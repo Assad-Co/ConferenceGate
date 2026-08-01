@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Globe, Award, Sparkles, Building2, Layers } from 'lucide-react';
+import { Logo } from './Logo';
 
 export const Footer: React.FC = () => {
   return (
@@ -8,14 +9,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           {/* Brand Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                CG
-              </div>
-              <span className="text-lg font-bold text-white tracking-tight">
-                CONFERENCE <span className="text-blue-400">GATE</span>
-              </span>
-            </div>
+            <Logo size={36} theme="dark" />
             <p className="text-xs text-slate-400 leading-relaxed">
               LinkedIn builds your general professional identity. Conference Gate builds and verifies your conference professional identity.
             </p>
