@@ -108,7 +108,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </button>
             <button
               onClick={() => onNavigateTab('sponsor')}
-              className="px-6 py-3.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 font-bold rounded-xl text-sm backdrop-blur-md transition-all flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-400/40 font-bold rounded-xl text-sm backdrop-blur-md transition-all flex items-center gap-2 cursor-pointer"
             >
               <Briefcase className="w-4 h-4" />
               <span>Explore Sponsorship Opportunities</span>
@@ -183,11 +183,11 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider">
-              <Flame className="w-4 h-4 text-amber-500 fill-amber-500" />
+            <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider">
+              <Flame className="w-4 h-4 text-blue-400 fill-blue-400" />
               <span>Promoted Conferences</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight mt-1">
+            <h2 className="text-2xl font-bold text-white tracking-tight mt-1">
               Find the best conference for you
             </h2>
           </div>
@@ -264,7 +264,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
                       <span>{conf.location.city}, {conf.location.country}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                       <span className="font-medium text-slate-700">
                         Call for Papers: <strong className="text-emerald-600">{conf.cfpStatus}</strong> (Deadline: {conf.abstractDeadline})
                       </span>
@@ -356,7 +356,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
           </div>
 
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
               <Briefcase className="w-6 h-6" />
             </div>
             <h3 className="font-bold text-base text-slate-900">Sponsorship & ROI Analytics</h3>

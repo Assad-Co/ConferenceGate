@@ -168,7 +168,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
             </button>
             <button
               onClick={() => onApplySponsorship(conference.id)}
-              className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
             >
               <Briefcase className="w-4 h-4" />
               <span>Become Sponsor</span>
@@ -298,7 +298,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="space-y-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-300">
                   Call for Papers Status: {conference.cfpStatus}
                 </span>
                 <h3 className="text-lg font-bold">Submit Your Research Abstract</h3>
@@ -308,7 +308,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               </div>
               <button
                 onClick={() => onOpenSubmitAbstract(conference.id)}
-                className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
               >
                 Submit Abstract Now
               </button>
@@ -432,7 +432,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <h3 className="text-lg font-bold text-slate-900">Event Sponsors & Exhibitors</h3>
               <button
                 onClick={() => onApplySponsorship(conference.id)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Explore Sponsorship Packages
               </button>
@@ -442,7 +442,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                 <div key={sp.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
                   <img src={sp.logo} alt={sp.name} className="w-12 h-12 rounded-xl object-cover mx-auto" />
                   <div className="font-bold text-xs text-slate-900">{sp.name}</div>
-                  <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-md">
+                  <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-md">
                     {sp.tier} Sponsor
                   </span>
                 </div>

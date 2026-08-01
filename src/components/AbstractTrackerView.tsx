@@ -66,7 +66,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Submissions Sidebar */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 px-1">
             Submitted Abstracts ({submissions.length})
           </h3>
           <div className="space-y-3">
@@ -90,7 +90,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                         ? 'bg-emerald-100 text-emerald-800'
                         : sub.status === 'Under Review'
                         ? 'bg-blue-100 text-blue-800'
-                        : 'bg-amber-100 text-amber-800'
+                        : 'bg-blue-100 text-blue-800'
                     }`}
                   >
                     {sub.status}
@@ -205,8 +205,8 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   Reviewer Evaluation Feedback ({(currentSub.reviews || []).length})
                 </h4>
                 {(!currentSub.reviews || currentSub.reviews.length === 0) ? (
-                  <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-xl text-xs text-amber-800 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className="p-4 bg-blue-50/60 border border-blue-200/80 rounded-xl text-xs text-blue-800 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>Your abstract is currently assigned to peer reviewers. Feedback will appear here upon review completion.</span>
                   </div>
                 ) : (

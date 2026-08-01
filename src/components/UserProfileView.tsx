@@ -71,7 +71,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onOpenBadgeModal}
-              className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
             >
               <Award className="w-4 h-4" />
               <span>Digital Badge</span>
@@ -95,8 +95,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Reviewer Kudos</div>
-            <div className="text-xl font-extrabold text-amber-600 flex items-center justify-center gap-1">
-              <Zap className="w-4 h-4 fill-amber-500" />
+            <div className="text-xl font-extrabold text-blue-600 flex items-center justify-center gap-1">
+              <Zap className="w-4 h-4 fill-blue-500" />
               <span>+{userProfile.contributions.reviewerKudos}</span>
             </div>
           </div>
@@ -161,7 +161,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {userProfile.verifiedAchievements.map((b) => (
                 <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center font-bold">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 mx-auto flex items-center justify-center font-bold">
                     <Award className="w-6 h-6" />
                   </div>
                   <div className="font-bold text-xs text-slate-900">{b.title}</div>

@@ -39,12 +39,12 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-amber-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-blue-400" />
                 Corporate Sponsorship Marketplace
               </span>
             </div>
@@ -59,7 +59,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-6 shrink-0">
             <div>
               <div className="text-[10px] uppercase font-bold text-slate-300">Active Impressions</div>
-              <div className="text-2xl font-extrabold text-amber-300">142,800</div>
+              <div className="text-2xl font-extrabold text-blue-300">142,800</div>
             </div>
             <div className="border-l border-white/20 pl-6">
               <div className="text-[10px] uppercase font-bold text-slate-300">B2B Leads Captured</div>
@@ -75,7 +75,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           onClick={() => setActiveTab('marketplace')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'marketplace'
-              ? 'bg-amber-600 text-white font-bold shadow-xs'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
@@ -85,7 +85,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           onClick={() => setActiveTab('roi')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'roi'
-              ? 'bg-amber-600 text-white font-bold shadow-xs'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
@@ -95,7 +95,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           onClick={() => setActiveTab('booth')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
             activeTab === 'booth'
-              ? 'bg-amber-600 text-white font-bold shadow-xs'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
@@ -110,11 +110,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             {sponsorshipPackages.map((pkg) => (
               <div
                 key={pkg.id}
-                className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-amber-400 transition-all"
+                className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-3 py-1 bg-amber-100 text-amber-900 font-extrabold text-xs rounded-full uppercase tracking-wider">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-900 font-extrabold text-xs rounded-full uppercase tracking-wider">
                       {pkg.tier} Tier
                     </span>
                     <span className="text-2xl font-extrabold text-slate-900">
@@ -144,7 +144,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
                 <button
                   onClick={() => handleApplySponsorship(pkg)}
-                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   Apply for Sponsorship
                 </button>
@@ -172,7 +172,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <div className="text-xs font-bold text-slate-400 uppercase">Digital Booth Traffic</div>
-              <div className="text-2xl font-extrabold text-amber-600">3,420 Visitors</div>
+              <div className="text-2xl font-extrabold text-blue-600">3,420 Visitors</div>
               <div className="text-[11px] font-semibold text-slate-500">Average dwell time: 4m 12s</div>
             </div>
 

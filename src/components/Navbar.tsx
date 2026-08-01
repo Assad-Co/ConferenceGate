@@ -88,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleTabChange('home')}
               className="flex items-center gap-2.5 group text-left cursor-pointer"
             >
-              <LogoMark size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
+              <LogoMark size={44} className="shrink-0 group-hover:scale-105 transition-transform" />
               <div className="hidden sm:block leading-none">
                 <span className="text-[15px] font-extrabold text-slate-900 tracking-tight block">
                   CONFERENCE
@@ -97,9 +97,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   G
                   <GateGlyph className="inline-block w-[0.72em] h-[0.72em] mx-[0.02em] -translate-y-[0.02em]" />
                   TE
-                </span>
-                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mt-0.5">
-                  The Global Gateway to Conferences
                 </span>
               </div>
             </button>
@@ -207,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-semibold shadow-xs hover:shadow-md transition-all hover:opacity-95 cursor-pointer"
               title="Conference Gate AI Assistant"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
               <span className="hidden sm:inline">AI Assistant</span>
             </button>
 
@@ -244,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 >
                   <span>Abstract Reviewer</span>
-                  <Award className="w-3.5 h-3.5 text-amber-500" />
+                  <Award className="w-3.5 h-3.5 text-blue-500" />
                 </button>
                 <button
                   onClick={() => {

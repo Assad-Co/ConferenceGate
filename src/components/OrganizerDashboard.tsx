@@ -221,7 +221,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sponsorship Revenue</div>
-              <div className="text-2xl font-extrabold text-amber-600">$185,000</div>
+              <div className="text-2xl font-extrabold text-blue-600">$185,000</div>
               <div className="text-[11px] font-semibold text-slate-500">4 Active Corporate Packages</div>
             </div>
           </div>
@@ -412,7 +412,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           onClick={() => handleAIMatchReviewers(sub)}
                           className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <Sparkles className="w-3.5 h-3.5 text-blue-300" />
                           <span>AI Match Reviewers</span>
                         </button>
                       </td>

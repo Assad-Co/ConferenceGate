@@ -30,7 +30,7 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
-            <Award className="w-5 h-5 text-amber-500" />
+            <Award className="w-5 h-5 text-blue-500" />
             <span>Verified Digital Badge Widget</span>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
@@ -42,7 +42,7 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
         <div className="p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border border-slate-800 text-white space-y-4 shadow-xl relative overflow-hidden">
           <LogoMark size={72} className="absolute -bottom-4 -right-4 opacity-10 pointer-events-none" />
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-blue-400 bg-blue-500/20 px-2.5 py-0.5 rounded-full border border-blue-400/30">
               <Award className="w-3 h-3" />
               Verified Conference Identity
             </div>
@@ -50,11 +50,11 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            <img src={userProfile.avatar} alt={userProfile.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-amber-400/50" />
+            <img src={userProfile.avatar} alt={userProfile.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-400/50" />
             <div>
               <h4 className="font-extrabold text-base text-white">{userProfile.name}</h4>
               <p className="text-xs text-slate-300">{userProfile.organization}</p>
-              <p className="text-[10px] text-amber-300 font-semibold mt-0.5">Conference Index: 890 • Reviewer Kudos: +280</p>
+              <p className="text-[10px] text-blue-300 font-semibold mt-0.5">Conference Index: 890 • Reviewer Kudos: +280</p>
             </div>
           </div>
 

@@ -98,8 +98,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-blue-400" />
                 Accredited Peer Reviewer Workspace
               </span>
               <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full text-xs font-bold flex items-center gap-1">
@@ -121,8 +121,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-[10px] uppercase font-bold text-slate-300">Total Reviewer Kudos</div>
-                <div className="text-2xl font-extrabold text-amber-300 flex items-center gap-1">
-                  <Zap className="w-5 h-5 fill-amber-300" />
+                <div className="text-2xl font-extrabold text-blue-300 flex items-center gap-1">
+                  <Zap className="w-5 h-5 fill-blue-300" />
                   <span>+{userProfile.contributions.reviewerKudos} Kudos</span>
                 </div>
               </div>
@@ -161,7 +161,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               key={idx}
               className="px-3 py-1 bg-white/10 border border-white/15 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5"
             >
-              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <Award className="w-3.5 h-3.5 text-blue-400" />
               <span>{badge}</span>
             </span>
           ))}

@@ -297,7 +297,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
                 disabled={aiChecking || !abstractText.trim()}
                 className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <Sparkles className="w-3.5 h-3.5 text-blue-300" />
                 <span>{aiChecking ? 'Evaluating...' : 'AI Quality Pre-Check'}</span>
               </button>
             </div>
