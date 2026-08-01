@@ -1,0 +1,6 @@
+{
+  "name": "Conference Gate",
+  "description": "The Global Gateway to Conferences — All-in-one SaaS platform for conference discovery, management, professional networking, abstract submission & review, technical committees, sponsorship marketplace, and verified conference identity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
