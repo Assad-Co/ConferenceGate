@@ -36,7 +36,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       {/* Top Banner & Profile Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Cover Header */}
-        <div className="h-36 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 relative" />
+        <div className="h-36 bg-gradient-to-r from-slate-50 via-white to-slate-100 relative" />
 
         {/* Profile Info Row */}
         <div className="px-6 sm:px-8 pb-8 relative flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
@@ -47,11 +47,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 alt={userProfile.name}
                 className="w-28 h-28 rounded-3xl object-cover ring-4 ring-white shadow-xl bg-slate-900"
               />
-              <span
-                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 ring-4 ring-white flex items-center justify-center"
-                title="Verified Conference Identity"
-              >
-                <ShieldCheck className="w-4 h-4 text-white" />
+              <span className="absolute -bottom-1 -right-1 group/badge">
+                <span className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 ring-[3px] ring-white shadow-md flex items-center justify-center cursor-default">
+                  <ShieldCheck className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                </span>
+                <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/badge:opacity-100">
+                  Verified Conference Identity
+                  <span className="absolute top-full right-2.5 -mt-px border-4 border-transparent border-t-slate-900" />
+                </span>
               </span>
             </div>
             <div className="space-y-1 pt-2 sm:pt-0">
@@ -65,10 +68,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-rose-500" />
                   {userProfile.location}
-                </span>
-                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Verified Conference Identity
                 </span>
               </div>
             </div>
