@@ -383,6 +383,8 @@ export const sampleConferences: Conference[] = [
     communityPosts: 48,
     isSaved: true,
     isFollowed: true,
+    hasBrochure: true,
+    hasCityMap: true,
   },
   {
     id: 'conf_2',
@@ -432,6 +434,8 @@ export const sampleConferences: Conference[] = [
     communityPosts: 92,
     isSaved: false,
     isFollowed: true,
+    hasBrochure: true,
+    hasCityMap: false,
   },
   {
     id: 'conf_3',
@@ -473,6 +477,8 @@ export const sampleConferences: Conference[] = [
     communityPosts: 31,
     isSaved: true,
     isFollowed: false,
+    hasBrochure: false,
+    hasCityMap: true,
   },
 ];
 

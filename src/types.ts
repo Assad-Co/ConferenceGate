@@ -195,6 +195,8 @@ export interface Conference {
   communityPosts: number;
   isSaved?: boolean;
   isFollowed?: boolean;
+  hasBrochure?: boolean;
+  hasCityMap?: boolean;
 }
 
 export interface AbstractReview {
