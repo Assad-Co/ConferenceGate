@@ -19,7 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { UserRole, UserProfile, NotificationItem } from '../types';
-import { LogoMark, GateGlyph } from './Logo';
+import { Logo } from './Logo';
 
 interface NavbarProps {
   currentRole?: UserRole;
@@ -86,19 +86,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-6">
             <button
               onClick={() => handleTabChange('home')}
-              className="flex items-center gap-2.5 group text-left cursor-pointer"
+              className="flex items-center group text-left cursor-pointer"
             >
-              <LogoMark size={44} className="shrink-0 group-hover:scale-105 transition-transform" />
-              <div className="hidden sm:block leading-none">
-                <span className="text-[15px] font-extrabold text-slate-900 tracking-tight block">
-                  CONFERENCE
-                </span>
-                <span className="flex items-center text-xl font-extrabold text-blue-500 tracking-tight">
-                  G
-                  <GateGlyph className="inline-block w-[0.72em] h-[0.72em] mx-[0.02em] -translate-y-[0.02em]" />
-                  TE
-                </span>
-              </div>
+              <Logo className="h-10 w-auto group-hover:scale-105 transition-transform" />
             </button>
 
             {/* Quick Navigation Links */}

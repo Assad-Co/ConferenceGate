@@ -18,7 +18,6 @@ import {
   Star,
 } from 'lucide-react';
 import { Conference } from '../types';
-import { LogoMark } from './Logo';
 
 interface HomeLandingProps {
   conferences: Conference[];
@@ -71,7 +70,6 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
       <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-8 sm:p-12 lg:p-16 shadow-2xl border border-slate-800">
         <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
-        <LogoMark size={340} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.05] pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-300 text-xs font-semibold backdrop-blur-md">

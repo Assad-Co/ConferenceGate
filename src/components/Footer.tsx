@@ -9,7 +9,9 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           {/* Brand Info */}
           <div className="space-y-4">
-            <Logo size={36} theme="dark" />
+            <div className="inline-block bg-white rounded-lg px-3 py-2">
+              <Logo className="h-8 w-auto" />
+            </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               LinkedIn builds your general professional identity. Conference Gate builds and verifies your conference professional identity.
             </p>

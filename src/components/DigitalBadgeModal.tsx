@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, Copy, CheckCircle2, Award, ExternalLink } from 'lucide-react';
 import { UserProfile } from '../types';
-import { LogoMark } from './Logo';
 
 interface DigitalBadgeModalProps {
   isOpen: boolean;
@@ -40,7 +39,6 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
 
         {/* Live Badge Preview Card */}
         <div className="p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border border-slate-800 text-white space-y-4 shadow-xl relative overflow-hidden">
-          <LogoMark size={72} className="absolute -bottom-4 -right-4 opacity-10 pointer-events-none" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-blue-400 bg-blue-500/20 px-2.5 py-0.5 rounded-full border border-blue-400/30">
               <Award className="w-3 h-3" />
