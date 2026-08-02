@@ -171,16 +171,23 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
               <span className="line-clamp-1">{userProfile.organization}</span>
             </div>
           </div>
-          <div className="border-t border-slate-100 px-4 py-3 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Reviewer Kudos</span>
-              <span className="font-bold text-blue-700">+{userProfile.contributions.reviewerKudos}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Abstracts Submitted</span>
-              <span className="font-bold text-slate-900">{userProfile.contributions.abstractsSubmitted}</span>
-            </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-slate-200 shadow-xs px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500">Reviewer Kudos</span>
+            <span className="font-bold text-blue-700">+{userProfile.contributions.reviewerKudos}</span>
           </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500">Abstracts Submitted</span>
+            <span className="font-bold text-slate-900">{userProfile.contributions.abstractsSubmitted}</span>
+          </div>
+          <button
+            onClick={() => onNavigateTab('profile')}
+            className="text-[11px] font-bold text-slate-500 hover:text-blue-600 cursor-pointer pt-1"
+          >
+            View full profile
+          </button>
         </div>
 
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs py-2">
