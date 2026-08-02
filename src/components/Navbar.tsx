@@ -88,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleTabChange('home')}
               className="flex items-center group text-left cursor-pointer"
             >
-              <Logo className="h-12 w-auto group-hover:scale-105 transition-transform" />
+              <Logo className="h-14 w-auto group-hover:scale-105 transition-transform" />
             </button>
 
             {/* Quick Navigation Links */}
