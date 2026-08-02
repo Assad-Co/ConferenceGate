@@ -25,8 +25,15 @@ import {
   sampleFeedPosts,
   sampleReviewOpportunities,
   sampleSponsorshipPackages,
+  sampleSponsorProfile,
 } from './data/mockData';
-import { Conference, AbstractSubmission, Post, UserRole } from './types';
+import { Conference, AbstractSubmission, CelebrationKind, Post, SponsorshipPackage, UserRole } from './types';
+
+const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
+  Accept: 'Accepted',
+  'Oral Presentation': 'Accepted for Oral',
+  'Poster Presentation': 'Accepted for Poster',
+};
 
 export function App() {
   const { showToast } = useToast();
@@ -38,8 +45,32 @@ export function App() {
   // App Data State
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
   const [submissions, setSubmissions] = useState<AbstractSubmission[]>(sampleAbstractSubmissions);
-  const [posts, setPosts] = useState<any[]>(sampleFeedPosts);
+  const [posts, setPosts] = useState<Post[]>(sampleFeedPosts);
   const [userProfile, setUserProfile] = useState(currentUserProfile);
+
+  const postCelebration = (
+    kind: CelebrationKind,
+    headline: string,
+    content: string,
+    opts?: { authorName?: string; authorTitle?: string; authorOrg?: string; authorAvatar?: string; conferenceBadge?: string }
+  ) => {
+    const celebration: Post = {
+      id: `post_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      authorName: opts?.authorName || userProfile.name,
+      authorTitle: opts?.authorTitle || userProfile.title,
+      authorOrg: opts?.authorOrg || userProfile.organization,
+      authorAvatar: opts?.authorAvatar || userProfile.avatar,
+      content,
+      timestamp: 'Just now',
+      postType: 'celebration',
+      celebrationKind: kind,
+      celebrationHeadline: headline,
+      conferenceBadge: opts?.conferenceBadge,
+      reactions: { likes: 0, celebrates: 0, insightful: 0, kudos: 0 },
+      commentsCount: 0,
+    };
+    setPosts((prev) => [celebration, ...prev]);
+  };
 
   // Modals State
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -109,12 +140,16 @@ export function App() {
   };
 
   const handleCompleteReview = (abstractId: string, reviewData: any) => {
+    const newStatus = RECOMMENDATION_TO_STATUS[reviewData.recommendation];
+    let acceptedSubmission: AbstractSubmission | undefined;
+
     setSubmissions((prev) =>
       prev.map((sub) => {
         if (sub.id === abstractId) {
+          if (newStatus) acceptedSubmission = sub;
           return {
             ...sub,
-            status: 'Under Review',
+            status: newStatus || 'Under Review',
             reviews: [...sub.reviews, reviewData],
           };
         }
@@ -122,14 +157,37 @@ export function App() {
       })
     );
 
+    const nextReviewed = userProfile.contributions.abstractsReviewed + 1;
     setUserProfile((prev) => ({
       ...prev,
       contributions: {
         ...prev.contributions,
         reviewerKudos: prev.contributions.reviewerKudos + 20,
-        abstractsReviewed: prev.contributions.abstractsReviewed + 1,
+        abstractsReviewed: nextReviewed,
       },
     }));
+
+    if (acceptedSubmission) {
+      postCelebration(
+        'abstract-accepted',
+        '🎉 Abstract Accepted!',
+        `"${acceptedSubmission.title}" has been accepted for presentation at ${acceptedSubmission.conferenceTitle}. Congratulations to ${acceptedSubmission.primaryAuthor.name}!`,
+        {
+          authorName: acceptedSubmission.primaryAuthor.name,
+          authorTitle: 'Author',
+          authorOrg: acceptedSubmission.primaryAuthor.affiliation,
+          conferenceBadge: acceptedSubmission.conferenceTitle,
+        }
+      );
+    }
+
+    if (nextReviewed % 10 === 0) {
+      postCelebration(
+        'reviewer-milestone',
+        `🏅 ${nextReviewed} Reviews Milestone!`,
+        `${userProfile.name} just completed their ${nextReviewed}th verified peer review on Conference Gate — a serious commitment to the research community.`
+      );
+    }
 
     showToast({
       type: 'achievement',
@@ -181,21 +239,55 @@ export function App() {
   };
 
   const handleAddPost = (content: string) => {
-    const newPost = {
+    const newPost: Post = {
       id: `post_${Date.now()}`,
       authorName: userProfile.name,
       authorAvatar: userProfile.avatar,
       authorTitle: userProfile.title,
       authorOrg: userProfile.organization,
-      conferenceTitle: 'Annual Subsurface Energy & AI Summit 2026',
+      conferenceBadge: 'Annual Subsurface Energy & AI Summit 2026',
       content,
       timestamp: 'Just now',
-      postType: 'general' as const,
+      postType: 'announcement',
       reactions: { likes: 1, celebrates: 0, insightful: 0, kudos: 0 },
       commentsCount: 0,
     };
     setPosts([newPost, ...posts]);
     showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
+  };
+
+  const handleSponsorshipAccepted = (pkg: SponsorshipPackage) => {
+    postCelebration(
+      'sponsorship-accepted',
+      '🤝 Sponsorship Confirmed!',
+      `${sampleSponsorProfile.companyName} is proud to confirm ${pkg.tier} Tier sponsorship for ${pkg.conferenceTitle}! We look forward to connecting with the community.`,
+      {
+        authorName: sampleSponsorProfile.companyName,
+        authorTitle: 'Corporate Sponsor',
+        authorOrg: pkg.conferenceTitle,
+        authorAvatar: sampleSponsorProfile.logo,
+        conferenceBadge: pkg.conferenceTitle,
+      }
+    );
+    showToast({
+      type: 'achievement',
+      title: 'Sponsorship confirmed',
+      message: `${pkg.tier} tier package reserved for ${pkg.conferenceTitle}.`,
+    });
+  };
+
+  const handleInviteToCommittee = (reviewerName: string, conferenceTitle: string) => {
+    postCelebration(
+      'committee-appointment',
+      '📋 New Technical Committee Role!',
+      `${reviewerName} has joined the Technical Committee for ${conferenceTitle}, helping shape the review process and program quality.`,
+      { authorName: reviewerName, authorTitle: 'Technical Committee Member', authorOrg: conferenceTitle, conferenceBadge: conferenceTitle }
+    );
+    showToast({
+      type: 'achievement',
+      title: 'Committee invitation sent',
+      message: `${reviewerName} has been invited to join the Technical Committee.`,
+    });
   };
 
   return (
@@ -274,11 +366,15 @@ export function App() {
             submissions={submissions}
             sponsorshipPackages={sampleSponsorshipPackages}
             onCreateConference={handleCreateConference}
+            onInviteToCommittee={handleInviteToCommittee}
           />
         )}
 
         {activeTab === 'sponsor' && (
-          <SponsorPortal sponsorshipPackages={sampleSponsorshipPackages} />
+          <SponsorPortal
+            sponsorshipPackages={sampleSponsorshipPackages}
+            onSponsorshipAccepted={handleSponsorshipAccepted}
+          />
         )}
 
         {activeTab === 'community' && (

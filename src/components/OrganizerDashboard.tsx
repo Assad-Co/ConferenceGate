@@ -27,6 +27,7 @@ interface OrganizerDashboardProps {
   submissions: AbstractSubmission[];
   sponsorshipPackages: SponsorshipPackage[];
   onCreateConference: (newConf: Partial<Conference>) => void;
+  onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
 }
 
 export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
@@ -34,6 +35,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   submissions,
   sponsorshipPackages,
   onCreateConference,
+  onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'program' | 'sponsors' | 'communications' | 'analytics'
@@ -457,7 +459,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
                           {match.matchPercentage}% Match
                         </span>
-                        <button className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer">
+                        <button
+                          onClick={() =>
+                            onInviteToCommittee(
+                              match.reviewerId === 'rev_1' ? 'Dr. Lina Hassan' : 'Prof. Marcus Vance',
+                              selectedSubForAI?.conferenceTitle || 'the conference'
+                            )
+                          }
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                        >
                           Invite to Review
                         </button>
                       </div>

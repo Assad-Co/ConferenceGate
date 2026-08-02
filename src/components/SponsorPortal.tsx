@@ -18,10 +18,12 @@ import { SponsorshipPackage } from '../types';
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
+  onSponsorshipAccepted?: (pkg: SponsorshipPackage) => void;
 }
 
 export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   sponsorshipPackages,
+  onSponsorshipAccepted = (_pkg: SponsorshipPackage) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth'>('marketplace');
   const [selectedPackage, setSelectedPackage] = useState<SponsorshipPackage | null>(null);
@@ -30,6 +32,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const handleApplySponsorship = (pkg: SponsorshipPackage) => {
     setSelectedPackage(pkg);
     setAppliedSuccess(true);
+    onSponsorshipAccepted(pkg);
     setTimeout(() => {
       setAppliedSuccess(false);
       setSelectedPackage(null);

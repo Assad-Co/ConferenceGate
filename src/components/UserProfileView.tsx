@@ -15,6 +15,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -28,6 +29,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onOpenCertificates,
 }) => {
   const [activeTab, setActiveTab] = useState<'conferences' | 'papers' | 'reviews' | 'committee' | 'badges'>('conferences');
+  const [feedbackConference, setFeedbackConference] = useState<string | null>(null);
 
   return (
     <div className="space-y-8">
@@ -142,14 +144,22 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900">Verified Conferences Attended</h3>
             <div className="space-y-3">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                 <div>
                   <h4 className="font-bold text-xs text-slate-900">Annual Subsurface Energy & AI Summit 2026</h4>
                   <p className="text-[11px] text-slate-500">Abu Dhabi, UAE • Attended as Presenter & Keynote Delegate</p>
                 </div>
-                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">
-                  Verified Attendance
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setFeedbackConference('Annual Subsurface Energy & AI Summit 2026')}
+                    className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
+                  >
+                    Leave Feedback
+                  </button>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                    Verified Attendance
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -172,6 +182,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         )}
       </div>
+
+      <ConferenceFeedbackModal
+        isOpen={feedbackConference !== null}
+        onClose={() => setFeedbackConference(null)}
+        conferenceTitle={feedbackConference || ''}
+      />
     </div>
   );
 };

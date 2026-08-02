@@ -10,6 +10,7 @@ import {
   Award,
 } from 'lucide-react';
 import { Post } from '../types';
+import { CelebrationPostCard } from './CelebrationPostCard';
 
 interface CommunityFeedProps {
   posts?: Post[];
@@ -72,44 +73,50 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
       {/* Posts List */}
       <div className="space-y-6">
-        {(posts || []).map((post) => (
-          <div key={post.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-            {/* Author Bar */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/20" />
-                <div className="text-xs">
-                  <div className="font-bold text-slate-900 flex items-center gap-1">
-                    <span>{post.authorName}</span>
-                    <Award className="w-3.5 h-3.5 text-blue-600" />
+        {(posts || []).map((post) =>
+          post.postType === 'celebration' ? (
+            <CelebrationPostCard key={post.id} post={post} />
+          ) : (
+            <div key={post.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+              {/* Author Bar */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/20" />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-900 flex items-center gap-1">
+                      <span>{post.authorName}</span>
+                      <Award className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <div className="text-slate-500">{post.authorTitle} • {post.authorOrg}</div>
                   </div>
-                  <div className="text-slate-500">{post.authorTitle} • {post.authorOrg}</div>
                 </div>
+                <span className="text-[10px] text-slate-400 font-semibold">{post.timestamp}</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-semibold">{post.timestamp}</span>
-            </div>
 
-            {/* Conference Badge Tag */}
-            <div className="inline-block px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md text-[11px] font-bold">
-              📍 {post.conferenceTitle}
-            </div>
+              {/* Conference Badge Tag */}
+              {post.conferenceBadge && (
+                <div className="inline-block px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md text-[11px] font-bold">
+                  📍 {post.conferenceBadge}
+                </div>
+              )}
 
-            {/* Content */}
-            <p className="text-xs text-slate-700 leading-relaxed">{post.content}</p>
+              {/* Content */}
+              <p className="text-xs text-slate-700 leading-relaxed">{post.content}</p>
 
-            {/* Actions */}
-            <div className="pt-3 border-t border-slate-100 flex items-center gap-6 text-xs text-slate-500 font-semibold">
-              <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
-                <ThumbsUp className="w-4 h-4" />
-                <span>{post.likes} Likes</span>
-              </button>
-              <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
-                <MessageSquare className="w-4 h-4" />
-                <span>{post.commentsCount} Comments</span>
-              </button>
+              {/* Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center gap-6 text-xs text-slate-500 font-semibold">
+                <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
+                  <ThumbsUp className="w-4 h-4" />
+                  <span>{post.reactions?.likes ?? 0} Likes</span>
+                </button>
+                <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{post.commentsCount} Comments</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
     </div>
   );

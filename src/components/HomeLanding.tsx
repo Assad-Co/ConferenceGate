@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Conference, UserProfile, Post } from '../types';
+import { CelebrationPostCard } from './CelebrationPostCard';
 
 interface HomeLandingProps {
   conferences: Conference[];
@@ -271,7 +272,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
         ) : (
           posts.map((post, i) => (
             <React.Fragment key={post.id}>
-              <PostCard post={post} />
+              {post.postType === 'celebration' ? <CelebrationPostCard post={post} /> : <PostCard post={post} />}
               {i % 3 === 2 && promotedPool.length > 0 && (
                 <PromotedConferenceCard
                   conf={promotedPool[Math.floor(i / 3) % promotedPool.length]}

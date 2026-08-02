@@ -324,6 +324,13 @@ export interface TechnicalCommitteeOpportunity {
   description: string;
 }
 
+export type CelebrationKind =
+  | 'abstract-accepted'
+  | 'reviewer-milestone'
+  | 'committee-appointment'
+  | 'sponsorship-accepted'
+  | 'best-organizer';
+
 export interface FeedPost {
   id: string;
   authorName: string;
@@ -332,8 +339,10 @@ export interface FeedPost {
   authorAvatar: string;
   content: string;
   timestamp: string;
-  postType: 'announcement' | 'achievement' | 'cfp' | 'speaker' | 'sponsorship' | 'review';
+  postType: 'announcement' | 'achievement' | 'cfp' | 'speaker' | 'sponsorship' | 'review' | 'celebration';
   conferenceBadge?: string;
+  celebrationKind?: CelebrationKind;
+  celebrationHeadline?: string;
   reactions: {
     likes: number;
     celebrates: number;
