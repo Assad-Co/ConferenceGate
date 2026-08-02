@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
@@ -27,6 +29,7 @@ import {
 import { Conference, AbstractSubmission, Post, UserRole } from './types';
 
 export function App() {
+  const { showToast } = useToast();
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
@@ -98,6 +101,11 @@ export function App() {
 
     setSubmissions([newSubmission, ...submissions]);
     setActiveTab('abstracts');
+    showToast({
+      type: 'success',
+      title: 'Abstract submitted',
+      message: `"${newSubmission.title}" is now in initial screening.`,
+    });
   };
 
   const handleCompleteReview = (abstractId: string, reviewData: any) => {
@@ -122,6 +130,12 @@ export function App() {
         abstractsReviewed: prev.contributions.abstractsReviewed + 1,
       },
     }));
+
+    showToast({
+      type: 'achievement',
+      title: 'Review submitted · +20 Kudos',
+      message: 'Your feedback has been recorded and the author notified.',
+    });
   };
 
   const handleCreateConference = (newConfData: Partial<Conference>) => {
@@ -159,6 +173,11 @@ export function App() {
     };
 
     setConferences([newConf, ...conferences]);
+    showToast({
+      type: 'success',
+      title: 'Conference created',
+      message: `"${newConf.title}" is now live in the discovery feed.`,
+    });
   };
 
   const handleAddPost = (content: string) => {
@@ -176,6 +195,7 @@ export function App() {
       commentsCount: 0,
     };
     setPosts([newPost, ...posts]);
+    showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
   };
 
   return (
@@ -191,6 +211,14 @@ export function App() {
 
       {/* Main Container View Router */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+      >
         {activeTab === 'home' && (
           <HomeLanding
             conferences={conferences}
@@ -271,6 +299,8 @@ export function App() {
             onBack={() => setActiveTab('profile')}
           />
         )}
+      </motion.div>
+      </AnimatePresence>
       </main>
 
       {/* Global SaaS Footer */}
