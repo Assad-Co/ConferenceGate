@@ -17,6 +17,7 @@ import {
   X,
   QrCode,
   ShieldCheck,
+  Home,
 } from 'lucide-react';
 import { UserRole, UserProfile, NotificationItem } from '../types';
 import { Logo } from './Logo';
@@ -78,113 +79,64 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const navItems: Array<{ id: string; label: string; icon: React.ElementType; match: string[] }> = [
+    { id: 'home', label: 'Home', icon: Home, match: ['home'] },
+    { id: 'discover', label: 'Discover', icon: Layers, match: ['discover'] },
+    { id: 'abstracts', label: 'My Abstracts', icon: FileText, match: ['abstracts'] },
+    { id: 'community', label: 'Feed', icon: Users, match: ['community', 'feed'] },
+    ...(role === 'reviewer' ? [{ id: 'reviewer', label: 'Reviewer', icon: Award, match: ['reviewer', 'reviews'] }] : []),
+    ...(role === 'organizer' ? [{ id: 'organizer', label: 'Organizer', icon: Building2, match: ['organizer'] }] : []),
+    ...(role === 'sponsor' ? [{ id: 'sponsor', label: 'Sponsor', icon: Briefcase, match: ['sponsor'] }] : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Tagline */}
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between h-14">
+          {/* Brand Logo + Search, LinkedIn-style */}
+          <div className="flex items-center gap-2">
             <button
               onClick={() => handleTabChange('home')}
-              className="flex items-center group text-left cursor-pointer"
+              className="flex items-center group text-left cursor-pointer shrink-0"
             >
-              <Logo className="h-14 w-auto group-hover:scale-105 transition-transform" />
+              <Logo className="h-11 w-auto group-hover:scale-105 transition-transform" />
             </button>
 
-            {/* Quick Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
-              <button
-                onClick={() => handleTabChange('home')}
-                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'home'
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                Home
-              </button>
-              <button
-                onClick={() => handleTabChange('discover')}
-                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'discover'
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                Discover Conferences
-              </button>
-              <button
-                onClick={() => handleTabChange('abstracts')}
-                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'abstracts'
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                My Abstracts
-              </button>
-              <button
-                onClick={() => handleTabChange('community')}
-                className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  activeTab === 'community' || activeTab === 'feed'
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                Conference Feed
-              </button>
-              {role === 'reviewer' && (
-                <button
-                  onClick={() => handleTabChange('reviewer')}
-                  className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeTab === 'reviewer' || activeTab === 'reviews'
-                      ? 'bg-blue-50 text-blue-700 font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  Reviewer Workspace
-                </button>
-              )}
-              {role === 'organizer' && (
-                <button
-                  onClick={() => handleTabChange('organizer')}
-                  className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeTab === 'organizer'
-                      ? 'bg-blue-50 text-blue-700 font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  Organizer Command Center
-                </button>
-              )}
-              {role === 'sponsor' && (
-                <button
-                  onClick={() => handleTabChange('sponsor')}
-                  className={`px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                    activeTab === 'sponsor'
-                      ? 'bg-blue-50 text-blue-700 font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  Sponsor Portal
-                </button>
-              )}
-            </nav>
+            <div className="hidden md:flex">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search conferences, abstracts, topics..."
+                  className="w-64 pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
+                />
+                <Search className="w-4 h-4 text-slate-600 absolute left-2.5 top-1.5" />
+              </form>
+            </div>
           </div>
 
-          {/* Global Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-xs mx-4">
-            <form onSubmit={handleSearchSubmit} className="w-full relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search conferences, abstracts, topics..."
-                className="w-full pl-9 pr-4 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-full border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-400"
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2" />
-            </form>
-          </div>
+          {/* Center Icon Nav, LinkedIn-style */}
+          <nav className="hidden lg:flex items-center h-14">
+            {navItems.map((item) => {
+              const isActive = item.match.includes(activeTab);
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabChange(item.id)}
+                  className={`flex flex-col items-center justify-center gap-0.5 px-4 h-14 min-w-[64px] border-b-2 transition-colors cursor-pointer ${
+                    isActive
+                      ? 'border-slate-900 text-slate-900'
+                      : 'border-transparent text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 ${isActive ? 'fill-slate-900/10' : ''}`} strokeWidth={isActive ? 2.25 : 1.75} />
+                  <span className="text-[11px] font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
           {/* Right Action Icons & Role Switcher */}
           <div className="flex items-center gap-2 sm:gap-3">

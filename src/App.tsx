@@ -179,7 +179,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-blue-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#f4f2ee] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -198,6 +198,9 @@ export function App() {
             onNavigateTab={setActiveTab}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
             onSearchQuery={(q) => setSearchQuery(q)}
+            userProfile={userProfile}
+            posts={posts}
+            onAddPost={handleAddPost}
           />
         )}
 
