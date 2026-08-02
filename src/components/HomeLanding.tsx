@@ -79,10 +79,12 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             <span>Verified Conference Identity Platform</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-            Science conference <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-              done right
+          <h1 className="space-y-2">
+            <span className="block text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+              Conference Gate
+            </span>
+            <span className="block text-lg sm:text-2xl font-semibold tracking-tight bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+              where all your conference activities commence from one place
             </span>
           </h1>
 
