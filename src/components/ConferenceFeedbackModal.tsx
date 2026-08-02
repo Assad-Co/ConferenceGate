@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles } from 'lucide-react';
+import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles, CalendarDays, Send } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface ConferenceFeedbackModalProps {
@@ -94,6 +94,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const { showToast } = useToast();
   const [ratings, setRatings] = useState<Ratings>({});
   const [comment, setComment] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
 
   const overall = useMemo(() => {
     const values: number[] = Object.values(ratings);
@@ -107,6 +108,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const reset = () => {
     setRatings({});
     setComment('');
+    setRecipientEmail('');
   };
 
   const handleClose = () => {
@@ -121,12 +123,13 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (Object.keys(ratings).length === 0) return;
+    const ratingSummary = overall ? ` — overall rating: ${overall.label}.` : '.';
     showToast({
       type: 'success',
       title: 'Feedback submitted',
-      message: overall
-        ? `Thanks for reviewing "${conferenceTitle}" — overall rating: ${overall.label}.`
-        : `Thanks for reviewing "${conferenceTitle}" — organizers use this to improve future sessions.`,
+      message: recipientEmail
+        ? `Thanks for reviewing "${conferenceTitle}"${ratingSummary} A copy was sent to ${recipientEmail}.`
+        : `Thanks for reviewing "${conferenceTitle}"${ratingSummary} Organizers use this to improve future sessions.`,
     });
     handleClose();
   };
@@ -144,9 +147,15 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
           </button>
         </div>
 
-        <div>
-          <p className="text-xs text-slate-500">Please rate your experience at</p>
-          <p className="text-sm font-bold text-slate-900">{conferenceTitle}</p>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
+            Conference / Workshop
+          </label>
+          <div className="flex items-center justify-between gap-2 w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+            <span>{conferenceTitle}</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide shrink-0">Auto-filled</span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -179,6 +188,20 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
               onChange={(e) => setComment(e.target.value)}
               placeholder="What stood out — sessions, speakers, organization, venue? (optional)"
               className="w-full p-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs focus:outline-hidden leading-relaxed"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Send className="w-3.5 h-3.5 text-blue-600" />
+              Send a copy to organizer / employer (optional)
+            </label>
+            <input
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="organizer@conference.com or hr@yourcompany.com"
+              className="w-full p-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs focus:outline-hidden"
             />
           </div>
 
