@@ -94,7 +94,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner & Reviewer Availability Toggle */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+      <div className="bg-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
