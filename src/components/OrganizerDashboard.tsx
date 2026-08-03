@@ -147,7 +147,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Command Center Header */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
