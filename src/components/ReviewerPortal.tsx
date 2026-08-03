@@ -263,7 +263,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 ) : (
                   <button
                     onClick={() => handleVolunteer(opp.id)}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Volunteer as Reviewer</span>
@@ -393,7 +393,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             <div className="pt-2 flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-2"
+                className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 <span>Submit Official Review (+20 Kudos)</span>
@@ -434,7 +434,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                     setSelectedAbstractId(sub.id);
                     setActiveTab('evaluate');
                   }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer"
+                  className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer"
                 >
                   Start Evaluation
                 </button>

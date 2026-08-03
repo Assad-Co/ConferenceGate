@@ -199,7 +199,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
           <button
             type="submit"
             disabled={loading || !inputPrompt.trim()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-4 py-2 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <span>Ask</span>
             <Send className="w-3.5 h-3.5" />

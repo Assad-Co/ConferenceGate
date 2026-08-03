@@ -147,7 +147,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
                 <button
                   onClick={() => handleApplySponsorship(pkg)}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                  className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   Apply for Sponsorship
                 </button>
@@ -218,7 +218,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               <input type="text" defaultValue="https://aramco.com/whitepapers/subsurface-ai-2026.pdf" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium" />
             </div>
 
-            <button type="button" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
+            <button type="button" className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
               Save Booth Configuration
             </button>
           </form>

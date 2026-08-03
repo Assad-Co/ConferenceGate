@@ -147,7 +147,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => onOpenSubmitAbstract(conference.id)}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               <FileText className="w-4 h-4" />
               <span>Submit Abstract</span>
@@ -282,7 +282,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                       className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
                         registeredPackage === pkg.id
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-blue-900 hover:bg-blue-950 text-white'
                       }`}
                     >
                       {registeredPackage === pkg.id ? 'Package Selected ✓' : 'Register Package'}
@@ -432,7 +432,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <h3 className="text-lg font-bold text-slate-900">Event Sponsors & Exhibitors</h3>
               <button
                 onClick={() => onApplySponsorship(conference.id)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Explore Sponsorship Packages
               </button>

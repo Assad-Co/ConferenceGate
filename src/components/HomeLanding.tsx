@@ -106,7 +106,7 @@ const PromotedConferenceCard: React.FC<{
         </button>
         <button
           onClick={() => onSelect(conf)}
-          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-full transition-colors cursor-pointer"
+          className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-full transition-colors cursor-pointer"
         >
           See Details
         </button>
@@ -250,7 +250,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             <button
               onClick={handlePostSubmit}
               disabled={!postText.trim()}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-full transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-full transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Post</span>

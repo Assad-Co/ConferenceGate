@@ -76,14 +76,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="flex items-center gap-3 pt-2 sm:pt-0">
             <button
               onClick={onOpenBadgeModal}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
             >
               <Award className="w-4 h-4" />
               <span>Digital Badge</span>
             </button>
             <button
               onClick={onOpenCertificates}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               <span>Certificates</span>

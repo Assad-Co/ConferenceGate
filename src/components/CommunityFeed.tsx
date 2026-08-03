@@ -62,7 +62,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             <button
               type="submit"
               disabled={!newPostText.trim()}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Post Update</span>

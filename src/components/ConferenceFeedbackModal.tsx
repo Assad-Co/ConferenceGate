@@ -221,7 +221,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
             <button
               type="submit"
               disabled={Object.keys(ratings).length === 0}
-              className="mt-3 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 shrink-0"
+              className="mt-3 px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 shrink-0"
             >
               Submit Feedback
             </button>

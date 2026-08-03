@@ -391,7 +391,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
               >
                 Submit Abstract for Review
               </button>

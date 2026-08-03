@@ -74,7 +74,7 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
             />
             <button
               onClick={handleCopy}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shrink-0 cursor-pointer flex items-center gap-1"
+              className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold rounded-xl shrink-0 cursor-pointer flex items-center gap-1"
             >
               {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
               <span>{copied ? 'Copied!' : 'Copy Code'}</span>

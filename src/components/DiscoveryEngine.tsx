@@ -616,7 +616,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       </button>
                       <button
                         onClick={() => onSelectConference(conf)}
-                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        className="px-4 py-1.5 bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                       >
                         View Conference Page
                       </button>

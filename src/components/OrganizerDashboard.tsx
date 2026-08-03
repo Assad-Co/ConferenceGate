@@ -250,7 +250,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     </span>
                     <button
                       onClick={() => setActiveTab('abstracts')}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
                     >
                       Manage Abstracts
                     </button>
@@ -367,7 +367,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <div className="pt-4 border-t border-slate-200 flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
               >
                 Publish Conference & Open Call for Papers
               </button>
@@ -466,7 +466,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                               selectedSubForAI?.conferenceTitle || 'the conference'
                             )
                           }
-                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                          className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
                         >
                           Invite to Review
                         </button>
@@ -538,7 +538,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
               <span>Send Broadcast Message</span>

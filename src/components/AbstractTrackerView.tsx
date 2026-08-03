@@ -56,7 +56,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
 
         <button
           onClick={onOpenNewSubmission}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+          className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-2 transition-colors cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Submit New Abstract</span>
@@ -266,7 +266,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                     <button
                       type="submit"
                       disabled={!revisionText.trim()}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Submit Revision Response</span>
