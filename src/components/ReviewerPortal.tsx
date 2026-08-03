@@ -94,55 +94,55 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner & Reviewer Availability Toggle */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+      <div className="bg-slate-100 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Award className="w-3.5 h-3.5 text-blue-400" />
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-blue-600" />
                 Accredited Peer Reviewer Workspace
               </span>
-              <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full text-xs font-bold flex items-center gap-1">
+              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Verified Reviewer
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Reviewer Portal & Recognition Engine
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
               Every verified review increases your Reviewer Kudos (+20 Kudos per completed review) and unlocks official Reviewer Badges on your profile.
             </p>
           </div>
 
           {/* Kudos & Availability Card */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-2xl shrink-0 space-y-3">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl shrink-0 space-y-3 shadow-xs">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-[10px] uppercase font-bold text-slate-300">Total Reviewer Kudos</div>
-                <div className="text-2xl font-extrabold text-blue-300 flex items-center gap-1">
-                  <Zap className="w-5 h-5 fill-blue-300" />
+                <div className="text-[10px] uppercase font-bold text-slate-400">Total Reviewer Kudos</div>
+                <div className="text-2xl font-extrabold text-blue-700 flex items-center gap-1">
+                  <Zap className="w-5 h-5 fill-blue-600" />
                   <span>+{userProfile.contributions.reviewerKudos} Kudos</span>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-slate-300">Reviews Done</div>
-                <div className="text-xl font-bold text-white">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Reviews Done</div>
+                <div className="text-xl font-bold text-slate-900">
                   {userProfile.contributions.abstractsReviewed} Papers
                 </div>
               </div>
             </div>
 
             {/* Availability Toggle */}
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-200">Available to Review Abstracts:</span>
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-600">Available to Review Abstracts:</span>
               <button
                 onClick={() => setAvailableToReview(!availableToReview)}
                 className={`px-3 py-1 rounded-full font-bold text-xs transition-colors cursor-pointer ${
                   availableToReview
-                    ? 'bg-emerald-500 text-slate-950'
-                    : 'bg-slate-700 text-slate-300'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-200 text-slate-600'
                 }`}
               >
                 {availableToReview ? '● Active' : 'Off'}
@@ -152,16 +152,16 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         </div>
 
         {/* Reviewer Badges Showcase Row */}
-        <div className="mt-6 pt-6 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs">
+        <div className="mt-6 pt-6 border-t border-slate-200 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-slate-400 font-bold uppercase text-[10px] mr-2">
             Your Badges:
           </span>
           {(userProfile?.reviewerInfo?.badges || []).map((badge, idx) => (
             <span
               key={idx}
-              className="px-3 py-1 bg-white/10 border border-white/15 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5"
             >
-              <Award className="w-3.5 h-3.5 text-blue-400" />
+              <Award className="w-3.5 h-3.5 text-blue-600" />
               <span>{badge}</span>
             </span>
           ))}
