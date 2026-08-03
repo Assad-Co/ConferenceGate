@@ -36,7 +36,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       {/* Top Banner & Profile Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Cover Header */}
-        <div className="h-36 bg-slate-50 relative" />
+        <div className="h-36 bg-slate-100 relative" />
 
         {/* Profile Info Row */}
         <div className="px-6 sm:px-8 pb-8 relative flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
