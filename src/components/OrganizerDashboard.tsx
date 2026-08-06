@@ -298,9 +298,88 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   };
 
   // Sponsorship Opportunities Catalog State
+  const sponsorshipOpportunityColors: Record<
+    string,
+    { header: string; iconBox: string; icon: string; border: string; price: string; badge: string }
+  > = {
+    violet: {
+      header: 'bg-violet-50',
+      iconBox: 'bg-white border border-violet-200',
+      icon: 'text-violet-700',
+      border: 'border-violet-100',
+      price: 'text-violet-700',
+      badge: 'bg-violet-100 text-violet-800',
+    },
+    blue: {
+      header: 'bg-blue-50',
+      iconBox: 'bg-white border border-blue-200',
+      icon: 'text-blue-700',
+      border: 'border-blue-100',
+      price: 'text-blue-700',
+      badge: 'bg-blue-100 text-blue-800',
+    },
+    indigo: {
+      header: 'bg-indigo-50',
+      iconBox: 'bg-white border border-indigo-200',
+      icon: 'text-indigo-700',
+      border: 'border-indigo-100',
+      price: 'text-indigo-700',
+      badge: 'bg-indigo-100 text-indigo-800',
+    },
+    sky: {
+      header: 'bg-sky-50',
+      iconBox: 'bg-white border border-sky-200',
+      icon: 'text-sky-700',
+      border: 'border-sky-100',
+      price: 'text-sky-700',
+      badge: 'bg-sky-100 text-sky-800',
+    },
+    emerald: {
+      header: 'bg-emerald-50',
+      iconBox: 'bg-white border border-emerald-200',
+      icon: 'text-emerald-700',
+      border: 'border-emerald-100',
+      price: 'text-emerald-700',
+      badge: 'bg-emerald-100 text-emerald-800',
+    },
+    amber: {
+      header: 'bg-amber-50',
+      iconBox: 'bg-white border border-amber-200',
+      icon: 'text-amber-700',
+      border: 'border-amber-100',
+      price: 'text-amber-700',
+      badge: 'bg-amber-100 text-amber-800',
+    },
+    teal: {
+      header: 'bg-teal-50',
+      iconBox: 'bg-white border border-teal-200',
+      icon: 'text-teal-700',
+      border: 'border-teal-100',
+      price: 'text-teal-700',
+      badge: 'bg-teal-100 text-teal-800',
+    },
+    rose: {
+      header: 'bg-rose-50',
+      iconBox: 'bg-white border border-rose-200',
+      icon: 'text-rose-700',
+      border: 'border-rose-100',
+      price: 'text-rose-700',
+      badge: 'bg-rose-100 text-rose-800',
+    },
+    fuchsia: {
+      header: 'bg-fuchsia-50',
+      iconBox: 'bg-white border border-fuchsia-200',
+      icon: 'text-fuchsia-700',
+      border: 'border-fuchsia-100',
+      price: 'text-fuchsia-700',
+      badge: 'bg-fuchsia-100 text-fuchsia-800',
+    },
+  };
+
   const sponsorshipOpportunities: Array<{
     id: string;
     icon: React.ElementType;
+    color: keyof typeof sponsorshipOpportunityColors;
     name: string;
     description: string;
     packages: Array<{ tier: string; price: number; slots: number; benefits: string[] }>;
@@ -308,6 +387,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_gala',
       icon: Wine,
+      color: 'violet',
       name: 'Gala Dinner Sponsorship',
       description: 'Naming rights and branded presence at the flagship evening gala dinner attended by all delegates and VIP guests.',
       packages: [
@@ -318,6 +398,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_conference',
       icon: Presentation,
+      color: 'blue',
       name: 'Conference Title Sponsorship',
       description: 'Top-tier branding across the entire conference: opening ceremony, main stage, app, and delegate badges.',
       packages: [
@@ -329,6 +410,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_workshop',
       icon: GraduationCap,
+      color: 'indigo',
       name: 'Workshop Sponsorship',
       description: 'Sponsor a dedicated pre-conference or breakout technical workshop session.',
       packages: [
@@ -338,6 +420,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_icebreaker',
       icon: Snowflake,
+      color: 'sky',
       name: 'Ice Breaker Reception Sponsorship',
       description: 'Sponsor the opening night networking reception welcoming all delegates.',
       packages: [
@@ -347,6 +430,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_fieldtrip',
       icon: Bus,
+      color: 'emerald',
       name: 'Field Trip Sponsorship',
       description: 'Sponsor branded transport, guides, and refreshments for the technical field trip or site visit.',
       packages: [
@@ -356,6 +440,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_cultural',
       icon: Landmark,
+      color: 'amber',
       name: 'Cultural Event Sponsorship',
       description: 'Sponsor the cultural showcase evening celebrating the host destination.',
       packages: [
@@ -365,6 +450,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_lunch',
       icon: UtensilsCrossed,
+      color: 'teal',
       name: 'Lunch Sponsorship',
       description: 'Branded lunch service on a conference day, with signage across the dining area.',
       packages: [
@@ -374,6 +460,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_dinner',
       icon: Utensils,
+      color: 'rose',
       name: 'Speakers & VIP Dinner Sponsorship',
       description: 'Sponsor the exclusive dinner for keynote speakers, committee chairs, and VIP guests.',
       packages: [
@@ -383,6 +470,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     {
       id: 'opp_gifts',
       icon: Gift,
+      color: 'fuchsia',
       name: 'Delegate Gift & Badge Sponsorship',
       description: 'Branded delegate gift bags, lanyards, or badge holders distributed to every attendee.',
       packages: [
@@ -1498,55 +1586,54 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="columns-1 md:columns-2 xl:columns-3 gap-6 [column-fill:_balance]">
             {sponsorshipOpportunities.map((opp) => {
               const Icon = opp.icon;
+              const c = sponsorshipOpportunityColors[opp.color];
+              const startingPrice = Math.min(...opp.packages.map((p) => p.price));
               return (
                 <div
                   key={opp.id}
-                  className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4"
+                  className={`break-inside-avoid mb-6 bg-white rounded-3xl border ${c.border} shadow-xs overflow-hidden`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
-                      <Icon className="w-5 h-5 text-blue-700" />
+                  <div className={`${c.header} p-5 flex items-start gap-3`}>
+                    <div className={`w-10 h-10 rounded-xl ${c.iconBox} flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-5 h-5 ${c.icon}`} />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900">{opp.name}</h3>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-sm text-slate-900">{opp.name}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${c.badge}`}>
+                          From ${startingPrice.toLocaleString()}
+                        </span>
+                      </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">{opp.description}</p>
                     </div>
                   </div>
 
-                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="p-4 space-y-2">
                     {opp.packages.map((pkg) => {
                       const key = `${opp.id}__${pkg.tier}`;
                       const isActive = !!activatedPackages[key];
                       return (
-                        <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <div>
+                        <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
                               <div className="font-bold text-xs text-slate-900">{pkg.tier}</div>
-                              <div className="text-[10px] text-slate-500">
-                                Up to {pkg.slots} sponsor{pkg.slots === 1 ? '' : 's'}
+                              <div className="text-[10px] text-slate-500 truncate">
+                                Up to {pkg.slots} sponsor{pkg.slots === 1 ? '' : 's'} · {pkg.benefits.join(' · ')}
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <div className="font-extrabold text-sm text-blue-700">
+                              <div className={`font-extrabold text-sm ${c.price}`}>
                                 ${pkg.price.toLocaleString()}
                               </div>
                               <div className="text-[9px] text-slate-400 uppercase font-bold">Tentative</div>
                             </div>
                           </div>
-                          <ul className="space-y-1 text-[11px] text-slate-600">
-                            {pkg.benefits.map((ben, idx) => (
-                              <li key={idx} className="flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                                <span>{ben}</span>
-                              </li>
-                            ))}
-                          </ul>
                           <button
                             onClick={() => handleToggleOpportunityPackage(key)}
-                            className={`w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
+                            className={`mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
                               isActive
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : 'bg-blue-900 hover:bg-blue-950 text-white'
