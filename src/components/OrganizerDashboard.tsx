@@ -42,7 +42,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'wizard' | 'abstracts' | 'committee' | 'program' | 'sponsors' | 'communications' | 'analytics'
+    'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
   >('overview');
 
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
@@ -287,7 +287,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'wizard', label: '15-Step Conference Wizard' },
           { id: 'abstracts', label: `Abstracts & AI Matcher (${submissions.length})` },
           { id: 'committee', label: 'Technical Committee' },
-          { id: 'program', label: 'Program & Agenda Builder' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
           { id: 'communications', label: 'Communications Hub' },
           { id: 'analytics', label: 'Event Analytics' },
@@ -569,11 +568,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               )}
             </div>
 
-            {/* Step 6: Technical Program & Schedule */}
+            {/* Step 6: Technical Program & Agenda Builder */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-blue-600" />
-                Step 6: Technical Program & Schedule
+                Step 6: Technical Program & Agenda Builder
               </h3>
               <div className="space-y-1.5">
                 <label className="font-bold uppercase text-[10px] text-slate-500">Main Topics (Comma separated)</label>
