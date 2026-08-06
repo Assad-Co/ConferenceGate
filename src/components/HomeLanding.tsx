@@ -156,7 +156,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
       {/* Left Sidebar: Profile + Quick Links */}
       <aside className="hidden lg:flex flex-col gap-4 sticky top-[72px]">
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-          <div className="h-14 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-600" />
+          <div className="h-14 bg-blue-50" />
           <div className="px-4 pb-4 -mt-8">
             <button onClick={() => onNavigateTab('profile')} className="cursor-pointer block">
               <img
