@@ -198,7 +198,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   return (
     <div className="space-y-8">
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+      <div className="bg-blue-50 rounded-2xl border border-blue-100 p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
