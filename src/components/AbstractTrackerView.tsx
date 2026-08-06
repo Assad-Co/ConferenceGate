@@ -41,7 +41,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Title Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-blue-50 rounded-2xl border border-blue-100 p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
             Author Portal & Peer Review
