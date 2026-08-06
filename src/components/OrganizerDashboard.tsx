@@ -19,6 +19,10 @@ import {
   UserCheck,
   ChevronRight,
   Filter,
+  Image as ImageIcon,
+  UserPlus,
+  Mic,
+  Trash2,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
 
@@ -53,7 +57,46 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [newConfEndDate, setNewConfEndDate] = useState('2026-10-18');
   const [newConfLocation, setNewConfLocation] = useState('Paris, France');
   const [newConfTracks, setNewConfTracks] = useState('Track 1: Subsurface AI, Track 2: Carbon Storage');
+  const [newConfBanner, setNewConfBanner] = useState(
+    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1600&q=80'
+  );
+  const [newConfMainThemes, setNewConfMainThemes] = useState('Subsurface AI, Net Zero Solutions');
   const [wizardPublished, setWizardPublished] = useState(false);
+
+  const [committeeDraft, setCommitteeDraft] = useState({
+    name: '',
+    title: '',
+    org: '',
+    committeeRole: 'Technical Committee Member',
+  });
+  const [newConfCommittee, setNewConfCommittee] = useState<
+    Array<{ name: string; title: string; org: string; committeeRole: string }>
+  >([]);
+
+  const [speakerDraft, setSpeakerDraft] = useState({ name: '', title: '', org: '', avatar: '', bio: '' });
+  const [newConfSpeakers, setNewConfSpeakers] = useState<
+    Array<{ name: string; title: string; org: string; avatar: string; bio: string }>
+  >([]);
+
+  const handleAddCommitteeMember = () => {
+    if (!committeeDraft.name.trim()) return;
+    setNewConfCommittee((prev) => [...prev, committeeDraft]);
+    setCommitteeDraft({ name: '', title: '', org: '', committeeRole: 'Technical Committee Member' });
+  };
+
+  const handleRemoveCommitteeMember = (idx: number) => {
+    setNewConfCommittee((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAddSpeaker = () => {
+    if (!speakerDraft.name.trim()) return;
+    setNewConfSpeakers((prev) => [...prev, speakerDraft]);
+    setSpeakerDraft({ name: '', title: '', org: '', avatar: '', bio: '' });
+  };
+
+  const handleRemoveSpeaker = (idx: number) => {
+    setNewConfSpeakers((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   // Communications Broadcast State
   const [recipientGroup, setRecipientGroup] = useState('All Attendees');
@@ -100,7 +143,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       title: newConfTitle || 'International Energy & Subsurface Congress 2026',
       organizerName: 'Global Scientific Association',
       organizerLogo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
-      banner: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      banner: newConfBanner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
       logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=200&q=80',
       description: 'Newly created international congress focusing on energy transition, geosciences, and subsurface AI.',
       industry: newConfIndustry,
@@ -117,10 +160,26 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       recommendationScore: 94,
       attendeeCount: 150,
       networkAttendeesCount: 12,
-      mainThemes: ['Subsurface AI', 'Net Zero Solutions'],
+      mainThemes: newConfMainThemes.split(',').map((t) => t.trim()).filter(Boolean),
       agendaDays: [],
-      speakers: [],
-      committee: [],
+      speakers: newConfSpeakers.map((sp, idx) => ({
+        id: `spk_${Date.now()}_${idx}`,
+        name: sp.name,
+        title: sp.title,
+        org: sp.org,
+        avatar: sp.avatar || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80',
+        role: 'Speaker',
+        bio: sp.bio,
+        interests: [],
+      })),
+      committee: newConfCommittee.map((member, idx) => ({
+        id: `com_${Date.now()}_${idx}`,
+        name: member.name,
+        title: member.title,
+        org: member.org,
+        avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80',
+        committeeRole: member.committeeRole,
+      })),
       sponsors: [],
       exhibitors: [],
       accommodation: 'Partner Hotel Paris ($150/night).',
@@ -355,6 +414,215 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
               </div>
+            </div>
+
+            {/* Step 4: Conference Cover Image */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-blue-600" />
+                Step 4: Conference Cover Image
+              </h3>
+              <div className="space-y-1.5">
+                <label className="font-bold uppercase text-[10px] text-slate-500">High-Resolution Banner Image URL</label>
+                <input
+                  type="url"
+                  value={newConfBanner}
+                  onChange={(e) => setNewConfBanner(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-hidden"
+                />
+              </div>
+              {newConfBanner && (
+                <div
+                  className="h-40 rounded-2xl border border-slate-200 bg-slate-100 bg-cover bg-center relative overflow-hidden"
+                  style={{ backgroundImage: `url(${newConfBanner})` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                  <span className="absolute bottom-3 left-4 text-white text-sm font-bold drop-shadow-sm">
+                    {newConfTitle || 'Conference Cover Preview'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Step 5: Technical Committee */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-blue-600" />
+                Step 5: Approved Technical Committee
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={committeeDraft.name}
+                  onChange={(e) => setCommitteeDraft({ ...committeeDraft, name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <input
+                  type="text"
+                  placeholder="Title (e.g. Professor)"
+                  value={committeeDraft.title}
+                  onChange={(e) => setCommitteeDraft({ ...committeeDraft, title: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <input
+                  type="text"
+                  placeholder="Organization"
+                  value={committeeDraft.org}
+                  onChange={(e) => setCommitteeDraft({ ...committeeDraft, org: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <select
+                  value={committeeDraft.committeeRole}
+                  onChange={(e) => setCommitteeDraft({ ...committeeDraft, committeeRole: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                >
+                  <option>Technical Committee Chair</option>
+                  <option>Technical Committee Member</option>
+                  <option>Session Chair</option>
+                  <option>Scientific Advisor</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCommitteeMember}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Committee Member</span>
+              </button>
+
+              {newConfCommittee.length > 0 && (
+                <div className="space-y-2">
+                  {newConfCommittee.map((member, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-900">{member.name}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {[member.title, member.org].filter(Boolean).join(', ')}
+                          {(member.title || member.org) && ' · '}
+                          {member.committeeRole}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCommitteeMember(idx)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Step 6: Technical Program Main Topics */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-blue-600" />
+                Step 6: Technical Program Main Topics
+              </h3>
+              <div className="space-y-1.5">
+                <label className="font-bold uppercase text-[10px] text-slate-500">Main Topics (Comma separated)</label>
+                <input
+                  type="text"
+                  value={newConfMainThemes}
+                  onChange={(e) => setNewConfMainThemes(e.target.value)}
+                  placeholder="e.g. Subsurface AI, Net Zero Solutions, Carbon Storage"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Step 7: Speakers & Biographies */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <Mic className="w-4 h-4 text-blue-600" />
+                Step 7: Speakers & Biographies
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={speakerDraft.name}
+                  onChange={(e) => setSpeakerDraft({ ...speakerDraft, name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <input
+                  type="text"
+                  placeholder="Title (e.g. Keynote Speaker)"
+                  value={speakerDraft.title}
+                  onChange={(e) => setSpeakerDraft({ ...speakerDraft, title: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <input
+                  type="text"
+                  placeholder="Organization"
+                  value={speakerDraft.org}
+                  onChange={(e) => setSpeakerDraft({ ...speakerDraft, org: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <input
+                  type="url"
+                  placeholder="Speaker Photo URL"
+                  value={speakerDraft.avatar}
+                  onChange={(e) => setSpeakerDraft({ ...speakerDraft, avatar: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
+              <textarea
+                rows={2}
+                placeholder="Speaker biography..."
+                value={speakerDraft.bio}
+                onChange={(e) => setSpeakerDraft({ ...speakerDraft, bio: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              ></textarea>
+              <button
+                type="button"
+                onClick={handleAddSpeaker}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Speaker</span>
+              </button>
+
+              {newConfSpeakers.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {newConfSpeakers.map((sp, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <img
+                        src={
+                          sp.avatar ||
+                          'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=100&q=80'
+                        }
+                        alt={sp.name}
+                        className="w-12 h-12 rounded-xl object-cover shrink-0 ring-1 ring-slate-200"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-900">{sp.name}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {[sp.title, sp.org].filter(Boolean).join(', ')}
+                        </div>
+                        {sp.bio && (
+                          <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{sp.bio}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSpeaker(idx)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {wizardPublished && (
