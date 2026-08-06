@@ -42,31 +42,31 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner */}
-      <div className="bg-blue-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+      <div className="bg-slate-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-blue-400" />
+              <span className="px-3 py-1 bg-white text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                 Corporate Sponsorship Marketplace
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               Sponsor Marketplace & Real-Time ROI Analytics
             </h1>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-600">
               Connect corporate brands with world-class technical and scientific conferences. Track logo impressions, digital booth traffic, and B2B leads.
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-6 shrink-0">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-6 shrink-0 shadow-xs">
             <div>
-              <div className="text-[10px] uppercase font-bold text-slate-300">Active Impressions</div>
-              <div className="text-2xl font-extrabold text-blue-300">142,800</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Active Impressions</div>
+              <div className="text-2xl font-extrabold text-blue-700">142,800</div>
             </div>
-            <div className="border-l border-white/20 pl-6">
-              <div className="text-[10px] uppercase font-bold text-slate-300">B2B Leads Captured</div>
-              <div className="text-2xl font-extrabold text-emerald-400">384 Leads</div>
+            <div className="border-l border-slate-200 pl-6">
+              <div className="text-[10px] uppercase font-bold text-slate-400">B2B Leads Captured</div>
+              <div className="text-2xl font-extrabold text-emerald-600">384 Leads</div>
             </div>
           </div>
         </div>
