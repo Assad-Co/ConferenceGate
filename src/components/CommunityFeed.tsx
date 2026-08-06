@@ -33,7 +33,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       {/* Title */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-1">
+      <div className="bg-blue-50 rounded-2xl border border-blue-100 p-6 shadow-xs space-y-1">
         <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
           Verified Activity Feed
         </span>
