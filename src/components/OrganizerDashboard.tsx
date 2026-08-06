@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Building2,
   Calendar,
@@ -23,6 +23,10 @@ import {
   UserPlus,
   Mic,
   Trash2,
+  Bell,
+  ClipboardList,
+  MessageCircle,
+  Star,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
 
@@ -116,6 +120,172 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const handleRemoveProgramItem = (idx: number) => {
     setNewConfProgramItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Technical Committee Tab State
+  const committeeRoster = useMemo(() => {
+    const byName = new Map<
+      string,
+      {
+        name: string;
+        title: string;
+        org: string;
+        avatar: string;
+        roles: Set<string>;
+        participationCount: number;
+        tracks: Set<string>;
+      }
+    >();
+
+    (conferences || []).forEach((conf) => {
+      (conf.committee || []).forEach((member) => {
+        const existing = byName.get(member.name);
+        if (existing) {
+          existing.roles.add(member.committeeRole);
+          existing.participationCount += 1;
+          if (member.track) existing.tracks.add(member.track);
+        } else {
+          byName.set(member.name, {
+            name: member.name,
+            title: member.title,
+            org: member.org,
+            avatar: member.avatar,
+            roles: new Set([member.committeeRole]),
+            participationCount: 1,
+            tracks: new Set(member.track ? [member.track] : []),
+          });
+        }
+      });
+    });
+
+    return Array.from(byName.values()).sort((a, b) => b.participationCount - a.participationCount);
+  }, [conferences]);
+
+  const [committeeMatchLoading, setCommitteeMatchLoading] = useState(false);
+  const [committeeMatches, setCommitteeMatches] = useState<
+    Array<{ reviewerId: string; matchPercentage: number; reason: string }> | null
+  >(null);
+  const [invitedCandidateIds, setInvitedCandidateIds] = useState<Record<string, boolean>>({});
+
+  const committeeCandidatePool = [
+    {
+      id: 'cand_1',
+      name: 'Dr. Youssef Nasser',
+      title: 'Director of Subsurface Data Science',
+      org: 'Aramco Innovation Labs',
+      expertise: ['Subsurface AI', 'Reservoir Engineering'],
+      yearsExperience: 14,
+      pastCommitteeCount: 6,
+    },
+    {
+      id: 'cand_2',
+      name: 'Prof. Hana Ito',
+      title: 'Chair of Applied Geosciences',
+      org: 'University of Tokyo',
+      expertise: ['Geochemistry', 'Carbon Storage'],
+      yearsExperience: 19,
+      pastCommitteeCount: 9,
+    },
+    {
+      id: 'cand_3',
+      name: 'Dr. Omar Khalil',
+      title: 'Principal Research Scientist',
+      org: 'KAUST',
+      expertise: ['Machine Learning', 'Basin Modeling'],
+      yearsExperience: 8,
+      pastCommitteeCount: 3,
+    },
+  ];
+
+  const handleAINominateCommittee = async () => {
+    setCommitteeMatchLoading(true);
+    setCommitteeMatches(null);
+    try {
+      const res = await fetch('/api/ai/reviewer-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          abstractTitle: 'Technical Committee Nomination',
+          abstractKeywords: conferences[0]?.topics || [],
+          abstractTopic: conferences[0]?.industry || 'Multidisciplinary Conference Program',
+          reviewers: committeeCandidatePool,
+        }),
+      });
+      const data = await res.json();
+      setCommitteeMatches(data.matches || []);
+    } catch (e) {
+      setCommitteeMatches(
+        committeeCandidatePool.map((c, idx) => ({
+          reviewerId: c.id,
+          matchPercentage: Math.min(98, 95 - idx * 6),
+          reason: `${c.yearsExperience}+ years of experience and ${c.pastCommitteeCount} prior technical committee appointments in ${c.expertise[0]}.`,
+        }))
+      );
+    } finally {
+      setCommitteeMatchLoading(false);
+    }
+  };
+
+  const handleInviteCandidateToCommittee = (candidateId: string, candidateName: string) => {
+    setInvitedCandidateIds((prev) => ({ ...prev, [candidateId]: true }));
+    onInviteToCommittee(candidateName, conferences[0]?.title || 'the conference');
+  };
+
+  const [taskDraft, setTaskDraft] = useState({
+    assignee: '',
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'Medium',
+  });
+  const [committeeTasks, setCommitteeTasks] = useState<
+    Array<{
+      id: string;
+      assignee: string;
+      title: string;
+      description: string;
+      dueDate: string;
+      priority: string;
+      status: 'Pending' | 'In Progress' | 'Completed';
+    }>
+  >([]);
+
+  const handleAssignTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskDraft.assignee || !taskDraft.title.trim()) return;
+    setCommitteeTasks((prev) => [
+      { id: `task_${Date.now()}`, ...taskDraft, status: 'Pending' },
+      ...prev,
+    ]);
+    setTaskDraft({ assignee: taskDraft.assignee, title: '', description: '', dueDate: '', priority: 'Medium' });
+  };
+
+  const handleCycleTaskStatus = (id: string) => {
+    const order: Array<'Pending' | 'In Progress' | 'Completed'> = ['Pending', 'In Progress', 'Completed'];
+    setCommitteeTasks((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, status: order[(order.indexOf(t.status) + 1) % order.length] } : t
+      )
+    );
+  };
+
+  const [followUpDraft, setFollowUpDraft] = useState({
+    from: 'Conference Organizer',
+    to: 'Technical Committee Chair',
+    message: '',
+  });
+  const [committeeFollowUps, setCommitteeFollowUps] = useState<
+    Array<{ id: string; from: string; to: string; message: string; date: string }>
+  >([]);
+
+  const handleSendFollowUp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!followUpDraft.message.trim()) return;
+    setCommitteeFollowUps((prev) => [
+      { id: `fu_${Date.now()}`, ...followUpDraft, date: new Date().toLocaleString() },
+      ...prev,
+    ]);
+    setFollowUpDraft({ ...followUpDraft, message: '' });
   };
 
   // Communications Broadcast State
@@ -878,6 +1048,333 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab 4: Technical Committee */}
+      {activeTab === 'committee' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Technical Committee Management</h2>
+            <p className="text-xs text-slate-500">
+              Nominate candidates with AI, review your current committee roster, assign tasks, and keep the
+              organizer, chair, and co-chair in sync with follow-up notifications.
+            </p>
+          </div>
+
+          {/* AI Nomination */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">AI-Nominated Technical Committee Candidates</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Ranked by subject-matter expertise, years of experience, and number of prior technical
+                    committee appointments.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAINominateCommittee}
+                disabled={committeeMatchLoading}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                <span>{committeeMatchLoading ? 'Analyzing Candidates…' : 'Run AI Nomination'}</span>
+              </button>
+            </div>
+
+            {committeeMatchLoading && (
+              <div className="text-center py-6 text-xs text-slate-500 font-medium">
+                Calculating experience and participation match scores against the global candidate pool…
+              </div>
+            )}
+
+            {!committeeMatchLoading && committeeMatches && (
+              <div className="space-y-3">
+                {committeeMatches.map((match) => {
+                  const candidate = committeeCandidatePool.find((c) => c.id === match.reviewerId);
+                  if (!candidate) return null;
+                  return (
+                    <div
+                      key={candidate.id}
+                      className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    >
+                      <div>
+                        <div className="font-bold text-xs text-slate-900">
+                          {candidate.name} ({candidate.org})
+                        </div>
+                        <div className="text-[11px] text-slate-500">{candidate.title}</div>
+                        <p className="text-[11px] text-slate-600 mt-1">{match.reason}</p>
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            {candidate.yearsExperience} yrs experience
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Award className="w-3 h-3 text-blue-500" />
+                            {candidate.pastCommitteeCount} past committee roles
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
+                          {match.matchPercentage}% Match
+                        </span>
+                        {invitedCandidateIds[candidate.id] ? (
+                          <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Invitation Sent
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleInviteCandidateToCommittee(candidate.id, candidate.name)}
+                            className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Bell className="w-3.5 h-3.5" />
+                            <span>Push Notify to Join</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Committee Roster */}
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="p-6 pb-0">
+              <h3 className="font-bold text-sm text-slate-900">Current Technical Committee Roster</h3>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Aggregated across all your conferences. Participation reflects how many conferences each member
+                has served on in a technical committee role.
+              </p>
+            </div>
+            <div className="overflow-x-auto p-6">
+              {committeeRoster.length === 0 ? (
+                <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                  No technical committee members yet. Nominate candidates above or add members via the Conference
+                  Wizard.
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 border-b border-slate-200 uppercase font-bold text-[10px] text-slate-500">
+                    <tr>
+                      <th className="p-3">Name</th>
+                      <th className="p-3">Role(s)</th>
+                      <th className="p-3">Participation</th>
+                      <th className="p-3">Track(s)</th>
+                      <th className="p-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {committeeRoster.map((member) => (
+                      <tr key={member.name} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{member.name}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {[member.title, member.org].filter(Boolean).join(', ')}
+                          </div>
+                        </td>
+                        <td className="p-3">{Array.from(member.roles).join(', ')}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                            {member.participationCount} conference{member.participationCount === 1 ? '' : 's'}
+                          </span>
+                        </td>
+                        <td className="p-3">{Array.from(member.tracks).join(', ') || '—'}</td>
+                        <td className="p-3">
+                          <button
+                            onClick={() => setTaskDraft({ ...taskDraft, assignee: member.name })}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg cursor-pointer"
+                          >
+                            Assign Task
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* Assign Tasks */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-sm text-slate-900">Assign Tasks to Committee Members</h3>
+            </div>
+            <form onSubmit={handleAssignTask} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <select
+                  required
+                  value={taskDraft.assignee}
+                  onChange={(e) => setTaskDraft({ ...taskDraft, assignee: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                >
+                  <option value="">Select Committee Member</option>
+                  {committeeRoster.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                  {committeeCandidatePool
+                    .filter((c) => invitedCandidateIds[c.id])
+                    .map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  value={taskDraft.priority}
+                  onChange={(e) => setTaskDraft({ ...taskDraft, priority: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                >
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                required
+                placeholder="Task title, e.g. Review 12 abstracts in Track 2"
+                value={taskDraft.title}
+                onChange={(e) => setTaskDraft({ ...taskDraft, title: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              />
+              <textarea
+                rows={2}
+                placeholder="Task description..."
+                value={taskDraft.description}
+                onChange={(e) => setTaskDraft({ ...taskDraft, description: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              ></textarea>
+              <div className="flex items-center gap-3">
+                <input
+                  type="date"
+                  value={taskDraft.dueDate}
+                  onChange={(e) => setTaskDraft({ ...taskDraft, dueDate: e.target.value })}
+                  className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Assign Task</span>
+                </button>
+              </div>
+            </form>
+
+            {committeeTasks.length > 0 && (
+              <div className="space-y-2 pt-2">
+                {committeeTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900 text-xs">{task.title}</div>
+                      <div className="text-[11px] text-slate-500">
+                        Assigned to <strong>{task.assignee}</strong>
+                        {task.dueDate && <> · Due {task.dueDate}</>} · {task.priority} Priority
+                      </div>
+                      {task.description && (
+                        <p className="text-[11px] text-slate-600 mt-1">{task.description}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleCycleTaskStatus(task.id)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer shrink-0 ${
+                        task.status === 'Completed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : task.status === 'In Progress'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {task.status}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Follow-Up Notifications */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-sm text-slate-900">
+                Follow-Up Notifications — Organizer, Chair & Co-Chair
+              </h3>
+            </div>
+            <form onSubmit={handleSendFollowUp} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <select
+                  value={followUpDraft.from}
+                  onChange={(e) => setFollowUpDraft({ ...followUpDraft, from: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                >
+                  <option>Conference Organizer</option>
+                  <option>Technical Committee Chair</option>
+                  <option>Technical Committee Co-Chair</option>
+                </select>
+                <select
+                  value={followUpDraft.to}
+                  onChange={(e) => setFollowUpDraft({ ...followUpDraft, to: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                >
+                  <option>Conference Organizer</option>
+                  <option>Technical Committee Chair</option>
+                  <option>Technical Committee Co-Chair</option>
+                  <option>All Committee Members</option>
+                  {committeeRoster.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                required
+                rows={3}
+                placeholder="Follow-up message, e.g. Reminder: please submit your reviewer assignments by Friday..."
+                value={followUpDraft.message}
+                onChange={(e) => setFollowUpDraft({ ...followUpDraft, message: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              ></textarea>
+              <button
+                type="submit"
+                className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Send Follow-Up</span>
+              </button>
+            </form>
+
+            {committeeFollowUps.length > 0 && (
+              <div className="space-y-2 pt-2">
+                {committeeFollowUps.map((fu) => (
+                  <div key={fu.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-slate-700">
+                      <span>
+                        {fu.from} <ChevronRight className="w-3 h-3 inline text-slate-400" /> {fu.to}
+                      </span>
+                      <span className="text-slate-400 font-medium">{fu.date}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-1">{fu.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
