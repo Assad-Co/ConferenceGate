@@ -108,21 +108,21 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-3xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 text-white flex items-center justify-between">
+        <div className="bg-blue-50 border-b border-blue-100 p-6 text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-700">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold">Submit Scientific Abstract</h3>
-              <p className="text-xs text-blue-200">
+              <h3 className="text-base font-bold text-slate-900">Submit Scientific Abstract</h3>
+              <p className="text-xs text-slate-600">
                 Peer Review & Abstract Management System
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl cursor-pointer"
+            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-white rounded-xl cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
