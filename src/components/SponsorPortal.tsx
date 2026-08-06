@@ -42,11 +42,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner */}
-      <div className="bg-slate-100 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
+      <div className="bg-blue-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-blue-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="px-3 py-1 bg-white text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                 Corporate Sponsorship Marketplace
               </span>
@@ -59,13 +59,13 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-6 shrink-0 shadow-xs">
+          <div className="bg-white border border-blue-100 p-4 rounded-2xl flex items-center gap-6 shrink-0 shadow-xs">
             <div>
-              <div className="text-[10px] uppercase font-bold text-slate-400">Active Impressions</div>
+              <div className="text-[10px] uppercase font-bold text-blue-400">Active Impressions</div>
               <div className="text-2xl font-extrabold text-blue-700">142,800</div>
             </div>
-            <div className="border-l border-slate-200 pl-6">
-              <div className="text-[10px] uppercase font-bold text-slate-400">B2B Leads Captured</div>
+            <div className="border-l border-blue-100 pl-6">
+              <div className="text-[10px] uppercase font-bold text-blue-400">B2B Leads Captured</div>
               <div className="text-2xl font-extrabold text-emerald-600">384 Leads</div>
             </div>
           </div>
