@@ -27,6 +27,15 @@ import {
   ClipboardList,
   MessageCircle,
   Star,
+  Wine,
+  Presentation,
+  GraduationCap,
+  Snowflake,
+  Bus,
+  Landmark,
+  UtensilsCrossed,
+  Utensils,
+  Gift,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
 
@@ -286,6 +295,106 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       ...prev,
     ]);
     setFollowUpDraft({ ...followUpDraft, message: '' });
+  };
+
+  // Sponsorship Opportunities Catalog State
+  const sponsorshipOpportunities: Array<{
+    id: string;
+    icon: React.ElementType;
+    name: string;
+    description: string;
+    packages: Array<{ tier: string; price: number; slots: number; benefits: string[] }>;
+  }> = [
+    {
+      id: 'opp_gala',
+      icon: Wine,
+      name: 'Gala Dinner Sponsorship',
+      description: 'Naming rights and branded presence at the flagship evening gala dinner attended by all delegates and VIP guests.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 15000, slots: 1, benefits: ['Naming rights on all gala signage', 'Stage welcome address', '10 complimentary seats'] },
+        { tier: 'Co-Sponsor', price: 6000, slots: 3, benefits: ['Logo on gala signage & menu cards', '4 complimentary seats'] },
+      ],
+    },
+    {
+      id: 'opp_conference',
+      icon: Presentation,
+      name: 'Conference Title Sponsorship',
+      description: 'Top-tier branding across the entire conference: opening ceremony, main stage, app, and delegate badges.',
+      packages: [
+        { tier: 'Platinum Title Sponsor', price: 50000, slots: 1, benefits: ['Conference name co-branding', 'Opening ceremony keynote slot', '8 VIP registrations'] },
+        { tier: 'Gold Sponsor', price: 25000, slots: 2, benefits: ['Main stage backdrop logo', 'Panel speaking slot', '4 registrations'] },
+        { tier: 'Silver Sponsor', price: 12000, slots: 4, benefits: ['App & website logo placement', '2 registrations'] },
+      ],
+    },
+    {
+      id: 'opp_workshop',
+      icon: GraduationCap,
+      name: 'Workshop Sponsorship',
+      description: 'Sponsor a dedicated pre-conference or breakout technical workshop session.',
+      packages: [
+        { tier: 'Workshop Sponsor', price: 5000, slots: 6, benefits: ['Branded workshop room signage', 'Opening remarks slot', 'Attendee contact list'] },
+      ],
+    },
+    {
+      id: 'opp_icebreaker',
+      icon: Snowflake,
+      name: 'Ice Breaker Reception Sponsorship',
+      description: 'Sponsor the opening night networking reception welcoming all delegates.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 8000, slots: 1, benefits: ['Naming rights on reception', 'Branded welcome drinks station', 'Logo on delegate badges'] },
+      ],
+    },
+    {
+      id: 'opp_fieldtrip',
+      icon: Bus,
+      name: 'Field Trip Sponsorship',
+      description: 'Sponsor branded transport, guides, and refreshments for the technical field trip or site visit.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 6000, slots: 1, benefits: ['Branded coach signage', 'On-site banner placement', '2 complimentary seats'] },
+      ],
+    },
+    {
+      id: 'opp_cultural',
+      icon: Landmark,
+      name: 'Cultural Event Sponsorship',
+      description: 'Sponsor the cultural showcase evening celebrating the host destination.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 7000, slots: 1, benefits: ['Naming rights on cultural evening', 'Stage acknowledgment', '6 complimentary seats'] },
+      ],
+    },
+    {
+      id: 'opp_lunch',
+      icon: UtensilsCrossed,
+      name: 'Lunch Sponsorship',
+      description: 'Branded lunch service on a conference day, with signage across the dining area.',
+      packages: [
+        { tier: 'Daily Sponsor', price: 4000, slots: 3, benefits: ['Table tent & signage branding', 'App agenda mention'] },
+      ],
+    },
+    {
+      id: 'opp_dinner',
+      icon: Utensils,
+      name: 'Speakers & VIP Dinner Sponsorship',
+      description: 'Sponsor the exclusive dinner for keynote speakers, committee chairs, and VIP guests.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 9000, slots: 1, benefits: ['Seated with keynote speakers', 'Dinner welcome toast', '4 complimentary seats'] },
+      ],
+    },
+    {
+      id: 'opp_gifts',
+      icon: Gift,
+      name: 'Delegate Gift & Badge Sponsorship',
+      description: 'Branded delegate gift bags, lanyards, or badge holders distributed to every attendee.',
+      packages: [
+        { tier: 'Exclusive Sponsor', price: 3500, slots: 1, benefits: ['Logo on all delegate badges/lanyards', 'Branded item in gift bag'] },
+      ],
+    },
+  ];
+
+  const [activatedPackages, setActivatedPackages] = useState<Record<string, boolean>>({});
+
+  const handleToggleOpportunityPackage = (key: string) => {
+    setActivatedPackages((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   // Communications Broadcast State
@@ -1374,6 +1483,116 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Sponsorship Packages */}
+      {activeTab === 'sponsors' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
+            <p className="text-xs text-slate-500">
+              Tentative pricing and packages available across every part of your conference program. Activate a
+              package to make it available to sponsors in the marketplace.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {sponsorshipOpportunities.map((opp) => {
+              const Icon = opp.icon;
+              return (
+                <div
+                  key={opp.id}
+                  className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                      <Icon className="w-5 h-5 text-blue-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900">{opp.name}</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{opp.description}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    {opp.packages.map((pkg) => {
+                      const key = `${opp.id}__${pkg.tier}`;
+                      const isActive = !!activatedPackages[key];
+                      return (
+                        <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="font-bold text-xs text-slate-900">{pkg.tier}</div>
+                              <div className="text-[10px] text-slate-500">
+                                Up to {pkg.slots} sponsor{pkg.slots === 1 ? '' : 's'}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="font-extrabold text-sm text-blue-700">
+                                ${pkg.price.toLocaleString()}
+                              </div>
+                              <div className="text-[9px] text-slate-400 uppercase font-bold">Tentative</div>
+                            </div>
+                          </div>
+                          <ul className="space-y-1 text-[11px] text-slate-600">
+                            {pkg.benefits.map((ben, idx) => (
+                              <li key={idx} className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                <span>{ben}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <button
+                            onClick={() => handleToggleOpportunityPackage(key)}
+                            className={`w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
+                              isActive
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-blue-900 hover:bg-blue-950 text-white'
+                            }`}
+                          >
+                            {isActive ? '✓ Active in Marketplace' : 'Activate for This Conference'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Existing Published Packages */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Currently Published Packages</h2>
+            <p className="text-xs text-slate-500">
+              Live packages sponsors can already see and apply for in the Sponsor Marketplace.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sponsorshipPackages.map((pkg) => (
+              <div key={pkg.id} className="bg-white rounded-3xl border border-slate-200 p-6 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-900 font-extrabold text-xs rounded-full uppercase tracking-wider">
+                    {pkg.tier} Tier
+                  </span>
+                  <span className="text-xl font-extrabold text-slate-900">${pkg.price.toLocaleString()}</span>
+                </div>
+                <p className="text-[11px] text-slate-500">{pkg.conferenceTitle}</p>
+                <div className="text-[11px] text-slate-500">
+                  {pkg.availableSlots} of {pkg.totalSlots} slots available
+                </div>
+                <ul className="space-y-1.5 text-xs text-slate-700 pt-2 border-t border-slate-100">
+                  {pkg.benefits.slice(0, 3).map((ben, idx) => (
+                    <li key={idx} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>{ben}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       )}
