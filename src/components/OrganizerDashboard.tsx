@@ -36,6 +36,11 @@ import {
   UtensilsCrossed,
   Utensils,
   Gift,
+  Globe,
+  Smile,
+  Briefcase,
+  LayoutGrid,
+  PieChart,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
 
@@ -46,6 +51,128 @@ interface OrganizerDashboardProps {
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
 }
+
+const CHART_HEX = {
+  blue: '#2563eb',
+  indigo: '#4f46e5',
+  violet: '#7c3aed',
+  emerald: '#10b981',
+  amber: '#f59e0b',
+  rose: '#f43f5e',
+  slate: '#cbd5e1',
+};
+
+function buildConicGradient(segments: Array<{ color: string; value: number }>) {
+  const total = segments.reduce((sum, seg) => sum + seg.value, 0) || 1;
+  let cursor = 0;
+  const stops = segments.map((seg) => {
+    const start = (cursor / total) * 360;
+    cursor += seg.value;
+    const end = (cursor / total) * 360;
+    return `${seg.color} ${start}deg ${end}deg`;
+  });
+  return `conic-gradient(${stops.join(', ')})`;
+}
+
+const AnalyticsStatTile: React.FC<{
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub: string;
+  tone: 'good' | 'neutral' | 'warning';
+  accent: string;
+}> = ({ icon: Icon, label, value, sub, tone, accent }) => (
+  <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+    <div className="flex items-center justify-between">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0`} style={{ backgroundColor: `${accent}1a` }}>
+        <Icon className="w-4 h-4" style={{ color: accent }} />
+      </div>
+    </div>
+    <div className="text-2xl font-extrabold text-slate-900">{value}</div>
+    <div
+      className={`text-[11px] font-semibold ${
+        tone === 'good' ? 'text-emerald-600' : tone === 'warning' ? 'text-amber-600' : 'text-slate-500'
+      }`}
+    >
+      {sub}
+    </div>
+  </div>
+);
+
+const AnalyticsBarRow: React.FC<{ label: string; value: number; max: number; color: string; valueLabel: string }> = ({
+  label,
+  value,
+  max,
+  color,
+  valueLabel,
+}) => (
+  <div className="space-y-1" title={`${label}: ${valueLabel}`}>
+    <div className="flex items-center justify-between text-[11px]">
+      <span className="font-semibold text-slate-700">{label}</span>
+      <span className="font-bold text-slate-900">{valueLabel}</span>
+    </div>
+    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all"
+        style={{ width: `${max > 0 ? Math.min(100, (value / max) * 100) : 0}%`, backgroundColor: color }}
+      />
+    </div>
+  </div>
+);
+
+const AnalyticsGaugeCard: React.FC<{
+  icon: React.ElementType;
+  title: string;
+  subtitle: string;
+  score: number;
+  maxScore: number;
+  color: string;
+  responseCount: number;
+  breakdown: Array<{ label: string; pct: number }>;
+}> = ({ icon: Icon, title, subtitle, score, maxScore, color, responseCount, breakdown }) => (
+  <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}1a` }}>
+        <Icon className="w-4 h-4" style={{ color }} />
+      </div>
+      <div>
+        <div className="font-bold text-xs text-slate-900">{title}</div>
+        <div className="text-[10px] text-slate-500">{subtitle}</div>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-4">
+      <div
+        className="w-20 h-20 rounded-full flex items-center justify-center shrink-0"
+        style={{
+          background: buildConicGradient([
+            { color, value: score },
+            { color: CHART_HEX.slate, value: maxScore - score },
+          ]),
+        }}
+      >
+        <div className="w-14 h-14 rounded-full bg-white flex flex-col items-center justify-center">
+          <span className="text-sm font-extrabold text-slate-900">{score.toFixed(1)}</span>
+          <span className="text-[8px] text-slate-400 font-bold">/ {maxScore}</span>
+        </div>
+      </div>
+      <div className="flex-1 space-y-1.5">
+        {breakdown.map((b) => (
+          <div key={b.label} className="flex items-center gap-2" title={`${b.label}: ${b.pct}%`}>
+            <span className="text-[9px] font-bold text-slate-500 w-14 shrink-0">{b.label}</span>
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${b.pct}%`, backgroundColor: color }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div className="text-[10px] text-slate-400 font-semibold pt-1 border-t border-slate-100">
+      Based on {responseCount} responses
+    </div>
+  </div>
+);
 
 export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   conferences,
@@ -484,6 +611,51 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const handleToggleOpportunityPackage = (key: string) => {
     setActivatedPackages((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  // Event Analytics Data
+  const analyticsTracks = (conferences[0]?.tracks?.length ? conferences[0].tracks : [
+    'Track 1: Reservoir Analytics & AI',
+    'Track 2: Organic Geochemistry',
+    'Track 3: Carbon Storage & Net Zero',
+    'Track 4: Subsurface Digital Twins',
+  ]).slice(0, 4);
+
+  const sessionsByTrack = [
+    { track: analyticsTracks[0], oral: 14, poster: 22 },
+    { track: analyticsTracks[1], oral: 11, poster: 19 },
+    { track: analyticsTracks[2], oral: 9, poster: 16 },
+    { track: analyticsTracks[3] || 'Track 4', oral: 6, poster: 12 },
+  ].filter((t) => t.track);
+
+  const totalOralSessions = sessionsByTrack.reduce((sum, t) => sum + t.oral, 0);
+  const totalPosterSessions = sessionsByTrack.reduce((sum, t) => sum + t.poster, 0);
+  const maxSessionsInTrack = Math.max(...sessionsByTrack.map((t) => t.oral + t.poster));
+
+  const submissionStatusBreakdown = [
+    { label: 'Accepted', value: 214, color: CHART_HEX.emerald },
+    { label: 'Under Review', value: 68, color: CHART_HEX.blue },
+    { label: 'Revision Requested', value: 34, color: CHART_HEX.amber },
+    { label: 'Rejected', value: 21, color: CHART_HEX.rose },
+    { label: 'Withdrawn', value: 5, color: CHART_HEX.slate },
+  ];
+  const totalSubmissions = submissionStatusBreakdown.reduce((sum, s) => sum + s.value, 0);
+
+  const registrationsByDay = [
+    { day: 'Day 1', count: 2100 },
+    { day: 'Day 2', count: 2480 },
+    { day: 'Day 3', count: 2260 },
+    { day: 'Day 4', count: 1740 },
+  ];
+  const maxDailyRegistrations = Math.max(...registrationsByDay.map((d) => d.count));
+
+  const sponsorRevenueByTier = sponsorshipPackages.map((pkg) => ({
+    tier: pkg.tier,
+    revenue: pkg.price * (pkg.totalSlots - pkg.availableSlots),
+    sold: pkg.totalSlots - pkg.availableSlots,
+    total: pkg.totalSlots,
+  }));
+  const maxSponsorRevenue = Math.max(1, ...sponsorRevenueByTier.map((s) => s.revenue));
+  const totalSponsorRevenueRealized = sponsorRevenueByTier.reduce((sum, s) => sum + s.revenue, 0);
 
   // Communications Broadcast State
   const [recipientGroup, setRecipientGroup] = useState('All Attendees');
@@ -1748,6 +1920,256 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               <span>Send Broadcast Message</span>
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Tab 8: Event Analytics */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Event Analytics</h2>
+            <p className="text-xs text-slate-500">
+              A full picture of your conference: participation, technical & poster sessions, submission
+              outcomes, sponsor performance, and satisfaction feedback across organizers, professionals, and
+              sponsors.
+            </p>
+          </div>
+
+          {/* Hero KPI Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <AnalyticsStatTile
+              icon={Users}
+              label="Total Participants"
+              value="2,480"
+              sub="↑ 18% vs last event"
+              tone="good"
+              accent={CHART_HEX.blue}
+            />
+            <AnalyticsStatTile
+              icon={Presentation}
+              label="Technical Sessions"
+              value={`${totalOralSessions}`}
+              sub={`${sessionsByTrack.length} tracks`}
+              tone="neutral"
+              accent={CHART_HEX.indigo}
+            />
+            <AnalyticsStatTile
+              icon={LayoutGrid}
+              label="Poster Presentations"
+              value={`${totalPosterSessions}`}
+              sub="On-site & e-poster hybrid"
+              tone="neutral"
+              accent={CHART_HEX.violet}
+            />
+            <AnalyticsStatTile
+              icon={FileText}
+              label="Abstracts Submitted"
+              value={`${totalSubmissions}`}
+              sub={`${submissionStatusBreakdown[0].value} accepted`}
+              tone="good"
+              accent={CHART_HEX.emerald}
+            />
+            <AnalyticsStatTile
+              icon={Globe}
+              label="Countries Represented"
+              value="58"
+              sub="Across 6 continents"
+              tone="neutral"
+              accent={CHART_HEX.amber}
+            />
+            <AnalyticsStatTile
+              icon={Smile}
+              label="Overall Satisfaction"
+              value="4.6 / 5"
+              sub="92 Net Promoter Score"
+              tone="good"
+              accent={CHART_HEX.rose}
+            />
+          </div>
+
+          {/* Program Composition */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-blue-600" />
+                  <h3 className="font-bold text-sm text-slate-900">Technical Sessions vs Posters by Track</h3>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_HEX.blue }} />
+                  Technical Sessions ({totalOralSessions})
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CHART_HEX.violet }} />
+                  Poster Presentations ({totalPosterSessions})
+                </span>
+              </div>
+              <div className="space-y-4">
+                {sessionsByTrack.map((t) => (
+                  <div key={t.track} className="space-y-1.5">
+                    <div className="text-[11px] font-semibold text-slate-700">{t.track}</div>
+                    <div className="flex gap-1.5 h-3">
+                      <div
+                        className="rounded-l-full"
+                        style={{
+                          width: `${(t.oral / maxSessionsInTrack) * 100}%`,
+                          backgroundColor: CHART_HEX.blue,
+                        }}
+                        title={`Technical Sessions: ${t.oral}`}
+                      />
+                      <div
+                        className="rounded-r-full"
+                        style={{
+                          width: `${(t.poster / maxSessionsInTrack) * 100}%`,
+                          backgroundColor: CHART_HEX.violet,
+                        }}
+                        title={`Poster Presentations: ${t.poster}`}
+                      />
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-semibold">
+                      {t.oral} sessions · {t.poster} posters
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-blue-600" />
+                <h3 className="font-bold text-sm text-slate-900">Abstract Status Breakdown</h3>
+              </div>
+              <div className="flex items-center gap-6">
+                <div
+                  className="w-32 h-32 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: buildConicGradient(submissionStatusBreakdown) }}
+                >
+                  <div className="w-20 h-20 rounded-full bg-white flex flex-col items-center justify-center">
+                    <span className="text-lg font-extrabold text-slate-900">{totalSubmissions}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase">Total</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2">
+                  {submissionStatusBreakdown.map((s) => (
+                    <div key={s.label} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                        {s.label}
+                      </span>
+                      <span className="font-bold text-slate-900">
+                        {s.value} <span className="text-slate-400 font-medium">({Math.round((s.value / totalSubmissions) * 100)}%)</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
+              <h3 className="font-bold text-sm text-slate-900">Daily Attendance</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {registrationsByDay.map((d) => (
+                <AnalyticsBarRow
+                  key={d.day}
+                  label={d.day}
+                  value={d.count}
+                  max={maxDailyRegistrations}
+                  color={CHART_HEX.blue}
+                  valueLabel={d.count.toLocaleString()}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Feedback & Satisfaction */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Smile className="w-4 h-4 text-blue-600" />
+              <h3 className="font-bold text-sm text-slate-900">Feedback & Satisfaction</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <AnalyticsGaugeCard
+                icon={Building2}
+                title="Organizer Feedback"
+                subtitle="Committee & organizing team"
+                score={4.4}
+                maxScore={5}
+                color={CHART_HEX.blue}
+                responseCount={28}
+                breakdown={[
+                  { label: 'Logistics', pct: 92 },
+                  { label: 'Program Quality', pct: 88 },
+                  { label: 'Support Tools', pct: 81 },
+                ]}
+              />
+              <AnalyticsGaugeCard
+                icon={UserCheck}
+                title="Professional Feedback"
+                subtitle="Delegates & presenters"
+                score={4.6}
+                maxScore={5}
+                color={CHART_HEX.indigo}
+                responseCount={612}
+                breakdown={[
+                  { label: 'Content', pct: 94 },
+                  { label: 'Networking', pct: 87 },
+                  { label: 'Venue', pct: 90 },
+                ]}
+              />
+              <AnalyticsGaugeCard
+                icon={Briefcase}
+                title="Sponsor Feedback"
+                subtitle="Corporate sponsors & exhibitors"
+                score={4.2}
+                maxScore={5}
+                color={CHART_HEX.violet}
+                responseCount={14}
+                breakdown={[
+                  { label: 'Lead Quality', pct: 78 },
+                  { label: 'Booth Traffic', pct: 85 },
+                  { label: 'ROI', pct: 74 },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Sponsor Performance */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-blue-600" />
+                <h3 className="font-bold text-sm text-slate-900">Sponsor Package Performance</h3>
+              </div>
+              <span className="text-xs font-extrabold text-emerald-700">
+                ${totalSponsorRevenueRealized.toLocaleString()} Realized
+              </span>
+            </div>
+            {sponsorRevenueByTier.length === 0 ? (
+              <div className="text-xs text-slate-400 font-medium py-4 text-center">
+                No sponsorship packages published yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sponsorRevenueByTier.map((s) => (
+                  <AnalyticsBarRow
+                    key={s.tier}
+                    label={`${s.tier} Tier`}
+                    value={s.revenue}
+                    max={maxSponsorRevenue}
+                    color={CHART_HEX.emerald}
+                    valueLabel={`$${s.revenue.toLocaleString()} · ${s.sold}/${s.total} sold`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
