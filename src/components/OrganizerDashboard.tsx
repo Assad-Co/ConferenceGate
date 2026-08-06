@@ -78,6 +78,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     Array<{ name: string; title: string; org: string; avatar: string; bio: string }>
   >([]);
 
+  const [programItemDraft, setProgramItemDraft] = useState({
+    type: 'Technical Session',
+    title: '',
+    date: newConfStartDate,
+    time: '09:00',
+  });
+  const [newConfProgramItems, setNewConfProgramItems] = useState<
+    Array<{ type: string; title: string; date: string; time: string }>
+  >([]);
+
   const handleAddCommitteeMember = () => {
     if (!committeeDraft.name.trim()) return;
     setNewConfCommittee((prev) => [...prev, committeeDraft]);
@@ -96,6 +106,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const handleRemoveSpeaker = (idx: number) => {
     setNewConfSpeakers((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAddProgramItem = () => {
+    if (!programItemDraft.title.trim()) return;
+    setNewConfProgramItems((prev) => [...prev, programItemDraft]);
+    setProgramItemDraft({ type: programItemDraft.type, title: '', date: programItemDraft.date, time: '09:00' });
+  };
+
+  const handleRemoveProgramItem = (idx: number) => {
+    setNewConfProgramItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
   // Communications Broadcast State
@@ -137,6 +157,34 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }
   };
 
+  const buildAgendaDaysFromProgramItems = () => {
+    const byDate = new Map<string, typeof newConfProgramItems>();
+    newConfProgramItems.forEach((item) => {
+      byDate.set(item.date, [...(byDate.get(item.date) || []), item]);
+    });
+
+    return Array.from(byDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, items]) => ({
+        date,
+        dayName: date
+          ? new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' })
+          : '',
+        sessions: [...items]
+          .sort((a, b) => a.time.localeCompare(b.time))
+          .map((item, idx) => ({
+            id: `sess_${date}_${idx}`,
+            time: item.time,
+            title: item.title,
+            hall: item.type === 'Technical Session' ? 'Main Hall' : item.type,
+            speakerName: '',
+            speakerTitle: '',
+            speakerAvatar: '',
+            track: item.type,
+          })),
+      }));
+  };
+
   const handleWizardSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreateConference({
@@ -161,7 +209,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       attendeeCount: 150,
       networkAttendeesCount: 12,
       mainThemes: newConfMainThemes.split(',').map((t) => t.trim()).filter(Boolean),
-      agendaDays: [],
+      agendaDays: buildAgendaDaysFromProgramItems(),
       speakers: newConfSpeakers.map((sp, idx) => ({
         id: `spk_${Date.now()}_${idx}`,
         name: sp.name,
@@ -521,11 +569,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               )}
             </div>
 
-            {/* Step 6: Technical Program Main Topics */}
+            {/* Step 6: Technical Program & Schedule */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-blue-600" />
-                Step 6: Technical Program Main Topics
+                Step 6: Technical Program & Schedule
               </h3>
               <div className="space-y-1.5">
                 <label className="font-bold uppercase text-[10px] text-slate-500">Main Topics (Comma separated)</label>
@@ -536,6 +584,92 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   placeholder="e.g. Subsurface AI, Net Zero Solutions, Carbon Storage"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
+              </div>
+
+              <div className="space-y-1.5 pt-2">
+                <label className="font-bold uppercase text-[10px] text-slate-500">
+                  Program Schedule — Sessions, Field Trips & Social Events
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <select
+                    value={programItemDraft.type}
+                    onChange={(e) => setProgramItemDraft({ ...programItemDraft, type: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium sm:col-span-1"
+                  >
+                    <option>Technical Session</option>
+                    <option>Field Trip</option>
+                    <option>Ice Breaker</option>
+                    <option>Lunch</option>
+                    <option>Gala Dinner</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder={
+                      programItemDraft.type === 'Field Trip'
+                        ? 'e.g. Offshore Rig Field Trip (Subsurface AI Track)'
+                        : 'e.g. Keynote: Net Zero Solutions'
+                    }
+                    value={programItemDraft.title}
+                    onChange={(e) => setProgramItemDraft({ ...programItemDraft, title: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium sm:col-span-2"
+                  />
+                  <input
+                    type="date"
+                    value={programItemDraft.date}
+                    onChange={(e) => setProgramItemDraft({ ...programItemDraft, date: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  />
+                  <input
+                    type="time"
+                    value={programItemDraft.time}
+                    onChange={(e) => setProgramItemDraft({ ...programItemDraft, time: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddProgramItem}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add to Program</span>
+                </button>
+
+                {newConfProgramItems.length > 0 && (
+                  <div className="space-y-2">
+                    {[...newConfProgramItems]
+                      .map((item, originalIdx) => ({ item, originalIdx }))
+                      .sort(
+                        (a, b) =>
+                          a.item.date.localeCompare(b.item.date) || a.item.time.localeCompare(b.item.time)
+                      )
+                      .map(({ item, originalIdx }) => (
+                        <div
+                          key={originalIdx}
+                          className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                              {item.type}
+                            </span>
+                            <div>
+                              <div className="font-bold text-slate-900">{item.title}</div>
+                              <div className="text-[11px] text-slate-500">
+                                {item.date || 'No date'} · {item.time || 'No time'}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProgramItem(originalIdx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
 
