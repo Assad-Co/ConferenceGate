@@ -94,7 +94,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Top Banner & Reviewer Availability Toggle */}
-      <div className="bg-slate-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-slate-200">
+      <div className="bg-blue-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-blue-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -117,17 +117,17 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
           </div>
 
           {/* Kudos & Availability Card */}
-          <div className="bg-white border border-slate-200 p-5 rounded-2xl shrink-0 space-y-3 shadow-xs">
+          <div className="bg-white border border-blue-100 p-5 rounded-2xl shrink-0 space-y-3 shadow-xs">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">Total Reviewer Kudos</div>
+                <div className="text-[10px] uppercase font-bold text-blue-400">Total Reviewer Kudos</div>
                 <div className="text-2xl font-extrabold text-blue-700 flex items-center gap-1">
                   <Zap className="w-5 h-5 fill-blue-600" />
                   <span>+{userProfile.contributions.reviewerKudos} Kudos</span>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Reviews Done</div>
+                <div className="text-[10px] uppercase font-bold text-blue-400">Reviews Done</div>
                 <div className="text-xl font-bold text-slate-900">
                   {userProfile.contributions.abstractsReviewed} Papers
                 </div>
@@ -135,7 +135,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             </div>
 
             {/* Availability Toggle */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="pt-2 border-t border-blue-50 flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Available to Review Abstracts:</span>
               <button
                 onClick={() => setAvailableToReview(!availableToReview)}
@@ -152,14 +152,14 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         </div>
 
         {/* Reviewer Badges Showcase Row */}
-        <div className="mt-6 pt-6 border-t border-slate-200 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-slate-400 font-bold uppercase text-[10px] mr-2">
+        <div className="mt-6 pt-6 border-t border-blue-100 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-blue-400 font-bold uppercase text-[10px] mr-2">
             Your Badges:
           </span>
           {(userProfile?.reviewerInfo?.badges || []).map((badge, idx) => (
             <span
               key={idx}
-              className="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              className="px-3 py-1 bg-white border border-blue-100 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5"
             >
               <Award className="w-3.5 h-3.5 text-blue-600" />
               <span>{badge}</span>
