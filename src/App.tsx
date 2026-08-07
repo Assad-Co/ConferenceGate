@@ -378,7 +378,7 @@ export function App() {
         )}
 
         {activeTab === 'community' && (
-          <CommunityFeed posts={posts} onAddPost={handleAddPost} />
+          <CommunityFeed posts={posts} onAddPost={handleAddPost} userProfile={userProfile} />
         )}
 
         {activeTab === 'profile' && (
