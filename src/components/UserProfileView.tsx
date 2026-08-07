@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
+import { ProfileAnalytics } from './ProfileAnalytics';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -28,7 +29,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onOpenBadgeModal,
   onOpenCertificates,
 }) => {
-  const [activeTab, setActiveTab] = useState<'conferences' | 'papers' | 'reviews' | 'committee' | 'badges'>('conferences');
+  const [activeTab, setActiveTab] = useState<'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics'>('conferences');
   const [feedbackConference, setFeedbackConference] = useState<string | null>(null);
 
   return (
@@ -125,6 +126,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             { id: 'reviews', label: 'Peer Reviews & Kudos' },
             { id: 'committee', label: 'Committee Positions' },
             { id: 'badges', label: 'Verified Badges' },
+            { id: 'analytics', label: 'Engagement Analytics' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -184,6 +186,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             </div>
           </div>
         )}
+
+        {activeTab === 'analytics' && <ProfileAnalytics />}
       </div>
 
       <ConferenceFeedbackModal

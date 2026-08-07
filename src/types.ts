@@ -390,3 +390,52 @@ export interface DigitalCertificate {
 }
 
 export type Post = FeedPost;
+
+export interface EngagementMetric {
+  value: number;
+  deltaPct: number;
+}
+
+export interface EngagementTrendPoint {
+  date: string;
+  impressions: number;
+}
+
+export interface TopPerformingPost {
+  id: string;
+  excerpt: string;
+  conferenceBadge?: string;
+  timestamp: string;
+  impressions: number;
+  reactions: number;
+  comments: number;
+  reposts: number;
+  saves: number;
+}
+
+export interface DemographicBreakdownItem {
+  label: string;
+  pct: number;
+}
+
+export interface EngagementAnalytics {
+  period: string;
+  summary: {
+    impressions: EngagementMetric;
+    impressionViews: EngagementMetric;
+    reactions: EngagementMetric;
+    comments: EngagementMetric;
+    reposts: EngagementMetric;
+    saves: EngagementMetric;
+  };
+  reactionBreakdown: Array<{ type: 'like' | 'celebrate' | 'insightful' | 'kudos'; count: number }>;
+  impressionsTrend: EngagementTrendPoint[];
+  topPosts: TopPerformingPost[];
+  demographics: {
+    industry: DemographicBreakdownItem[];
+    company: DemographicBreakdownItem[];
+    companySize: DemographicBreakdownItem[];
+    location: DemographicBreakdownItem[];
+    jobTitle: DemographicBreakdownItem[];
+  };
+}
