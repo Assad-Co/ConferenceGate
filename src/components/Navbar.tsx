@@ -102,14 +102,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Logo className="h-11 w-auto group-hover:scale-105 transition-transform" />
             </button>
 
-            <div className="hidden md:flex">
+            <div className="hidden md:flex mr-2">
               <form onSubmit={handleSearchSubmit} className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search conferences, abstracts, topics..."
-                  className="w-64 pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
+                  className="w-48 xl:w-64 pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
                 />
                 <Search className="w-4 h-4 text-slate-600 absolute left-2.5 top-1.5" />
               </form>
@@ -117,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Center Icon Nav, LinkedIn-style */}
-          <nav className="hidden lg:flex items-center h-14">
+          <nav className="hidden xl:flex items-center h-14 shrink-0">
             {navItems.map((item) => {
               const isActive = item.match.includes(activeTab);
               const Icon = item.icon;
@@ -296,7 +296,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
+              className="xl:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -306,7 +306,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2">
+        <div className="xl:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2">
           <button
             onClick={() => {
               handleTabChange('home');
