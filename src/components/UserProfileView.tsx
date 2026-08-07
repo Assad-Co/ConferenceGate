@@ -14,7 +14,7 @@ import {
   Globe,
   Briefcase,
 } from 'lucide-react';
-import { UserProfile } from '../types';
+import { ConferenceRole, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
 
@@ -24,13 +24,35 @@ interface UserProfileViewProps {
   onOpenCertificates: () => void;
 }
 
+interface AttendedConference {
+  id: string;
+  title: string;
+  location: string;
+  roleLabel: string;
+  organizerName: string;
+  eventDate: string;
+  defaultRole: ConferenceRole;
+}
+
+const ATTENDED_CONFERENCES: AttendedConference[] = [
+  {
+    id: 'conf_1',
+    title: 'Annual Subsurface Energy & AI Summit 2026',
+    location: 'Abu Dhabi, UAE',
+    roleLabel: 'Attended as Presenter & Keynote Delegate',
+    organizerName: 'Global Subsurface Energy Society',
+    eventDate: 'March 12–14, 2026',
+    defaultRole: 'Keynote',
+  },
+];
+
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
   userProfile,
   onOpenBadgeModal,
   onOpenCertificates,
 }) => {
   const [activeTab, setActiveTab] = useState<'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics'>('conferences');
-  const [feedbackConference, setFeedbackConference] = useState<string | null>(null);
+  const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
 
   return (
     <div className="space-y-8">
@@ -149,23 +171,25 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900">Verified Conferences Attended</h3>
             <div className="space-y-3">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900">Annual Subsurface Energy & AI Summit 2026</h4>
-                  <p className="text-[11px] text-slate-500">Abu Dhabi, UAE • Attended as Presenter & Keynote Delegate</p>
+              {ATTENDED_CONFERENCES.map((conf) => (
+                <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900">{conf.title}</h4>
+                    <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setFeedbackConference(conf)}
+                      className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
+                    >
+                      Leave Feedback
+                    </button>
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                      Verified Attendance
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setFeedbackConference('Annual Subsurface Energy & AI Summit 2026')}
-                    className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
-                  >
-                    Leave Feedback
-                  </button>
-                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
-                    Verified Attendance
-                  </span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
@@ -193,7 +217,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       <ConferenceFeedbackModal
         isOpen={feedbackConference !== null}
         onClose={() => setFeedbackConference(null)}
-        conferenceTitle={feedbackConference || ''}
+        conferenceTitle={feedbackConference?.title || ''}
+        organizerName={feedbackConference?.organizerName || ''}
+        eventDate={feedbackConference?.eventDate || ''}
+        participantName={userProfile.name}
+        participantCompany={userProfile.organization}
+        defaultRole={feedbackConference?.defaultRole}
       />
     </div>
   );

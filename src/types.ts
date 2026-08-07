@@ -11,6 +11,7 @@ export type UserRole =
 export type ConferenceRole =
   | 'Attendee'
   | 'Author'
+  | 'Presenter'
   | 'Speaker'
   | 'Keynote'
   | 'Reviewer'
