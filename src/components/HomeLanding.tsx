@@ -125,6 +125,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   onAddPost,
 }) => {
   const [postText, setPostText] = useState('');
+  const [logoErrorIds, setLogoErrorIds] = useState<Record<string, boolean>>({});
 
   const handlePostSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,7 +324,18 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
           <div className="divide-y divide-slate-100">
             {recommended.map((conf) => (
               <div key={conf.id} className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors group">
-                <img src={conf.logo} alt={conf.title} className="w-9 h-9 rounded-md object-cover shrink-0" />
+                {conf.logo && !logoErrorIds[conf.id] ? (
+                  <img
+                    src={conf.logo}
+                    alt={conf.title}
+                    className="w-9 h-9 rounded-md object-cover shrink-0"
+                    onError={() => setLogoErrorIds((prev) => ({ ...prev, [conf.id]: true }))}
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-xs shrink-0">
+                    {conf.title.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <button
                   onClick={() => onSelectConference(conf)}
                   className="min-w-0 flex-1 text-left cursor-pointer"
