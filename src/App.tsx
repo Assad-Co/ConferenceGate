@@ -28,7 +28,7 @@ import {
   sampleSponsorProfile,
   sampleNotifications,
 } from './data/mockData';
-import { Conference, AbstractSubmission, CelebrationKind, Post, SponsorshipPackage, UserRole } from './types';
+import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorshipPackage, UserRole } from './types';
 
 const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   Accept: 'Accepted',
@@ -42,6 +42,13 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
+  const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
+
+  const handleMarkNotificationRead = (id: string) =>
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const handleMarkAllNotificationsRead = () =>
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
   // App Data State
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
@@ -296,14 +303,21 @@ export function App() {
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          if (tab === 'profile') setProfileInitialTab('conferences');
+          setActiveTab(tab);
+        }}
         activeRole={activeRole}
         onRoleChange={handleRoleChange}
         onOpenAIModal={() => setIsAIModalOpen(true)}
         userProfile={userProfile}
-        notifications={sampleNotifications}
+        notifications={notifications}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
+        onOpenNotifications={() => {
+          setProfileInitialTab('notifications');
+          setActiveTab('profile');
+        }}
       />
 
       {/* Main Container View Router */}
@@ -391,6 +405,10 @@ export function App() {
             userProfile={userProfile}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
+            initialTab={profileInitialTab}
+            notifications={notifications}
+            onMarkNotificationRead={handleMarkNotificationRead}
+            onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
           />
         )}
 
