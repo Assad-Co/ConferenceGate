@@ -128,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleTabChange('home')}
               className="flex items-center group text-left cursor-pointer shrink-0"
             >
-              <Logo className="h-11 w-auto group-hover:scale-105 transition-transform" />
+              <Logo className="h-11 w-auto" />
             </button>
 
             <div className="hidden md:flex w-36 sm:w-44 lg:w-56 xl:w-64 min-w-[110px] shrink">
