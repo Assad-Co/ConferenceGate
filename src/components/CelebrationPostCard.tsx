@@ -1,53 +1,76 @@
 import React from 'react';
-import { ThumbsUp, MessageSquare, Share2, PartyPopper, Award, ShieldCheck, Briefcase, Trophy, FileCheck2 } from 'lucide-react';
+import {
+  ThumbsUp,
+  MessageSquare,
+  Share2,
+  FileCheck2,
+  Medal,
+  Landmark,
+  Handshake,
+  Trophy,
+  Star,
+} from 'lucide-react';
 import { CelebrationKind, Post } from '../types';
 
-const THEME: Record<
-  CelebrationKind,
-  { icon: React.ElementType; badge: string; glow: string; label: string }
-> = {
+interface CelebrationTheme {
+  icon: React.ElementType;
+  label: string;
+  wash: string;
+  medal: string;
+  ribbon: string;
+  pill: string;
+}
+
+const THEME: Record<CelebrationKind, CelebrationTheme> = {
   'abstract-accepted': {
     icon: FileCheck2,
-    badge: 'bg-blue-600',
-    glow: 'from-blue-100 via-sky-50 to-indigo-100',
     label: 'Abstract Accepted',
+    wash: 'from-blue-50 via-white to-slate-50',
+    medal: 'from-blue-400 to-blue-600',
+    ribbon: 'bg-blue-600',
+    pill: 'bg-blue-50 text-blue-700',
   },
   'reviewer-milestone': {
-    icon: Award,
-    badge: 'bg-indigo-600',
-    glow: 'from-indigo-100 via-blue-50 to-sky-100',
+    icon: Medal,
     label: 'Review Milestone',
+    wash: 'from-violet-50 via-white to-slate-50',
+    medal: 'from-violet-400 to-violet-600',
+    ribbon: 'bg-violet-600',
+    pill: 'bg-violet-50 text-violet-700',
   },
   'committee-appointment': {
-    icon: ShieldCheck,
-    badge: 'bg-sky-600',
-    glow: 'from-sky-100 via-blue-50 to-indigo-100',
+    icon: Landmark,
     label: 'Committee Appointment',
+    wash: 'from-teal-50 via-white to-slate-50',
+    medal: 'from-teal-400 to-teal-600',
+    ribbon: 'bg-teal-600',
+    pill: 'bg-teal-50 text-teal-700',
   },
   'sponsorship-accepted': {
-    icon: Briefcase,
-    badge: 'bg-blue-700',
-    glow: 'from-blue-100 via-indigo-50 to-sky-100',
+    icon: Handshake,
     label: 'Sponsorship Confirmed',
+    wash: 'from-emerald-50 via-white to-slate-50',
+    medal: 'from-emerald-400 to-emerald-600',
+    ribbon: 'bg-emerald-600',
+    pill: 'bg-emerald-50 text-emerald-700',
   },
   'best-organizer': {
     icon: Trophy,
-    badge: 'bg-indigo-700',
-    glow: 'from-indigo-100 via-sky-50 to-blue-100',
-    label: 'Best Organizer',
+    label: 'Conference Gate Recognition',
+    wash: 'from-amber-50 via-white to-slate-50',
+    medal: 'from-amber-400 to-amber-600',
+    ribbon: 'bg-amber-600',
+    pill: 'bg-amber-50 text-amber-700',
+  },
+  achievement: {
+    icon: Star,
+    label: 'Professional Achievement',
+    wash: 'from-sky-50 via-white to-slate-50',
+    medal: 'from-sky-400 to-sky-600',
+    ribbon: 'bg-sky-600',
+    pill: 'bg-sky-50 text-sky-700',
   },
 };
-
-const CONFETTI = [
-  { top: '12%', left: '8%', size: 10, color: 'bg-blue-400', rotate: 12 },
-  { top: '22%', left: '85%', size: 8, color: 'bg-indigo-400', rotate: -18 },
-  { top: '65%', left: '10%', size: 7, color: 'bg-sky-400', rotate: 30 },
-  { top: '75%', left: '90%', size: 9, color: 'bg-emerald-400', rotate: -10 },
-  { top: '15%', left: '45%', size: 6, color: 'bg-sky-300', rotate: 0 },
-  { top: '80%', left: '55%', size: 8, color: 'bg-blue-300', rotate: 20 },
-  { top: '40%', left: '5%', size: 5, color: 'bg-indigo-300', rotate: -25 },
-  { top: '35%', left: '92%', size: 6, color: 'bg-emerald-300', rotate: 15 },
-];
 
 export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
   const kind = post.celebrationKind || 'abstract-accepted';
@@ -56,29 +79,50 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-      <div className={`relative h-52 bg-gradient-to-br ${theme.glow} overflow-hidden`}>
-        {CONFETTI.map((c, i) => (
+      <div className={`relative h-44 bg-gradient-to-br ${theme.wash} overflow-hidden flex flex-col items-center justify-center gap-3`}>
+        {/* Subtle dot-grid texture, never a competing color */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+            color: '#0f172a',
+          }}
+        />
+
+        {/* Medal badge */}
+        <div className="relative">
+          {/* Ribbon tails */}
           <span
-            key={i}
-            className={`absolute rounded-sm ${c.color} opacity-70`}
+            className={`absolute top-9 left-1/2 w-3 h-8 ${theme.ribbon} opacity-80`}
             style={{
-              top: c.top,
-              left: c.left,
-              width: c.size,
-              height: c.size * 2.2,
-              transform: `rotate(${c.rotate}deg)`,
+              transform: 'translateX(-14px) rotate(-16deg)',
+              clipPath: 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)',
             }}
           />
-        ))}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <span
+            className={`absolute top-9 left-1/2 w-3 h-8 ${theme.ribbon} opacity-80`}
+            style={{
+              transform: 'translateX(2px) rotate(16deg)',
+              clipPath: 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)',
+            }}
+          />
+          {/* Soft glow */}
+          <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${theme.medal} blur-xl opacity-40 scale-110`} />
+          {/* Medal face */}
           <div
-            className={`w-20 h-20 rounded-full ${theme.badge} text-white flex items-center justify-center shadow-lg ring-8 ring-white/60`}
+            className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${theme.medal} text-white flex items-center justify-center shadow-lg ring-4 ring-white`}
           >
-            <Icon className="w-10 h-10" />
+            <Icon className="w-7 h-7" strokeWidth={2.25} />
           </div>
-          <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm">
-            <PartyPopper className="w-4 h-4 text-blue-600" />
-            <span>{post.celebrationHeadline || theme.label}</span>
+        </div>
+
+        <div className="relative text-center space-y-1 px-6">
+          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.pill}`}>
+            {theme.label}
+          </span>
+          <div className="text-slate-900 font-bold text-sm leading-snug">
+            {post.celebrationHeadline || theme.label}
           </div>
         </div>
       </div>
