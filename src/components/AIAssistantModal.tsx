@@ -100,21 +100,21 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl flex flex-col h-[600px] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center justify-between">
+        <div className="bg-sky-50 border-b border-sky-100 p-4 text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-blue-300 ring-1 ring-white/20">
+            <div className="w-9 h-9 rounded-xl bg-white border border-sky-200 flex items-center justify-center text-sky-700">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <h3 className="text-sm font-bold tracking-tight">Conference Gate AI Assistant</h3>
-              <p className="text-[11px] text-blue-200">
+              <p className="text-[11px] text-sky-700">
                 Powered by Gemini • Specialized in Academic & Technical Conferences
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
