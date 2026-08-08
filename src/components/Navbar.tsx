@@ -13,8 +13,6 @@ import {
   UserCheck,
   Briefcase,
   Layers,
-  Menu,
-  X,
   QrCode,
   ShieldCheck,
   Home,
@@ -55,7 +53,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDigitalBadge = () => {},
   onSearch = (_query: string) => {},
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -92,9 +89,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-blue-50 border-b border-blue-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
+        <div className="flex items-center justify-between h-14 overflow-x-auto">
           {/* Brand Logo + Search, LinkedIn-style */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-[132px] md:min-w-[250px] shrink-0 md:shrink">
             <button
               onClick={() => handleTabChange('home')}
               className="flex items-center group text-left cursor-pointer shrink-0"
@@ -116,8 +113,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Center Icon Nav, LinkedIn-style */}
-          <nav className="hidden xl:flex items-center h-14 shrink-0">
+          {/* Center Icon Nav, LinkedIn-style — always visible, never tucked behind a menu */}
+          <nav className="flex items-center h-14 shrink-0">
             {navItems.map((item) => {
               const isActive = item.match.includes(activeTab);
               const Icon = item.icon;
@@ -125,14 +122,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleTabChange(item.id)}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-4 h-14 min-w-[64px] border-b-2 transition-colors cursor-pointer ${
+                  title={item.label}
+                  className={`flex flex-col items-center justify-center gap-0.5 px-2.5 sm:px-4 h-14 min-w-[44px] sm:min-w-[64px] border-b-2 transition-colors cursor-pointer shrink-0 ${
                     isActive
                       ? 'border-slate-900 text-slate-900'
                       : 'border-transparent text-slate-500 hover:text-slate-900'
                   }`}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? 'fill-slate-900/10' : ''}`} strokeWidth={isActive ? 2.25 : 1.75} />
-                  <span className="text-[11px] font-medium">{item.label}</span>
+                  <span className="hidden sm:block text-[11px] font-medium">{item.label}</span>
                 </button>
               );
             })}
@@ -147,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Conference Gate AI Assistant"
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
-              <span className="hidden sm:inline">AI Assistant</span>
+              <span className="hidden xl:inline">AI Assistant</span>
             </button>
 
             {/* Role Switcher Pill */}
@@ -292,95 +290,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
             </button>
-
-            {/* Mobile Hamburger Menu */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="xl:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2">
-          <button
-            onClick={() => {
-              handleTabChange('home');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Home
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('discover');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Discover Conferences
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('abstracts');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            My Abstract Submissions
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('community');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Conference Feed
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('reviewer');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Reviewer Portal
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('organizer');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Organizer Command Center
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('sponsor');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            Sponsor Portal
-          </button>
-          <button
-            onClick={() => {
-              handleTabChange('profile');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full text-left py-2 text-sm font-medium text-slate-800 hover:text-blue-600"
-          >
-            My Conference Profile & Verified Identity
-          </button>
-        </div>
-      )}
     </header>
   );
 };
