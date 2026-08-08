@@ -100,8 +100,8 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
           ) : null}
         </div>
 
-        <div className="absolute top-2.5 right-2.5 opacity-90">
-          <Logo className="h-6 sm:h-7 w-auto" />
+        <div className="absolute top-2.5 right-2.5 bg-white/95 rounded-md px-2 py-1 shadow-sm">
+          <Logo className="h-5 sm:h-6 w-auto" />
         </div>
 
         <div className="relative text-center space-y-1 px-6">
