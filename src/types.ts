@@ -332,7 +332,8 @@ export type CelebrationKind =
   | 'reviewer-milestone'
   | 'committee-appointment'
   | 'sponsorship-accepted'
-  | 'best-organizer';
+  | 'best-organizer'
+  | 'achievement';
 
 export interface FeedPost {
   id: string;
