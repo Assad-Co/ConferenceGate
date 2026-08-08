@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Sparkles, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Conference, AbstractSubmission } from '../types';
+import { formatDate } from '../utils/date';
 
 interface AbstractSubmissionModalProps {
   isOpen: boolean;
@@ -149,7 +150,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
             >
               {conferences.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.title} ({c.dates.start})
+                  {c.title} ({formatDate(c.dates.start)})
                 </option>
               ))}
             </select>
