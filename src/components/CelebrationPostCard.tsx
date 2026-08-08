@@ -98,8 +98,8 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
           ) : Illustration ? (
             <Illustration />
           ) : null}
-          <div className="absolute bottom-1.5 right-1.5 bg-white/95 rounded-md px-2 py-1 shadow-sm">
-            <Logo className="h-5 sm:h-6 w-auto" />
+          <div className="absolute bottom-1.5 right-1.5 bg-white/95 rounded-md px-1.5 py-0.5 shadow-sm">
+            <Logo className="h-3 sm:h-3.5 w-auto" />
           </div>
         </div>
 
