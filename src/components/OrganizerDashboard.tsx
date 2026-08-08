@@ -43,6 +43,7 @@ import {
   PieChart,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
+import { formatDate } from '../utils/date';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
@@ -883,7 +884,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <div>
                       <h4 className="font-bold text-sm text-slate-900">{conf.title}</h4>
                       <div className="text-xs text-slate-500 font-medium">
-                        {conf.dates.start} • {conf.location.city}, {conf.location.country}
+                        {formatDate(conf.dates.start)} • {conf.location.city}, {conf.location.country}
                       </div>
                     </div>
                   </div>

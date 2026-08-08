@@ -21,6 +21,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Conference } from '../types';
+import { formatDateRange } from '../utils/date';
 
 interface ConferenceDetailProps {
   conference: Conference;
@@ -128,7 +129,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-200 font-medium">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-blue-400" />
-                {conference.dates.start} — {conference.dates.end}
+                {formatDateRange(conference.dates.start, conference.dates.end)}
               </span>
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-rose-400" />

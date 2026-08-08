@@ -17,6 +17,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Conference } from '../types';
+import { formatDate, formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
 
 interface DiscoveryEngineProps {
   conferences: Conference[];
@@ -511,10 +512,22 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                         <h2 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
                           {conf.title}
                         </h2>
-                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 mt-1">
-                          <span className="flex items-center gap-1.5 text-blue-700">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {conf.dates.start} — {conf.dates.end}
+                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-2">
+                            <span className="flex flex-col items-center justify-center w-7 h-7 rounded-md bg-blue-600 text-white leading-none shrink-0 shadow-xs">
+                              <span className="text-[6.5px] font-bold uppercase tracking-wide">
+                                {formatMonthShort(conf.dates.start)}
+                              </span>
+                              <span className="text-[11px] font-extrabold">{formatDay(conf.dates.start)}</span>
+                            </span>
+                            <span className="flex flex-col leading-tight">
+                              <span className="text-blue-700 font-bold text-[11.5px]">
+                                {formatDateRange(conf.dates.start, conf.dates.end)}
+                              </span>
+                              <span className="text-slate-400 font-medium text-[10px]">
+                                {conferenceDurationDays(conf.dates.start, conf.dates.end)}-day event
+                              </span>
+                            </span>
                           </span>
                           <span className="flex items-center gap-1.5 text-slate-600">
                             <MapPin className="w-3.5 h-3.5 text-rose-500" />
@@ -580,7 +593,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Call for Papers:</span>
                         <span className="font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md text-[11px]">
-                          {conf.cfpStatus} (Deadline: {conf.abstractDeadline})
+                          {conf.cfpStatus} (Deadline: {formatDate(conf.abstractDeadline)})
                         </span>
                       </div>
                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">

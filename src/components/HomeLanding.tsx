@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Conference, UserProfile, Post } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
+import { formatDate, formatDateRange } from '../utils/date';
 
 interface HomeLandingProps {
   conferences: Conference[];
@@ -90,7 +91,7 @@ const PromotedConferenceCard: React.FC<{
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
           <Calendar className="w-3.5 h-3.5 text-blue-600" />
-          {conf.dates.start} — {conf.dates.end}
+          {formatDateRange(conf.dates.start, conf.dates.end)}
         </span>
         <span className="flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 text-rose-500" />
@@ -304,7 +305,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-blue-700 transition-colors">{conf.title}</div>
-                  <div className="text-[11px] text-slate-500">Deadline {conf.abstractDeadline}</div>
+                  <div className="text-[11px] text-slate-500">Deadline {formatDate(conf.abstractDeadline)}</div>
                 </div>
               </button>
             ))}
