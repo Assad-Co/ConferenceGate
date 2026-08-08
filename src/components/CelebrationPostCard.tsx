@@ -1,18 +1,11 @@
 import React from 'react';
 import { ThumbsUp, MessageSquare, Share2 } from 'lucide-react';
 import { CelebrationKind, Post } from '../types';
-import {
-  KudosRibbon,
-  AbstractAcceptedIllustration,
-  ReviewerMilestoneIllustration,
-  CommitteeAppointmentIllustration,
-  SponsorshipAcceptedIllustration,
-  BestOrganizerIllustration,
-  AchievementIllustration,
-} from './celebrationIllustrations';
+import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration } from './celebrationIllustrations';
 
 interface CelebrationTheme {
-  Illustration: React.ElementType;
+  image?: string;
+  Illustration?: React.ElementType;
   label: string;
   wash: string;
   ribbon: string;
@@ -22,7 +15,7 @@ interface CelebrationTheme {
 
 const THEME: Record<CelebrationKind, CelebrationTheme> = {
   'abstract-accepted': {
-    Illustration: AbstractAcceptedIllustration,
+    image: '/kudos/abstract-accepted.jpg',
     label: 'Abstract Accepted',
     wash: 'from-blue-50 via-white to-slate-50',
     ribbon: '#2563eb',
@@ -30,7 +23,7 @@ const THEME: Record<CelebrationKind, CelebrationTheme> = {
     pill: 'bg-blue-50 text-blue-700',
   },
   'reviewer-milestone': {
-    Illustration: ReviewerMilestoneIllustration,
+    image: '/kudos/reviewer-milestone.jpg',
     label: 'Review Milestone',
     wash: 'from-violet-50 via-white to-slate-50',
     ribbon: '#7c3aed',
@@ -38,7 +31,7 @@ const THEME: Record<CelebrationKind, CelebrationTheme> = {
     pill: 'bg-violet-50 text-violet-700',
   },
   'committee-appointment': {
-    Illustration: CommitteeAppointmentIllustration,
+    image: '/kudos/committee-appointment.jpg',
     label: 'Committee Appointment',
     wash: 'from-teal-50 via-white to-slate-50',
     ribbon: '#0d9488',
@@ -62,7 +55,7 @@ const THEME: Record<CelebrationKind, CelebrationTheme> = {
     pill: 'bg-amber-50 text-amber-700',
   },
   achievement: {
-    Illustration: AchievementIllustration,
+    image: '/kudos/achievement.jpg',
     label: 'Professional Achievement',
     wash: 'from-sky-50 via-white to-slate-50',
     ribbon: '#0284c7',
@@ -79,21 +72,31 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
       <div className={`relative bg-gradient-to-br ${theme.wash} overflow-hidden flex flex-col items-center pt-4 pb-5 gap-2`}>
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
-            backgroundSize: '18px 18px',
-            color: '#0f172a',
-          }}
-        />
+        {!theme.image && (
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)',
+              backgroundSize: '18px 18px',
+              color: '#0f172a',
+            }}
+          />
+        )}
 
         <div className="relative">
           <KudosRibbon color={theme.ribbon} dark={theme.ribbonDark} />
         </div>
 
         <div className="relative">
-          <Illustration />
+          {theme.image ? (
+            <img
+              src={theme.image}
+              alt={theme.label}
+              className="h-28 sm:h-32 w-auto rounded-lg shadow-sm object-cover"
+            />
+          ) : Illustration ? (
+            <Illustration />
+          ) : null}
         </div>
 
         <div className="relative text-center space-y-1 px-6">
