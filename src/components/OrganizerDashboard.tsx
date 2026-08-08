@@ -791,13 +791,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Top Command Center Header */}
+      {/* Top Dashboard Header */}
       <div className="bg-blue-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-blue-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 bg-white text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider">
-                Conference Management Command Center
+                Organizer Dashboard
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">

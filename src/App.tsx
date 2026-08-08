@@ -26,6 +26,7 @@ import {
   sampleReviewOpportunities,
   sampleSponsorshipPackages,
   sampleSponsorProfile,
+  sampleNotifications,
 } from './data/mockData';
 import { Conference, AbstractSubmission, CelebrationKind, Post, SponsorshipPackage, UserRole } from './types';
 
@@ -299,6 +300,10 @@ export function App() {
         activeRole={activeRole}
         onRoleChange={handleRoleChange}
         onOpenAIModal={() => setIsAIModalOpen(true)}
+        userProfile={userProfile}
+        notifications={sampleNotifications}
+        onOpenDigitalBadge={() => setIsBadgeOpen(true)}
+        onSearch={(q) => setSearchQuery(q)}
       />
 
       {/* Main Container View Router */}
