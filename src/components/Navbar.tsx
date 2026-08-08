@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Brand Logo + Search, LinkedIn-style */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => handleTabChange('home')}
               className="flex items-center group text-left cursor-pointer shrink-0"
@@ -102,14 +102,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Logo className="h-11 w-auto group-hover:scale-105 transition-transform" />
             </button>
 
-            <div className="hidden md:flex">
-              <form onSubmit={handleSearchSubmit} className="relative">
+            <div className="hidden md:flex w-36 sm:w-44 lg:w-56 xl:w-64 min-w-[110px] shrink">
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search conferences, abstracts, topics..."
-                  className="w-64 pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
                 />
                 <Search className="w-4 h-4 text-slate-600 absolute left-2.5 top-1.5" />
               </form>
@@ -117,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Center Icon Nav, LinkedIn-style */}
-          <nav className="hidden lg:flex items-center h-14">
+          <nav className="hidden xl:flex items-center h-14 shrink-0">
             {navItems.map((item) => {
               const isActive = item.match.includes(activeTab);
               const Icon = item.icon;
@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Right Action Icons & Role Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* AI Assistant Button */}
             <button
               onClick={handleOpenAI}
@@ -296,7 +296,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
+              className="xl:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -306,7 +306,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2">
+        <div className="xl:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2">
           <button
             onClick={() => {
               handleTabChange('home');

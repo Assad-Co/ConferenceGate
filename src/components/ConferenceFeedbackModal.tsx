@@ -1,14 +1,50 @@
-import React, { useMemo, useState } from 'react';
-import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles, CalendarDays, Send } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles, CalendarDays, Send, User, Building2, UserCog, Tag } from 'lucide-react';
 import { useToast } from './Toast';
+import { ConferenceRole } from '../types';
 
 interface ConferenceFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   conferenceTitle: string;
+  organizerName?: string;
+  eventDate?: string;
+  participantName?: string;
+  participantCompany?: string;
+  defaultRole?: ConferenceRole;
 }
 
 const SCALE = ['Very Poor', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+const ROLE_OPTIONS: ConferenceRole[] = [
+  'Presenter',
+  'Speaker',
+  'Keynote',
+  'Technical Committee',
+  'Reviewer',
+  'Session Chair',
+  'Moderator',
+  'Author',
+  'Organizer Rep',
+  'Attendee',
+];
+
+const AutoFilledField: React.FC<{ icon: React.ElementType; label: string; value: string }> = ({
+  icon: Icon,
+  label,
+  value,
+}) => (
+  <div className="space-y-1.5">
+    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+      <Icon className="w-3.5 h-3.5 text-blue-600" />
+      {label}
+    </label>
+    <div className="flex items-center justify-between gap-2 w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+      <span className="truncate" title={value}>{value || '—'}</span>
+      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide shrink-0">Auto-filled</span>
+    </div>
+  </div>
+);
 
 const SPEAKER_QUESTIONS = [
   'Did the speaker/facilitator explain the material clearly?',
@@ -90,11 +126,21 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   isOpen,
   onClose,
   conferenceTitle,
+  organizerName = '',
+  eventDate = '',
+  participantName = '',
+  participantCompany = '',
+  defaultRole,
 }) => {
   const { showToast } = useToast();
   const [ratings, setRatings] = useState<Ratings>({});
   const [comment, setComment] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [role, setRole] = useState<ConferenceRole>(defaultRole || 'Attendee');
+
+  useEffect(() => {
+    if (isOpen) setRole(defaultRole || 'Attendee');
+  }, [isOpen, defaultRole]);
 
   const overall = useMemo(() => {
     const values: number[] = Object.values(ratings);
@@ -124,12 +170,13 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     e.preventDefault();
     if (Object.keys(ratings).length === 0) return;
     const ratingSummary = overall ? ` — overall rating: ${overall.label}.` : '.';
+    const roleSummary = ` Submitted as ${role}.`;
     showToast({
       type: 'success',
       title: 'Feedback submitted',
       message: recipientEmail
-        ? `Thanks for reviewing "${conferenceTitle}"${ratingSummary} A copy was sent to ${recipientEmail}.`
-        : `Thanks for reviewing "${conferenceTitle}"${ratingSummary} Organizers use this to improve future sessions.`,
+        ? `Thanks for reviewing "${conferenceTitle}"${ratingSummary}${roleSummary} A copy was sent to ${recipientEmail}.`
+        : `Thanks for reviewing "${conferenceTitle}"${ratingSummary}${roleSummary} Organizers use this to improve future sessions.`,
     });
     handleClose();
   };
@@ -147,14 +194,34 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
           </button>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-            <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
-            Conference / Workshop
-          </label>
-          <div className="flex items-center justify-between gap-2 w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
-            <span>{conferenceTitle}</span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide shrink-0">Auto-filled</span>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <AutoFilledField icon={CalendarDays} label="Conference / Workshop" value={conferenceTitle} />
+            <AutoFilledField icon={Building2} label="Name of Organizer" value={organizerName} />
+            <AutoFilledField icon={CalendarCheck2} label="Date of Event" value={eventDate} />
+            <AutoFilledField icon={User} label="Name of Participant" value={participantName} />
+          </div>
+          <AutoFilledField icon={Building2} label="Company / Organization Affiliated With" value={participantCompany} />
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <UserCog className="w-3.5 h-3.5 text-blue-600" />
+              Your Role at This Event
+            </label>
+            <div className="relative">
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as ConferenceRole)}
+                className="w-full appearance-none px-3 py-2.5 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden cursor-pointer"
+              >
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+              <Tag className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
 
