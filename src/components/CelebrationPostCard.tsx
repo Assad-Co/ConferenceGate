@@ -2,6 +2,7 @@ import React from 'react';
 import { ThumbsUp, MessageSquare, Share2 } from 'lucide-react';
 import { CelebrationKind, Post } from '../types';
 import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration } from './celebrationIllustrations';
+import { Logo } from './Logo';
 
 interface CelebrationTheme {
   image?: string;
@@ -82,6 +83,10 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
             }}
           />
         )}
+
+        <div className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-1 shadow-sm">
+          <Logo className="h-4 w-auto" />
+        </div>
 
         <div className="relative">
           <KudosRibbon color={theme.ribbon} dark={theme.ribbonDark} />
