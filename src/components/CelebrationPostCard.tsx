@@ -2,6 +2,7 @@ import React from 'react';
 import { ThumbsUp, MessageSquare, Share2 } from 'lucide-react';
 import { CelebrationKind, Post } from '../types';
 import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration } from './celebrationIllustrations';
+import { Logo } from './Logo';
 
 interface CelebrationTheme {
   image?: string;
@@ -92,11 +93,14 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
             <img
               src={theme.image}
               alt={theme.label}
-              className="h-28 sm:h-32 w-auto rounded-lg shadow-sm object-cover"
+              className="w-72 sm:w-80 h-auto rounded-lg shadow-sm object-cover"
             />
           ) : Illustration ? (
             <Illustration />
           ) : null}
+          <div className="absolute bottom-1 right-1 bg-white/95 rounded px-1 py-0.5 shadow-sm">
+            <Logo className="h-2 sm:h-2.5 w-auto" />
+          </div>
         </div>
 
         <div className="relative text-center space-y-1 px-6">
