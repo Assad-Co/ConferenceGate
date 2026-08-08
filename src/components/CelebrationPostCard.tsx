@@ -84,10 +84,6 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
           />
         )}
 
-        <div className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-1 shadow-sm">
-          <Logo className="h-4 w-auto" />
-        </div>
-
         <div className="relative">
           <KudosRibbon color={theme.ribbon} dark={theme.ribbonDark} />
         </div>
@@ -102,7 +98,21 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
           ) : Illustration ? (
             <Illustration />
           ) : null}
+          {theme.image && (
+            <div
+              className="absolute bottom-1 right-1 opacity-60"
+              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
+            >
+              <Logo className="h-3.5 w-auto" />
+            </div>
+          )}
         </div>
+
+        {!theme.image && (
+          <div className="absolute bottom-2.5 right-2.5 opacity-50">
+            <Logo className="h-3.5 w-auto" />
+          </div>
+        )}
 
         <div className="relative text-center space-y-1 px-6">
           <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.pill}`}>
