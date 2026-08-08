@@ -93,26 +93,16 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
             <img
               src={theme.image}
               alt={theme.label}
-              className="h-28 sm:h-32 w-auto rounded-lg shadow-sm object-cover"
+              className="w-72 sm:w-80 h-auto rounded-lg shadow-sm object-cover"
             />
           ) : Illustration ? (
             <Illustration />
           ) : null}
-          {theme.image && (
-            <div
-              className="absolute bottom-1 right-1 opacity-60"
-              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
-            >
-              <Logo className="h-3.5 w-auto" />
-            </div>
-          )}
         </div>
 
-        {!theme.image && (
-          <div className="absolute bottom-2.5 right-2.5 opacity-50">
-            <Logo className="h-3.5 w-auto" />
-          </div>
-        )}
+        <div className="absolute bottom-2 right-2.5 opacity-50">
+          <Logo className="h-3.5 w-auto" />
+        </div>
 
         <div className="relative text-center space-y-1 px-6">
           <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${theme.pill}`}>
