@@ -43,7 +43,7 @@ const Confetti: React.FC<{ color: string; alt?: string }> = ({ color, alt = '#f5
 );
 
 export const SponsorshipAcceptedIllustration: React.FC = () => (
-  <svg viewBox="0 0 160 96" className="w-32 h-auto">
+  <svg viewBox="0 0 160 96" className="w-56 sm:w-64 h-auto">
     <Confetti color="#10b981" alt="#6ee7b7" />
     <rect x="46" y="42" width="68" height="42" rx="7" fill="#10b981" />
     <rect x="66" y="30" width="28" height="16" rx="5" fill="none" stroke="#10b981" strokeWidth="4" />
@@ -60,7 +60,7 @@ export const SponsorshipAcceptedIllustration: React.FC = () => (
 export const BestOrganizerIllustration: React.FC = () => {
   const leaves = [-55, -35, -15, 15, 35, 55];
   return (
-    <svg viewBox="0 0 160 96" className="w-32 h-auto">
+    <svg viewBox="0 0 160 96" className="w-56 sm:w-64 h-auto">
       <Confetti color="#f59e0b" alt="#fcd34d" />
       {leaves.map((deg) => (
         <ellipse
