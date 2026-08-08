@@ -190,7 +190,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [selectedSubForAI, setSelectedSubForAI] = useState<AbstractSubmission | null>(null);
 
   // Wizard State
-  const [wizardStep, setWizardStep] = useState(1);
   const [newConfTitle, setNewConfTitle] = useState('');
   const [newConfIndustry, setNewConfIndustry] = useState('Energy & Geosciences');
   const [newConfStartDate, setNewConfStartDate] = useState('2026-10-15');
@@ -913,7 +912,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase text-blue-600">
-                Step {wizardStep} of 15
+                Steps 1–7 · Complete in One Page
               </span>
               <h2 className="text-xl font-bold text-slate-900">Create Conference Wizard</h2>
             </div>
