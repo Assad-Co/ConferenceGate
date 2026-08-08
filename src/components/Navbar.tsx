@@ -35,6 +35,7 @@ interface NavbarProps {
   onOpenMessages?: () => void;
   onOpenDigitalBadge?: () => void;
   onSearch?: (query: string) => void;
+  onOpenNotifications?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -52,12 +53,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMessages = () => {},
   onOpenDigitalBadge = () => {},
   onSearch = (_query: string) => {},
+  onOpenNotifications,
 }) => {
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const handleTabChange = onTabChange || setActiveTab || (() => {});
+  const handleOpenNotifications = onOpenNotifications || (() => handleTabChange('profile'));
   const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
   const profile = userProfile || {
     name: 'Dr. Elena Rostova',
@@ -231,46 +233,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Notifications Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
-                )}
-              </button>
-
-              {notificationsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 py-3 z-50">
-                  <div className="px-4 pb-2 border-b border-slate-100 flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Notifications
-                    </h4>
-                    <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                      {unreadNotifCount} New
-                    </span>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
-                    {safeNotifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`p-3 text-xs hover:bg-slate-50 transition-colors ${
-                          !notif.read ? 'bg-blue-50/30' : ''
-                        }`}
-                      >
-                        <div className="font-semibold text-slate-900 mb-0.5">{notif.title}</div>
-                        <div className="text-slate-600 leading-snug">{notif.message}</div>
-                        <div className="text-[10px] text-slate-400 mt-1">{notif.timestamp}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            {/* Notifications — opens the Notifications tab on the profile page */}
+            <button
+              onClick={handleOpenNotifications}
+              className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotifCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
               )}
-            </div>
+            </button>
 
             {/* Profile Avatar & Menu */}
             <button

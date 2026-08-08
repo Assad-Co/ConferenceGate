@@ -14,14 +14,21 @@ import {
   Globe,
   Briefcase,
 } from 'lucide-react';
-import { ConferenceRole, UserProfile } from '../types';
+import { ConferenceRole, NotificationItem, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
+import { ProfileNotifications } from './ProfileNotifications';
+
+type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
   onOpenBadgeModal: () => void;
   onOpenCertificates: () => void;
+  initialTab?: ProfileTab;
+  notifications: NotificationItem[];
+  onMarkNotificationRead: (id: string) => void;
+  onMarkAllNotificationsRead: () => void;
 }
 
 interface AttendedConference {
@@ -50,9 +57,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   userProfile,
   onOpenBadgeModal,
   onOpenCertificates,
+  initialTab = 'conferences',
+  notifications,
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
 }) => {
-  const [activeTab, setActiveTab] = useState<'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics'>('conferences');
+  const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
+  const unreadNotifCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="space-y-8">
@@ -143,6 +155,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         {/* Profile Tabs */}
         <div className="px-6 sm:px-8 border-t border-slate-200 flex gap-6 overflow-x-auto text-xs font-semibold text-slate-600">
           {[
+            { id: 'notifications', label: 'Notifications' },
             { id: 'conferences', label: 'Conferences History' },
             { id: 'papers', label: 'Papers & Abstracts' },
             { id: 'reviews', label: 'Peer Reviews & Kudos' },
@@ -152,14 +165,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+              onClick={() => setActiveTab(tab.id as ProfileTab)}
+              className={`py-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 font-bold'
                   : 'border-transparent hover:text-slate-900'
               }`}
             >
               {tab.label}
+              {tab.id === 'notifications' && unreadNotifCount > 0 && (
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {unreadNotifCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -167,6 +185,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
       {/* Tab Content */}
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+        {activeTab === 'notifications' && (
+          <ProfileNotifications
+            notifications={notifications}
+            onMarkRead={onMarkNotificationRead}
+            onMarkAllRead={onMarkAllNotificationsRead}
+          />
+        )}
+
         {activeTab === 'conferences' && (
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900">Verified Conferences Attended</h3>
