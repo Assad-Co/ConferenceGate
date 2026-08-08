@@ -823,7 +823,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         {[
           { id: 'overview', label: 'Dashboard Overview' },
-          { id: 'wizard', label: '15-Step Conference Wizard' },
+          { id: 'wizard', label: 'Conference Wizard' },
           { id: 'abstracts', label: `Abstracts & AI Matcher (${submissions.length})` },
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
