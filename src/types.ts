@@ -355,6 +355,8 @@ export interface FeedPost {
   };
   userReaction?: 'like' | 'celebrate' | 'insightful' | 'kudos';
   commentsCount: number;
+  impressions?: number;
+  repostsCount?: number;
 }
 
 export interface DirectMessage {

@@ -17,6 +17,10 @@ import {
   MoreHorizontal,
   ShieldCheck,
   Flame,
+  Eye,
+  Repeat2,
+  Bookmark,
+  X,
 } from 'lucide-react';
 import { Post, UserProfile } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
@@ -26,6 +30,12 @@ interface CommunityFeedProps {
   onAddPost: (postText: string) => void;
   userProfile?: UserProfile;
 }
+
+const formatCompactCount = (n: number): string => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
+  return `${n}`;
+};
 
 type ReactionType = 'like' | 'celebrate' | 'insightful' | 'kudos';
 
@@ -61,6 +71,9 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const [commentBoxOpenIds, setCommentBoxOpenIds] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [localComments, setLocalComments] = useState<Record<string, string[]>>({});
+  const [savedPostIds, setSavedPostIds] = useState<Record<string, boolean>>({});
+  const [repostedPostIds, setRepostedPostIds] = useState<Record<string, boolean>>({});
+  const [analyticsOpenId, setAnalyticsOpenId] = useState<string | null>(null);
 
   const composerAvatar = userProfile?.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80';
   const composerName = userProfile?.name || 'You';
@@ -80,6 +93,14 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
   const toggleComments = (postId: string) => {
     setCommentBoxOpenIds((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleSave = (postId: string) => {
+    setSavedPostIds((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleRepost = (postId: string) => {
+    setRepostedPostIds((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   const handleAddComment = (postId: string) => {
@@ -228,6 +249,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
           const activeMeta = activeReaction ? REACTION_META[activeReaction] : null;
 
+          const isSaved = !!savedPostIds[post.id];
+          const isReposted = !!repostedPostIds[post.id];
+          const repostsCount = (post.repostsCount || 0) + (isReposted ? 1 : 0);
+          const impressions = post.impressions ?? (totalReactions + post.commentsCount) * 9 + 200;
+
           return (
             <div key={post.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-4 space-y-3">
@@ -244,9 +270,20 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                       <div className="text-slate-400 text-[10px] font-medium">{post.timestamp}</div>
                     </div>
                   </div>
-                  <button className="p-1.5 text-slate-300 hover:text-slate-500 rounded-lg cursor-pointer shrink-0" title="More">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => toggleSave(post.id)}
+                      className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                        isSaved ? 'text-blue-600' : 'text-slate-300 hover:text-slate-500'
+                      }`}
+                      title={isSaved ? 'Saved' : 'Save post'}
+                    >
+                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                    </button>
+                    <button className="p-1.5 text-slate-300 hover:text-slate-500 rounded-lg cursor-pointer" title="More">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Post Type + Conference Badges */}
@@ -282,7 +319,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               </div>
 
               {/* Reaction Summary */}
-              {(totalReactions > 0 || post.commentsCount > 0) && (
+              {(totalReactions > 0 || post.commentsCount > 0 || repostsCount > 0) && (
                 <div className="px-4 pb-2 flex items-center justify-between text-[11px] text-slate-500">
                   <div className="flex items-center gap-1">
                     {presentReactions.length > 0 && (
@@ -303,19 +340,69 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     )}
                     {totalReactions > 0 && <span className="font-semibold">{totalReactions}</span>}
                   </div>
-                  {post.commentsCount > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    {repostsCount > 0 && <span className="font-semibold">{repostsCount} reposts</span>}
+                    {post.commentsCount > 0 && (
+                      <button
+                        onClick={() => toggleComments(post.id)}
+                        className="font-semibold hover:underline cursor-pointer"
+                      >
+                        {post.commentsCount + (localComments[post.id]?.length || 0)} comments
+                      </button>
+                    )}
+                    <span className="text-slate-300">•</span>
                     <button
-                      onClick={() => toggleComments(post.id)}
-                      className="font-semibold hover:underline cursor-pointer"
+                      onClick={() => setAnalyticsOpenId(post.id)}
+                      className="flex items-center gap-1 font-semibold hover:underline cursor-pointer"
+                      title="View impression analytics"
                     >
-                      {post.commentsCount + (localComments[post.id]?.length || 0)} comments
+                      <Eye className="w-3 h-3" />
+                      {formatCompactCount(impressions)} impressions
                     </button>
-                  )}
+                  </div>
+                </div>
+              )}
+
+              {/* Impression Analytics Popover */}
+              {analyticsOpenId === post.id && (
+                <div className="mx-4 mb-3 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-blue-600" />
+                      Post Impressions
+                    </span>
+                    <button
+                      onClick={() => setAnalyticsOpenId(null)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-white rounded-lg border border-slate-200 py-2">
+                      <div className="text-sm font-extrabold text-slate-900">{formatCompactCount(impressions)}</div>
+                      <div className="text-[9px] text-slate-500 font-semibold uppercase">Impressions</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-slate-200 py-2">
+                      <div className="text-sm font-extrabold text-slate-900">{totalReactions}</div>
+                      <div className="text-[9px] text-slate-500 font-semibold uppercase">Reactions</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-slate-200 py-2">
+                      <div className="text-sm font-extrabold text-slate-900">
+                        {post.commentsCount + (localComments[post.id]?.length || 0)}
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-semibold uppercase">Comments</div>
+                    </div>
+                    <div className="bg-white rounded-lg border border-slate-200 py-2">
+                      <div className="text-sm font-extrabold text-slate-900">{repostsCount}</div>
+                      <div className="text-[9px] text-slate-500 font-semibold uppercase">Reposts</div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="px-2 border-t border-slate-100 flex items-center text-xs text-slate-500 font-semibold">
+              <div className="px-1 border-t border-slate-100 flex items-center text-xs text-slate-500 font-semibold">
                 <div
                   className="relative flex-1"
                   onMouseEnter={() => setReactionPickerOpenId(post.id)}
@@ -341,7 +428,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                   )}
                   <button
                     onClick={() => toggleReaction(post.id, activeReaction || 'like')}
-                    className={`w-full py-3 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg transition-colors ${
+                    className={`w-full py-3 flex items-center justify-center gap-1 cursor-pointer rounded-lg transition-colors ${
                       activeReaction ? activeMeta?.color : 'hover:text-blue-600'
                     }`}
                   >
@@ -351,12 +438,21 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 </div>
                 <button
                   onClick={() => toggleComments(post.id)}
-                  className="flex-1 py-3 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors"
+                  className="flex-1 py-3 flex items-center justify-center gap-1 hover:text-blue-600 cursor-pointer rounded-lg transition-colors"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Comment</span>
                 </button>
-                <button className="flex-1 py-3 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors">
+                <button
+                  onClick={() => toggleRepost(post.id)}
+                  className={`flex-1 py-3 flex items-center justify-center gap-1 cursor-pointer rounded-lg transition-colors ${
+                    isReposted ? 'text-emerald-600' : 'hover:text-emerald-600'
+                  }`}
+                >
+                  <Repeat2 className="w-4 h-4" />
+                  <span>{isReposted ? 'Reposted' : 'Repost'}</span>
+                </button>
+                <button className="flex-1 py-3 flex items-center justify-center gap-1 hover:text-blue-600 cursor-pointer rounded-lg transition-colors">
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
                 </button>

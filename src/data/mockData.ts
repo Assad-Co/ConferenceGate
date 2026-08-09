@@ -749,6 +749,8 @@ export const sampleFeedPosts: FeedPost[] = [
     },
     userReaction: 'celebrate',
     commentsCount: 12,
+    impressions: 8412,
+    repostsCount: 6,
   },
   {
     id: 'post_2',
@@ -767,6 +769,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 20,
     },
     commentsCount: 8,
+    impressions: 11204,
+    repostsCount: 14,
   },
   {
     id: 'post_3',
@@ -787,6 +791,8 @@ export const sampleFeedPosts: FeedPost[] = [
     },
     userReaction: 'kudos',
     commentsCount: 19,
+    impressions: 19824,
+    repostsCount: 22,
   },
   {
     id: 'post_4',
@@ -807,6 +813,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 64,
     },
     commentsCount: 27,
+    impressions: 24630,
+    repostsCount: 31,
   },
   {
     id: 'post_5',
@@ -827,6 +835,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 30,
     },
     commentsCount: 11,
+    impressions: 12940,
+    repostsCount: 9,
   },
   {
     id: 'post_6',
@@ -846,6 +856,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 45,
     },
     commentsCount: 15,
+    impressions: 17350,
+    repostsCount: 18,
   },
   {
     id: 'post_7',
@@ -866,6 +878,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 22,
     },
     commentsCount: 9,
+    impressions: 9615,
+    repostsCount: 7,
   },
   {
     id: 'post_8',
@@ -886,6 +900,8 @@ export const sampleFeedPosts: FeedPost[] = [
       kudos: 19,
     },
     commentsCount: 6,
+    impressions: 8104,
+    repostsCount: 5,
   },
 ];
 
