@@ -15,6 +15,7 @@ import {
   Send,
   Star,
   Sparkles,
+  PenSquare,
 } from 'lucide-react';
 import { Conference, UserProfile, Post } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
@@ -214,23 +215,29 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
 
       {/* Center Feed */}
       <main className="flex flex-col gap-4 min-w-0">
-        {/* Post Composer */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-4">
-          <form onSubmit={handlePostSubmit} className="flex items-start gap-3">
-            <img
-              src={userProfile.avatar}
-              alt={userProfile.name}
-              className="w-10 h-10 rounded-full object-cover shrink-0"
-            />
-            <input
-              type="text"
-              value={postText}
-              onChange={(e) => setPostText(e.target.value)}
-              placeholder="Share a conference update, CFP, or paper insight..."
-              className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm focus:outline-hidden focus:border-blue-500 focus:ring-2 focus:ring-blue-100 hover:bg-slate-50 transition-shadow"
-            />
-          </form>
-          <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
+        {/* Post Composer — visually distinct from the navbar Search bar (rounded-xl "compose" box + label vs. the pill-shaped search input) */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+          <div className="flex items-center gap-1.5 px-4 pt-3 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+            <PenSquare className="w-3.5 h-3.5" />
+            Share with your network
+          </div>
+          <div className="p-4 pt-2">
+            <form onSubmit={handlePostSubmit} className="flex items-start gap-3">
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name}
+                className="w-10 h-10 rounded-full object-cover shrink-0"
+              />
+              <input
+                type="text"
+                value={postText}
+                onChange={(e) => setPostText(e.target.value)}
+                placeholder={`What's new in your research, ${userProfile.name}?`}
+                className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm focus:outline-hidden focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-shadow"
+              />
+            </form>
+          </div>
+          <div className="flex items-center justify-between px-4 pb-4 pt-3 border-t border-slate-100">
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
               <button
                 type="button"
