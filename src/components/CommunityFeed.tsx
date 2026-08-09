@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Award,
   PartyPopper,
-  Lightbulb,
   Megaphone,
   FileText,
   Mic,
@@ -24,27 +23,14 @@ import {
 } from 'lucide-react';
 import { Post, UserProfile } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
+import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
+import { formatCompactCount } from '../utils/format';
 
 interface CommunityFeedProps {
   posts?: Post[];
   onAddPost: (postText: string) => void;
   userProfile?: UserProfile;
 }
-
-const formatCompactCount = (n: number): string => {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`;
-  return `${n}`;
-};
-
-type ReactionType = 'like' | 'celebrate' | 'insightful' | 'kudos';
-
-const REACTION_META: Record<ReactionType, { icon: React.ElementType; color: string; bg: string; label: string }> = {
-  like: { icon: ThumbsUp, color: 'text-blue-600', bg: 'bg-blue-600', label: 'Like' },
-  celebrate: { icon: PartyPopper, color: 'text-amber-600', bg: 'bg-amber-500', label: 'Celebrate' },
-  insightful: { icon: Lightbulb, color: 'text-yellow-500', bg: 'bg-yellow-400', label: 'Insightful' },
-  kudos: { icon: Award, color: 'text-violet-600', bg: 'bg-violet-600', label: 'Kudos' },
-};
 
 const POST_TYPE_META: Record<
   Exclude<Post['postType'], 'celebration'>,
