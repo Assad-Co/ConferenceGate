@@ -339,6 +339,10 @@ export function App() {
         onRoleChange={handleRoleChange}
         onOpenAIModal={() => setIsAIModalOpen(true)}
         userProfile={userProfile}
+        organizerIdentity={
+          conferences[0] ? { name: conferences[0].organizerName, logo: conferences[0].organizerLogo } : undefined
+        }
+        sponsorIdentity={{ name: sampleSponsorProfile.companyName, logo: sampleSponsorProfile.logo }}
         notifications={notifications}
         sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}

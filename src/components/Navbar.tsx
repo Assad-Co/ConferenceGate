@@ -28,6 +28,8 @@ interface NavbarProps {
   onTabChange?: (tab: string) => void;
   setActiveTab?: (tab: string) => void;
   userProfile?: UserProfile;
+  organizerIdentity?: { name: string; logo: string };
+  sponsorIdentity?: { name: string; logo: string };
   notifications?: NotificationItem[];
   sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
@@ -48,6 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   setActiveTab,
   userProfile,
+  organizerIdentity,
+  sponsorIdentity,
   notifications = [],
   sponsorAlerts = [],
   unreadMessageCount = 0,
@@ -97,11 +101,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isSponsorRole = role === 'sponsor';
   const handleOpenSponsorAlerts = onOpenSponsorAlerts || (() => handleTabChange('sponsor'));
   const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
-  const profile = userProfile || {
+  const isOrganizerRole = role === 'organizer';
+  const defaultProfile = userProfile || {
     name: 'Dr. Elena Rostova',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
     title: 'Senior Geoscience Researcher',
   };
+
+  const identity = isOrganizerRole && organizerIdentity
+    ? { name: organizerIdentity.name, avatar: organizerIdentity.logo }
+    : isSponsorRole && sponsorIdentity
+    ? { name: sponsorIdentity.name, avatar: sponsorIdentity.logo }
+    : defaultProfile;
+  const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
+  const identityTab = isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'profile';
 
   const safeNotifications = notifications || [];
   const unreadNotifCount = safeNotifications.filter((n) => !n.read).length;
@@ -299,21 +312,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Profile Avatar & Menu */}
+            {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
             <button
-              onClick={() => handleTabChange('profile')}
+              onClick={() => handleTabChange(identityTab)}
               className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
             >
               <img
-                src={profile.avatar}
-                alt={profile.name}
+                src={identity.avatar}
+                alt={identity.name}
                 className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
               />
               <div className="hidden xl:block text-left pr-1">
-                <div className="text-xs font-bold text-slate-900 line-clamp-1">{profile.name}</div>
+                <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
                 <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
                   <ShieldCheck className="w-3 h-3" />
-                  <span>Verified Identity</span>
+                  <span>{identityLabel}</span>
                 </div>
               </div>
             </button>
