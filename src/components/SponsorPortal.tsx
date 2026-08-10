@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Briefcase,
   CheckCircle2,
@@ -57,8 +57,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth' | 'profile'>('marketplace');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const alertsPanelRef = useRef<HTMLDivElement>(null);
 
   const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
+
+  const handleJumpToAlerts = () => {
+    setActiveTab('marketplace');
+    setTimeout(() => alertsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
 
   const verified = isSponsorVerified(sponsorProfile);
 
@@ -124,6 +130,21 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                   <ShieldAlert className="w-3.5 h-3.5" />
                   Registration Restricted
                 </span>
+              )}
+              {sponsorAlerts.length > 0 && (
+                <button
+                  onClick={handleJumpToAlerts}
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    unreadAlertCount > 0
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                      : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {unreadAlertCount > 0 ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                  {unreadAlertCount > 0
+                    ? `${unreadAlertCount} New Opportunity Alert${unreadAlertCount === 1 ? '' : 's'} From Organizer`
+                    : 'Opportunity Alerts'}
+                </button>
               )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
@@ -213,7 +234,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {activeTab === 'marketplace' && (
         <div className="space-y-8">
           {sponsorAlerts.length > 0 && (
-            <div className="space-y-2">
+            <div ref={alertsPanelRef} className="space-y-2 scroll-mt-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                   {unreadAlertCount > 0 ? (
