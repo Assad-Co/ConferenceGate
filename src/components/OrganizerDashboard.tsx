@@ -60,7 +60,8 @@ interface OrganizerDashboardProps {
   sponsorApplicants?: SponsorProfile[];
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
-  onAddNotification?: (notif: { title: string; message: string; type: 'followup' | 'sponsorship'; actionUrl?: string }) => void;
+  onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
+  onNotifySponsors?: (title: string, message: string) => void;
 }
 
 const CHART_HEX = {
@@ -195,7 +196,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   sponsorApplicants = [],
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
-  onAddNotification = (_notif: { title: string; message: string; type: 'followup' | 'sponsorship'; actionUrl?: string }) => {},
+  onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
+  onNotifySponsors = (_title: string, _message: string) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
@@ -649,11 +651,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, string>>({});
 
   const handleNotifyVerifiedSponsors = (opportunityName: string, pkgTier: string, price: number, key: string) => {
-    onAddNotification({
-      title: `New Sponsorship Opportunity: ${opportunityName}`,
-      message: `${pkgTier} package now available for $${price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`,
-      type: 'sponsorship',
-    });
+    onNotifySponsors(
+      `New Sponsorship Opportunity: ${opportunityName}`,
+      `${pkgTier} package now available for $${price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
+    );
     setNotifiedOpportunityKeys((prev) => ({ ...prev, [key]: new Date().toLocaleString() }));
   };
 

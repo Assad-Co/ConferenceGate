@@ -55,6 +55,10 @@ export function App() {
   const handleToggleOpportunityPackage = (key: string) =>
     setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const [sponsorAlerts, setSponsorAlerts] = useState<Array<{ id: string; title: string; message: string; date: string }>>([]);
+  const handleNotifySponsors = (title: string, message: string) =>
+    setSponsorAlerts((prev) => [{ id: `salert_${Date.now()}`, title, message, date: new Date().toLocaleString() }, ...prev]);
+
   const handleMarkNotificationRead = (id: string) =>
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   const handleMarkAllNotificationsRead = () =>
@@ -406,6 +410,7 @@ export function App() {
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
+            onNotifySponsors={handleNotifySponsors}
           />
         )}
 
@@ -415,6 +420,7 @@ export function App() {
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
             activatedOpportunityKeys={activatedOpportunityKeys}
             sponsorProfile={sampleSponsorProfile}
+            sponsorAlerts={sponsorAlerts}
             onSponsorshipAccepted={handleSponsorshipAccepted}
           />
         )}
