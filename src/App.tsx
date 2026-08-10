@@ -55,9 +55,21 @@ export function App() {
   const handleToggleOpportunityPackage = (key: string) =>
     setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const [sponsorAlerts, setSponsorAlerts] = useState<Array<{ id: string; title: string; message: string; date: string }>>([]);
+  const [organizerLogoOverride, setOrganizerLogoOverride] = useState<string | null>(null);
+  const [sponsorLogoOverride, setSponsorLogoOverride] = useState<string | null>(null);
+
+  const [sponsorAlerts, setSponsorAlerts] = useState<
+    Array<{ id: string; title: string; message: string; date: string; read: boolean }>
+  >([]);
   const handleNotifySponsors = (title: string, message: string) =>
-    setSponsorAlerts((prev) => [{ id: `salert_${Date.now()}`, title, message, date: new Date().toLocaleString() }, ...prev]);
+    setSponsorAlerts((prev) => [
+      { id: `salert_${Date.now()}`, title, message, date: new Date().toLocaleString(), read: false },
+      ...prev,
+    ]);
+  const handleMarkSponsorAlertRead = (id: string) =>
+    setSponsorAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
+  const handleMarkAllSponsorAlertsRead = () =>
+    setSponsorAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
 
   const handleMarkNotificationRead = (id: string) =>
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -330,13 +342,26 @@ export function App() {
         onRoleChange={handleRoleChange}
         onOpenAIModal={() => setIsAIModalOpen(true)}
         userProfile={userProfile}
+        organizerIdentity={
+          conferences[0]
+            ? { name: conferences[0].organizerName, logo: organizerLogoOverride || conferences[0].organizerLogo }
+            : undefined
+        }
+        sponsorIdentity={{
+          name: sampleSponsorProfile.companyName,
+          logo: sponsorLogoOverride || sampleSponsorProfile.logo,
+        }}
+        onOrganizerLogoChange={setOrganizerLogoOverride}
+        onSponsorLogoChange={setSponsorLogoOverride}
         notifications={notifications}
+        sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
         onOpenNotifications={() => {
           setProfileInitialTab('notifications');
           setActiveTab('profile');
         }}
+        onOpenSponsorAlerts={() => setActiveTab('sponsor')}
       />
 
       {/* Main Container View Router */}
@@ -421,6 +446,8 @@ export function App() {
             activatedOpportunityKeys={activatedOpportunityKeys}
             sponsorProfile={sampleSponsorProfile}
             sponsorAlerts={sponsorAlerts}
+            onMarkAlertRead={handleMarkSponsorAlertRead}
+            onMarkAllAlertsRead={handleMarkAllSponsorAlertsRead}
             onSponsorshipAccepted={handleSponsorshipAccepted}
           />
         )}

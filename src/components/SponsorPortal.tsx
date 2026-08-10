@@ -9,7 +9,8 @@ import {
   History,
   MessageSquareQuote,
   Bell,
-  X,
+  BellRing,
+  CheckCheck,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
@@ -19,6 +20,7 @@ interface SponsorAlert {
   title: string;
   message: string;
   date: string;
+  read: boolean;
 }
 
 interface SponsorPortalProps {
@@ -27,6 +29,8 @@ interface SponsorPortalProps {
   activatedOpportunityKeys?: Record<string, boolean>;
   sponsorProfile: SponsorProfile;
   sponsorAlerts?: SponsorAlert[];
+  onMarkAlertRead?: (id: string) => void;
+  onMarkAllAlertsRead?: () => void;
   onSponsorshipAccepted?: (pkg: { tier: string; conferenceTitle: string }) => void;
 }
 
@@ -47,14 +51,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   activatedOpportunityKeys = {},
   sponsorProfile,
   sponsorAlerts = [],
+  onMarkAlertRead = (_id: string) => {},
+  onMarkAllAlertsRead = () => {},
   onSponsorshipAccepted = (_pkg: { tier: string; conferenceTitle: string }) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth' | 'profile'>('marketplace');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
-  const [dismissedAlertIds, setDismissedAlertIds] = useState<Record<string, boolean>>({});
 
-  const visibleAlerts = sponsorAlerts.filter((a) => !dismissedAlertIds[a.id]);
-  const dismissAlert = (id: string) => setDismissedAlertIds((prev) => ({ ...prev, [id]: true }));
+  const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
 
   const verified = isSponsorVerified(sponsorProfile);
 
@@ -166,9 +170,9 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           }`}
         >
           Sponsorship Marketplace ({sponsorshipPackages.length + activatedOpportunities.length})
-          {visibleAlerts.length > 0 && (
+          {unreadAlertCount > 0 && (
             <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-              {visibleAlerts.length}
+              {unreadAlertCount}
             </span>
           )}
         </button>
@@ -208,30 +212,48 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Tab 1: Marketplace */}
       {activeTab === 'marketplace' && (
         <div className="space-y-8">
-          {visibleAlerts.length > 0 && (
+          {sponsorAlerts.length > 0 && (
             <div className="space-y-2">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                <Bell className="w-4 h-4 text-blue-600" />
-                New Opportunity Alerts
-              </h2>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  {unreadAlertCount > 0 ? (
+                    <BellRing className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Bell className="w-4 h-4 text-slate-400" />
+                  )}
+                  Opportunity Alerts
+                  {unreadAlertCount > 0 && (
+                    <span className="text-[11px] font-normal text-slate-500">({unreadAlertCount} unread)</span>
+                  )}
+                </h2>
+                {unreadAlertCount > 0 && (
+                  <button
+                    onClick={onMarkAllAlertsRead}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-[11px] rounded-full cursor-pointer transition-colors"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    Mark all as read
+                  </button>
+                )}
+              </div>
               <div className="space-y-2">
-                {visibleAlerts.map((alert) => (
-                  <div
+                {sponsorAlerts.map((alert) => (
+                  <button
                     key={alert.id}
-                    className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start justify-between gap-3"
+                    onClick={() => onMarkAlertRead(alert.id)}
+                    className={`w-full text-left p-4 rounded-2xl border flex items-start justify-between gap-3 transition-colors cursor-pointer ${
+                      alert.read ? 'bg-white border-slate-200' : 'bg-blue-50/60 border-blue-200 hover:bg-blue-50'
+                    }`}
                   >
                     <div className="min-w-0">
-                      <div className="font-bold text-xs text-slate-900">{alert.title}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900">{alert.title}</span>
+                        {!alert.read && <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />}
+                      </div>
                       <p className="text-[11px] text-slate-600 mt-0.5">{alert.message}</p>
                       <div className="text-[10px] text-slate-400 mt-1">{alert.date}</div>
                     </div>
-                    <button
-                      onClick={() => dismissAlert(alert.id)}
-                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer shrink-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>

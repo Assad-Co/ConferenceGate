@@ -16,6 +16,7 @@ import {
   QrCode,
   ShieldCheck,
   Home,
+  Camera,
 } from 'lucide-react';
 import { UserRole, UserProfile, NotificationItem } from '../types';
 import { Logo } from './Logo';
@@ -28,7 +29,12 @@ interface NavbarProps {
   onTabChange?: (tab: string) => void;
   setActiveTab?: (tab: string) => void;
   userProfile?: UserProfile;
+  organizerIdentity?: { name: string; logo: string };
+  sponsorIdentity?: { name: string; logo: string };
+  onOrganizerLogoChange?: (dataUrl: string) => void;
+  onSponsorLogoChange?: (dataUrl: string) => void;
   notifications?: NotificationItem[];
+  sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
   onOpenAIAssistant?: () => void;
   onOpenAIModal?: () => void;
@@ -36,6 +42,7 @@ interface NavbarProps {
   onOpenDigitalBadge?: () => void;
   onSearch?: (query: string) => void;
   onOpenNotifications?: () => void;
+  onOpenSponsorAlerts?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -46,7 +53,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   setActiveTab,
   userProfile,
+  organizerIdentity,
+  sponsorIdentity,
+  onOrganizerLogoChange,
+  onSponsorLogoChange,
   notifications = [],
+  sponsorAlerts = [],
   unreadMessageCount = 0,
   onOpenAIAssistant,
   onOpenAIModal,
@@ -54,6 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDigitalBadge = () => {},
   onSearch = (_query: string) => {},
   onOpenNotifications,
+  onOpenSponsorAlerts,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
@@ -90,15 +103,45 @@ export const Navbar: React.FC<NavbarProps> = ({
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const handleTabChange = onTabChange || setActiveTab || (() => {});
   const handleOpenNotifications = onOpenNotifications || (() => handleTabChange('profile'));
+  const isSponsorRole = role === 'sponsor';
+  const handleOpenSponsorAlerts = onOpenSponsorAlerts || (() => handleTabChange('sponsor'));
   const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
-  const profile = userProfile || {
+  const isOrganizerRole = role === 'organizer';
+  const defaultProfile = userProfile || {
     name: 'Dr. Elena Rostova',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
     title: 'Senior Geoscience Researcher',
   };
 
+  const identity = isOrganizerRole && organizerIdentity
+    ? { name: organizerIdentity.name, avatar: organizerIdentity.logo }
+    : isSponsorRole && sponsorIdentity
+    ? { name: sponsorIdentity.name, avatar: sponsorIdentity.logo }
+    : defaultProfile;
+  const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
+  const identityTab = isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'profile';
+  const canCustomizeLogo = (isOrganizerRole && !!onOrganizerLogoChange) || (isSponsorRole && !!onSponsorLogoChange);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      if (isOrganizerRole) onOrganizerLogoChange?.(dataUrl);
+      else if (isSponsorRole) onSponsorLogoChange?.(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const safeNotifications = notifications || [];
   const unreadNotifCount = safeNotifications.filter((n) => !n.read).length;
+  const unreadSponsorAlertCount = sponsorAlerts.filter((a) => !a.read).length;
+  const bellUnreadCount = isSponsorRole ? unreadSponsorAlertCount : unreadNotifCount;
+  const bellClickHandler = isSponsorRole ? handleOpenSponsorAlerts : handleOpenNotifications;
+  const bellTitle = isSponsorRole ? 'Sponsorship Alerts' : 'Notifications';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,36 +320,61 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Notifications — opens the Notifications tab on the profile page */}
+            {/* Notifications — Sponsorship Alerts while in Sponsor role, Notifications tab otherwise */}
             <button
-              onClick={handleOpenNotifications}
+              onClick={bellClickHandler}
               className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
-              title="Notifications"
+              title={bellTitle}
             >
               <Bell className="w-4 h-4" />
-              {unreadNotifCount > 0 && (
+              {bellUnreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
               )}
             </button>
 
-            {/* Profile Avatar & Menu */}
-            <button
-              onClick={() => handleTabChange('profile')}
-              className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
-            >
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
-              />
-              <div className="hidden xl:block text-left pr-1">
-                <div className="text-xs font-bold text-slate-900 line-clamp-1">{profile.name}</div>
-                <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Verified Identity</span>
+            {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
+            <div className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
+              <button
+                onClick={() => handleTabChange(identityTab)}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <span className="relative shrink-0">
+                  <img
+                    src={identity.avatar}
+                    alt={identity.name}
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
+                  />
+                  {canCustomizeLogo && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        logoInputRef.current?.click();
+                      }}
+                      title="Change logo"
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center ring-2 ring-white cursor-pointer hover:bg-blue-700"
+                    >
+                      <Camera className="w-2.5 h-2.5" />
+                    </span>
+                  )}
+                </span>
+                <div className="hidden xl:block text-left pr-1">
+                  <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
+                  <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>{identityLabel}</span>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {canCustomizeLogo && (
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoFileSelected}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
