@@ -413,9 +413,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     from: 'Conference Organizer',
     to: 'Technical Committee Chair',
     message: '',
+    sendEmail: true,
   });
   const [committeeFollowUps, setCommitteeFollowUps] = useState<
-    Array<{ id: string; from: string; to: string; message: string; date: string }>
+    Array<{ id: string; from: string; to: string; message: string; date: string; sendEmail: boolean }>
   >([]);
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
 
@@ -430,12 +431,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       { id, ...followUpDraft, date: new Date().toLocaleString() },
       ...prev,
     ]);
+    // In-app notification is always sent — it's the source of truth for delivery in Conference Gate.
     onAddNotification({
       title: `Follow-Up from ${followUpDraft.from}`,
       message: followUpDraft.message,
       type: 'followup',
     });
-    setExpandedEmailId(id);
+    setExpandedEmailId(followUpDraft.sendEmail ? id : null);
     setFollowUpDraft({ ...followUpDraft, message: '' });
   };
 
@@ -1836,6 +1838,25 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 onChange={(e) => setFollowUpDraft({ ...followUpDraft, message: e.target.value })}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
               ></textarea>
+
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
+                    <Bell className="w-3 h-3" />
+                    In-app notification always sent
+                  </span>
+                  <label className="flex items-center gap-1.5 cursor-pointer font-semibold text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={followUpDraft.sendEmail}
+                      onChange={(e) => setFollowUpDraft({ ...followUpDraft, sendEmail: e.target.checked })}
+                      className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
+                    />
+                    Also send email copy (optional)
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
@@ -1862,17 +1883,24 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <Bell className="w-3 h-3" />
                         In-app notification sent
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setExpandedEmailId((cur) => (cur === fu.id ? null : fu.id))}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors"
-                      >
-                        <Mail className="w-3 h-3" />
-                        Email sent{expandedEmailId === fu.id ? ' — hide' : ' — view'}
-                      </button>
+                      {fu.sendEmail ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedEmailId((cur) => (cur === fu.id ? null : fu.id))}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors"
+                        >
+                          <Mail className="w-3 h-3" />
+                          Email sent{expandedEmailId === fu.id ? ' — hide' : ' — view'}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400">
+                          <Mail className="w-3 h-3" />
+                          No email sent
+                        </span>
+                      )}
                     </div>
 
-                    {expandedEmailId === fu.id && (
+                    {fu.sendEmail && expandedEmailId === fu.id && (
                       <div className="mt-2 bg-white border border-slate-200 rounded-xl overflow-hidden">
                         <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 space-y-0.5">
                           <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
