@@ -49,6 +49,11 @@ export function App() {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   const handleMarkAllNotificationsRead = () =>
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleAddNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) =>
+    setNotifications((prev) => [
+      { id: `notif_${Date.now()}`, timestamp: 'Just now', read: false, ...notif },
+      ...prev,
+    ]);
 
   // App Data State
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
@@ -386,6 +391,7 @@ export function App() {
             sponsorshipPackages={sampleSponsorshipPackages}
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
+            onAddNotification={handleAddNotification}
           />
         )}
 

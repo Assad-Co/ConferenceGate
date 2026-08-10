@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, UserPlus, Award, Briefcase, Calendar, BellRing, CheckCheck } from 'lucide-react';
+import { FileText, UserPlus, Award, Briefcase, Calendar, BellRing, CheckCheck, MessageCircle } from 'lucide-react';
 import { NotificationItem } from '../types';
 
 const TYPE_META: Record<NotificationItem['type'], { icon: React.ElementType; bg: string; text: string }> = {
@@ -8,6 +8,7 @@ const TYPE_META: Record<NotificationItem['type'], { icon: React.ElementType; bg:
   review: { icon: Award, bg: 'bg-amber-100', text: 'text-amber-700' },
   sponsorship: { icon: Briefcase, bg: 'bg-emerald-100', text: 'text-emerald-700' },
   agenda: { icon: Calendar, bg: 'bg-sky-100', text: 'text-sky-700' },
+  followup: { icon: MessageCircle, bg: 'bg-indigo-100', text: 'text-indigo-700' },
 };
 
 interface ProfileNotificationsProps {
