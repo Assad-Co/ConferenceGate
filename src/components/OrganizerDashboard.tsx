@@ -43,14 +43,21 @@ import {
   Briefcase,
   LayoutGrid,
   PieChart,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
-import { Conference, AbstractSubmission, SponsorshipPackage } from '../types';
+import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { formatDate } from '../utils/date';
+import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
   submissions: AbstractSubmission[];
   sponsorshipPackages: SponsorshipPackage[];
+  sponsorshipOpportunities: SponsorshipOpportunity[];
+  activatedOpportunityKeys: Record<string, boolean>;
+  onToggleOpportunityPackage: (key: string) => void;
+  sponsorApplicants?: SponsorProfile[];
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
@@ -182,6 +189,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   conferences,
   submissions,
   sponsorshipPackages,
+  sponsorshipOpportunities,
+  activatedOpportunityKeys,
+  onToggleOpportunityPackage,
+  sponsorApplicants = [],
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
@@ -622,113 +633,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     },
   };
 
-  const sponsorshipOpportunities: Array<{
-    id: string;
-    icon: React.ElementType;
-    color: keyof typeof sponsorshipOpportunityColors;
-    name: string;
-    description: string;
-    packages: Array<{ tier: string; price: number; slots: number; benefits: string[] }>;
-  }> = [
-    {
-      id: 'opp_gala',
-      icon: Wine,
-      color: 'violet',
-      name: 'Gala Dinner Sponsorship',
-      description: 'Naming rights and branded presence at the flagship evening gala dinner attended by all delegates and VIP guests.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 15000, slots: 1, benefits: ['Naming rights on all gala signage', 'Stage welcome address', '10 complimentary seats'] },
-        { tier: 'Co-Sponsor', price: 6000, slots: 3, benefits: ['Logo on gala signage & menu cards', '4 complimentary seats'] },
-      ],
-    },
-    {
-      id: 'opp_conference',
-      icon: Presentation,
-      color: 'blue',
-      name: 'Conference Title Sponsorship',
-      description: 'Top-tier branding across the entire conference: opening ceremony, main stage, app, and delegate badges.',
-      packages: [
-        { tier: 'Platinum Title Sponsor', price: 50000, slots: 1, benefits: ['Conference name co-branding', 'Opening ceremony keynote slot', '8 VIP registrations'] },
-        { tier: 'Gold Sponsor', price: 25000, slots: 2, benefits: ['Main stage backdrop logo', 'Panel speaking slot', '4 registrations'] },
-        { tier: 'Silver Sponsor', price: 12000, slots: 4, benefits: ['App & website logo placement', '2 registrations'] },
-      ],
-    },
-    {
-      id: 'opp_workshop',
-      icon: GraduationCap,
-      color: 'indigo',
-      name: 'Workshop Sponsorship',
-      description: 'Sponsor a dedicated pre-conference or breakout technical workshop session.',
-      packages: [
-        { tier: 'Workshop Sponsor', price: 5000, slots: 6, benefits: ['Branded workshop room signage', 'Opening remarks slot', 'Attendee contact list'] },
-      ],
-    },
-    {
-      id: 'opp_icebreaker',
-      icon: Snowflake,
-      color: 'sky',
-      name: 'Ice Breaker Reception Sponsorship',
-      description: 'Sponsor the opening night networking reception welcoming all delegates.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 8000, slots: 1, benefits: ['Naming rights on reception', 'Branded welcome drinks station', 'Logo on delegate badges'] },
-      ],
-    },
-    {
-      id: 'opp_fieldtrip',
-      icon: Bus,
-      color: 'emerald',
-      name: 'Field Trip Sponsorship',
-      description: 'Sponsor branded transport, guides, and refreshments for the technical field trip or site visit.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 6000, slots: 1, benefits: ['Branded coach signage', 'On-site banner placement', '2 complimentary seats'] },
-      ],
-    },
-    {
-      id: 'opp_cultural',
-      icon: Landmark,
-      color: 'amber',
-      name: 'Cultural Event Sponsorship',
-      description: 'Sponsor the cultural showcase evening celebrating the host destination.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 7000, slots: 1, benefits: ['Naming rights on cultural evening', 'Stage acknowledgment', '6 complimentary seats'] },
-      ],
-    },
-    {
-      id: 'opp_lunch',
-      icon: UtensilsCrossed,
-      color: 'teal',
-      name: 'Lunch Sponsorship',
-      description: 'Branded lunch service on a conference day, with signage across the dining area.',
-      packages: [
-        { tier: 'Daily Sponsor', price: 4000, slots: 3, benefits: ['Table tent & signage branding', 'App agenda mention'] },
-      ],
-    },
-    {
-      id: 'opp_dinner',
-      icon: Utensils,
-      color: 'rose',
-      name: 'Speakers & VIP Dinner Sponsorship',
-      description: 'Sponsor the exclusive dinner for keynote speakers, committee chairs, and VIP guests.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 9000, slots: 1, benefits: ['Seated with keynote speakers', 'Dinner welcome toast', '4 complimentary seats'] },
-      ],
-    },
-    {
-      id: 'opp_gifts',
-      icon: Gift,
-      color: 'fuchsia',
-      name: 'Delegate Gift & Badge Sponsorship',
-      description: 'Branded delegate gift bags, lanyards, or badge holders distributed to every attendee.',
-      packages: [
-        { tier: 'Exclusive Sponsor', price: 3500, slots: 1, benefits: ['Logo on all delegate badges/lanyards', 'Branded item in gift bag'] },
-      ],
-    },
-  ];
-
-  const [activatedPackages, setActivatedPackages] = useState<Record<string, boolean>>({});
-
-  const handleToggleOpportunityPackage = (key: string) => {
-    setActivatedPackages((prev) => ({ ...prev, [key]: !prev[key] }));
+  const sponsorshipOpportunityIcons: Record<string, React.ElementType> = {
+    violet: Wine,
+    blue: Presentation,
+    indigo: GraduationCap,
+    sky: Snowflake,
+    emerald: Bus,
+    amber: Landmark,
+    teal: UtensilsCrossed,
+    rose: Utensils,
+    fuchsia: Gift,
   };
 
   // Event Analytics Data
@@ -2136,8 +2050,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
           <div className="columns-1 md:columns-2 xl:columns-3 gap-6 [column-fill:_balance]">
             {sponsorshipOpportunities.map((opp) => {
-              const Icon = opp.icon;
-              const c = sponsorshipOpportunityColors[opp.color];
+              const Icon = sponsorshipOpportunityIcons[opp.category] || Briefcase;
+              const c = sponsorshipOpportunityColors[opp.category] || sponsorshipOpportunityColors.blue;
               const startingPrice = Math.min(...opp.packages.map((p) => p.price));
               return (
                 <div
@@ -2162,7 +2076,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   <div className="p-4 space-y-2">
                     {opp.packages.map((pkg) => {
                       const key = `${opp.id}__${pkg.tier}`;
-                      const isActive = !!activatedPackages[key];
+                      const isActive = !!activatedOpportunityKeys[key];
                       return (
                         <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                           <div className="flex items-center justify-between gap-3">
@@ -2180,7 +2094,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                             </div>
                           </div>
                           <button
-                            onClick={() => handleToggleOpportunityPackage(key)}
+                            onClick={() => onToggleOpportunityPackage(key)}
                             className={`mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
                               isActive
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -2229,6 +2143,101 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
             ))}
           </div>
+
+          {/* Sponsor Verification Queue */}
+          {sponsorApplicants.length > 0 && (
+            <div className="space-y-3">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-blue-600" />
+                  Sponsor Verification Queue
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Every applicant is screened against past ratings from organizers and attendees. Sponsors averaging
+                  below {SPONSOR_RATING_THRESHOLD.toFixed(1)}/5 are automatically restricted from registering — no manual
+                  review needed to keep low-quality sponsors out.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sponsorApplicants.map((applicant) => {
+                  const eligible = isSponsorVerified(applicant);
+                  return (
+                    <div
+                      key={applicant.id}
+                      className={`bg-white rounded-2xl border p-5 space-y-3 shadow-xs ${
+                        eligible ? 'border-slate-200' : 'border-rose-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={applicant.logo}
+                            alt={applicant.companyName}
+                            className="w-11 h-11 rounded-xl object-cover shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs text-slate-900 truncate">{applicant.companyName}</div>
+                            <div className="text-[11px] text-slate-500 truncate">{applicant.industry}</div>
+                          </div>
+                        </div>
+                        {eligible ? (
+                          <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0">
+                            <ShieldCheck className="w-3 h-3" />
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0">
+                            <ShieldAlert className="w-3 h-3" />
+                            Restricted
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`w-3.5 h-3.5 ${
+                                n <= Math.round(applicant.rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">{applicant.rating.toFixed(1)} / 5</span>
+                        <span className="text-[10px] text-slate-400">({applicant.reviewsCount} reviews)</span>
+                      </div>
+
+                      <div className="text-[11px] text-slate-500">
+                        {applicant.sponsorshipHistory.length} sponsorship{applicant.sponsorshipHistory.length === 1 ? '' : 's'} on
+                        record{applicant.sponsorshipHistory[0] && (
+                          <> · most recent: {applicant.sponsorshipHistory[0].conferenceTitle} ({applicant.sponsorshipHistory[0].year})</>
+                        )}
+                      </div>
+
+                      {!eligible && (
+                        <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2">
+                          {sponsorVerificationReason(applicant)}
+                        </p>
+                      )}
+
+                      <button
+                        disabled={!eligible}
+                        className={`w-full py-2 rounded-xl font-bold text-[11px] cursor-pointer transition-colors ${
+                          eligible
+                            ? 'bg-blue-900 hover:bg-blue-950 text-white'
+                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {eligible ? 'Approve Registration' : 'Blocked — Rating Below Threshold'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

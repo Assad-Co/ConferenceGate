@@ -26,9 +26,11 @@ import {
   sampleReviewOpportunities,
   sampleSponsorshipPackages,
   sampleSponsorProfile,
+  sampleSponsorshipOpportunities,
+  sampleSponsorApplicants,
   sampleNotifications,
 } from './data/mockData';
-import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorshipPackage, UserRole } from './types';
+import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, UserRole } from './types';
 
 const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   Accept: 'Accepted',
@@ -44,6 +46,9 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
+  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({});
+  const handleToggleOpportunityPackage = (key: string) =>
+    setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleMarkNotificationRead = (id: string) =>
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -269,7 +274,7 @@ export function App() {
     showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
   };
 
-  const handleSponsorshipAccepted = (pkg: SponsorshipPackage) => {
+  const handleSponsorshipAccepted = (pkg: { tier: string; conferenceTitle: string }) => {
     postCelebration(
       'sponsorship-accepted',
       '🤝 Sponsorship Confirmed!',
@@ -389,6 +394,10 @@ export function App() {
             conferences={conferences}
             submissions={submissions}
             sponsorshipPackages={sampleSponsorshipPackages}
+            sponsorshipOpportunities={sampleSponsorshipOpportunities}
+            activatedOpportunityKeys={activatedOpportunityKeys}
+            onToggleOpportunityPackage={handleToggleOpportunityPackage}
+            sponsorApplicants={sampleSponsorApplicants}
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
@@ -398,6 +407,9 @@ export function App() {
         {activeTab === 'sponsor' && (
           <SponsorPortal
             sponsorshipPackages={sampleSponsorshipPackages}
+            sponsorshipOpportunities={sampleSponsorshipOpportunities}
+            activatedOpportunityKeys={activatedOpportunityKeys}
+            sponsorProfile={sampleSponsorProfile}
             onSponsorshipAccepted={handleSponsorshipAccepted}
           />
         )}
