@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Building2,
   Calendar,
@@ -18,6 +18,7 @@ import {
   Mail,
   UserCheck,
   ChevronRight,
+  ChevronDown,
   Filter,
   Image as ImageIcon,
   UserPlus,
@@ -463,6 +464,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }>
   >([]);
 
+  const generateZoomLink = () => {
+    const zoomId = Math.floor(1000000000 + Math.random() * 8999999999);
+    const zoomPwd = Math.random().toString(36).slice(2, 8);
+    return `https://zoom.us/j/${zoomId}?pwd=${zoomPwd}`;
+  };
+  const [pendingZoomLink, setPendingZoomLink] = useState(generateZoomLink);
+
   const toggleMeetingAttendee = (name: string) => {
     setMeetingDraft((prev) => ({
       ...prev,
@@ -471,6 +479,20 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         : [...prev.attendees, name],
     }));
   };
+
+  const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState(false);
+  const attendeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!attendeeDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attendeeDropdownRef.current && !attendeeDropdownRef.current.contains(e.target as Node)) {
+        setAttendeeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [attendeeDropdownOpen]);
 
   const worldClockPreview = useMemo(() => {
     if (!meetingDraft.date || !meetingDraft.time) return [];
@@ -494,17 +516,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const handleScheduleMeeting = (e: React.FormEvent) => {
     e.preventDefault();
     if (!meetingDraft.title.trim() || !meetingDraft.date || !meetingDraft.time || meetingDraft.attendees.length === 0) return;
-    const zoomId = Math.floor(1000000000 + Math.random() * 8999999999);
-    const zoomPwd = Math.random().toString(36).slice(2, 8);
     setScheduledMeetings((prev) => [
       {
         id: `mtg_${Date.now()}`,
         ...meetingDraft,
-        zoomLink: `https://zoom.us/j/${zoomId}?pwd=${zoomPwd}`,
+        zoomLink: pendingZoomLink,
       },
       ...prev,
     ]);
     setMeetingDraft({ title: '', attendees: [], date: '', time: '', organizerTimezone: meetingDraft.organizerTimezone });
+    setPendingZoomLink(generateZoomLink());
   };
 
   // Sponsorship Opportunities Catalog State
@@ -1846,29 +1867,76 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
               />
 
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Attendees</span>
+              <div className="space-y-1.5" ref={attendeeDropdownRef}>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Attendees — Select Who's Available
+                </span>
                 {committeeRoster.length === 0 ? (
                   <p className="text-[11px] text-slate-400">No committee members yet — invite members above first.</p>
                 ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {committeeRoster.map((m) => {
-                      const selected = meetingDraft.attendees.includes(m.name);
-                      return (
-                        <button
-                          type="button"
-                          key={m.name}
-                          onClick={() => toggleMeetingAttendee(m.name)}
-                          className={`px-2.5 py-1.5 rounded-full text-[11px] font-bold border cursor-pointer transition-colors ${
-                            selected
-                              ? 'bg-blue-600 border-blue-600 text-white'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {m.name} · {m.org}
-                        </button>
-                      );
-                    })}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setAttendeeDropdownOpen((v) => !v)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium flex items-center justify-between cursor-pointer text-left"
+                    >
+                      <span className={meetingDraft.attendees.length === 0 ? 'text-slate-400' : 'text-slate-800 font-bold'}>
+                        {meetingDraft.attendees.length === 0
+                          ? 'Select committee members to invite...'
+                          : `${meetingDraft.attendees.length} of ${committeeRoster.length} selected: ${meetingDraft.attendees.join(', ')}`}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${attendeeDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {attendeeDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                            Who can attend?
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setMeetingDraft({ ...meetingDraft, attendees: committeeRoster.map((m) => m.name) })}
+                              className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
+                            >
+                              Select All
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMeetingDraft({ ...meetingDraft, attendees: [] })}
+                              className="text-[10px] font-bold text-slate-400 hover:underline cursor-pointer"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-56 overflow-y-auto">
+                          {committeeRoster.map((m) => {
+                            const selected = meetingDraft.attendees.includes(m.name);
+                            return (
+                              <label
+                                key={m.name}
+                                className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-b-0"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() => toggleMeetingAttendee(m.name)}
+                                  className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
+                                />
+                                <span className="min-w-0">
+                                  <span className="block font-bold text-slate-900 text-xs truncate">{m.name}</span>
+                                  <span className="block text-[10px] text-slate-500 truncate">
+                                    {m.title} · {m.org}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1926,6 +1994,17 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Zoom Link Preview — visible as soon as date & time are picked, before the meeting is scheduled */}
+              {meetingDraft.date && meetingDraft.time && (
+                <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-800">
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Your Zoom Link (ready once scheduled)</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-emerald-900 break-all">{pendingZoomLink}</span>
                 </div>
               )}
 
