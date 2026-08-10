@@ -284,6 +284,31 @@ export interface SponsorshipPackage {
   totalSlots: number;
 }
 
+export interface SponsorshipOpportunity {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  idealSectors: string[];
+  packages: Array<{ tier: string; price: number; slots: number; benefits: string[] }>;
+}
+
+export interface SponsorReview {
+  id: string;
+  reviewerName: string;
+  reviewerRole: 'Organizer' | 'Attendee' | 'Committee Chair';
+  conferenceTitle: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
+export interface SponsorHistoryEntry {
+  year: number;
+  conferenceTitle: string;
+  tier: string;
+}
+
 export interface SponsorProfile {
   id: string;
   companyName: string;
@@ -300,6 +325,11 @@ export interface SponsorProfile {
   profileViews: number;
   logoImpressions: number;
   contactEmail: string;
+  rating: number;
+  reviewsCount: number;
+  reviews: SponsorReview[];
+  sponsorshipHistory: SponsorHistoryEntry[];
+  verificationStatus: 'Verified' | 'Restricted';
 }
 
 export interface ReviewOpportunity {
