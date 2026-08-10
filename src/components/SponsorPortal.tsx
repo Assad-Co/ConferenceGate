@@ -8,15 +8,25 @@ import {
   ShieldAlert,
   History,
   MessageSquareQuote,
+  Bell,
+  X,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+
+interface SponsorAlert {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+}
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities?: SponsorshipOpportunity[];
   activatedOpportunityKeys?: Record<string, boolean>;
   sponsorProfile: SponsorProfile;
+  sponsorAlerts?: SponsorAlert[];
   onSponsorshipAccepted?: (pkg: { tier: string; conferenceTitle: string }) => void;
 }
 
@@ -36,10 +46,15 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   sponsorshipOpportunities = [],
   activatedOpportunityKeys = {},
   sponsorProfile,
+  sponsorAlerts = [],
   onSponsorshipAccepted = (_pkg: { tier: string; conferenceTitle: string }) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth' | 'profile'>('marketplace');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Record<string, boolean>>({});
+
+  const visibleAlerts = sponsorAlerts.filter((a) => !dismissedAlertIds[a.id]);
+  const dismissAlert = (id: string) => setDismissedAlertIds((prev) => ({ ...prev, [id]: true }));
 
   const verified = isSponsorVerified(sponsorProfile);
 
@@ -144,13 +159,18 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         <button
           onClick={() => setActiveTab('marketplace')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'marketplace'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
           Sponsorship Marketplace ({sponsorshipPackages.length + activatedOpportunities.length})
+          {visibleAlerts.length > 0 && (
+            <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+              {visibleAlerts.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('roi')}
@@ -188,6 +208,35 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Tab 1: Marketplace */}
       {activeTab === 'marketplace' && (
         <div className="space-y-8">
+          {visibleAlerts.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-blue-600" />
+                New Opportunity Alerts
+              </h2>
+              <div className="space-y-2">
+                {visibleAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-bold text-xs text-slate-900">{alert.title}</div>
+                      <p className="text-[11px] text-slate-600 mt-0.5">{alert.message}</p>
+                      <div className="text-[10px] text-slate-400 mt-1">{alert.date}</div>
+                    </div>
+                    <button
+                      onClick={() => dismissAlert(alert.id)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-slate-900">Standard Sponsorship Tiers</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -46,9 +46,18 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
-  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({});
+  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({
+    'opp_conference__Gold Sponsor': true,
+    'opp_workshop__Workshop Sponsor': true,
+    'opp_icebreaker__Exclusive Sponsor': true,
+    'opp_gifts__Exclusive Sponsor': true,
+  });
   const handleToggleOpportunityPackage = (key: string) =>
     setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const [sponsorAlerts, setSponsorAlerts] = useState<Array<{ id: string; title: string; message: string; date: string }>>([]);
+  const handleNotifySponsors = (title: string, message: string) =>
+    setSponsorAlerts((prev) => [{ id: `salert_${Date.now()}`, title, message, date: new Date().toLocaleString() }, ...prev]);
 
   const handleMarkNotificationRead = (id: string) =>
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -401,6 +410,7 @@ export function App() {
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
+            onNotifySponsors={handleNotifySponsors}
           />
         )}
 
@@ -410,6 +420,7 @@ export function App() {
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
             activatedOpportunityKeys={activatedOpportunityKeys}
             sponsorProfile={sampleSponsorProfile}
+            sponsorAlerts={sponsorAlerts}
             onSponsorshipAccepted={handleSponsorshipAccepted}
           />
         )}

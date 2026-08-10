@@ -61,6 +61,7 @@ interface OrganizerDashboardProps {
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
+  onNotifySponsors?: (title: string, message: string) => void;
 }
 
 const CHART_HEX = {
@@ -196,6 +197,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
+  onNotifySponsors = (_title: string, _message: string) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
@@ -643,6 +645,17 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     teal: UtensilsCrossed,
     rose: Utensils,
     fuchsia: Gift,
+  };
+
+  const verifiedSponsorCount = sponsorApplicants.filter((s) => isSponsorVerified(s)).length;
+  const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, string>>({});
+
+  const handleNotifyVerifiedSponsors = (opportunityName: string, pkgTier: string, price: number, key: string) => {
+    onNotifySponsors(
+      `New Sponsorship Opportunity: ${opportunityName}`,
+      `${pkgTier} package now available for $${price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
+    );
+    setNotifiedOpportunityKeys((prev) => ({ ...prev, [key]: new Date().toLocaleString() }));
   };
 
   // Event Analytics Data
@@ -2103,6 +2116,17 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           >
                             {isActive ? '✓ Active in Marketplace' : 'Activate for This Conference'}
                           </button>
+                          {isActive && (
+                            <button
+                              onClick={() => handleNotifyVerifiedSponsors(opp.name, pkg.tier, pkg.price, key)}
+                              className="mt-1.5 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1.5"
+                            >
+                              <Bell className="w-3 h-3" />
+                              {notifiedOpportunityKeys[key]
+                                ? `Notified ${verifiedSponsorCount} Verified Sponsors ✓`
+                                : `Notify ${verifiedSponsorCount} Verified Sponsors`}
+                            </button>
+                          )}
                         </div>
                       );
                     })}
