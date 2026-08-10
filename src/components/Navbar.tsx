@@ -29,6 +29,7 @@ interface NavbarProps {
   setActiveTab?: (tab: string) => void;
   userProfile?: UserProfile;
   notifications?: NotificationItem[];
+  sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
   onOpenAIAssistant?: () => void;
   onOpenAIModal?: () => void;
@@ -36,6 +37,7 @@ interface NavbarProps {
   onOpenDigitalBadge?: () => void;
   onSearch?: (query: string) => void;
   onOpenNotifications?: () => void;
+  onOpenSponsorAlerts?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -47,6 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   userProfile,
   notifications = [],
+  sponsorAlerts = [],
   unreadMessageCount = 0,
   onOpenAIAssistant,
   onOpenAIModal,
@@ -54,6 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDigitalBadge = () => {},
   onSearch = (_query: string) => {},
   onOpenNotifications,
+  onOpenSponsorAlerts,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
@@ -90,6 +94,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const handleTabChange = onTabChange || setActiveTab || (() => {});
   const handleOpenNotifications = onOpenNotifications || (() => handleTabChange('profile'));
+  const isSponsorRole = role === 'sponsor';
+  const handleOpenSponsorAlerts = onOpenSponsorAlerts || (() => handleTabChange('sponsor'));
   const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
   const profile = userProfile || {
     name: 'Dr. Elena Rostova',
@@ -99,6 +105,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const safeNotifications = notifications || [];
   const unreadNotifCount = safeNotifications.filter((n) => !n.read).length;
+  const unreadSponsorAlertCount = sponsorAlerts.filter((a) => !a.read).length;
+  const bellUnreadCount = isSponsorRole ? unreadSponsorAlertCount : unreadNotifCount;
+  const bellClickHandler = isSponsorRole ? handleOpenSponsorAlerts : handleOpenNotifications;
+  const bellTitle = isSponsorRole ? 'Sponsorship Alerts' : 'Notifications';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,14 +287,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Notifications — opens the Notifications tab on the profile page */}
+            {/* Notifications — Sponsorship Alerts while in Sponsor role, Notifications tab otherwise */}
             <button
-              onClick={handleOpenNotifications}
+              onClick={bellClickHandler}
               className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
-              title="Notifications"
+              title={bellTitle}
             >
               <Bell className="w-4 h-4" />
-              {unreadNotifCount > 0 && (
+              {bellUnreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
               )}
             </button>
