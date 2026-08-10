@@ -16,6 +16,7 @@ import {
   QrCode,
   ShieldCheck,
   Home,
+  Camera,
 } from 'lucide-react';
 import { UserRole, UserProfile, NotificationItem } from '../types';
 import { Logo } from './Logo';
@@ -30,6 +31,8 @@ interface NavbarProps {
   userProfile?: UserProfile;
   organizerIdentity?: { name: string; logo: string };
   sponsorIdentity?: { name: string; logo: string };
+  onOrganizerLogoChange?: (dataUrl: string) => void;
+  onSponsorLogoChange?: (dataUrl: string) => void;
   notifications?: NotificationItem[];
   sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
@@ -52,6 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   userProfile,
   organizerIdentity,
   sponsorIdentity,
+  onOrganizerLogoChange,
+  onSponsorLogoChange,
   notifications = [],
   sponsorAlerts = [],
   unreadMessageCount = 0,
@@ -115,6 +120,21 @@ export const Navbar: React.FC<NavbarProps> = ({
     : defaultProfile;
   const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
   const identityTab = isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'profile';
+  const canCustomizeLogo = (isOrganizerRole && !!onOrganizerLogoChange) || (isSponsorRole && !!onSponsorLogoChange);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      if (isOrganizerRole) onOrganizerLogoChange?.(dataUrl);
+      else if (isSponsorRole) onSponsorLogoChange?.(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const safeNotifications = notifications || [];
   const unreadNotifCount = safeNotifications.filter((n) => !n.read).length;
@@ -313,23 +333,48 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
-            <button
-              onClick={() => handleTabChange(identityTab)}
-              className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
-            >
-              <img
-                src={identity.avatar}
-                alt={identity.name}
-                className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
-              />
-              <div className="hidden xl:block text-left pr-1">
-                <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
-                <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>{identityLabel}</span>
+            <div className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
+              <button
+                onClick={() => handleTabChange(identityTab)}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <span className="relative shrink-0">
+                  <img
+                    src={identity.avatar}
+                    alt={identity.name}
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
+                  />
+                  {canCustomizeLogo && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        logoInputRef.current?.click();
+                      }}
+                      title="Change logo"
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center ring-2 ring-white cursor-pointer hover:bg-blue-700"
+                    >
+                      <Camera className="w-2.5 h-2.5" />
+                    </span>
+                  )}
+                </span>
+                <div className="hidden xl:block text-left pr-1">
+                  <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
+                  <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>{identityLabel}</span>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {canCustomizeLogo && (
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoFileSelected}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
