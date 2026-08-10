@@ -46,7 +46,12 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
-  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({});
+  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({
+    'opp_conference__Gold Sponsor': true,
+    'opp_workshop__Workshop Sponsor': true,
+    'opp_icebreaker__Exclusive Sponsor': true,
+    'opp_gifts__Exclusive Sponsor': true,
+  });
   const handleToggleOpportunityPackage = (key: string) =>
     setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
 
