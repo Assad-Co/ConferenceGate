@@ -60,7 +60,15 @@ export function App() {
 
   const [sponsorAlerts, setSponsorAlerts] = useState<
     Array<{ id: string; title: string; message: string; date: string; read: boolean }>
-  >([]);
+  >([
+    {
+      id: 'salert_default_1',
+      title: 'New Sponsorship Opportunity: Conference Title Sponsorship',
+      message: 'Gold Sponsor package now available for $25,000. Apply in the Sponsor Marketplace before slots fill up.',
+      date: '8/10/2026, 9:00:00 AM',
+      read: false,
+    },
+  ]);
   const handleNotifySponsors = (title: string, message: string) =>
     setSponsorAlerts((prev) => [
       { id: `salert_${Date.now()}`, title, message, date: new Date().toLocaleString(), read: false },
