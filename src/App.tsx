@@ -30,7 +30,7 @@ import {
   sampleSponsorApplicants,
   sampleNotifications,
 } from './data/mockData';
-import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, UserRole } from './types';
+import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorProfile, UserRole } from './types';
 
 const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   Accept: 'Accepted',
@@ -78,6 +78,59 @@ export function App() {
     setSponsorAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
   const handleMarkAllSponsorAlertsRead = () =>
     setSponsorAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
+
+  // All sponsors an organizer can rate — the current/primary sponsor (index 0, shown in the
+  // Sponsor Marketplace) plus the applicant pool shown in the Sponsor Verification Queue.
+  const [allSponsorProfiles, setAllSponsorProfiles] = useState<SponsorProfile[]>([
+    sampleSponsorProfile,
+    ...sampleSponsorApplicants,
+  ]);
+  const primarySponsorProfile = allSponsorProfiles[0];
+  const sponsorApplicantProfiles = allSponsorProfiles.slice(1);
+
+  const handleReviewSponsor = (
+    sponsorId: string,
+    review: { conferenceTitle: string; rating: number; comment: string }
+  ) => {
+    let updatedSponsorName = '';
+    let updatedRating = 0;
+    setAllSponsorProfiles((prev) =>
+      prev.map((s) => {
+        if (s.id !== sponsorId) return s;
+        const newReview = {
+          id: `srev_${Date.now()}`,
+          reviewerName: conferences[0]?.organizerName || 'Conference Organizer',
+          reviewerRole: 'Organizer' as const,
+          conferenceTitle: review.conferenceTitle,
+          rating: review.rating,
+          comment: review.comment,
+          date: new Date().toISOString().split('T')[0],
+        };
+        const newReviewsCount = s.reviewsCount + 1;
+        const newRating = Math.round(((s.rating * s.reviewsCount + review.rating) / newReviewsCount) * 10) / 10;
+        updatedSponsorName = s.companyName;
+        updatedRating = newRating;
+        return {
+          ...s,
+          reviews: [newReview, ...s.reviews],
+          reviewsCount: newReviewsCount,
+          rating: newRating,
+          verificationStatus: newRating >= 3.0 ? 'Verified' : 'Restricted',
+        };
+      })
+    );
+    if (sponsorId === primarySponsorProfile.id) {
+      handleNotifySponsors(
+        `New Feedback from ${conferences[0]?.organizerName || 'Conference Organizer'}`,
+        `You received a ${review.rating}/5 review for ${review.conferenceTitle}: "${review.comment}"`
+      );
+    }
+    showToast({
+      type: 'success',
+      title: 'Feedback sent to sponsor',
+      message: `${updatedSponsorName || 'Sponsor'}'s rating is now ${updatedRating.toFixed(1)}/5.`,
+    });
+  };
 
   const handleMarkNotificationRead = (id: string) =>
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -307,12 +360,12 @@ export function App() {
     postCelebration(
       'sponsorship-accepted',
       '🤝 Sponsorship Confirmed!',
-      `${sampleSponsorProfile.companyName} is proud to confirm ${pkg.tier} Tier sponsorship for ${pkg.conferenceTitle}! We look forward to connecting with the community.`,
+      `${primarySponsorProfile.companyName} is proud to confirm ${pkg.tier} Tier sponsorship for ${pkg.conferenceTitle}! We look forward to connecting with the community.`,
       {
-        authorName: sampleSponsorProfile.companyName,
+        authorName: primarySponsorProfile.companyName,
         authorTitle: 'Corporate Sponsor',
         authorOrg: pkg.conferenceTitle,
-        authorAvatar: sampleSponsorProfile.logo,
+        authorAvatar: primarySponsorProfile.logo,
         conferenceBadge: pkg.conferenceTitle,
       }
     );
@@ -356,8 +409,8 @@ export function App() {
             : undefined
         }
         sponsorIdentity={{
-          name: sampleSponsorProfile.companyName,
-          logo: sponsorLogoOverride || sampleSponsorProfile.logo,
+          name: primarySponsorProfile.companyName,
+          logo: sponsorLogoOverride || primarySponsorProfile.logo,
         }}
         onOrganizerLogoChange={setOrganizerLogoOverride}
         onSponsorLogoChange={setSponsorLogoOverride}
@@ -439,7 +492,9 @@ export function App() {
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
             activatedOpportunityKeys={activatedOpportunityKeys}
             onToggleOpportunityPackage={handleToggleOpportunityPackage}
-            sponsorApplicants={sampleSponsorApplicants}
+            sponsorApplicants={sponsorApplicantProfiles}
+            reviewableSponsors={allSponsorProfiles}
+            onReviewSponsor={handleReviewSponsor}
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
@@ -452,7 +507,7 @@ export function App() {
             sponsorshipPackages={sampleSponsorshipPackages}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
             activatedOpportunityKeys={activatedOpportunityKeys}
-            sponsorProfile={sampleSponsorProfile}
+            sponsorProfile={primarySponsorProfile}
             sponsorAlerts={sponsorAlerts}
             onMarkAlertRead={handleMarkSponsorAlertRead}
             onMarkAllAlertsRead={handleMarkAllSponsorAlertsRead}
