@@ -45,6 +45,7 @@ import {
   PieChart,
   ShieldCheck,
   ShieldAlert,
+  MessageSquareQuote,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { formatDate } from '../utils/date';
@@ -58,6 +59,8 @@ interface OrganizerDashboardProps {
   activatedOpportunityKeys: Record<string, boolean>;
   onToggleOpportunityPackage: (key: string) => void;
   sponsorApplicants?: SponsorProfile[];
+  reviewableSponsors?: SponsorProfile[];
+  onReviewSponsor?: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string }) => void;
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
@@ -194,6 +197,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   activatedOpportunityKeys,
   onToggleOpportunityPackage,
   sponsorApplicants = [],
+  reviewableSponsors = [],
+  onReviewSponsor = (_sponsorId: string, _review: { conferenceTitle: string; rating: number; comment: string }) => {},
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
@@ -656,6 +661,41 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       `${pkgTier} package now available for $${price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
     );
     setNotifiedOpportunityKeys((prev) => ({ ...prev, [key]: new Date().toLocaleString() }));
+  };
+
+  // Sponsor Feedback / Review State
+  const [sponsorReviewDraft, setSponsorReviewDraft] = useState({
+    sponsorId: reviewableSponsors[0]?.id || '',
+    conferenceTitle: conferences[0]?.title || '',
+    rating: 0,
+    comment: '',
+  });
+  const [sponsorReviewsSent, setSponsorReviewsSent] = useState<
+    Array<{ id: string; sponsorName: string; conferenceTitle: string; rating: number; comment: string; date: string }>
+  >([]);
+
+  const handleSubmitSponsorReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sponsorReviewDraft.sponsorId || !sponsorReviewDraft.rating || !sponsorReviewDraft.comment.trim()) return;
+    const sponsor = reviewableSponsors.find((s) => s.id === sponsorReviewDraft.sponsorId);
+    if (!sponsor) return;
+    onReviewSponsor(sponsorReviewDraft.sponsorId, {
+      conferenceTitle: sponsorReviewDraft.conferenceTitle,
+      rating: sponsorReviewDraft.rating,
+      comment: sponsorReviewDraft.comment,
+    });
+    setSponsorReviewsSent((prev) => [
+      {
+        id: `sr_${Date.now()}`,
+        sponsorName: sponsor.companyName,
+        conferenceTitle: sponsorReviewDraft.conferenceTitle,
+        rating: sponsorReviewDraft.rating,
+        comment: sponsorReviewDraft.comment,
+        date: new Date().toLocaleString(),
+      },
+      ...prev,
+    ]);
+    setSponsorReviewDraft((prev) => ({ ...prev, rating: 0, comment: '' }));
   };
 
   // Event Analytics Data
@@ -2260,6 +2300,112 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Rate & Review Sponsor */}
+          {reviewableSponsors.length > 0 && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <MessageSquareQuote className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-sm text-slate-900">Rate & Review Sponsor</h3>
+              </div>
+              <p className="text-xs text-slate-500 -mt-2">
+                Evaluate the services or package a sponsor delivered. Your review updates their rating and is pushed
+                straight to their Sponsor Marketplace as feedback.
+              </p>
+              <form onSubmit={handleSubmitSponsorReview} className="space-y-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <select
+                    value={sponsorReviewDraft.sponsorId}
+                    onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, sponsorId: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    {reviewableSponsors.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.companyName}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={sponsorReviewDraft.conferenceTitle}
+                    onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, conferenceTitle: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    {conferences.map((c) => (
+                      <option key={c.id} value={c.title}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rating</span>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        type="button"
+                        key={n}
+                        onClick={() => setSponsorReviewDraft({ ...sponsorReviewDraft, rating: n })}
+                        className="cursor-pointer"
+                        title={`${n} star${n === 1 ? '' : 's'}`}
+                      >
+                        <Star
+                          className={`w-5 h-5 ${
+                            n <= sponsorReviewDraft.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {sponsorReviewDraft.rating > 0 && (
+                    <span className="text-[11px] font-bold text-slate-700">{sponsorReviewDraft.rating}/5</span>
+                  )}
+                </div>
+
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Evaluate the services or package provided, e.g. Delivered branding assets on time and their booth staff were highly engaged with delegates..."
+                  value={sponsorReviewDraft.comment}
+                  onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, comment: e.target.value })}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                ></textarea>
+
+                <button
+                  type="submit"
+                  disabled={!sponsorReviewDraft.rating || !sponsorReviewDraft.comment.trim()}
+                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Push Feedback to Sponsor</span>
+                </button>
+              </form>
+
+              {sponsorReviewsSent.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  {sponsorReviewsSent.map((r) => (
+                    <div key={r.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-slate-900 text-xs">{r.sponsorName}</span>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`w-3 h-3 ${n <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {r.conferenceTitle} · <span className="text-emerald-600 font-semibold">Sent to sponsor {r.date}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-1">{r.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
