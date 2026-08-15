@@ -45,6 +45,7 @@ interface NavbarProps {
   onOpenNotifications?: () => void;
   onOpenSponsorAlerts?: () => void;
   accountEmail?: string;
+  accountRole?: 'professional' | 'organizer' | 'sponsor';
   onLogout?: () => void;
 }
 
@@ -71,6 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
   onOpenSponsorAlerts,
   accountEmail,
+  accountRole,
   onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,6 +108,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
+  const switchableRoles: Array<'professional' | 'reviewer' | 'organizer' | 'sponsor'> =
+    accountRole === 'organizer'
+      ? ['organizer']
+      : accountRole === 'sponsor'
+      ? ['sponsor']
+      : accountRole === 'professional'
+      ? ['professional', 'reviewer']
+      : ['professional', 'reviewer', 'organizer', 'sponsor'];
   const handleTabChange = onTabChange || setActiveTab || (() => {});
   const handleOpenNotifications = onOpenNotifications || (() => handleTabChange('profile'));
   const isSponsorRole = role === 'sponsor';
@@ -248,58 +258,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Switch Active Context
                   </div>
-                  <button
-                    onClick={() => {
-                      onRoleChange('Professional' as UserRole);
-                      handleTabChange('home');
-                      setRoleMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
-                      role === 'professional' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>Professional / Author</span>
-                    <UserCheck className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      onRoleChange('Reviewer' as UserRole);
-                      handleTabChange('reviewer');
-                      setRoleMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
-                      role === 'reviewer' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>Abstract Reviewer</span>
-                    <Award className="w-3.5 h-3.5 text-blue-500" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      onRoleChange('Organizer' as UserRole);
-                      handleTabChange('organizer');
-                      setRoleMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
-                      role === 'organizer' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>Conference Organizer</span>
-                    <Building2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      onRoleChange('Sponsor' as UserRole);
-                      handleTabChange('sponsor');
-                      setRoleMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
-                      role === 'sponsor' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>Corporate Sponsor</span>
-                    <Briefcase className="w-3.5 h-3.5" />
-                  </button>
+                  {switchableRoles.includes('professional') && (
+                    <button
+                      onClick={() => {
+                        onRoleChange('Professional' as UserRole);
+                        handleTabChange('home');
+                        setRoleMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
+                        role === 'professional' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                      }`}
+                    >
+                      <span>Professional / Author</span>
+                      <UserCheck className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {switchableRoles.includes('reviewer') && (
+                    <button
+                      onClick={() => {
+                        onRoleChange('Reviewer' as UserRole);
+                        handleTabChange('reviewer');
+                        setRoleMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
+                        role === 'reviewer' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                      }`}
+                    >
+                      <span>Abstract Reviewer</span>
+                      <Award className="w-3.5 h-3.5 text-blue-500" />
+                    </button>
+                  )}
+                  {switchableRoles.includes('organizer') && (
+                    <button
+                      onClick={() => {
+                        onRoleChange('Organizer' as UserRole);
+                        handleTabChange('organizer');
+                        setRoleMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
+                        role === 'organizer' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                      }`}
+                    >
+                      <span>Conference Organizer</span>
+                      <Building2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {switchableRoles.includes('sponsor') && (
+                    <button
+                      onClick={() => {
+                        onRoleChange('Sponsor' as UserRole);
+                        handleTabChange('sponsor');
+                        setRoleMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
+                        role === 'sponsor' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                      }`}
+                    >
+                      <span>Corporate Sponsor</span>
+                      <Briefcase className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {onLogout && (
                     <>
                       <div className="my-1 border-t border-slate-100" />
