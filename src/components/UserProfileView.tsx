@@ -185,12 +185,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Presented Papers</div>
-            <div className="text-xl font-extrabold text-slate-900">{userProfile.contributions.papersPresented} Papers</div>
+            <div className="text-xl font-extrabold text-slate-900">
+              {userProfile.contributions.oralPresentations + userProfile.contributions.posterPresentations} Papers
+            </div>
           </div>
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
-            <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.committeesServed} Positions</div>
+            <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees} Positions</div>
           </div>
         </div>
 
