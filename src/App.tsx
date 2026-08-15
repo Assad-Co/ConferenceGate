@@ -522,6 +522,7 @@ export function App() {
         {activeTab === 'profile' && (
           <UserProfileView
             userProfile={userProfile}
+            submissions={submissions}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
