@@ -4,7 +4,6 @@ import {
   FileText,
   Award,
   Users,
-  Briefcase,
   Layers,
   Building2,
   Clock,
@@ -16,6 +15,8 @@ import {
   Star,
   Sparkles,
   PenSquare,
+  BadgeCheck,
+  QrCode,
 } from 'lucide-react';
 import { Conference, UserProfile, Post } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
@@ -30,6 +31,7 @@ interface HomeLandingProps {
   userProfile: UserProfile;
   posts: Post[];
   onAddPost: (content: string) => void;
+  onOpenDigitalBadge: () => void;
 }
 
 const PostCard: React.FC<{ post: Post }> = ({ post }) => (
@@ -125,6 +127,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   userProfile,
   posts,
   onAddPost,
+  onOpenDigitalBadge,
 }) => {
   const [postText, setPostText] = useState('');
   const [logoErrorIds, setLogoErrorIds] = useState<Record<string, boolean>>({});
@@ -150,8 +153,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
     { label: 'Discover Conferences', icon: Layers, tab: 'discover' },
     { label: 'My Abstracts', icon: FileText, tab: 'abstracts' },
     { label: 'Reviewer Portal', icon: Award, tab: 'reviewer' },
-    { label: 'Organizer Dashboard', icon: Building2, tab: 'organizer' },
-    { label: 'Sponsor Portal', icon: Briefcase, tab: 'sponsor' },
+    { label: 'Certificates', icon: BadgeCheck, tab: 'certificates' },
   ];
 
   return (
@@ -210,6 +212,13 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
               <span>{item.label}</span>
             </button>
           ))}
+          <button
+            onClick={onOpenDigitalBadge}
+            className="w-full flex items-center gap-3 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-700 cursor-pointer transition-colors group"
+          >
+            <QrCode className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            <span>Digital Badge</span>
+          </button>
         </div>
       </aside>
 

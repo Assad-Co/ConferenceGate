@@ -485,6 +485,7 @@ export function App() {
         }}
         onOpenSponsorAlerts={() => setActiveTab('sponsor')}
         accountEmail={authUser.email}
+        accountRole={authUser.role}
         onLogout={handleLogout}
       />
 
@@ -508,6 +509,7 @@ export function App() {
             userProfile={userProfile}
             posts={posts}
             onAddPost={handleAddPost}
+            onOpenDigitalBadge={() => setIsBadgeOpen(true)}
           />
         )}
 
@@ -526,8 +528,22 @@ export function App() {
             onBack={() => setActiveTab('discover')}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
             onVolunteerReviewer={() => setActiveTab('reviewer')}
-            onExpressCommitteeInterest={() => setActiveTab('organizer')}
-            onApplySponsorship={() => setActiveTab('sponsor')}
+            onExpressCommitteeInterest={(confId) => {
+              const conf = conferences.find((c) => c.id === confId);
+              showToast({
+                type: 'success',
+                title: 'Interest sent to the organizer',
+                message: `${conf?.organizerName || 'The organizing committee'} will follow up about joining the Technical Committee.`,
+              });
+            }}
+            onApplySponsorship={(confId) => {
+              const conf = conferences.find((c) => c.id === confId);
+              showToast({
+                type: 'success',
+                title: 'Sponsorship inquiry sent',
+                message: `${conf?.organizerName || 'The organizer'} has been notified — explore live packages in the Sponsor Marketplace.`,
+              });
+            }}
           />
         )}
 
@@ -547,7 +563,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'organizer' && (
+        {activeTab === 'organizer' && authUser.role === 'organizer' && (
           <OrganizerDashboard
             conferences={conferences}
             submissions={submissions}
@@ -565,7 +581,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'sponsor' && (
+        {activeTab === 'sponsor' && authUser.role === 'sponsor' && (
           <SponsorPortal
             sponsorshipPackages={sampleSponsorshipPackages}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
