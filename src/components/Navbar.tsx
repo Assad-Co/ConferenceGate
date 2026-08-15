@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Home,
   Camera,
+  LogOut,
 } from 'lucide-react';
 import { UserRole, UserProfile, NotificationItem } from '../types';
 import { Logo } from './Logo';
@@ -43,6 +44,8 @@ interface NavbarProps {
   onSearch?: (query: string) => void;
   onOpenNotifications?: () => void;
   onOpenSponsorAlerts?: () => void;
+  accountEmail?: string;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -67,6 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearch = (_query: string) => {},
   onOpenNotifications,
   onOpenSponsorAlerts,
+  accountEmail,
+  onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
@@ -295,6 +300,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Corporate Sponsor</span>
                     <Briefcase className="w-3.5 h-3.5" />
                   </button>
+                  {onLogout && (
+                    <>
+                      <div className="my-1 border-t border-slate-100" />
+                      {accountEmail && (
+                        <div className="px-3 pb-1 text-[10px] text-slate-400 truncate">{accountEmail}</div>
+                      )}
+                      <button
+                        onClick={() => {
+                          setRoleMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center justify-between cursor-pointer"
+                      >
+                        <span>Log Out</span>
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

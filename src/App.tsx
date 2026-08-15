@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
+import { AuthScreen } from './components/auth/AuthScreen';
+import { AuthUser, fetchCurrentUser, logout as apiLogout } from './api/auth';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
@@ -38,8 +41,18 @@ const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   'Poster Presentation': 'Accepted for Poster',
 };
 
+const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
+  professional: 'Professional',
+  organizer: 'Organizer',
+  sponsor: 'Sponsor',
+};
+
 export function App() {
   const { showToast } = useToast();
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [organizerNameOverride, setOrganizerNameOverride] = useState<string | null>(null);
+  const [sponsorNameOverride, setSponsorNameOverride] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
@@ -147,6 +160,39 @@ export function App() {
   const [submissions, setSubmissions] = useState<AbstractSubmission[]>(sampleAbstractSubmissions);
   const [posts, setPosts] = useState<Post[]>(sampleFeedPosts);
   const [userProfile, setUserProfile] = useState(currentUserProfile);
+
+  const applyAuthUser = (user: AuthUser) => {
+    setAuthUser(user);
+    const mappedRole = AUTH_ROLE_TO_USER_ROLE[user.role];
+    setActiveRole(mappedRole);
+    if (mappedRole === 'Organizer') {
+      setOrganizerNameOverride(user.name);
+      setActiveTab('organizer');
+    } else if (mappedRole === 'Sponsor') {
+      setSponsorNameOverride(user.name);
+      setActiveTab('sponsor');
+    } else {
+      setUserProfile((prev) => ({ ...prev, name: user.name, title: user.title || prev.title }));
+      setActiveTab('home');
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentUser()
+      .then((user) => {
+        if (user) applyAuthUser(user);
+      })
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  const handleLogout = async () => {
+    await apiLogout();
+    setAuthUser(null);
+    setOrganizerNameOverride(null);
+    setSponsorNameOverride(null);
+    setActiveRole('Professional');
+    setActiveTab('home');
+  };
 
   const postCelebration = (
     kind: CelebrationKind,
@@ -390,6 +436,18 @@ export function App() {
     });
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-blue-700 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return <AuthScreen onAuthenticated={applyAuthUser} />;
+  }
+
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Top Navbar */}
@@ -405,11 +463,14 @@ export function App() {
         userProfile={userProfile}
         organizerIdentity={
           conferences[0]
-            ? { name: conferences[0].organizerName, logo: organizerLogoOverride || conferences[0].organizerLogo }
+            ? {
+                name: organizerNameOverride || conferences[0].organizerName,
+                logo: organizerLogoOverride || conferences[0].organizerLogo,
+              }
             : undefined
         }
         sponsorIdentity={{
-          name: primarySponsorProfile.companyName,
+          name: sponsorNameOverride || primarySponsorProfile.companyName,
           logo: sponsorLogoOverride || primarySponsorProfile.logo,
         }}
         onOrganizerLogoChange={setOrganizerLogoOverride}
@@ -423,6 +484,8 @@ export function App() {
           setActiveTab('profile');
         }}
         onOpenSponsorAlerts={() => setActiveTab('sponsor')}
+        accountEmail={authUser.email}
+        onLogout={handleLogout}
       />
 
       {/* Main Container View Router */}

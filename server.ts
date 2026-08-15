@@ -1,8 +1,10 @@
 import express from "express";
 import path from "path";
+import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { authRouter } from "./server/auth";
 
 dotenv.config();
 
@@ -11,11 +13,15 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(cookieParser());
 
   // Health check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", app: "Conference Gate" });
   });
+
+  // Auth routes
+  app.use("/api/auth", authRouter);
 
   // AI Routes using Gemini SDK
   const getAIClient = () => {
