@@ -7,6 +7,7 @@ export interface AuthUser {
   name: string;
   organization: string | null;
   title: string | null;
+  avatar: string | null;
 }
 
 export interface SignupPayload {
@@ -50,6 +51,17 @@ export async function login(email: string, password: string): Promise<AuthUser> 
 
 export async function logout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+}
+
+export async function updateAvatar(avatar: string | null): Promise<AuthUser> {
+  const res = await fetch('/api/auth/avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ avatar }),
+  });
+  const data = await parseResponse(res);
+  return data.user;
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser | null> {

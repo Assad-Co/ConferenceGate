@@ -28,6 +28,7 @@ function toPublicUser(row: UserRow) {
     name: row.name,
     organization: row.organization,
     title: row.title,
+    avatar: row.avatar,
   };
 }
 
@@ -138,5 +139,27 @@ authRouter.get("/me", requireAuth, (req: AuthedRequest, res) => {
     res.clearCookie(COOKIE_NAME, { path: "/" });
     return res.status(401).json({ error: "Not authenticated" });
   }
+  res.json({ user: toPublicUser(row) });
+});
+
+const MAX_AVATAR_LENGTH = 2_000_000; // ~1.5MB decoded, comfortably under the request body limit
+
+authRouter.post("/avatar", requireAuth, (req: AuthedRequest, res) => {
+  const { avatar } = req.body || {};
+
+  if (avatar !== null && typeof avatar !== "string") {
+    return res.status(400).json({ error: "avatar must be a data URL string or null" });
+  }
+  if (typeof avatar === "string") {
+    if (!avatar.startsWith("data:image/")) {
+      return res.status(400).json({ error: "avatar must be an image data URL" });
+    }
+    if (avatar.length > MAX_AVATAR_LENGTH) {
+      return res.status(400).json({ error: "Image is too large" });
+    }
+  }
+
+  db.prepare("UPDATE users SET avatar = ? WHERE id = ?").run(avatar, req.userId);
+  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
   res.json({ user: toPublicUser(row) });
 });
