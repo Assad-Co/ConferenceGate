@@ -17,6 +17,7 @@ import {
   PenSquare,
   BadgeCheck,
   QrCode,
+  ExternalLink,
 } from 'lucide-react';
 import { Conference, UserProfile, Post } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
@@ -276,7 +277,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
           </div>
         </div>
 
-        {/* Feed: posts interleaved with promoted conferences */}
+        {/* Highlights teaser: a couple of top posts, not the full feed (see Feed tab for that) */}
         {posts.length === 0 ? (
           <div className="bg-white rounded-lg border border-dashed border-slate-300 p-10 text-center space-y-2">
             <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 mx-auto flex items-center justify-center">
@@ -288,18 +289,31 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </p>
           </div>
         ) : (
-          posts.map((post, i) => (
-            <React.Fragment key={post.id}>
-              {post.postType === 'celebration' ? <CelebrationPostCard post={post} /> : <PostCard post={post} />}
-              {i % 3 === 2 && promotedPool.length > 0 && (
-                <PromotedConferenceCard
-                  conf={promotedPool[Math.floor(i / 3) % promotedPool.length]}
-                  onSelect={onSelectConference}
-                  onSubmitAbstract={onOpenSubmitAbstract}
-                />
-              )}
-            </React.Fragment>
-          ))
+          <>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              Highlights From Your Network
+            </div>
+            {posts.slice(0, 2).map((post, i) => (
+              <React.Fragment key={post.id}>
+                {post.postType === 'celebration' ? <CelebrationPostCard post={post} /> : <PostCard post={post} />}
+                {i === 0 && promotedPool.length > 0 && (
+                  <PromotedConferenceCard
+                    conf={promotedPool[0]}
+                    onSelect={onSelectConference}
+                    onSubmitAbstract={onOpenSubmitAbstract}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+            <button
+              onClick={() => onNavigateTab('community')}
+              className="w-full py-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-blue-700 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              View Full Community Feed
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </>
         )}
       </main>
 
