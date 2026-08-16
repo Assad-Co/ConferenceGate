@@ -94,6 +94,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [facilityBrochure, setFacilityBrochure] = useState(false);
   const [facilityCityMap, setFacilityCityMap] = useState(false);
 
+  const industryOptions = useMemo(() => {
+    const unique = Array.from(new Set((conferences || []).map((c) => c.industry).filter(Boolean))) as string[];
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [conferences]);
+
   const priceBounds = useMemo(() => {
     const all = (conferences || []).flatMap((c) => parsePriceRange(c.priceRange));
     if (all.length === 0) return { min: 0, max: 1000 };
@@ -152,8 +157,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       (conf.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (conf.topics || []).some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesIndustry =
-      selectedIndustry === 'All' || (conf.industry || '').includes(selectedIndustry);
+    const matchesIndustry = selectedIndustry === 'All' || conf.industry === selectedIndustry;
 
     const matchesCfp =
       selectedCfp === 'All' || conf.cfpStatus === selectedCfp;
@@ -242,10 +246,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               className="w-full px-3 py-2 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden font-medium cursor-pointer"
             >
               <option value="All">All Industries</option>
-              <option value="Energy">Energy & Geosciences</option>
-              <option value="Artificial Intelligence">Artificial Intelligence</option>
-              <option value="Petroleum">Petroleum & Mining</option>
-              <option value="Technology">Technology & Software</option>
+              {industryOptions.map((industry) => (
+                <option key={industry} value={industry}>
+                  {industry}
+                </option>
+              ))}
             </select>
           </div>
 

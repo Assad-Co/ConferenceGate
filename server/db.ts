@@ -23,6 +23,11 @@ db.exec(`
   );
 `);
 
+const existingColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+if (!existingColumns.some((col) => col.name === "avatar")) {
+  db.exec("ALTER TABLE users ADD COLUMN avatar TEXT");
+}
+
 export interface UserRow {
   id: string;
   email: string;
@@ -31,5 +36,6 @@ export interface UserRow {
   name: string;
   organization: string | null;
   title: string | null;
+  avatar: string | null;
   created_at: string;
 }

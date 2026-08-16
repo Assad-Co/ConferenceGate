@@ -4,7 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './components/auth/AuthScreen';
-import { AuthUser, fetchCurrentUser, logout as apiLogout } from './api/auth';
+import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar } from './api/auth';
+import { resolveAvatar } from './utils/avatar';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
@@ -165,15 +166,31 @@ export function App() {
     setAuthUser(user);
     const mappedRole = AUTH_ROLE_TO_USER_ROLE[user.role];
     setActiveRole(mappedRole);
+    const avatar = resolveAvatar(user.avatar, user.name);
     if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.name);
+      setOrganizerLogoOverride(avatar);
       setActiveTab('organizer');
     } else if (mappedRole === 'Sponsor') {
       setSponsorNameOverride(user.name);
+      setSponsorLogoOverride(avatar);
       setActiveTab('sponsor');
     } else {
-      setUserProfile((prev) => ({ ...prev, name: user.name, title: user.title || prev.title }));
+      setUserProfile((prev) => ({ ...prev, name: user.name, title: user.title || prev.title, avatar }));
       setActiveTab('home');
+    }
+  };
+
+  const handleAvatarChange = async (dataUrl: string | null) => {
+    const updatedUser = await updateAvatar(dataUrl);
+    setAuthUser(updatedUser);
+    const avatar = resolveAvatar(updatedUser.avatar, updatedUser.name);
+    if (updatedUser.role === 'organizer') {
+      setOrganizerLogoOverride(avatar);
+    } else if (updatedUser.role === 'sponsor') {
+      setSponsorLogoOverride(avatar);
+    } else {
+      setUserProfile((prev) => ({ ...prev, avatar }));
     }
   };
 
@@ -473,8 +490,14 @@ export function App() {
           name: sponsorNameOverride || primarySponsorProfile.companyName,
           logo: sponsorLogoOverride || primarySponsorProfile.logo,
         }}
-        onOrganizerLogoChange={setOrganizerLogoOverride}
-        onSponsorLogoChange={setSponsorLogoOverride}
+        onOrganizerLogoChange={(dataUrl) => {
+          setOrganizerLogoOverride(dataUrl);
+          updateAvatar(dataUrl).then(setAuthUser).catch(() => {});
+        }}
+        onSponsorLogoChange={(dataUrl) => {
+          setSponsorLogoOverride(dataUrl);
+          updateAvatar(dataUrl).then(setAuthUser).catch(() => {});
+        }}
         notifications={notifications}
         sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
@@ -608,6 +631,8 @@ export function App() {
             notifications={notifications}
             onMarkNotificationRead={handleMarkNotificationRead}
             onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+            onAvatarChange={handleAvatarChange}
+            hasCustomAvatar={!!authUser.avatar}
           />
         )}
 

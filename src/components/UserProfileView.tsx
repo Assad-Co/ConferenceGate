@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   User,
   Award,
@@ -18,11 +18,14 @@ import {
   Gauge,
   Sparkles,
   ExternalLink,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import { AbstractSubmission, ConferenceRole, NotificationItem, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
+import { resizeImageFile } from '../utils/image';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
 
@@ -35,6 +38,8 @@ interface UserProfileViewProps {
   notifications: NotificationItem[];
   onMarkNotificationRead: (id: string) => void;
   onMarkAllNotificationsRead: () => void;
+  onAvatarChange?: (dataUrl: string | null) => void | Promise<void>;
+  hasCustomAvatar?: boolean;
 }
 
 const ABSTRACT_STATUS_STYLE: Record<string, string> = {
@@ -60,11 +65,11 @@ interface AttendedConference {
 const ATTENDED_CONFERENCES: AttendedConference[] = [
   {
     id: 'conf_1',
-    title: 'Annual Subsurface Energy & AI Summit 2026',
-    location: 'Abu Dhabi, UAE',
+    title: 'EAGE Annual Conference & Exhibition 2026',
+    location: 'Amsterdam, Netherlands',
     roleLabel: 'Attended as Presenter & Keynote Delegate',
-    organizerName: 'Global Subsurface Energy Society',
-    eventDate: 'March 12–14, 2026',
+    organizerName: 'European Association of Geoscientists & Engineers (EAGE)',
+    eventDate: 'June 25–28, 2026',
     defaultRole: 'Keynote',
   },
 ];
@@ -78,10 +83,44 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   notifications,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
+  onAvatarChange,
+  hasCustomAvatar = false,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !onAvatarChange) return;
+    setAvatarError(null);
+    setAvatarUploading(true);
+    try {
+      const dataUrl = await resizeImageFile(file);
+      await onAvatarChange(dataUrl);
+    } catch {
+      setAvatarError('Could not update your photo. Please try another image.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!onAvatarChange) return;
+    setAvatarError(null);
+    setAvatarUploading(true);
+    try {
+      await onAvatarChange(null);
+    } catch {
+      setAvatarError('Could not remove your photo. Please try again.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const mySubmissions = submissions.filter((s) => s.primaryAuthor.name === userProfile.name);
 
@@ -124,6 +163,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 alt={userProfile.name}
                 className="w-28 h-28 rounded-3xl object-cover ring-4 ring-white shadow-xl bg-slate-900"
               />
+              {avatarUploading && (
+                <span className="absolute inset-0 rounded-3xl bg-slate-900/50 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                </span>
+              )}
               <span className="absolute -bottom-1 -right-1 group/badge">
                 <span className="w-7 h-7 rounded-full bg-blue-600 ring-[3px] ring-white shadow-md flex items-center justify-center cursor-default">
                   <ShieldCheck className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
@@ -133,6 +177,25 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   <span className="absolute top-full right-2.5 -mt-px border-4 border-transparent border-t-slate-900" />
                 </span>
               </span>
+              {onAvatarChange && (
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  title="Change photo"
+                  className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-white ring-[3px] ring-white shadow-md flex items-center justify-center cursor-pointer hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <Camera className="w-3.5 h-3.5 text-slate-600" />
+                </button>
+              )}
+              {onAvatarChange && (
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileSelected}
+                />
+              )}
             </div>
             <div className="space-y-1 pt-2 sm:pt-0">
               <h1 className="text-2xl font-extrabold text-slate-900">{userProfile.name}</h1>
@@ -147,6 +210,27 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   {userProfile.location}
                 </span>
               </div>
+              {onAvatarChange && (
+                <div className="flex items-center gap-3 pt-1.5">
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="text-[11px] font-bold text-blue-700 hover:underline cursor-pointer disabled:opacity-60"
+                  >
+                    Change Photo
+                  </button>
+                  {hasCustomAvatar && (
+                    <button
+                      onClick={handleRemovePhoto}
+                      disabled={avatarUploading}
+                      className="text-[11px] font-bold text-slate-400 hover:text-rose-600 hover:underline cursor-pointer disabled:opacity-60"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              )}
+              {avatarError && <p className="text-[11px] font-semibold text-rose-600">{avatarError}</p>}
             </div>
           </div>
 
