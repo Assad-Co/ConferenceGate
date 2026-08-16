@@ -13,7 +13,7 @@ if (!process.env.JWT_SECRET) {
   );
 }
 
-const COOKIE_NAME = "cg_session";
+export const COOKIE_NAME = "cg_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const ALLOWED_ROLES = ["professional", "organizer", "sponsor"] as const;
@@ -55,18 +55,34 @@ export interface AuthedRequest extends Request {
   userId?: string;
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
-  const token = req.cookies?.[COOKIE_NAME];
-  if (!token) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+/** Verifies a raw session JWT (used for both the HTTP cookie and the WebSocket handshake) and returns the user id, or null if invalid/expired. */
+export function verifySessionToken(token: string | undefined | null): string | null {
+  if (!token) return null;
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string };
-    req.userId = payload.sub;
-    next();
+    return payload.sub;
   } catch {
-    return res.status(401).json({ error: "Session expired or invalid" });
+    return null;
   }
+}
+
+export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+  const userId = verifySessionToken(req.cookies?.[COOKIE_NAME]);
+  if (!userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  req.userId = userId;
+  next();
+}
+
+export function publicUserSummary(row: UserRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar,
+    title: row.title,
+    organization: row.organization,
+  };
 }
 
 export const authRouter = Router();

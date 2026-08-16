@@ -225,6 +225,8 @@ export interface AbstractReview {
 
 export interface AbstractSubmission {
   id: string;
+  /** Real backend account id of the submitter. */
+  submitterId?: string;
   conferenceId: string;
   conferenceTitle: string;
   title: string;
@@ -371,6 +373,8 @@ export interface FeedPost {
   authorTitle: string;
   authorOrg: string;
   authorAvatar: string;
+  /** Real backend account id of the author, when the post was made by an actual registered user — enables messaging them for real. Undefined for sample/demo content. */
+  authorUserId?: string;
   content: string;
   timestamp: string;
   postType: 'announcement' | 'achievement' | 'cfp' | 'speaker' | 'sponsorship' | 'review' | 'celebration';
@@ -389,26 +393,14 @@ export interface FeedPost {
   repostsCount?: number;
 }
 
-export interface DirectMessage {
-  id: string;
-  partnerId: string;
-  partnerName: string;
-  partnerAvatar: string;
-  partnerRole: string;
-  messages: Array<{
-    id: string;
-    senderId: string;
-    text: string;
-    timestamp: string;
-  }>;
-}
-
 /** A post author's public identity — enough to show a lightweight profile and start a conversation. */
 export interface PostAuthor {
   name: string;
   avatar: string;
   title: string;
   org: string;
+  /** Real backend account id, when this author is an actual registered user. Undefined for sample/demo content. */
+  userId?: string;
 }
 
 export interface NotificationItem {

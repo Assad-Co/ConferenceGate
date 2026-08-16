@@ -4,8 +4,11 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { authRouter } from "./server/auth";
+import { WebSocketServer } from "ws";
+import { authRouter, verifySessionToken, COOKIE_NAME } from "./server/auth";
 import { googleSearchRouter } from "./server/googleSearch";
+import { activityRouter } from "./server/activity";
+import { messagesRouter, registerSocket } from "./server/messages";
 
 async function startServer() {
   const app = express();
@@ -24,6 +27,12 @@ async function startServer() {
 
   // Live conference search (Google Custom Search)
   app.use("/api/search", googleSearchRouter);
+
+  // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations
+  app.use("/api/activity", activityRouter);
+
+  // Persistent, real-time direct messaging
+  app.use("/api/messages", messagesRouter);
 
   // AI Routes using Gemini SDK
   const getAIClient = () => {
@@ -190,8 +199,27 @@ Provide constructive feedback in JSON format with fields:
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Conference Gate server running at http://localhost:${PORT}`);
+  });
+
+  // Real-time message delivery: authenticate the WebSocket handshake using the
+  // same session cookie as the HTTP API, then register the socket for pushes.
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws/messages" });
+  wss.on("connection", (socket, request) => {
+    const cookieHeader = request.headers.cookie || "";
+    const cookies = Object.fromEntries(
+      cookieHeader.split(";").map((part) => {
+        const idx = part.indexOf("=");
+        return idx === -1 ? [part.trim(), ""] : [part.slice(0, idx).trim(), decodeURIComponent(part.slice(idx + 1).trim())];
+      })
+    );
+    const userId = verifySessionToken(cookies[COOKIE_NAME]);
+    if (!userId) {
+      socket.close(4401, "Not authenticated");
+      return;
+    }
+    registerSocket(userId, socket);
   });
 }
 

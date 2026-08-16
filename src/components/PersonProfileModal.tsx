@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MessageSquare, ShieldCheck, Building2 } from 'lucide-react';
+import { X, MessageSquare, ShieldCheck, Building2, Info } from 'lucide-react';
 import { Post, PostAuthor } from '../types';
 
 interface PersonProfileModalProps {
@@ -43,13 +43,20 @@ export const PersonProfileModal: React.FC<PersonProfileModalProps> = ({ author, 
             )}
           </div>
 
-          <button
-            onClick={() => onMessage(author)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-full shadow-xs transition-colors cursor-pointer"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Message
-          </button>
+          {author.userId ? (
+            <button
+              onClick={() => onMessage(author)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-full shadow-xs transition-colors cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Message
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 border border-slate-200 rounded-full text-[11px] font-semibold">
+              <Info className="w-3.5 h-3.5 shrink-0" />
+              <span>Sample profile — not a registered account, so it can't receive messages.</span>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-slate-100 px-6 py-5 space-y-3">
