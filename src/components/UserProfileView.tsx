@@ -20,11 +20,13 @@ import {
   ExternalLink,
   Camera,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { AbstractSubmission, ConferenceRole, NotificationItem, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
+import { EditProfileModal } from './EditProfileModal';
 import { resizeImageFile } from '../utils/image';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
@@ -40,6 +42,15 @@ interface UserProfileViewProps {
   onMarkAllNotificationsRead: () => void;
   onAvatarChange?: (dataUrl: string | null) => void | Promise<void>;
   hasCustomAvatar?: boolean;
+  onEditProfile?: (payload: {
+    name: string;
+    title: string;
+    organization: string;
+    department: string;
+    city: string;
+    country: string;
+    bio: string;
+  }) => Promise<void>;
 }
 
 const ABSTRACT_STATUS_STYLE: Record<string, string> = {
@@ -85,9 +96,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onMarkAllNotificationsRead,
   onAvatarChange,
   hasCustomAvatar = false,
+  onEditProfile,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -205,10 +218,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   <Building2 className="w-3.5 h-3.5 text-slate-400" />
                   {userProfile.organization}
                 </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                  {userProfile.location}
-                </span>
+                {(userProfile.city || userProfile.country) && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                    {[userProfile.city, userProfile.country].filter(Boolean).join(', ')}
+                  </span>
+                )}
               </div>
               {onAvatarChange && (
                 <div className="flex items-center gap-3 pt-1.5">
@@ -235,6 +250,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3 pt-2 sm:pt-0">
+            {onEditProfile && (
+              <button
+                onClick={() => setIsEditProfileOpen(true)}
+                className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs border border-slate-200 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <Pencil className="w-4 h-4" />
+                <span>Edit Profile</span>
+              </button>
+            )}
             <button
               onClick={onOpenBadgeModal}
               className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
@@ -557,6 +581,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         participantCompany={userProfile.organization}
         defaultRole={feedbackConference?.defaultRole}
       />
+
+      {onEditProfile && (
+        <EditProfileModal
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+          userProfile={userProfile}
+          onSave={onEditProfile}
+        />
+      )}
     </div>
   );
 };

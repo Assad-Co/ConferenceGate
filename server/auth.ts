@@ -29,6 +29,10 @@ function toPublicUser(row: UserRow) {
     name: row.name,
     organization: row.organization,
     title: row.title,
+    department: row.department,
+    city: row.city,
+    country: row.country,
+    bio: row.bio,
     avatar: row.avatar,
   };
 }
@@ -146,6 +150,42 @@ authRouter.get("/me", requireAuth, (req: AuthedRequest, res) => {
     res.clearCookie(COOKIE_NAME, { path: "/" });
     return res.status(401).json({ error: "Not authenticated" });
   }
+  res.json({ user: toPublicUser(row) });
+});
+
+const EDITABLE_PROFILE_FIELDS = ["name", "title", "organization", "department", "city", "country", "bio"] as const;
+const MAX_BIO_LENGTH = 600;
+
+authRouter.patch("/me", requireAuth, (req: AuthedRequest, res) => {
+  const body = req.body || {};
+  const updates: Record<string, string | null> = {};
+
+  for (const field of EDITABLE_PROFILE_FIELDS) {
+    if (!(field in body)) continue;
+    const value = body[field];
+    if (value !== null && typeof value !== "string") {
+      return res.status(400).json({ error: `${field} must be a string or null` });
+    }
+    const trimmed = typeof value === "string" ? value.trim() : null;
+    if (field === "name" && !trimmed) {
+      return res.status(400).json({ error: "Full name cannot be empty" });
+    }
+    if (field === "bio" && trimmed && trimmed.length > MAX_BIO_LENGTH) {
+      return res.status(400).json({ error: `Bio must be ${MAX_BIO_LENGTH} characters or fewer` });
+    }
+    updates[field] = trimmed || null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: "No valid fields to update" });
+  }
+
+  const setClause = Object.keys(updates)
+    .map((field) => `${field} = ?`)
+    .join(", ");
+  db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...Object.values(updates), req.userId);
+
+  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
   res.json({ user: toPublicUser(row) });
 });
 
