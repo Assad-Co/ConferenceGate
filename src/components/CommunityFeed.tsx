@@ -254,6 +254,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                         avatar: post.authorAvatar,
                         title: post.authorTitle,
                         org: post.authorOrg,
+                        userId: post.authorUserId,
                       })
                     }
                     className="flex items-center gap-3 text-left cursor-pointer group/author"

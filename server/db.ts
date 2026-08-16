@@ -82,3 +82,150 @@ export interface UserRow {
   avatar: string | null;
   created_at: string;
 }
+
+// Real tracked activity: submissions, peer reviews, reviewer volunteering, and
+// conference registrations — replaces the earlier client-only mock/placeholder data.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS submissions (
+    id TEXT PRIMARY KEY,
+    submitter_id TEXT NOT NULL REFERENCES users(id),
+    conference_id TEXT NOT NULL,
+    conference_title TEXT NOT NULL,
+    title TEXT NOT NULL,
+    track TEXT,
+    topic TEXT,
+    keywords TEXT NOT NULL DEFAULT '[]',
+    abstract_text TEXT NOT NULL,
+    preferred_type TEXT NOT NULL DEFAULT 'Oral',
+    primary_author_name TEXT NOT NULL,
+    primary_author_email TEXT NOT NULL,
+    primary_author_affiliation TEXT,
+    primary_author_bio TEXT,
+    co_authors TEXT NOT NULL DEFAULT '[]',
+    conflict_of_interest TEXT,
+    status TEXT NOT NULL DEFAULT 'Submitted',
+    submission_date TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS submission_reviews (
+    id TEXT PRIMARY KEY,
+    submission_id TEXT NOT NULL REFERENCES submissions(id),
+    reviewer_id TEXT NOT NULL REFERENCES users(id),
+    reviewer_name TEXT NOT NULL,
+    reviewer_org TEXT,
+    scores TEXT NOT NULL,
+    overall_score REAL NOT NULL,
+    comments_to_author TEXT NOT NULL,
+    confidential_comments TEXT,
+    recommendation TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS review_volunteers (
+    id TEXT PRIMARY KEY,
+    reviewer_id TEXT NOT NULL REFERENCES users(id),
+    opportunity_id TEXT NOT NULL,
+    conference_title TEXT NOT NULL,
+    topic TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(reviewer_id, opportunity_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS conference_registrations (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    conference_id TEXT NOT NULL,
+    conference_title TEXT NOT NULL,
+    package_id TEXT,
+    package_name TEXT,
+    registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, conference_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS conversations (
+    id TEXT PRIMARY KEY,
+    user_a TEXT NOT NULL REFERENCES users(id),
+    user_b TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_a, user_b)
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES conversations(id),
+    sender_id TEXT NOT NULL REFERENCES users(id),
+    text TEXT NOT NULL,
+    read_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
+export interface SubmissionRow {
+  id: string;
+  submitter_id: string;
+  conference_id: string;
+  conference_title: string;
+  title: string;
+  track: string | null;
+  topic: string | null;
+  keywords: string;
+  abstract_text: string;
+  preferred_type: string;
+  primary_author_name: string;
+  primary_author_email: string;
+  primary_author_affiliation: string | null;
+  primary_author_bio: string | null;
+  co_authors: string;
+  conflict_of_interest: string | null;
+  status: string;
+  submission_date: string;
+}
+
+export interface SubmissionReviewRow {
+  id: string;
+  submission_id: string;
+  reviewer_id: string;
+  reviewer_name: string;
+  reviewer_org: string | null;
+  scores: string;
+  overall_score: number;
+  comments_to_author: string;
+  confidential_comments: string | null;
+  recommendation: string;
+  created_at: string;
+}
+
+export interface ReviewVolunteerRow {
+  id: string;
+  reviewer_id: string;
+  opportunity_id: string;
+  conference_title: string;
+  topic: string | null;
+  created_at: string;
+}
+
+export interface ConferenceRegistrationRow {
+  id: string;
+  user_id: string;
+  conference_id: string;
+  conference_title: string;
+  package_id: string | null;
+  package_name: string | null;
+  registered_at: string;
+}
+
+export interface ConversationRow {
+  id: string;
+  user_a: string;
+  user_b: string;
+  created_at: string;
+}
+
+export interface MessageRow {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  text: string;
+  read_at: string | null;
+  created_at: string;
+}

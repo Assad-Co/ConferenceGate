@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   User,
   Award,
@@ -22,12 +22,13 @@ import {
   Loader2,
   Pencil,
 } from 'lucide-react';
-import { AbstractSubmission, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
+import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { resizeImageFile } from '../utils/image';
+import { ConferenceRegistration } from '../api/activity';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
 
@@ -35,6 +36,8 @@ interface UserProfileViewProps {
   userProfile: UserProfile;
   submissions?: AbstractSubmission[];
   posts?: Post[];
+  registrations?: ConferenceRegistration[];
+  conferences?: Conference[];
   onOpenBadgeModal: () => void;
   onOpenCertificates: () => void;
   initialTab?: ProfileTab;
@@ -74,12 +77,12 @@ interface AttendedConference {
   defaultRole: ConferenceRole;
 }
 
-const ATTENDED_CONFERENCES: AttendedConference[] = [];
-
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
   userProfile,
   submissions = [],
   posts = [],
+  registrations = [],
+  conferences = [],
   onOpenBadgeModal,
   onOpenCertificates,
   initialTab = 'conferences',
@@ -92,6 +95,25 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
+
+  // Verified attendance is derived from real, persisted conference registrations —
+  // never fabricated, so it starts empty until the account actually registers for one.
+  const ATTENDED_CONFERENCES: AttendedConference[] = useMemo(
+    () =>
+      registrations.map((reg) => {
+        const conf = conferences.find((c) => c.id === reg.conferenceId);
+        return {
+          id: reg.conferenceId,
+          title: reg.conferenceTitle || conf?.title || 'Conference',
+          location: conf ? `${conf.location.city}, ${conf.location.country}` : '',
+          roleLabel: reg.packageName ? `${reg.packageName} Registration` : 'Attendee',
+          organizerName: conf?.organizerName || '',
+          eventDate: conf ? `${conf.dates.start} – ${conf.dates.end}` : reg.registeredAt.split('T')[0],
+          defaultRole: 'Attendee' as ConferenceRole,
+        };
+      }),
+    [registrations, conferences]
+  );
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
   const avatarInputRef = useRef<HTMLInputElement>(null);

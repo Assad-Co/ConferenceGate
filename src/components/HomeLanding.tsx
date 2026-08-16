@@ -45,6 +45,7 @@ const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => v
           avatar: post.authorAvatar,
           title: post.authorTitle,
           org: post.authorOrg,
+          userId: post.authorUserId,
         })
       }
       className="flex items-center gap-3 text-left cursor-pointer group/author"

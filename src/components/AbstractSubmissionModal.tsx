@@ -9,6 +9,7 @@ interface AbstractSubmissionModalProps {
   conferences: Conference[];
   defaultConferenceId?: string;
   onSubmit: (submission: Partial<AbstractSubmission>) => void;
+  author: { name: string; email: string; affiliation: string; bio: string };
 }
 
 export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = ({
@@ -17,6 +18,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   conferences,
   defaultConferenceId,
   onSubmit,
+  author,
 }) => {
   if (!isOpen) return null;
 
@@ -29,9 +31,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   const [keywords, setKeywords] = useState('Machine Learning, Geosciences, AI');
   const [abstractText, setAbstractText] = useState('');
   const [preferredType, setPreferredType] = useState<'Oral' | 'Poster'>('Oral');
-  const [coAuthors, setCoAuthors] = useState<Array<{ name: string; affiliation: string; email: string }>>([
-    { name: 'Dr. Sarah Ahmed', affiliation: 'Aramco Innovation Labs', email: 's.ahmed@aramco.com' },
-  ]);
+  const [coAuthors, setCoAuthors] = useState<Array<{ name: string; affiliation: string; email: string }>>([]);
   const [conflictOfInterest, setConflictOfInterest] = useState('None declared.');
   const [aiChecking, setAiChecking] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<any>(null);
@@ -89,12 +89,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
       keywords: keywords.split(',').map((k) => k.trim()),
       abstractText,
       preferredType,
-      primaryAuthor: {
-        name: 'Prof. Dr. John Smith',
-        email: 'john.smith@cs.ox.ac.uk',
-        affiliation: 'University of Oxford',
-        bio: 'Professor of Computer Science & Energy Informatics.',
-      },
+      primaryAuthor: author,
       coAuthors,
       conflictOfInterest,
       status: 'Submitted',
