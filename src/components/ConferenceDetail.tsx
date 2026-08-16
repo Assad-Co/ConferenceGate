@@ -30,6 +30,8 @@ interface ConferenceDetailProps {
   onVolunteerReviewer: (confId: string) => void;
   onExpressCommitteeInterest: (confId: string) => void;
   onApplySponsorship: (confId: string) => void;
+  registeredPackageId?: string | null;
+  onRegister?: (conferenceId: string, conferenceTitle: string, packageId: string, packageName: string) => void;
 }
 
 export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
@@ -39,11 +41,13 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
   onVolunteerReviewer,
   onExpressCommitteeInterest,
   onApplySponsorship,
+  registeredPackageId = null,
+  onRegister,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'cfp' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
   >('overview');
-  const [registeredPackage, setRegisteredPackage] = useState<string | null>(null);
+  const registeredPackage = registeredPackageId;
   const [saved, setSaved] = useState(false);
   const [followed, setFollowed] = useState(false);
 
@@ -279,14 +283,14 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                     </div>
 
                     <button
-                      onClick={() => setRegisteredPackage(pkg.id)}
+                      onClick={() => onRegister?.(conference.id, conference.title, pkg.id, pkg.name)}
                       className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
                         registeredPackage === pkg.id
                           ? 'bg-emerald-600 text-white'
                           : 'bg-blue-900 hover:bg-blue-950 text-white'
                       }`}
                     >
-                      {registeredPackage === pkg.id ? 'Package Selected ✓' : 'Register Package'}
+                      {registeredPackage === pkg.id ? 'Registered ✓ — Verified Attendance' : 'Register Package'}
                     </button>
                   </div>
                 ))}

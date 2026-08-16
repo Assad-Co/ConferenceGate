@@ -20,6 +20,8 @@ interface ReviewerPortalProps {
   opportunities: ReviewOpportunity[];
   submissions: AbstractSubmission[];
   onCompleteReview: (abstractId: string, reviewData: any) => void;
+  volunteeredOpportunityIds?: string[];
+  onVolunteer?: (opportunityId: string, conferenceTitle: string, topic: string) => void;
 }
 
 export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
@@ -27,6 +29,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   opportunities,
   submissions,
   onCompleteReview,
+  volunteeredOpportunityIds = [],
+  onVolunteer,
 }) => {
   const [activeTab, setActiveTab] = useState<'opportunities' | 'my-reviews' | 'evaluate' | 'history'>('opportunities');
   const [availableToReview, setAvailableToReview] = useState(userProfile.reviewerInfo.available);
@@ -53,8 +57,9 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   const selectedSub = submissions.find((s) => s.id === selectedAbstractId) || submissions[0];
 
-  const handleVolunteer = (oppId: string) => {
-    setVolunteerSuccess(oppId);
+  const handleVolunteer = (opp: ReviewOpportunity) => {
+    onVolunteer?.(opp.id, opp.conferenceTitle, opp.topic);
+    setVolunteerSuccess(opp.id);
     setTimeout(() => setVolunteerSuccess(null), 4000);
   };
 
@@ -255,14 +260,18 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                   ))}
                 </div>
 
-                {volunteerSuccess === opp.id ? (
+                {volunteeredOpportunityIds.includes(opp.id) ? (
                   <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Volunteered! Added to Reviewer Pool for EAGE Committee.</span>
+                    <span>
+                      {volunteerSuccess === opp.id
+                        ? `Volunteered! Added to the Reviewer Pool for ${opp.organizerName}.`
+                        : 'You volunteered for this opportunity.'}
+                    </span>
                   </div>
                 ) : (
                   <button
-                    onClick={() => handleVolunteer(opp.id)}
+                    onClick={() => handleVolunteer(opp)}
                     className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />

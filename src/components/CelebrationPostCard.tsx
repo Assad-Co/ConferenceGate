@@ -154,7 +154,13 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
         <div className="flex items-start justify-between">
           <button
             onClick={() =>
-              onOpenProfile?.({ name: post.authorName, avatar: post.authorAvatar, title: post.authorTitle, org: post.authorOrg })
+              onOpenProfile?.({
+                name: post.authorName,
+                avatar: post.authorAvatar,
+                title: post.authorTitle,
+                org: post.authorOrg,
+                userId: post.authorUserId,
+              })
             }
             className="flex items-center gap-3 text-left cursor-pointer group/author"
           >

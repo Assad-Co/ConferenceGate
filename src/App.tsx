@@ -23,11 +23,31 @@ import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { CertificatesView } from './components/CertificatesView';
 import { PersonProfileModal } from './components/PersonProfileModal';
 import { MessagesPanel } from './components/MessagesPanel';
+import {
+  fetchSubmissions,
+  createSubmission,
+  submitReview,
+  volunteerForReview,
+  fetchMyVolunteeredOpportunityIds,
+  registerForConference,
+  fetchMyRegistrations,
+  ConferenceRegistration,
+} from './api/activity';
+import {
+  fetchConversations,
+  fetchConversation,
+  sendMessage as sendMessageApi,
+  markConversationRead,
+  connectMessageSocket,
+  ConversationSummary,
+  MessageItem,
+  MessageSocketEvent,
+  PublicUser,
+} from './api/messages';
 
 import {
   sampleConferences,
   currentUserProfile,
-  sampleAbstractSubmissions,
   sampleFeedPosts,
   sampleReviewOpportunities,
   sampleSponsorshipPackages,
@@ -46,14 +66,7 @@ import {
   UserRole,
   UserProfile,
   PostAuthor,
-  DirectMessage,
 } from './types';
-
-const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
-  Accept: 'Accepted',
-  'Oral Presentation': 'Accepted for Oral',
-  'Poster Presentation': 'Accepted for Poster',
-};
 
 const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
   professional: 'Professional',
@@ -216,9 +229,239 @@ export function App() {
 
   // App Data State
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
-  const [submissions, setSubmissions] = useState<AbstractSubmission[]>(sampleAbstractSubmissions);
+  const [submissions, setSubmissions] = useState<AbstractSubmission[]>([]);
   const [posts, setPosts] = useState<Post[]>(sampleFeedPosts);
   const [userProfile, setUserProfile] = useState(currentUserProfile);
+
+  // Real tracked activity — persisted server-side, loaded once authenticated.
+  const [registrations, setRegistrations] = useState<ConferenceRegistration[]>([]);
+  const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    fetchSubmissions().then(setSubmissions).catch(() => {});
+    fetchMyRegistrations().then(setRegistrations).catch(() => {});
+    fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
+  }, [authUser?.id]);
+
+  // Submissions are shared across accounts (organizers/reviewers see everyone's), so
+  // re-fetch on every visit to a submissions-driven tab rather than only once at login.
+  useEffect(() => {
+    if (!authUser) return;
+    if (['abstracts', 'reviewer', 'organizer'].includes(activeTab)) {
+      fetchSubmissions().then(setSubmissions).catch(() => {});
+    }
+  }, [activeTab, authUser?.id]);
+
+  // A real account's stats are derived from its own persisted activity, never fabricated.
+  const myContributions = React.useMemo(() => {
+    const myId = authUser?.id;
+    const mySubmissions = myId ? submissions.filter((s) => s.submitterId === myId) : [];
+    const abstractsAccepted = mySubmissions.filter((s) =>
+      ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(s.status)
+    ).length;
+    const oralPresentations = mySubmissions.filter((s) => s.status === 'Accepted for Oral').length;
+    const posterPresentations = mySubmissions.filter((s) => s.status === 'Accepted for Poster').length;
+    const myReviews = myId ? submissions.flatMap((s) => s.reviews).filter((r) => r.reviewerId === myId) : [];
+    const conferencesReviewedFor = myId
+      ? new Set(submissions.filter((s) => s.reviews.some((r) => r.reviewerId === myId)).map((s) => s.conferenceTitle)).size
+      : 0;
+
+    return {
+      conferencesAttended: registrations.length,
+      abstractsSubmitted: mySubmissions.length,
+      abstractsAccepted,
+      oralPresentations,
+      posterPresentations,
+      speakerRoles: 0,
+      keynoteRoles: 0,
+      workshopsDelivered: 0,
+      panelsParticipated: 0,
+      sessionsChaired: 0,
+      technicalCommittees: 0,
+      abstractsReviewed: myReviews.length,
+      conferencesReviewedFor,
+      reviewerKudos: myReviews.length * 20,
+      awards: 0,
+      certificatesCount: 0,
+    };
+  }, [submissions, registrations, authUser?.id]);
+
+  useEffect(() => {
+    setUserProfile((prev) => ({
+      ...prev,
+      contributions: myContributions,
+      reviewerInfo: {
+        ...prev.reviewerInfo,
+        totalReviewed: myContributions.abstractsReviewed,
+        kudos: myContributions.reviewerKudos,
+      },
+    }));
+  }, [myContributions]);
+
+  // Direct messaging — persisted server-side with real-time delivery over WebSocket.
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activePartnerId, setActivePartnerId] = useState<string | null>(null);
+  const [pendingPartner, setPendingPartner] = useState<PublicUser | null>(null);
+  const [activeMessages, setActiveMessages] = useState<MessageItem[]>([]);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [viewedAuthor, setViewedAuthor] = useState<PostAuthor | null>(null);
+
+  const totalUnreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+
+  const refreshConversations = () => {
+    fetchConversations().then(setConversations).catch(() => {});
+  };
+
+  // Refs so the long-lived WebSocket handler always sees the latest values without reconnecting.
+  const activePartnerIdRef = React.useRef<string | null>(null);
+  const isMessagesOpenRef = React.useRef(false);
+  useEffect(() => {
+    activePartnerIdRef.current = activePartnerId;
+  }, [activePartnerId]);
+  useEffect(() => {
+    isMessagesOpenRef.current = isMessagesOpen;
+  }, [isMessagesOpen]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    refreshConversations();
+
+    const handleIncomingMessage = (evt: MessageSocketEvent) => {
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.partnerId === evt.partnerId);
+        const isActive = evt.partnerId === activePartnerIdRef.current && isMessagesOpenRef.current;
+        const updated: ConversationSummary = {
+          partnerId: evt.partnerId,
+          partner: evt.partner,
+          lastMessage: evt.message.text,
+          lastMessageAt: evt.message.createdAt,
+          unreadCount: isActive ? 0 : (idx === -1 ? 0 : prev[idx].unreadCount) + 1,
+        };
+        if (idx === -1) return [updated, ...prev];
+        const next = [...prev];
+        next[idx] = updated;
+        return next.sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1));
+      });
+
+      if (evt.partnerId === activePartnerIdRef.current && isMessagesOpenRef.current) {
+        setActiveMessages((prev) => [...prev, evt.message]);
+        markConversationRead(evt.partnerId).catch(() => {});
+      }
+    };
+
+    // A dropped connection (idle timeout, network blip) shouldn't silently end live
+    // delivery until the next full reload — reconnect automatically while logged in.
+    let stopped = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      if (stopped) return;
+      socket = connectMessageSocket(handleIncomingMessage);
+      socket.addEventListener('close', () => {
+        if (stopped) return;
+        refreshConversations();
+        reconnectTimer = setTimeout(connect, 3000);
+      });
+    };
+    connect();
+
+    return () => {
+      stopped = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      socket?.close();
+    };
+  }, [authUser?.id]);
+
+  // Backstop for the WebSocket push: a dropped/missed connection shouldn't mean a
+  // message never shows up. Poll the conversation list, and the open thread, at a
+  // low frequency so delivery is eventually guaranteed even if the live push fails.
+  useEffect(() => {
+    if (!authUser) return;
+    const interval = setInterval(refreshConversations, 15000);
+    return () => clearInterval(interval);
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (!authUser || !isMessagesOpen || !activePartnerId) return;
+    const interval = setInterval(() => {
+      fetchConversation(activePartnerId)
+        .then(({ messages }) => {
+          setActiveMessages((prev) => {
+            if (prev.length === messages.length) return prev;
+            markConversationRead(activePartnerId).catch(() => {});
+            return messages;
+          });
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [authUser?.id, isMessagesOpen, activePartnerId]);
+
+  const handleOpenProfile = (author: PostAuthor) => setViewedAuthor(author);
+  const handleCloseProfile = () => setViewedAuthor(null);
+
+  const openConversationWith = (partnerId: string, fallback?: PublicUser) => {
+    setActivePartnerId(partnerId);
+    setPendingPartner(fallback || null);
+    setIsMessagesOpen(true);
+    setActiveMessages([]);
+    fetchConversation(partnerId)
+      .then(({ messages }) => setActiveMessages(messages))
+      .catch(() => {});
+    markConversationRead(partnerId).catch(() => {});
+    setConversations((prev) => prev.map((c) => (c.partnerId === partnerId ? { ...c, unreadCount: 0 } : c)));
+  };
+
+  const handleStartConversation = (author: PostAuthor) => {
+    if (!author.userId) return;
+    setViewedAuthor(null);
+    openConversationWith(author.userId, {
+      id: author.userId,
+      name: author.name,
+      avatar: author.avatar,
+      title: author.title,
+      organization: author.org,
+    });
+  };
+
+  const handleSelectConversation = (partnerId: string) => {
+    const existing = conversations.find((c) => c.partnerId === partnerId);
+    openConversationWith(partnerId, existing?.partner);
+  };
+
+  const handleSendMessage = async (partnerId: string, text: string) => {
+    try {
+      const message = await sendMessageApi(partnerId, text);
+      setActiveMessages((prev) => [...prev, message]);
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.partnerId === partnerId);
+        const partner = idx !== -1 ? prev[idx].partner : pendingPartner;
+        if (!partner) return prev;
+        const updated: ConversationSummary = {
+          partnerId,
+          partner,
+          lastMessage: message.text,
+          lastMessageAt: message.createdAt,
+          unreadCount: 0,
+        };
+        if (idx === -1) return [updated, ...prev];
+        const next = [...prev];
+        next[idx] = updated;
+        return next;
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Message not sent', message: err.message || 'Please try again.' });
+    }
+  };
+
+  const handleOpenMessages = () => {
+    if (!activePartnerId && conversations.length > 0) {
+      handleSelectConversation(conversations[0].partnerId);
+    }
+    setIsMessagesOpen(true);
+  };
 
   const applyAuthUser = (user: AuthUser) => {
     setAuthUser(user);
@@ -312,7 +555,14 @@ export function App() {
     kind: CelebrationKind,
     headline: string,
     content: string,
-    opts?: { authorName?: string; authorTitle?: string; authorOrg?: string; authorAvatar?: string; conferenceBadge?: string }
+    opts?: {
+      authorName?: string;
+      authorTitle?: string;
+      authorOrg?: string;
+      authorAvatar?: string;
+      authorUserId?: string;
+      conferenceBadge?: string;
+    }
   ) => {
     const celebration: Post = {
       id: `post_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -320,6 +570,7 @@ export function App() {
       authorTitle: opts?.authorTitle || userProfile.title,
       authorOrg: opts?.authorOrg || userProfile.organization,
       authorAvatar: opts?.authorAvatar || userProfile.avatar,
+      authorUserId: opts?.authorName ? opts?.authorUserId : authUser?.id,
       content,
       timestamp: 'Just now',
       postType: 'celebration',
@@ -339,56 +590,6 @@ export function App() {
   const [isNetworkingOpen, setIsNetworkingOpen] = useState(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState(false);
 
-  // Person profile + direct messaging
-  const [viewedAuthor, setViewedAuthor] = useState<PostAuthor | null>(null);
-  const [conversations, setConversations] = useState<DirectMessage[]>([]);
-  const [activeConversationPartnerId, setActiveConversationPartnerId] = useState<string | null>(null);
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-
-  const slugifyPartnerId = (name: string) => `partner_${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-
-  const handleOpenProfile = (author: PostAuthor) => setViewedAuthor(author);
-  const handleCloseProfile = () => setViewedAuthor(null);
-
-  const handleStartConversation = (author: PostAuthor) => {
-    const partnerId = slugifyPartnerId(author.name);
-    setConversations((prev) => {
-      if (prev.some((c) => c.partnerId === partnerId)) return prev;
-      const newConversation: DirectMessage = {
-        id: `dm_${partnerId}`,
-        partnerId,
-        partnerName: author.name,
-        partnerAvatar: author.avatar,
-        partnerRole: [author.title, author.org].filter(Boolean).join(' · '),
-        messages: [],
-      };
-      return [...prev, newConversation];
-    });
-    setActiveConversationPartnerId(partnerId);
-    setIsMessagesOpen(true);
-    setViewedAuthor(null);
-  };
-
-  const handleSendMessage = (partnerId: string, text: string) => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.partnerId === partnerId
-          ? {
-              ...c,
-              messages: [...c.messages, { id: `msg_${Date.now()}`, senderId: 'me', text, timestamp: 'Just now' }],
-            }
-          : c
-      )
-    );
-  };
-
-  const handleOpenMessages = () => {
-    if (!activeConversationPartnerId && conversations.length > 0) {
-      setActiveConversationPartnerId(conversations[0].partnerId);
-    }
-    setIsMessagesOpen(true);
-  };
-
   // Handlers
   const handleRoleChange = (role: UserRole) => {
     setActiveRole(role);
@@ -403,100 +604,117 @@ export function App() {
     setActiveTab('detail');
   };
 
+  const handleRegisterForConference = async (
+    conferenceId: string,
+    conferenceTitle: string,
+    packageId: string,
+    packageName: string
+  ) => {
+    try {
+      await registerForConference(conferenceId, conferenceTitle, packageId, packageName);
+      setRegistrations((prev) => {
+        const existingIdx = prev.findIndex((r) => r.conferenceId === conferenceId);
+        const updated = { conferenceId, conferenceTitle, packageId, packageName, registeredAt: new Date().toISOString() };
+        if (existingIdx === -1) return [updated, ...prev];
+        const next = [...prev];
+        next[existingIdx] = updated;
+        return next;
+      });
+      showToast({
+        type: 'success',
+        title: 'Registration confirmed',
+        message: `You're registered for ${conferenceTitle} (${packageName}). It'll appear in your verified attendance.`,
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Registration failed', message: err.message || 'Please try again.' });
+    }
+  };
+
+  const handleVolunteerForReview = async (opportunityId: string, conferenceTitle: string, topic: string) => {
+    try {
+      await volunteerForReview(opportunityId, conferenceTitle, topic);
+      setVolunteeredOpportunityIds((prev) => (prev.includes(opportunityId) ? prev : [...prev, opportunityId]));
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not volunteer', message: err.message || 'Please try again.' });
+    }
+  };
+
   const handleOpenSubmitAbstract = (confId?: string) => {
     setSubmitAbstractConfId(confId);
     setIsSubmitAbstractOpen(true);
   };
 
-  const handleAddSubmission = (newSubData: Partial<AbstractSubmission>) => {
-    const newSubmission: AbstractSubmission = {
-      id: `sub_${Date.now()}`,
-      conferenceId: newSubData.conferenceId || 'conf_1',
-      conferenceTitle: newSubData.conferenceTitle || 'Conference Title',
-      title: newSubData.title || 'Untitled Abstract',
-      track: newSubData.track || 'General Track',
-      topic: newSubData.topic || 'General Topic',
-      keywords: newSubData.keywords || [],
-      abstractText: newSubData.abstractText || '',
-      preferredType: newSubData.preferredType || 'Oral',
-      primaryAuthor: newSubData.primaryAuthor || {
-        name: userProfile.name,
-        email: 'author@conferencegate.com',
-        affiliation: userProfile.organization,
-        bio: userProfile.headline,
-      },
-      coAuthors: newSubData.coAuthors || [],
-      conflictOfInterest: newSubData.conflictOfInterest || 'None declared.',
-      status: 'Submitted',
-      submissionDate: new Date().toISOString().split('T')[0],
-      revisionsCount: 0,
-      visualTimeline: [
-        { label: 'Submitted', status: 'completed', date: 'Today' },
-        { label: 'Initial Screening', status: 'current', date: 'In Progress' },
-        { label: 'Reviewer Assignment', status: 'upcoming' },
-        { label: 'Under Review', status: 'upcoming' },
-        { label: 'Final Decision', status: 'upcoming' },
-      ],
-      reviews: [],
-    };
+  const handleAddSubmission = async (newSubData: Partial<AbstractSubmission>) => {
+    try {
+      const newSubmission = await createSubmission({
+        conferenceId: newSubData.conferenceId || 'conf_1',
+        conferenceTitle: newSubData.conferenceTitle || 'Conference Title',
+        title: newSubData.title || 'Untitled Abstract',
+        track: newSubData.track || 'General Track',
+        topic: newSubData.topic || 'General Topic',
+        keywords: newSubData.keywords || [],
+        abstractText: newSubData.abstractText || '',
+        preferredType: newSubData.preferredType || 'Oral',
+        primaryAuthor: newSubData.primaryAuthor || {
+          name: userProfile.name,
+          email: 'author@conferencegate.com',
+          affiliation: userProfile.organization,
+          bio: userProfile.bio,
+        },
+        coAuthors: newSubData.coAuthors || [],
+        conflictOfInterest: newSubData.conflictOfInterest || 'None declared.',
+      });
 
-    setSubmissions([newSubmission, ...submissions]);
-    setActiveTab('abstracts');
-    showToast({
-      type: 'success',
-      title: 'Abstract submitted',
-      message: `"${newSubmission.title}" is now in initial screening.`,
-    });
+      setSubmissions((prev) => [newSubmission, ...prev]);
+      setActiveTab('abstracts');
+      showToast({
+        type: 'success',
+        title: 'Abstract submitted',
+        message: `"${newSubmission.title}" is now in initial screening.`,
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Submission failed', message: err.message || 'Please try again.' });
+    }
   };
 
-  const handleCompleteReview = (abstractId: string, reviewData: any) => {
-    const newStatus = RECOMMENDATION_TO_STATUS[reviewData.recommendation];
-    let acceptedSubmission: AbstractSubmission | undefined;
+  const handleCompleteReview = async (abstractId: string, reviewData: any) => {
+    try {
+      const updatedSubmission = await submitReview(abstractId, {
+        scores: reviewData.scores,
+        commentsToAuthor: reviewData.commentsToAuthor,
+        confidentialComments: reviewData.confidentialComments,
+        recommendation: reviewData.recommendation,
+      });
 
-    setSubmissions((prev) =>
-      prev.map((sub) => {
-        if (sub.id === abstractId) {
-          if (newStatus) acceptedSubmission = sub;
-          return {
-            ...sub,
-            status: newStatus || 'Under Review',
-            reviews: [...sub.reviews, reviewData],
-          };
-        }
-        return sub;
-      })
-    );
+      setSubmissions((prev) => prev.map((sub) => (sub.id === abstractId ? updatedSubmission : sub)));
 
-    const nextReviewed = userProfile.contributions.abstractsReviewed + 1;
-    setUserProfile((prev) => ({
-      ...prev,
-      contributions: {
-        ...prev.contributions,
-        reviewerKudos: prev.contributions.reviewerKudos + 20,
-        abstractsReviewed: nextReviewed,
-      },
-    }));
+      const isAccepted = ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(updatedSubmission.status);
+      if (isAccepted) {
+        postCelebration(
+          'abstract-accepted',
+          '🎉 Abstract Accepted!',
+          `"${updatedSubmission.title}" has been accepted for presentation at ${updatedSubmission.conferenceTitle}. Congratulations to ${updatedSubmission.primaryAuthor.name}!`,
+          {
+            authorName: updatedSubmission.primaryAuthor.name,
+            authorTitle: 'Author',
+            authorOrg: updatedSubmission.primaryAuthor.affiliation,
+            authorUserId: updatedSubmission.submitterId,
+            conferenceBadge: updatedSubmission.conferenceTitle,
+          }
+        );
+      }
 
-    if (acceptedSubmission) {
-      postCelebration(
-        'abstract-accepted',
-        '🎉 Abstract Accepted!',
-        `"${acceptedSubmission.title}" has been accepted for presentation at ${acceptedSubmission.conferenceTitle}. Congratulations to ${acceptedSubmission.primaryAuthor.name}!`,
-        {
-          authorName: acceptedSubmission.primaryAuthor.name,
-          authorTitle: 'Author',
-          authorOrg: acceptedSubmission.primaryAuthor.affiliation,
-          conferenceBadge: acceptedSubmission.conferenceTitle,
-        }
-      );
-    }
-
-    if (nextReviewed % 10 === 0) {
-      postCelebration(
-        'reviewer-milestone',
-        `🏅 ${nextReviewed} Reviews Milestone!`,
-        `${userProfile.name} just completed their ${nextReviewed}th verified peer review on Conference Gate — a serious commitment to the research community.`
-      );
+      const nextReviewed = myContributions.abstractsReviewed + 1;
+      if (nextReviewed % 10 === 0) {
+        postCelebration(
+          'reviewer-milestone',
+          `🏅 ${nextReviewed} Reviews Milestone!`,
+          `${userProfile.name} just completed their ${nextReviewed}th verified peer review on Conference Gate — a serious commitment to the research community.`
+        );
+      }
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Review not submitted', message: err.message || 'Please try again.' });
+      return;
     }
 
     showToast({
@@ -555,6 +773,7 @@ export function App() {
       authorAvatar: userProfile.avatar,
       authorTitle: userProfile.title,
       authorOrg: userProfile.organization,
+      authorUserId: authUser?.id,
       content,
       timestamp: 'Just now',
       postType: 'announcement',
@@ -659,7 +878,7 @@ export function App() {
         accountRole={authUser.role}
         onLogout={handleLogout}
         onOpenMessages={handleOpenMessages}
-        unreadMessageCount={0}
+        unreadMessageCount={totalUnreadMessages}
       />
 
       {/* Main Container View Router */}
@@ -702,6 +921,8 @@ export function App() {
             onBack={() => setActiveTab('discover')}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
             onVolunteerReviewer={() => setActiveTab('reviewer')}
+            registeredPackageId={registrations.find((r) => r.conferenceId === selectedConference.id)?.packageId || null}
+            onRegister={handleRegisterForConference}
             onExpressCommitteeInterest={(confId) => {
               const conf = conferences.find((c) => c.id === confId);
               showToast({
@@ -734,6 +955,8 @@ export function App() {
             opportunities={sampleReviewOpportunities}
             submissions={submissions}
             onCompleteReview={handleCompleteReview}
+            volunteeredOpportunityIds={volunteeredOpportunityIds}
+            onVolunteer={handleVolunteerForReview}
           />
         )}
 
@@ -782,6 +1005,8 @@ export function App() {
             userProfile={userProfile}
             submissions={submissions}
             posts={posts}
+            registrations={registrations}
+            conferences={conferences}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
@@ -820,6 +1045,12 @@ export function App() {
         conferences={conferences}
         defaultConferenceId={submitAbstractConfId}
         onSubmit={handleAddSubmission}
+        author={{
+          name: userProfile.name,
+          email: authUser.email,
+          affiliation: userProfile.organization,
+          bio: userProfile.bio,
+        }}
       />
 
       <NetworkingModal
@@ -844,9 +1075,13 @@ export function App() {
         isOpen={isMessagesOpen}
         onClose={() => setIsMessagesOpen(false)}
         conversations={conversations}
-        activePartnerId={activeConversationPartnerId}
-        onSelectConversation={setActiveConversationPartnerId}
+        activePartnerId={activePartnerId}
+        pendingPartner={pendingPartner}
+        activeMessages={activeMessages}
+        currentUserId={authUser.id}
+        onSelectConversation={handleSelectConversation}
         onSendMessage={handleSendMessage}
+        onStartNewConversation={(user) => openConversationWith(user.id, user)}
       />
     </div>
   );
