@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import { db, UserRow } from "./db";
 
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
@@ -119,7 +120,13 @@ authRouter.post("/login", (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
   const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail) as UserRow | undefined;
-  if (!row || !bcrypt.compareSync(password, row.password_hash)) {
+  if (!row) {
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+  if (!row.password_hash) {
+    return res.status(401).json({ error: "This account uses Google Sign-In. Please continue with Google." });
+  }
+  if (!bcrypt.compareSync(password, row.password_hash)) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
@@ -161,5 +168,69 @@ authRouter.post("/avatar", requireAuth, (req: AuthedRequest, res) => {
 
   db.prepare("UPDATE users SET avatar = ? WHERE id = ?").run(avatar, req.userId);
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
+  res.json({ user: toPublicUser(row) });
+});
+
+const googleClient = process.env.GOOGLE_OAUTH_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID) : null;
+
+authRouter.post("/google", async (req, res) => {
+  const { credential, role } = req.body || {};
+
+  if (!googleClient) {
+    return res.status(503).json({ error: "Google Sign-In is not configured on the server." });
+  }
+  if (typeof credential !== "string" || !credential) {
+    return res.status(400).json({ error: "Missing Google credential." });
+  }
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch {
+    return res.status(401).json({ error: "Could not verify Google sign-in. Please try again." });
+  }
+
+  if (!payload?.sub || !payload.email) {
+    return res.status(401).json({ error: "Google did not return the expected account details." });
+  }
+
+  const googleId = payload.sub;
+  const email = payload.email.toLowerCase();
+  const name = payload.name || email;
+  const picture = payload.picture || null;
+
+  let row = db.prepare("SELECT * FROM users WHERE google_id = ?").get(googleId) as UserRow | undefined;
+
+  if (!row) {
+    const byEmail = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+    if (byEmail) {
+      db.prepare("UPDATE users SET google_id = ? WHERE id = ?").run(googleId, byEmail.id);
+      row = db.prepare("SELECT * FROM users WHERE id = ?").get(byEmail.id) as UserRow;
+    }
+  }
+
+  if (!row) {
+    if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
+      return res.json({
+        needsRole: true,
+        google: { name, email, avatar: picture },
+      });
+    }
+
+    const id = crypto.randomUUID();
+    const normalizedRole = role.toLowerCase() as AuthRole;
+    db.prepare(
+      `INSERT INTO users (id, email, password_hash, google_id, role, name, avatar)
+       VALUES (?, ?, NULL, ?, ?, ?, ?)`
+    ).run(id, email, googleId, normalizedRole, name, picture);
+    row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow;
+  }
+
+  const token = signToken(row.id);
+  setSessionCookie(res, token);
   res.json({ user: toPublicUser(row) });
 });

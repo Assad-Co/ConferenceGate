@@ -64,6 +64,25 @@ export async function updateAvatar(avatar: string | null): Promise<AuthUser> {
   return data.user;
 }
 
+export interface GoogleAuthNeedsRole {
+  needsRole: true;
+  google: { name: string; email: string; avatar: string | null };
+}
+
+export async function googleAuth(credential: string, role?: AuthRole): Promise<AuthUser | GoogleAuthNeedsRole> {
+  const res = await fetch('/api/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ credential, role }),
+  });
+  const data = await parseResponse(res);
+  if (data.needsRole) {
+    return { needsRole: true, google: data.google };
+  }
+  return data.user;
+}
+
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   const res = await fetch('/api/auth/me', { credentials: 'include' });
   if (res.status === 401) return null;
