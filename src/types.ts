@@ -403,6 +403,14 @@ export interface DirectMessage {
   }>;
 }
 
+/** A post author's public identity — enough to show a lightweight profile and start a conversation. */
+export interface PostAuthor {
+  name: string;
+  avatar: string;
+  title: string;
+  org: string;
+}
+
 export interface NotificationItem {
   id: string;
   title: string;

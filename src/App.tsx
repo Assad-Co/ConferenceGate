@@ -21,6 +21,8 @@ import { AIAssistantModal } from './components/AIAssistantModal';
 import { NetworkingModal } from './components/NetworkingModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { CertificatesView } from './components/CertificatesView';
+import { PersonProfileModal } from './components/PersonProfileModal';
+import { MessagesPanel } from './components/MessagesPanel';
 
 import {
   sampleConferences,
@@ -34,7 +36,18 @@ import {
   sampleSponsorApplicants,
   sampleNotifications,
 } from './data/mockData';
-import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorProfile, UserRole, UserProfile } from './types';
+import {
+  Conference,
+  AbstractSubmission,
+  CelebrationKind,
+  NotificationItem,
+  Post,
+  SponsorProfile,
+  UserRole,
+  UserProfile,
+  PostAuthor,
+  DirectMessage,
+} from './types';
 
 const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   Accept: 'Accepted',
@@ -326,6 +339,56 @@ export function App() {
   const [isNetworkingOpen, setIsNetworkingOpen] = useState(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState(false);
 
+  // Person profile + direct messaging
+  const [viewedAuthor, setViewedAuthor] = useState<PostAuthor | null>(null);
+  const [conversations, setConversations] = useState<DirectMessage[]>([]);
+  const [activeConversationPartnerId, setActiveConversationPartnerId] = useState<string | null>(null);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+
+  const slugifyPartnerId = (name: string) => `partner_${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+  const handleOpenProfile = (author: PostAuthor) => setViewedAuthor(author);
+  const handleCloseProfile = () => setViewedAuthor(null);
+
+  const handleStartConversation = (author: PostAuthor) => {
+    const partnerId = slugifyPartnerId(author.name);
+    setConversations((prev) => {
+      if (prev.some((c) => c.partnerId === partnerId)) return prev;
+      const newConversation: DirectMessage = {
+        id: `dm_${partnerId}`,
+        partnerId,
+        partnerName: author.name,
+        partnerAvatar: author.avatar,
+        partnerRole: [author.title, author.org].filter(Boolean).join(' · '),
+        messages: [],
+      };
+      return [...prev, newConversation];
+    });
+    setActiveConversationPartnerId(partnerId);
+    setIsMessagesOpen(true);
+    setViewedAuthor(null);
+  };
+
+  const handleSendMessage = (partnerId: string, text: string) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.partnerId === partnerId
+          ? {
+              ...c,
+              messages: [...c.messages, { id: `msg_${Date.now()}`, senderId: 'me', text, timestamp: 'Just now' }],
+            }
+          : c
+      )
+    );
+  };
+
+  const handleOpenMessages = () => {
+    if (!activeConversationPartnerId && conversations.length > 0) {
+      setActiveConversationPartnerId(conversations[0].partnerId);
+    }
+    setIsMessagesOpen(true);
+  };
+
   // Handlers
   const handleRoleChange = (role: UserRole) => {
     setActiveRole(role);
@@ -595,6 +658,8 @@ export function App() {
         accountEmail={authUser.email}
         accountRole={authUser.role}
         onLogout={handleLogout}
+        onOpenMessages={handleOpenMessages}
+        unreadMessageCount={0}
       />
 
       {/* Main Container View Router */}
@@ -618,6 +683,7 @@ export function App() {
             posts={posts}
             onAddPost={handleAddPost}
             onOpenDigitalBadge={() => setIsBadgeOpen(true)}
+            onOpenProfile={handleOpenProfile}
           />
         )}
 
@@ -703,7 +769,12 @@ export function App() {
         )}
 
         {activeTab === 'community' && (
-          <CommunityFeed posts={posts} onAddPost={handleAddPost} userProfile={userProfile} />
+          <CommunityFeed
+            posts={posts}
+            onAddPost={handleAddPost}
+            userProfile={userProfile}
+            onOpenProfile={handleOpenProfile}
+          />
         )}
 
         {activeTab === 'profile' && (
@@ -760,6 +831,22 @@ export function App() {
         isOpen={isBadgeOpen}
         onClose={() => setIsBadgeOpen(false)}
         userProfile={userProfile}
+      />
+
+      <PersonProfileModal
+        author={viewedAuthor}
+        posts={posts}
+        onClose={handleCloseProfile}
+        onMessage={handleStartConversation}
+      />
+
+      <MessagesPanel
+        isOpen={isMessagesOpen}
+        onClose={() => setIsMessagesOpen(false)}
+        conversations={conversations}
+        activePartnerId={activeConversationPartnerId}
+        onSelectConversation={setActiveConversationPartnerId}
+        onSendMessage={handleSendMessage}
       />
     </div>
   );
