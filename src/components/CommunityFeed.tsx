@@ -21,7 +21,7 @@ import {
   Bookmark,
   X,
 } from 'lucide-react';
-import { Post, UserProfile } from '../types';
+import { Post, UserProfile, PostAuthor } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
 import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
 import { formatCompactCount } from '../utils/format';
@@ -30,6 +30,7 @@ interface CommunityFeedProps {
   posts?: Post[];
   onAddPost: (postText: string) => void;
   userProfile?: UserProfile;
+  onOpenProfile?: (author: PostAuthor) => void;
 }
 
 const POST_TYPE_META: Record<
@@ -48,6 +49,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   posts = [],
   onAddPost,
   userProfile,
+  onOpenProfile,
 }) => {
   const [newPostText, setNewPostText] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -206,7 +208,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
       <div className="space-y-4">
         {(posts || []).map((post) => {
           if (post.postType === 'celebration') {
-            return <CelebrationPostCard key={post.id} post={post} />;
+            return <CelebrationPostCard key={post.id} post={post} onOpenProfile={onOpenProfile} />;
           }
 
           const typeMeta = POST_TYPE_META[post.postType as Exclude<Post['postType'], 'celebration'>];
@@ -245,17 +247,27 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               <div className="p-4 space-y-3">
                 {/* Author Bar */}
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+                  <button
+                    onClick={() =>
+                      onOpenProfile?.({
+                        name: post.authorName,
+                        avatar: post.authorAvatar,
+                        title: post.authorTitle,
+                        org: post.authorOrg,
+                      })
+                    }
+                    className="flex items-center gap-3 text-left cursor-pointer group/author"
+                  >
                     <img src={post.authorAvatar} alt={post.authorName} className="w-11 h-11 rounded-full object-cover ring-2 ring-blue-500/15 shrink-0" />
                     <div className="text-xs">
-                      <div className="font-bold text-slate-900 flex items-center gap-1">
+                      <div className="font-bold text-slate-900 flex items-center gap-1 group-hover/author:text-blue-700 transition-colors">
                         <span>{post.authorName}</span>
                         <Award className="w-3.5 h-3.5 text-blue-600" />
                       </div>
                       <div className="text-slate-500">{post.authorTitle} • {post.authorOrg}</div>
                       <div className="text-slate-400 text-[10px] font-medium">{post.timestamp}</div>
                     </div>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => toggleSave(post.id)}

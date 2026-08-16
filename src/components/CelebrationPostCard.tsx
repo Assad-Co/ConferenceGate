@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ThumbsUp, MessageSquare, Share2, Eye, Repeat2, Bookmark, X } from 'lucide-react';
-import { CelebrationKind, Post } from '../types';
+import { CelebrationKind, Post, PostAuthor } from '../types';
 import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration } from './celebrationIllustrations';
 import { Logo } from './Logo';
 import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
@@ -67,7 +67,10 @@ const THEME: Record<CelebrationKind, CelebrationTheme> = {
   },
 };
 
-export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
+export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void }> = ({
+  post,
+  onOpenProfile,
+}) => {
   const kind = post.celebrationKind || 'abstract-accepted';
   const theme = THEME[kind];
   const { Illustration } = theme;
@@ -149,14 +152,19 @@ export const CelebrationPostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+          <button
+            onClick={() =>
+              onOpenProfile?.({ name: post.authorName, avatar: post.authorAvatar, title: post.authorTitle, org: post.authorOrg })
+            }
+            className="flex items-center gap-3 text-left cursor-pointer group/author"
+          >
             <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
             <div className="min-w-0 text-xs">
-              <div className="font-bold text-slate-900 truncate">{post.authorName}</div>
+              <div className="font-bold text-slate-900 truncate group-hover/author:text-blue-700 transition-colors">{post.authorName}</div>
               <div className="text-slate-500 truncate">{post.authorTitle} · {post.authorOrg}</div>
               <div className="text-slate-400">{post.timestamp}</div>
             </div>
-          </div>
+          </button>
           <button
             onClick={() => setIsSaved((v) => !v)}
             className={`p-1.5 rounded-lg cursor-pointer transition-colors shrink-0 ${

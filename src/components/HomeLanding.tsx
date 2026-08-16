@@ -19,7 +19,7 @@ import {
   QrCode,
   ExternalLink,
 } from 'lucide-react';
-import { Conference, UserProfile, Post } from '../types';
+import { Conference, UserProfile, Post, PostAuthor } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
 import { formatDate, formatDateRange } from '../utils/date';
 
@@ -33,21 +33,32 @@ interface HomeLandingProps {
   posts: Post[];
   onAddPost: (content: string) => void;
   onOpenDigitalBadge: () => void;
+  onOpenProfile?: (author: PostAuthor) => void;
 }
 
-const PostCard: React.FC<{ post: Post }> = ({ post }) => (
+const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void }> = ({ post, onOpenProfile }) => (
   <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-4 space-y-3">
-    <div className="flex items-center gap-3">
+    <button
+      onClick={() =>
+        onOpenProfile?.({
+          name: post.authorName,
+          avatar: post.authorAvatar,
+          title: post.authorTitle,
+          org: post.authorOrg,
+        })
+      }
+      className="flex items-center gap-3 text-left cursor-pointer group/author"
+    >
       <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
       <div className="min-w-0 text-xs">
-        <div className="font-bold text-slate-900 flex items-center gap-1">
+        <div className="font-bold text-slate-900 flex items-center gap-1 group-hover/author:text-blue-700 transition-colors">
           <span className="truncate">{post.authorName}</span>
           <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
         </div>
         <div className="text-slate-500 truncate">{post.authorTitle} · {post.authorOrg}</div>
         <div className="text-slate-400">{post.timestamp}</div>
       </div>
-    </div>
+    </button>
 
     {post.conferenceBadge && (
       <div className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold">
@@ -129,6 +140,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   posts,
   onAddPost,
   onOpenDigitalBadge,
+  onOpenProfile,
 }) => {
   const [postText, setPostText] = useState('');
   const [logoErrorIds, setLogoErrorIds] = useState<Record<string, boolean>>({});
@@ -296,7 +308,11 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </div>
             {posts.slice(0, 2).map((post, i) => (
               <React.Fragment key={post.id}>
-                {post.postType === 'celebration' ? <CelebrationPostCard post={post} /> : <PostCard post={post} />}
+                {post.postType === 'celebration' ? (
+                  <CelebrationPostCard post={post} onOpenProfile={onOpenProfile} />
+                ) : (
+                  <PostCard post={post} onOpenProfile={onOpenProfile} />
+                )}
                 {i === 0 && promotedPool.length > 0 && (
                   <PromotedConferenceCard
                     conf={promotedPool[0]}
