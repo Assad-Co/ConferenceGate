@@ -22,7 +22,7 @@ import {
   Loader2,
   Pencil,
 } from 'lucide-react';
-import { AbstractSubmission, ConferenceRole, NotificationItem, UserProfile } from '../types';
+import { AbstractSubmission, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
@@ -34,6 +34,7 @@ type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' 
 interface UserProfileViewProps {
   userProfile: UserProfile;
   submissions?: AbstractSubmission[];
+  posts?: Post[];
   onOpenBadgeModal: () => void;
   onOpenCertificates: () => void;
   initialTab?: ProfileTab;
@@ -73,21 +74,12 @@ interface AttendedConference {
   defaultRole: ConferenceRole;
 }
 
-const ATTENDED_CONFERENCES: AttendedConference[] = [
-  {
-    id: 'conf_1',
-    title: 'EAGE Annual Conference & Exhibition 2026',
-    location: 'Amsterdam, Netherlands',
-    roleLabel: 'Attended as Presenter & Keynote Delegate',
-    organizerName: 'European Association of Geoscientists & Engineers (EAGE)',
-    eventDate: 'June 25–28, 2026',
-    defaultRole: 'Keynote',
-  },
-];
+const ATTENDED_CONFERENCES: AttendedConference[] = [];
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
   userProfile,
   submissions = [],
+  posts = [],
   onOpenBadgeModal,
   onOpenCertificates,
   initialTab = 'conferences',
@@ -159,6 +151,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   ]
     .filter((entry, idx, arr) => arr.findIndex((e) => e.title === entry.title && e.year === entry.year) === idx)
     .sort((a, b) => b.year - a.year);
+
+  const conferenceGateIndex = Math.min(
+    1000,
+    userProfile.contributions.reviewerKudos +
+      userProfile.contributions.abstractsAccepted * 15 +
+      userProfile.contributions.technicalCommittees * 25 +
+      userProfile.contributions.sessionsChaired * 20 +
+      userProfile.contributions.speakerRoles * 20
+  );
 
   return (
     <div className="space-y-8">
@@ -280,7 +281,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Conference Gate Index</div>
-            <div className="text-xl font-extrabold text-blue-700">890 / 1000</div>
+            <div className="text-xl font-extrabold text-blue-700">{conferenceGateIndex} / 1000</div>
           </div>
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
@@ -348,27 +349,34 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         {activeTab === 'conferences' && (
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900">Verified Conferences Attended</h3>
-            <div className="space-y-3">
-              {ATTENDED_CONFERENCES.map((conf) => (
-                <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="font-bold text-xs text-slate-900">{conf.title}</h4>
-                    <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
+            {ATTENDED_CONFERENCES.length > 0 ? (
+              <div className="space-y-3">
+                {ATTENDED_CONFERENCES.map((conf) => (
+                  <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-900">{conf.title}</h4>
+                      <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setFeedbackConference(conf)}
+                        className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
+                      >
+                        Leave Feedback
+                      </button>
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                        Verified Attendance
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setFeedbackConference(conf)}
-                      className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
-                    >
-                      Leave Feedback
-                    </button>
-                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
-                      Verified Attendance
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                No verified conference attendance on record yet. Once you register for a conference through Conference
+                Gate, it'll appear here.
+              </p>
+            )}
           </div>
         )}
 
@@ -420,20 +428,24 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <BookOpen className="w-4 h-4 text-blue-600" />
                 Published Research
               </h3>
-              <div className="space-y-2">
-                {userProfile.publications.map((pub) => (
-                  <div key={pub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                    <h4 className="font-bold text-xs text-slate-900">{pub.title}</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{pub.journal} ({pub.year})</p>
-                    {pub.doi && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-blue-600 mt-1 font-mono">
-                        <ExternalLink className="w-3 h-3" />
-                        DOI: {pub.doi}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {userProfile.publications.length > 0 ? (
+                <div className="space-y-2">
+                  {userProfile.publications.map((pub) => (
+                    <div key={pub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                      <h4 className="font-bold text-xs text-slate-900">{pub.title}</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{pub.journal} ({pub.year})</p>
+                      {pub.doi && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-blue-600 mt-1 font-mono">
+                          <ExternalLink className="w-3 h-3" />
+                          DOI: {pub.doi}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No published research on record yet.</p>
+              )}
             </div>
           </div>
         )}
@@ -467,14 +479,18 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Reviewer Badges Earned</h4>
-              <div className="flex flex-wrap gap-2">
-                {userProfile.reviewerInfo.badges.map((b, idx) => (
-                  <span key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-bold flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5" />
-                    {b}
-                  </span>
-                ))}
-              </div>
+              {userProfile.reviewerInfo.badges.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {userProfile.reviewerInfo.badges.map((b, idx) => (
+                    <span key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-bold flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5" />
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No reviewer badges earned yet — volunteer to review abstracts to start earning them.</p>
+              )}
             </div>
 
             {userProfile.reviewerInfo.outstandingAwards.length > 0 && (
@@ -493,13 +509,17 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Review Expertise</h4>
-              <div className="flex flex-wrap gap-2">
-                {userProfile.reviewerInfo.expertiseKeywords.map((k, idx) => (
-                  <span key={idx} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-[11px] font-semibold">
-                    {k}
-                  </span>
-                ))}
-              </div>
+              {userProfile.reviewerInfo.expertiseKeywords.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {userProfile.reviewerInfo.expertiseKeywords.map((k, idx) => (
+                    <span key={idx} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-[11px] font-semibold">
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No review expertise keywords set yet.</p>
+              )}
             </div>
           </div>
         )}
@@ -554,21 +574,28 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         {activeTab === 'badges' && (
           <div className="space-y-6">
             <h3 className="text-base font-bold text-slate-900">Verified Conference Identity Badges</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {userProfile.verifiedAchievements.map((b) => (
-                <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 mx-auto flex items-center justify-center font-bold">
-                    <Award className="w-6 h-6" />
+            {userProfile.verifiedAchievements.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {userProfile.verifiedAchievements.map((b) => (
+                  <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 mx-auto flex items-center justify-center font-bold">
+                      <Award className="w-6 h-6" />
+                    </div>
+                    <div className="font-bold text-xs text-slate-900">{b.title}</div>
+                    <div className="text-[10px] text-slate-500">{b.conferenceName} ({b.year})</div>
                   </div>
-                  <div className="font-bold text-xs text-slate-900">{b.title}</div>
-                  <div className="text-[10px] text-slate-500">{b.conferenceName} ({b.year})</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                No verified badges yet. Badges are earned automatically for verified conference activity like keynotes,
+                reviews, and committee roles.
+              </p>
+            )}
           </div>
         )}
 
-        {activeTab === 'analytics' && <ProfileAnalytics />}
+        {activeTab === 'analytics' && <ProfileAnalytics userProfile={userProfile} posts={posts} />}
       </div>
 
       <ConferenceFeedbackModal
