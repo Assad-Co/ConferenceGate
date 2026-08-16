@@ -58,6 +58,14 @@ if (!existingColumns.some((col) => col.name === "google_id")) {
   `);
 }
 
+const PROFILE_COLUMNS = ["department", "city", "country", "bio"] as const;
+for (const col of PROFILE_COLUMNS) {
+  if (!existingColumns.some((c) => c.name === col)) {
+    db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
+    existingColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+  }
+}
+
 export interface UserRow {
   id: string;
   email: string;
@@ -67,6 +75,10 @@ export interface UserRow {
   name: string;
   organization: string | null;
   title: string | null;
+  department: string | null;
+  city: string | null;
+  country: string | null;
+  bio: string | null;
   avatar: string | null;
   created_at: string;
 }

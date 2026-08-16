@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Award, Download, CheckCircle2, ShieldCheck, FileText, ArrowLeft } from 'lucide-react';
 import { UserProfile } from '../types';
+import { downloadCertificatePDF } from '../utils/certificatePdf';
 
 interface CertificatesViewProps {
   userProfile: UserProfile;
@@ -44,10 +45,21 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   ];
 
   const handleDownload = (certId: string) => {
+    const cert = mockCertificates.find((c) => c.id === certId);
+    if (!cert) return;
     setDownloadingId(certId);
     setTimeout(() => {
+      downloadCertificatePDF({
+        title: cert.title,
+        recipientName: userProfile.name,
+        event: cert.event,
+        paperTitle: cert.paperTitle,
+        issuer: cert.issuer,
+        date: cert.date,
+        verificationHash: cert.verificationHash,
+      });
       setDownloadingId(null);
-    }, 2000);
+    }, 600);
   };
 
   return (

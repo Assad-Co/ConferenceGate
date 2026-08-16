@@ -7,7 +7,21 @@ export interface AuthUser {
   name: string;
   organization: string | null;
   title: string | null;
+  department: string | null;
+  city: string | null;
+  country: string | null;
+  bio: string | null;
   avatar: string | null;
+}
+
+export interface ProfileUpdatePayload {
+  name?: string;
+  title?: string;
+  organization?: string;
+  department?: string;
+  city?: string;
+  country?: string;
+  bio?: string;
 }
 
 export interface SignupPayload {
@@ -80,6 +94,17 @@ export async function googleAuth(credential: string, role?: AuthRole): Promise<A
   if (data.needsRole) {
     return { needsRole: true, google: data.google };
   }
+  return data.user;
+}
+
+export async function updateProfile(payload: ProfileUpdatePayload): Promise<AuthUser> {
+  const res = await fetch('/api/auth/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
   return data.user;
 }
 

@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './components/auth/AuthScreen';
-import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar } from './api/auth';
+import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar, updateProfile } from './api/auth';
 import { resolveAvatar } from './utils/avatar';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
@@ -176,7 +176,17 @@ export function App() {
       setSponsorLogoOverride(avatar);
       setActiveTab('sponsor');
     } else {
-      setUserProfile((prev) => ({ ...prev, name: user.name, title: user.title || prev.title, avatar }));
+      setUserProfile((prev) => ({
+        ...prev,
+        name: user.name,
+        title: user.title || '',
+        organization: user.organization || '',
+        department: user.department || '',
+        city: user.city || '',
+        country: user.country || '',
+        bio: user.bio || '',
+        avatar,
+      }));
       setActiveTab('home');
     }
   };
@@ -191,6 +201,34 @@ export function App() {
       setSponsorLogoOverride(avatar);
     } else {
       setUserProfile((prev) => ({ ...prev, avatar }));
+    }
+  };
+
+  const handleEditProfile = async (payload: {
+    name: string;
+    title: string;
+    organization: string;
+    department: string;
+    city: string;
+    country: string;
+    bio: string;
+  }) => {
+    const updatedUser = await updateProfile(payload);
+    setAuthUser(updatedUser);
+    setUserProfile((prev) => ({
+      ...prev,
+      name: updatedUser.name,
+      title: updatedUser.title || '',
+      organization: updatedUser.organization || '',
+      department: updatedUser.department || '',
+      city: updatedUser.city || '',
+      country: updatedUser.country || '',
+      bio: updatedUser.bio || '',
+    }));
+    if (updatedUser.role === 'organizer') {
+      setOrganizerNameOverride(updatedUser.name);
+    } else if (updatedUser.role === 'sponsor') {
+      setSponsorNameOverride(updatedUser.name);
     }
   };
 
@@ -633,6 +671,7 @@ export function App() {
             onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
             onAvatarChange={handleAvatarChange}
             hasCustomAvatar={!!authUser.avatar}
+            onEditProfile={handleEditProfile}
           />
         )}
 
