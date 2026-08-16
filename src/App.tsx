@@ -34,7 +34,7 @@ import {
   sampleSponsorApplicants,
   sampleNotifications,
 } from './data/mockData';
-import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorProfile, UserRole } from './types';
+import { Conference, AbstractSubmission, CelebrationKind, NotificationItem, Post, SponsorProfile, UserRole, UserProfile } from './types';
 
 const RECOMMENDATION_TO_STATUS: Record<string, AbstractSubmission['status']> = {
   Accept: 'Accepted',
@@ -46,6 +46,51 @@ const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
   professional: 'Professional',
   organizer: 'Organizer',
   sponsor: 'Sponsor',
+};
+
+// A brand-new account has no real conference activity yet — these reset a freshly
+// authenticated profile away from the seeded demo persona's career history rather
+// than silently displaying a stranger's papers, kudos, and committee roles as fact.
+const EMPTY_ACCOUNT_ACHIEVEMENTS = {
+  education: [] as string[],
+  certifications: [] as string[],
+  expertise: [] as string[],
+  technicalSpecialization: [] as string[],
+  researchInterests: [] as string[],
+  keywords: [] as string[],
+  publications: [] as UserProfile['publications'],
+  societies: [] as string[],
+  languages: [] as string[],
+  contributions: {
+    conferencesAttended: 0,
+    abstractsSubmitted: 0,
+    abstractsAccepted: 0,
+    oralPresentations: 0,
+    posterPresentations: 0,
+    speakerRoles: 0,
+    keynoteRoles: 0,
+    workshopsDelivered: 0,
+    panelsParticipated: 0,
+    sessionsChaired: 0,
+    technicalCommittees: 0,
+    abstractsReviewed: 0,
+    conferencesReviewedFor: 0,
+    reviewerKudos: 0,
+    awards: 0,
+    certificatesCount: 0,
+  },
+  verifiedAchievements: [] as UserProfile['verifiedAchievements'],
+  timeline: [] as UserProfile['timeline'],
+  reviewerInfo: {
+    available: false,
+    expertiseKeywords: [] as string[],
+    maxLoad: 0,
+    currentLoad: 0,
+    totalReviewed: 0,
+    kudos: 0,
+    badges: [] as string[],
+    outstandingAwards: [] as string[],
+  },
 };
 
 export function App() {
@@ -186,6 +231,7 @@ export function App() {
         country: user.country || '',
         bio: user.bio || '',
         avatar,
+        ...EMPTY_ACCOUNT_ACHIEVEMENTS,
       }));
       setActiveTab('home');
     }
@@ -446,12 +492,13 @@ export function App() {
       authorAvatar: userProfile.avatar,
       authorTitle: userProfile.title,
       authorOrg: userProfile.organization,
-      conferenceBadge: 'Annual Subsurface Energy & AI Summit 2026',
       content,
       timestamp: 'Just now',
       postType: 'announcement',
-      reactions: { likes: 1, celebrates: 0, insightful: 0, kudos: 0 },
+      reactions: { likes: 0, celebrates: 0, insightful: 0, kudos: 0 },
       commentsCount: 0,
+      impressions: 0,
+      repostsCount: 0,
     };
     setPosts([newPost, ...posts]);
     showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
@@ -663,6 +710,7 @@ export function App() {
           <UserProfileView
             userProfile={userProfile}
             submissions={submissions}
+            posts={posts}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
