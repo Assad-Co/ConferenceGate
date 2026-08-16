@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { authRouter } from "./server/auth";
+import { googleSearchRouter } from "./server/googleSearch";
 
 dotenv.config();
 
@@ -22,6 +23,9 @@ async function startServer() {
 
   // Auth routes
   app.use("/api/auth", authRouter);
+
+  // Live conference search (Google Custom Search)
+  app.use("/api/search", googleSearchRouter);
 
   // AI Routes using Gemini SDK
   const getAIClient = () => {
