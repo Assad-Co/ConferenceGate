@@ -1,13 +1,11 @@
+import "./server/env";
 import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
 import { authRouter } from "./server/auth";
 import { googleSearchRouter } from "./server/googleSearch";
-
-dotenv.config();
 
 async function startServer() {
   const app = express();
