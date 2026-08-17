@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+import { useToast } from './Toast';
 
 interface SponsorAlert {
   id: string;
@@ -58,6 +59,22 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth' | 'profile'>('marketplace');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const alertsPanelRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
+
+  const [boothForm, setBoothForm] = useState({
+    companyName: sponsorProfile.companyName,
+    headline: '',
+    whitepaperLink: '',
+  });
+
+  const handleSaveBoothConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    showToast({
+      type: 'success',
+      title: 'Booth configuration saved',
+      message: 'Your digital exhibition booth has been updated.',
+    });
+  };
 
   const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
 
@@ -151,18 +168,19 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               Sponsor Marketplace & Real-Time ROI Analytics
             </h1>
             <p className="text-xs text-slate-600">
-              Connect corporate brands with world-class technical and scientific conferences. Track logo impressions, digital booth traffic, and B2B leads.
+              Connect corporate brands with world-class technical and scientific conferences, and track your
+              sponsorship packages, opportunities, and organizer ratings in one place.
             </p>
           </div>
 
           <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-6 shrink-0 shadow-xs">
             <div>
-              <div className="text-[10px] uppercase font-bold text-slate-400">Active Impressions</div>
-              <div className="text-2xl font-extrabold text-blue-700">142,800</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Sponsor Rating</div>
+              <div className="text-2xl font-extrabold text-blue-700">{sponsorProfile.rating.toFixed(1)}/5</div>
             </div>
             <div className="border-l border-slate-200 pl-6">
-              <div className="text-[10px] uppercase font-bold text-slate-400">B2B Leads Captured</div>
-              <div className="text-2xl font-extrabold text-emerald-600">384 Leads</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Organizer Reviews</div>
+              <div className="text-2xl font-extrabold text-emerald-600">{sponsorProfile.reviewsCount}</div>
             </div>
           </div>
         </div>
@@ -402,28 +420,33 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Logo Impressions</div>
-              <div className="text-2xl font-extrabold text-slate-900">142,800 Views</div>
-              <div className="text-[11px] font-semibold text-emerald-600">On Platform & Emails</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Sponsorship Packages</div>
+              <div className="text-2xl font-extrabold text-slate-900">{sponsorshipPackages.length}</div>
+              <div className="text-[11px] font-semibold text-slate-500">Available across the marketplace</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Digital Booth Traffic</div>
-              <div className="text-2xl font-extrabold text-blue-600">3,420 Visitors</div>
-              <div className="text-[11px] font-semibold text-slate-500">Average dwell time: 4m 12s</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Organizer-Suggested Opportunities</div>
+              <div className="text-2xl font-extrabold text-blue-600">{activatedOpportunities.length}</div>
+              <div className="text-[11px] font-semibold text-slate-500">Matched to your sponsor profile</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">B2B Lead Contacts</div>
-              <div className="text-2xl font-extrabold text-blue-700">384 Qualified Leads</div>
-              <div className="text-[11px] font-semibold text-blue-600">Verified Professional Profiles</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Sponsor Rating</div>
+              <div className="text-2xl font-extrabold text-blue-700">{sponsorProfile.rating.toFixed(1)}/5</div>
+              <div className="text-[11px] font-semibold text-blue-600">{sponsorProfile.reviewsCount} organizer reviews</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Whitepaper Downloads</div>
-              <div className="text-2xl font-extrabold text-emerald-700">620 Downloads</div>
-              <div className="text-[11px] font-semibold text-emerald-600">Subsurface AI Paper</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Sponsorship History</div>
+              <div className="text-2xl font-extrabold text-emerald-700">{sortedHistory.length}</div>
+              <div className="text-[11px] font-semibold text-emerald-600">Past conferences sponsored</div>
             </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500">
+            Logo impression tracking, digital booth traffic, and lead-capture analytics aren't wired up to live
+            tracking yet — this dashboard will populate with real engagement data as those integrations go live.
           </div>
         </div>
       )}
@@ -436,23 +459,40 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             Configure your corporate logo, promotional video embed, representative booth staff, and downloadable whitepapers.
           </p>
 
-          <form className="space-y-4 text-xs">
+          <form onSubmit={handleSaveBoothConfig} className="space-y-4 text-xs">
             <div className="space-y-1.5">
               <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Company Name</label>
-              <input type="text" defaultValue="Aramco Scientific Solutions" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium" />
+              <input
+                type="text"
+                value={boothForm.companyName}
+                onChange={(e) => setBoothForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Booth Headline / Motto</label>
-              <input type="text" defaultValue="Pioneering AI-Driven Subsurface Energy Solutions & Sustainable Carbon Storage" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium" />
+              <input
+                type="text"
+                value={boothForm.headline}
+                onChange={(e) => setBoothForm((prev) => ({ ...prev, headline: e.target.value }))}
+                placeholder="e.g. Pioneering AI-Driven Subsurface Energy Solutions"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Whitepaper Download Link</label>
-              <input type="text" defaultValue="https://aramco.com/whitepapers/subsurface-ai-2026.pdf" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium" />
+              <input
+                type="text"
+                value={boothForm.whitepaperLink}
+                onChange={(e) => setBoothForm((prev) => ({ ...prev, whitepaperLink: e.target.value }))}
+                placeholder="https://yourcompany.com/whitepaper.pdf"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+              />
             </div>
 
-            <button type="button" className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
+            <button type="submit" className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
               Save Booth Configuration
             </button>
           </form>

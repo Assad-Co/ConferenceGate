@@ -623,6 +623,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       <ConferenceFeedbackModal
         isOpen={feedbackConference !== null}
         onClose={() => setFeedbackConference(null)}
+        conferenceId={feedbackConference?.id}
         conferenceTitle={feedbackConference?.title || ''}
         organizerName={feedbackConference?.organizerName || ''}
         eventDate={feedbackConference?.eventDate || ''}

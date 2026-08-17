@@ -12,30 +12,45 @@ import {
   Send,
 } from 'lucide-react';
 import { AbstractSubmission } from '../types';
+import { submitRevision } from '../api/activity';
+import { useToast } from './Toast';
 
 interface AbstractTrackerViewProps {
   submissions: AbstractSubmission[];
   onOpenNewSubmission: () => void;
+  onSubmissionUpdated?: (submission: AbstractSubmission) => void;
 }
 
 export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
   submissions,
   onOpenNewSubmission,
+  onSubmissionUpdated,
 }) => {
   const [selectedSubId, setSelectedSubId] = useState<string>(
     submissions[0]?.id || ''
   );
   const [revisionText, setRevisionText] = useState('');
   const [revisionSuccess, setRevisionTextSuccess] = useState(false);
+  const [submittingRevision, setSubmittingRevision] = useState(false);
+  const { showToast } = useToast();
 
   const currentSub = submissions.find((s) => s.id === selectedSubId) || submissions[0];
 
-  const handleSendRevision = (e: React.FormEvent) => {
+  const handleSendRevision = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!revisionText.trim()) return;
-    setRevisionTextSuccess(true);
-    setRevisionText('');
-    setTimeout(() => setRevisionTextSuccess(false), 4000);
+    if (!revisionText.trim() || !currentSub || submittingRevision) return;
+    setSubmittingRevision(true);
+    try {
+      const updated = await submitRevision(currentSub.id, revisionText.trim());
+      onSubmissionUpdated?.(updated);
+      setRevisionTextSuccess(true);
+      setRevisionText('');
+      setTimeout(() => setRevisionTextSuccess(false), 4000);
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Revision not submitted', message: err.message || 'Please try again.' });
+    } finally {
+      setSubmittingRevision(false);
+    }
   };
 
   return (
@@ -258,18 +273,18 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   {revisionSuccess && (
                     <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs flex items-center gap-2 font-medium">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Revision response uploaded and transmitted to Technical Committee.</span>
+                      <span>Revision response recorded. Status updated to Revised Abstract Submitted.</span>
                     </div>
                   )}
 
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={!revisionText.trim()}
+                      disabled={!revisionText.trim() || submittingRevision}
                       className="px-4 py-2 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>Submit Revision Response</span>
+                      <span>{submittingRevision ? 'Submitting…' : 'Submit Revision Response'}</span>
                     </button>
                   </div>
                 </form>

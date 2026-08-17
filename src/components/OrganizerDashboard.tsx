@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  Building2,
   Calendar,
   Users,
   FileText,
@@ -16,7 +15,6 @@ import {
   Layers,
   BarChart3,
   Mail,
-  UserCheck,
   ChevronRight,
   ChevronDown,
   Filter,
@@ -50,10 +48,15 @@ import {
 import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+import { useToast } from './Toast';
+import { sendBroadcast, fetchMyBroadcasts, OrganizerBroadcast } from '../api/activity';
+import { sendMessage } from '../api/messages';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
   submissions: AbstractSubmission[];
+  registrationCountsByConference?: Record<string, number>;
+  feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities: SponsorshipOpportunity[];
   activatedOpportunityKeys: Record<string, boolean>;
@@ -192,6 +195,8 @@ const AnalyticsGaugeCard: React.FC<{
 export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   conferences,
   submissions,
+  registrationCountsByConference = {},
+  feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
   sponsorshipOpportunities,
   activatedOpportunityKeys,
@@ -208,9 +213,33 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
   >('overview');
 
+  // Real platform activity for the managed conferences — no fabricated totals.
+  const overviewStats = useMemo(() => {
+    const conferenceIds = new Set(conferences.map((c) => c.id));
+    const totalRegistrations = conferences.reduce(
+      (sum, c) => sum + (registrationCountsByConference[c.id] || 0),
+      0
+    );
+    const relevantSubmissions = submissions.filter((s) => conferenceIds.has(s.conferenceId));
+    const acceptedSubmissions = relevantSubmissions.filter((s) =>
+      ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(s.status)
+    ).length;
+    const totalReviews = relevantSubmissions.reduce((sum, s) => sum + s.reviews.length, 0);
+    const activeOpportunityCount = Object.values(activatedOpportunityKeys).filter(Boolean).length;
+    return {
+      totalRegistrations,
+      submissionsCount: relevantSubmissions.length,
+      acceptedSubmissions,
+      totalReviews,
+      activeSponsorshipPackages: sponsorshipPackages.length + activeOpportunityCount,
+    };
+  }, [conferences, submissions, registrationCountsByConference, activatedOpportunityKeys, sponsorshipPackages]);
+
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
   const [aiMatches, setAiMatches] = useState<any[] | null>(null);
   const [selectedSubForAI, setSelectedSubForAI] = useState<AbstractSubmission | null>(null);
+  const [invitedReviewerIds, setInvitedReviewerIds] = useState<Record<string, boolean>>({});
+  const [invitingReviewerId, setInvitingReviewerId] = useState<string | null>(null);
 
   // Wizard State
   const [newConfTitle, setNewConfTitle] = useState('');
@@ -324,38 +353,38 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     Array<{ reviewerId: string; matchPercentage: number; reason: string }> | null
   >(null);
   const [invitedCandidateIds, setInvitedCandidateIds] = useState<Record<string, boolean>>({});
+  const [invitingCandidateId, setInvitingCandidateId] = useState<string | null>(null);
 
-  const committeeCandidatePool = [
-    {
-      id: 'cand_1',
-      name: 'Dr. Youssef Nasser',
-      title: 'Director of Subsurface Data Science',
-      org: 'Aramco Innovation Labs',
-      expertise: ['Subsurface AI', 'Reservoir Engineering'],
-      yearsExperience: 14,
-      pastCommitteeCount: 6,
-    },
-    {
-      id: 'cand_2',
-      name: 'Prof. Hana Ito',
-      title: 'Chair of Applied Geosciences',
-      org: 'University of Tokyo',
-      expertise: ['Geochemistry', 'Carbon Storage'],
-      yearsExperience: 19,
-      pastCommitteeCount: 9,
-    },
-    {
-      id: 'cand_3',
-      name: 'Dr. Omar Khalil',
-      title: 'Principal Research Scientist',
-      org: 'KAUST',
-      expertise: ['Machine Learning', 'Basin Modeling'],
-      yearsExperience: 8,
-      pastCommitteeCount: 3,
-    },
-  ];
+  // Real candidates, derived from people who have actually completed peer reviews on
+  // the platform — not a fixed cast of fictional names.
+  const committeeCandidatePool = useMemo(() => {
+    const byReviewer = new Map<
+      string,
+      { id: string; name: string; title: string; org: string; expertise: string[]; reviewCount: number }
+    >();
+    submissions.forEach((sub) => {
+      sub.reviews.forEach((r) => {
+        const existing = byReviewer.get(r.reviewerId);
+        if (existing) {
+          existing.reviewCount += 1;
+          if (sub.topic && !existing.expertise.includes(sub.topic)) existing.expertise.push(sub.topic);
+        } else {
+          byReviewer.set(r.reviewerId, {
+            id: r.reviewerId,
+            name: r.reviewerName,
+            title: 'Peer Reviewer',
+            org: r.reviewerOrg || 'Independent',
+            expertise: sub.topic ? [sub.topic] : [],
+            reviewCount: 1,
+          });
+        }
+      });
+    });
+    return Array.from(byReviewer.values());
+  }, [submissions]);
 
   const handleAINominateCommittee = async () => {
+    if (committeeCandidatePool.length === 0) return;
     setCommitteeMatchLoading(true);
     setCommitteeMatches(null);
     try {
@@ -376,7 +405,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         committeeCandidatePool.map((c, idx) => ({
           reviewerId: c.id,
           matchPercentage: Math.min(98, 95 - idx * 6),
-          reason: `${c.yearsExperience}+ years of experience and ${c.pastCommitteeCount} prior technical committee appointments in ${c.expertise[0]}.`,
+          reason: `${c.reviewCount} completed peer review${c.reviewCount === 1 ? '' : 's'} on Conference Gate${
+            c.expertise[0] ? `, including work in ${c.expertise[0]}` : ''
+          }.`,
         }))
       );
     } finally {
@@ -384,9 +415,25 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }
   };
 
-  const handleInviteCandidateToCommittee = (candidateId: string, candidateName: string) => {
-    setInvitedCandidateIds((prev) => ({ ...prev, [candidateId]: true }));
-    onInviteToCommittee(candidateName, conferences[0]?.title || 'the conference');
+  const handleInviteCandidateToCommittee = async (candidateId: string, candidateName: string) => {
+    const conferenceTitle = conferences[0]?.title || 'the conference';
+    setInvitingCandidateId(candidateId);
+    try {
+      await sendMessage(
+        candidateId,
+        `You've been nominated to join the Technical Committee for ${conferenceTitle}, based on your peer review contributions on Conference Gate. Reply here if you're interested in serving.`
+      );
+      setInvitedCandidateIds((prev) => ({ ...prev, [candidateId]: true }));
+      onInviteToCommittee?.(candidateName, conferenceTitle);
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't send invitation",
+        message: e instanceof Error ? e.message : 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setInvitingCandidateId(null);
+    }
   };
 
   const [taskDraft, setTaskDraft] = useState({
@@ -654,6 +701,21 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const verifiedSponsorCount = sponsorApplicants.filter((s) => isSponsorVerified(s)).length;
   const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, string>>({});
+  const [approvedApplicantIds, setApprovedApplicantIds] = useState<Record<string, boolean>>({});
+  const { showToast } = useToast();
+
+  const handleApproveApplicant = (applicant: SponsorProfile) => {
+    setApprovedApplicantIds((prev) => ({ ...prev, [applicant.id]: true }));
+    onNotifySponsors(
+      'Sponsorship Registration Approved',
+      `${applicant.companyName}'s registration has been approved by the organizing committee.`
+    );
+    showToast({
+      type: 'success',
+      title: 'Registration approved',
+      message: `${applicant.companyName} has been notified and approved for sponsorship.`,
+    });
+  };
 
   const handleNotifyVerifiedSponsors = (opportunityName: string, pkgTier: string, price: number, key: string) => {
     onNotifySponsors(
@@ -698,41 +760,59 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     setSponsorReviewDraft((prev) => ({ ...prev, rating: 0, comment: '' }));
   };
 
-  // Event Analytics Data
-  const analyticsTracks = (conferences[0]?.tracks?.length ? conferences[0].tracks : [
-    'Track 1: Reservoir Analytics & AI',
-    'Track 2: Organic Geochemistry',
-    'Track 3: Carbon Storage & Net Zero',
-    'Track 4: Subsurface Digital Twins',
-  ]).slice(0, 4);
+  // Event Analytics Data — derived entirely from real submissions, registrations, and feedback.
+  const relevantSubmissions = useMemo(() => {
+    const conferenceIds = new Set(conferences.map((c) => c.id));
+    return submissions.filter((s) => conferenceIds.has(s.conferenceId));
+  }, [conferences, submissions]);
 
-  const sessionsByTrack = [
-    { track: analyticsTracks[0], oral: 14, poster: 22 },
-    { track: analyticsTracks[1], oral: 11, poster: 19 },
-    { track: analyticsTracks[2], oral: 9, poster: 16 },
-    { track: analyticsTracks[3] || 'Track 4', oral: 6, poster: 12 },
-  ].filter((t) => t.track);
+  const sessionsByTrack = useMemo(() => {
+    const byTrack = new Map<string, { oral: number; poster: number }>();
+    relevantSubmissions
+      .filter((s) => ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(s.status))
+      .forEach((s) => {
+        const track = s.track || 'Unassigned Track';
+        const existing = byTrack.get(track) || { oral: 0, poster: 0 };
+        if (s.preferredType === 'Poster') existing.poster += 1;
+        else existing.oral += 1;
+        byTrack.set(track, existing);
+      });
+    return Array.from(byTrack.entries()).map(([track, counts]) => ({ track, ...counts }));
+  }, [relevantSubmissions]);
 
   const totalOralSessions = sessionsByTrack.reduce((sum, t) => sum + t.oral, 0);
   const totalPosterSessions = sessionsByTrack.reduce((sum, t) => sum + t.poster, 0);
-  const maxSessionsInTrack = Math.max(...sessionsByTrack.map((t) => t.oral + t.poster));
+  const maxSessionsInTrack = Math.max(1, ...sessionsByTrack.map((t) => t.oral + t.poster));
 
-  const submissionStatusBreakdown = [
-    { label: 'Accepted', value: 214, color: CHART_HEX.emerald },
-    { label: 'Under Review', value: 68, color: CHART_HEX.blue },
-    { label: 'Revision Requested', value: 34, color: CHART_HEX.amber },
-    { label: 'Rejected', value: 21, color: CHART_HEX.rose },
-    { label: 'Withdrawn', value: 5, color: CHART_HEX.slate },
-  ];
-  const totalSubmissions = submissionStatusBreakdown.reduce((sum, s) => sum + s.value, 0);
+  const submissionStatusBreakdown = useMemo(() => {
+    const buckets = {
+      Accepted: ['Accepted', 'Accepted for Oral', 'Accepted for Poster'],
+      'Under Review': ['Draft', 'Submitted', 'Initial Screening', 'Awaiting Reviewer Assignment', 'Reviewer Invited', 'Reviewer Accepted', 'Under Review'],
+      'Revision Requested': ['Revision Requested', 'Revised Abstract Submitted'],
+      Rejected: ['Rejected'],
+      Withdrawn: ['Withdrawn'],
+    };
+    const colors: Record<string, string> = {
+      Accepted: CHART_HEX.emerald,
+      'Under Review': CHART_HEX.blue,
+      'Revision Requested': CHART_HEX.amber,
+      Rejected: CHART_HEX.rose,
+      Withdrawn: CHART_HEX.slate,
+    };
+    return Object.entries(buckets)
+      .map(([label, statuses]) => ({
+        label,
+        value: relevantSubmissions.filter((s) => (statuses as string[]).includes(s.status)).length,
+        color: colors[label],
+      }))
+      .filter((b) => b.value > 0);
+  }, [relevantSubmissions]);
+  const totalSubmissions = relevantSubmissions.length;
 
-  const registrationsByDay = [
-    { day: 'Day 1', count: 2100 },
-    { day: 'Day 2', count: 2480 },
-    { day: 'Day 3', count: 2260 },
-    { day: 'Day 4', count: 1740 },
-  ];
-  const maxDailyRegistrations = Math.max(...registrationsByDay.map((d) => d.count));
+  const registrationsByConference = conferences
+    .map((c) => ({ title: c.title, count: registrationCountsByConference[c.id] || 0 }))
+    .filter((c) => c.count > 0);
+  const maxRegistrationsByConference = Math.max(1, ...registrationsByConference.map((c) => c.count));
 
   const sponsorRevenueByTier = sponsorshipPackages.map((pkg) => ({
     tier: pkg.tier,
@@ -748,16 +828,26 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [broadcastSubject, setBroadcastSubject] = useState('');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastHistory, setBroadcastHistory] = useState<OrganizerBroadcast[]>([]);
+
+  useEffect(() => {
+    fetchMyBroadcasts().then(setBroadcastHistory).catch(() => {});
+  }, []);
 
   const handleAIMatchReviewers = async (sub: AbstractSubmission) => {
     setSelectedSubForAI(sub);
     setAiMatchLoading(true);
 
-    const mockCandidateReviewers = [
-      { id: 'rev_1', name: 'Dr. Lina Hassan', title: 'Principal Geochemist', org: 'Shell Geosciences', expertise: ['Geochemistry', 'Kerogen'] },
-      { id: 'rev_2', name: 'Prof. Marcus Vance', title: 'Chair of Petroleum Data', org: 'Imperial College London', expertise: ['Subsurface Analytics', 'Neural Networks'] },
-      { id: 'rev_3', name: 'Dr. Elena Rostova', title: 'Senior Scientific Advisor', org: 'ETH Zurich', expertise: ['Thermal Maturity', 'Basin Modeling'] },
-    ];
+    // Real candidates, drawn from people who have already completed peer reviews on the
+    // platform — excludes the submission's own author.
+    const candidatePool = committeeCandidatePool.filter((c) => c.name !== sub.primaryAuthor.name);
+
+    if (candidatePool.length === 0) {
+      setAiMatches([]);
+      setAiMatchLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch('/api/ai/reviewer-match', {
@@ -767,18 +857,47 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           abstractTitle: sub.title,
           abstractKeywords: sub.keywords,
           abstractTopic: sub.topic,
-          reviewers: mockCandidateReviewers,
+          reviewers: candidatePool,
         }),
       });
       const data = await res.json();
       setAiMatches(data.matches || []);
     } catch (e) {
-      setAiMatches([
-        { reviewerId: 'rev_1', matchPercentage: 96, reason: 'High expertise alignment in geochemistry and core plug analysis.' },
-        { reviewerId: 'rev_2', matchPercentage: 91, reason: 'Strong publication record in neural network reservoir analytics.' },
-      ]);
+      setAiMatches(
+        candidatePool.map((c, idx) => ({
+          reviewerId: c.id,
+          matchPercentage: Math.min(97, 94 - idx * 5),
+          reason: `${c.reviewCount} completed peer review${c.reviewCount === 1 ? '' : 's'} on Conference Gate${
+            c.expertise[0] ? `, including work in ${c.expertise[0]}` : ''
+          }.`,
+        }))
+      );
     } finally {
       setAiMatchLoading(false);
+    }
+  };
+
+  const handleInviteReviewerToAbstract = async (candidateId: string, candidateName: string, submissionTitle: string) => {
+    setInvitingReviewerId(candidateId);
+    try {
+      await sendMessage(
+        candidateId,
+        `You've been suggested as a reviewer for the abstract "${submissionTitle}" on Conference Gate. Reply here if you're available to review it.`
+      );
+      setInvitedReviewerIds((prev) => ({ ...prev, [candidateId]: true }));
+      showToast({
+        type: 'success',
+        title: 'Invitation sent',
+        message: `${candidateName} has been messaged about reviewing this abstract.`,
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't send invitation",
+        message: e instanceof Error ? e.message : 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setInvitingReviewerId(null);
     }
   };
 
@@ -867,13 +986,22 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }, 2000);
   };
 
-  const handleBroadcast = (e: React.FormEvent) => {
+  const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!broadcastSubject.trim() || !broadcastBody.trim()) return;
-    setBroadcastSent(true);
-    setBroadcastSubject('');
-    setBroadcastBody('');
-    setTimeout(() => setBroadcastSent(false), 4000);
+    if (!broadcastSubject.trim() || !broadcastBody.trim() || broadcastSending) return;
+    setBroadcastSending(true);
+    try {
+      const broadcast = await sendBroadcast(recipientGroup, broadcastSubject.trim(), broadcastBody.trim());
+      setBroadcastHistory((prev) => [broadcast, ...prev]);
+      setBroadcastSent(true);
+      setBroadcastSubject('');
+      setBroadcastBody('');
+      setTimeout(() => setBroadcastSent(false), 4000);
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Broadcast not saved', message: err.message || 'Please try again.' });
+    } finally {
+      setBroadcastSending(false);
+    }
   };
 
   return (
@@ -936,26 +1064,26 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Registrations</div>
-              <div className="text-2xl font-extrabold text-slate-900">2,400 Delegates</div>
-              <div className="text-[11px] font-semibold text-emerald-600">↑ 18% vs Last Event</div>
-            </div>
-
-            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Registration Revenue</div>
-              <div className="text-2xl font-extrabold text-blue-700">$1,420,000</div>
-              <div className="text-[11px] font-semibold text-blue-600">Early Bird Target Reached</div>
+              <div className="text-2xl font-extrabold text-slate-900">{overviewStats.totalRegistrations} Delegates</div>
+              <div className="text-[11px] font-semibold text-slate-500">Across all managed conferences</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Abstract Submissions</div>
-              <div className="text-2xl font-extrabold text-slate-900">342 Submissions</div>
-              <div className="text-[11px] font-semibold text-emerald-600">78% Under Peer Review</div>
+              <div className="text-2xl font-extrabold text-slate-900">{overviewStats.submissionsCount} Submissions</div>
+              <div className="text-[11px] font-semibold text-emerald-600">{overviewStats.acceptedSubmissions} Accepted</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sponsorship Revenue</div>
-              <div className="text-2xl font-extrabold text-blue-600">$185,000</div>
-              <div className="text-[11px] font-semibold text-slate-500">4 Active Corporate Packages</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Peer Reviews Completed</div>
+              <div className="text-2xl font-extrabold text-blue-700">{overviewStats.totalReviews}</div>
+              <div className="text-[11px] font-semibold text-blue-600">Across all submissions</div>
+            </div>
+
+            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sponsorship Packages</div>
+              <div className="text-2xl font-extrabold text-blue-600">{overviewStats.activeSponsorshipPackages}</div>
+              <div className="text-[11px] font-semibold text-slate-500">Standard + activated add-ons</div>
             </div>
           </div>
 
@@ -1473,32 +1601,52 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 <div className="text-center py-6 text-xs text-slate-500 font-medium">
                   Calculating graph neural match scores against global reviewer pool...
                 </div>
+              ) : aiMatches && aiMatches.length === 0 ? (
+                <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                  No candidate reviewers yet — matches are drawn from people who have completed at least one peer
+                  review on Conference Gate.
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {aiMatches?.map((match, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-bold text-xs text-slate-900">{match.reviewerId === 'rev_1' ? 'Dr. Lina Hassan (Shell Geosciences)' : 'Prof. Marcus Vance (Imperial College)'}</div>
-                        <p className="text-[11px] text-slate-600">{match.reason}</p>
+                  {aiMatches?.map((match, idx) => {
+                    const candidate = committeeCandidatePool.find((c) => c.id === match.reviewerId);
+                    if (!candidate) return null;
+                    return (
+                      <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
+                        <div>
+                          <div className="font-bold text-xs text-slate-900">
+                            {candidate.name} ({candidate.org})
+                          </div>
+                          <p className="text-[11px] text-slate-600">{match.reason}</p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
+                            {match.matchPercentage}% Match
+                          </span>
+                          {invitedReviewerIds[candidate.id] ? (
+                            <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Invitation Sent
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleInviteReviewerToAbstract(
+                                  candidate.id,
+                                  candidate.name,
+                                  selectedSubForAI?.title || 'this abstract'
+                                )
+                              }
+                              disabled={invitingReviewerId === candidate.id}
+                              className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                            >
+                              {invitingReviewerId === candidate.id ? 'Sending…' : 'Invite to Review'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
-                          {match.matchPercentage}% Match
-                        </span>
-                        <button
-                          onClick={() =>
-                            onInviteToCommittee(
-                              match.reviewerId === 'rev_1' ? 'Dr. Lina Hassan' : 'Prof. Marcus Vance',
-                              selectedSubForAI?.conferenceTitle || 'the conference'
-                            )
-                          }
-                          className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
-                        >
-                          Invite to Review
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1525,8 +1673,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">AI-Nominated Technical Committee Candidates</h3>
                   <p className="text-[11px] text-slate-500">
-                    Ranked by subject-matter expertise, years of experience, and number of prior technical
-                    committee appointments.
+                    Ranked by number of completed peer reviews and subject-matter expertise on Conference Gate.
                   </p>
                 </div>
               </div>
@@ -1543,6 +1690,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             {committeeMatchLoading && (
               <div className="text-center py-6 text-xs text-slate-500 font-medium">
                 Calculating experience and participation match scores against the global candidate pool…
+              </div>
+            )}
+
+            {!committeeMatchLoading && committeeCandidatePool.length === 0 && (
+              <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                No candidates yet — nominations are drawn from people who have completed at least one peer review on
+                Conference Gate. Once reviewers submit reviews, they'll appear here.
               </div>
             )}
 
@@ -1565,12 +1719,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold text-slate-500">
                           <span className="flex items-center gap-1">
                             <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                            {candidate.yearsExperience} yrs experience
+                            {candidate.reviewCount} completed review{candidate.reviewCount === 1 ? '' : 's'}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Award className="w-3 h-3 text-blue-500" />
-                            {candidate.pastCommitteeCount} past committee roles
-                          </span>
+                          {candidate.expertise.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Award className="w-3 h-3 text-blue-500" />
+                              {candidate.expertise.slice(0, 2).join(', ')}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -1585,10 +1741,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         ) : (
                           <button
                             onClick={() => handleInviteCandidateToCommittee(candidate.id, candidate.name)}
-                            className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                            disabled={invitingCandidateId === candidate.id}
+                            className="px-3.5 py-1.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                           >
                             <Bell className="w-3.5 h-3.5" />
-                            <span>Push Notify to Join</span>
+                            <span>{invitingCandidateId === candidate.id ? 'Sending…' : 'Send Invitation'}</span>
                           </button>
                         )}
                       </div>
@@ -2287,14 +2444,21 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       )}
 
                       <button
-                        disabled={!eligible}
-                        className={`w-full py-2 rounded-xl font-bold text-[11px] cursor-pointer transition-colors ${
-                          eligible
-                            ? 'bg-blue-900 hover:bg-blue-950 text-white'
+                        disabled={!eligible || !!approvedApplicantIds[applicant.id]}
+                        onClick={() => handleApproveApplicant(applicant)}
+                        className={`w-full py-2 rounded-xl font-bold text-[11px] transition-colors ${
+                          approvedApplicantIds[applicant.id]
+                            ? 'bg-emerald-50 text-emerald-700 cursor-default'
+                            : eligible
+                            ? 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
                             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                         }`}
                       >
-                        {eligible ? 'Approve Registration' : 'Blocked — Rating Below Threshold'}
+                        {approvedApplicantIds[applicant.id]
+                          ? 'Approved ✓'
+                          : eligible
+                          ? 'Approve Registration'
+                          : 'Blocked — Rating Below Threshold'}
                       </button>
                     </div>
                   );
@@ -2417,7 +2581,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-slate-900">Broadcast Communication Center</h2>
             <p className="text-xs text-slate-500">
-              Send in-app notifications and official email blasts to delegates, speakers, reviewers, or sponsors.
+              Draft and record announcements for delegates, speakers, reviewers, or sponsors. Saved to your
+              communications history below.
             </p>
           </div>
 
@@ -2463,18 +2628,39 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             {broadcastSent && (
               <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>Broadcast successfully dispatched to {recipientGroup}!</span>
+                <span>Broadcast recorded for {recipientGroup}.</span>
               </div>
             )}
 
             <button
+              disabled={broadcastSending}
               type="submit"
-              className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
-              <span>Send Broadcast Message</span>
+              <span>{broadcastSending ? 'Sending…' : 'Send Broadcast Message'}</span>
             </button>
           </form>
+
+          {broadcastHistory.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Broadcast History</h3>
+              <div className="space-y-2">
+                {broadcastHistory.map((b) => (
+                  <div key={b.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-xs text-slate-900">{b.subject}</span>
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
+                        {b.recipientGroup}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 line-clamp-2">{b.body}</p>
+                    <p className="text-[10px] text-slate-400">{new Date(b.createdAt).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2495,8 +2681,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <AnalyticsStatTile
               icon={Users}
               label="Total Participants"
-              value="2,480"
-              sub="↑ 18% vs last event"
+              value={`${overviewStats.totalRegistrations}`}
+              sub={`Across ${conferences.length} managed conference${conferences.length === 1 ? '' : 's'}`}
               tone="good"
               accent={CHART_HEX.blue}
             />
@@ -2504,7 +2690,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               icon={Presentation}
               label="Technical Sessions"
               value={`${totalOralSessions}`}
-              sub={`${sessionsByTrack.length} tracks`}
+              sub={`${sessionsByTrack.length} track${sessionsByTrack.length === 1 ? '' : 's'}`}
               tone="neutral"
               accent={CHART_HEX.indigo}
             />
@@ -2512,7 +2698,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               icon={LayoutGrid}
               label="Poster Presentations"
               value={`${totalPosterSessions}`}
-              sub="On-site & e-poster hybrid"
+              sub="Accepted poster submissions"
               tone="neutral"
               accent={CHART_HEX.violet}
             />
@@ -2520,23 +2706,23 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               icon={FileText}
               label="Abstracts Submitted"
               value={`${totalSubmissions}`}
-              sub={`${submissionStatusBreakdown[0].value} accepted`}
+              sub={`${overviewStats.acceptedSubmissions} accepted`}
               tone="good"
               accent={CHART_HEX.emerald}
             />
             <AnalyticsStatTile
-              icon={Globe}
-              label="Countries Represented"
-              value="58"
-              sub="Across 6 continents"
+              icon={ClipboardList}
+              label="Technical Committee"
+              value={`${committeeRoster.length}`}
+              sub="Members across all conferences"
               tone="neutral"
               accent={CHART_HEX.amber}
             />
             <AnalyticsStatTile
               icon={Smile}
               label="Overall Satisfaction"
-              value="4.6 / 5"
-              sub="92 Net Promoter Score"
+              value={feedbackSummary.responseCount > 0 ? `${feedbackSummary.averageScore.toFixed(1)} / 5` : 'No data yet'}
+              sub={`${feedbackSummary.responseCount} feedback response${feedbackSummary.responseCount === 1 ? '' : 's'}`}
               tone="good"
               accent={CHART_HEX.rose}
             />
@@ -2561,34 +2747,40 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   Poster Presentations ({totalPosterSessions})
                 </span>
               </div>
-              <div className="space-y-4">
-                {sessionsByTrack.map((t) => (
-                  <div key={t.track} className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-slate-700">{t.track}</div>
-                    <div className="flex gap-1.5 h-3">
-                      <div
-                        className="rounded-l-full"
-                        style={{
-                          width: `${(t.oral / maxSessionsInTrack) * 100}%`,
-                          backgroundColor: CHART_HEX.blue,
-                        }}
-                        title={`Technical Sessions: ${t.oral}`}
-                      />
-                      <div
-                        className="rounded-r-full"
-                        style={{
-                          width: `${(t.poster / maxSessionsInTrack) * 100}%`,
-                          backgroundColor: CHART_HEX.violet,
-                        }}
-                        title={`Poster Presentations: ${t.poster}`}
-                      />
+              {sessionsByTrack.length === 0 ? (
+                <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                  No accepted submissions yet — this chart populates once abstracts are accepted.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {sessionsByTrack.map((t) => (
+                    <div key={t.track} className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-slate-700">{t.track}</div>
+                      <div className="flex gap-1.5 h-3">
+                        <div
+                          className="rounded-l-full"
+                          style={{
+                            width: `${(t.oral / maxSessionsInTrack) * 100}%`,
+                            backgroundColor: CHART_HEX.blue,
+                          }}
+                          title={`Technical Sessions: ${t.oral}`}
+                        />
+                        <div
+                          className="rounded-r-full"
+                          style={{
+                            width: `${(t.poster / maxSessionsInTrack) * 100}%`,
+                            backgroundColor: CHART_HEX.violet,
+                          }}
+                          title={`Poster Presentations: ${t.poster}`}
+                        />
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-semibold">
+                        {t.oral} sessions · {t.poster} posters
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-semibold">
-                      {t.oral} sessions · {t.poster} posters
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
@@ -2596,30 +2788,36 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 <PieChart className="w-4 h-4 text-blue-600" />
                 <h3 className="font-bold text-sm text-slate-900">Abstract Status Breakdown</h3>
               </div>
-              <div className="flex items-center gap-6">
-                <div
-                  className="w-32 h-32 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: buildConicGradient(submissionStatusBreakdown) }}
-                >
-                  <div className="w-20 h-20 rounded-full bg-white flex flex-col items-center justify-center">
-                    <span className="text-lg font-extrabold text-slate-900">{totalSubmissions}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase">Total</span>
+              {totalSubmissions === 0 ? (
+                <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                  No abstract submissions yet.
+                </div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <div
+                    className="w-32 h-32 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: buildConicGradient(submissionStatusBreakdown) }}
+                  >
+                    <div className="w-20 h-20 rounded-full bg-white flex flex-col items-center justify-center">
+                      <span className="text-lg font-extrabold text-slate-900">{totalSubmissions}</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase">Total</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    {submissionStatusBreakdown.map((s) => (
+                      <div key={s.label} className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                          {s.label}
+                        </span>
+                        <span className="font-bold text-slate-900">
+                          {s.value} <span className="text-slate-400 font-medium">({Math.round((s.value / totalSubmissions) * 100)}%)</span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="flex-1 space-y-2">
-                  {submissionStatusBreakdown.map((s) => (
-                    <div key={s.label} className="flex items-center justify-between gap-2 text-[11px]">
-                      <span className="flex items-center gap-1.5 font-semibold text-slate-700">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                        {s.label}
-                      </span>
-                      <span className="font-bold text-slate-900">
-                        {s.value} <span className="text-slate-400 font-medium">({Math.round((s.value / totalSubmissions) * 100)}%)</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -2627,20 +2825,26 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600" />
-              <h3 className="font-bold text-sm text-slate-900">Daily Attendance</h3>
+              <h3 className="font-bold text-sm text-slate-900">Registrations by Conference</h3>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {registrationsByDay.map((d) => (
-                <AnalyticsBarRow
-                  key={d.day}
-                  label={d.day}
-                  value={d.count}
-                  max={maxDailyRegistrations}
-                  color={CHART_HEX.blue}
-                  valueLabel={d.count.toLocaleString()}
-                />
-              ))}
-            </div>
+            {registrationsByConference.length === 0 ? (
+              <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                No registrations recorded yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {registrationsByConference.map((d) => (
+                  <AnalyticsBarRow
+                    key={d.title}
+                    label={d.title}
+                    value={d.count}
+                    max={maxRegistrationsByConference}
+                    color={CHART_HEX.blue}
+                    valueLabel={d.count.toLocaleString()}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Feedback & Satisfaction */}
@@ -2649,50 +2853,24 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               <Smile className="w-4 h-4 text-blue-600" />
               <h3 className="font-bold text-sm text-slate-900">Feedback & Satisfaction</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <AnalyticsGaugeCard
-                icon={Building2}
-                title="Organizer Feedback"
-                subtitle="Committee & organizing team"
-                score={4.4}
-                maxScore={5}
-                color={CHART_HEX.blue}
-                responseCount={28}
-                breakdown={[
-                  { label: 'Logistics', pct: 92 },
-                  { label: 'Program Quality', pct: 88 },
-                  { label: 'Support Tools', pct: 81 },
-                ]}
-              />
-              <AnalyticsGaugeCard
-                icon={UserCheck}
-                title="Professional Feedback"
-                subtitle="Delegates & presenters"
-                score={4.6}
-                maxScore={5}
-                color={CHART_HEX.indigo}
-                responseCount={612}
-                breakdown={[
-                  { label: 'Content', pct: 94 },
-                  { label: 'Networking', pct: 87 },
-                  { label: 'Venue', pct: 90 },
-                ]}
-              />
-              <AnalyticsGaugeCard
-                icon={Briefcase}
-                title="Sponsor Feedback"
-                subtitle="Corporate sponsors & exhibitors"
-                score={4.2}
-                maxScore={5}
-                color={CHART_HEX.violet}
-                responseCount={14}
-                breakdown={[
-                  { label: 'Lead Quality', pct: 78 },
-                  { label: 'Booth Traffic', pct: 85 },
-                  { label: 'ROI', pct: 74 },
-                ]}
-              />
-            </div>
+            {feedbackSummary.responseCount === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs text-xs text-slate-400 font-medium text-center">
+                No feedback submitted yet across your conferences.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <AnalyticsGaugeCard
+                  icon={Smile}
+                  title="Overall Feedback"
+                  subtitle="All roles — attendees, organizers, sponsors"
+                  score={feedbackSummary.averageScore}
+                  maxScore={5}
+                  color={CHART_HEX.blue}
+                  responseCount={feedbackSummary.responseCount}
+                  breakdown={[]}
+                />
+              </div>
+            )}
           </div>
 
           {/* Sponsor Performance */}

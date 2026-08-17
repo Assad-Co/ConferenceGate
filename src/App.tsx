@@ -18,7 +18,6 @@ import { SponsorPortal } from './components/SponsorPortal';
 import { UserProfileView } from './components/UserProfileView';
 import { CommunityFeed } from './components/CommunityFeed';
 import { AIAssistantModal } from './components/AIAssistantModal';
-import { NetworkingModal } from './components/NetworkingModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { CertificatesView } from './components/CertificatesView';
 import { PersonProfileModal } from './components/PersonProfileModal';
@@ -32,6 +31,11 @@ import {
   registerForConference,
   fetchMyRegistrations,
   ConferenceRegistration,
+  fetchMyConferenceInteractions,
+  toggleConferenceInteraction,
+  recordConferenceAction,
+  fetchRegistrationCountsByConference,
+  fetchFeedbackSummary,
 } from './api/activity';
 import {
   fetchConversations,
@@ -236,13 +240,39 @@ export function App() {
   // Real tracked activity — persisted server-side, loaded once authenticated.
   const [registrations, setRegistrations] = useState<ConferenceRegistration[]>([]);
   const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
+  const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
+  const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!authUser) return;
     fetchSubmissions().then(setSubmissions).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
+    fetchMyConferenceInteractions()
+      .then(({ saved, followed }) => {
+        setSavedConferenceIds(saved);
+        setFollowedConferenceIds(followed);
+      })
+      .catch(() => {});
   }, [authUser?.id]);
+
+  const handleToggleSaveConference = async (conferenceId: string) => {
+    try {
+      const active = await toggleConferenceInteraction(conferenceId, 'saved');
+      setSavedConferenceIds((prev) => (active ? [...prev, conferenceId] : prev.filter((id) => id !== conferenceId)));
+    } catch {
+      // Non-critical — the UI simply won't reflect the toggle if the request failed.
+    }
+  };
+
+  const handleToggleFollowConference = async (conferenceId: string) => {
+    try {
+      const active = await toggleConferenceInteraction(conferenceId, 'followed');
+      setFollowedConferenceIds((prev) => (active ? [...prev, conferenceId] : prev.filter((id) => id !== conferenceId)));
+    } catch {
+      // Non-critical — the UI simply won't reflect the toggle if the request failed.
+    }
+  };
 
   // Submissions are shared across accounts (organizers/reviewers see everyone's), so
   // re-fetch on every visit to a submissions-driven tab rather than only once at login.
@@ -250,6 +280,19 @@ export function App() {
     if (!authUser) return;
     if (['abstracts', 'reviewer', 'organizer'].includes(activeTab)) {
       fetchSubmissions().then(setSubmissions).catch(() => {});
+    }
+  }, [activeTab, authUser?.id]);
+
+  const [registrationCountsByConference, setRegistrationCountsByConference] = useState<Record<string, number>>({});
+  const [feedbackSummary, setFeedbackSummary] = useState<{ averageScore: number; responseCount: number }>({
+    averageScore: 0,
+    responseCount: 0,
+  });
+  useEffect(() => {
+    if (!authUser) return;
+    if (activeTab === 'organizer') {
+      fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
+      fetchFeedbackSummary().then(setFeedbackSummary).catch(() => {});
     }
   }, [activeTab, authUser?.id]);
 
@@ -266,6 +309,7 @@ export function App() {
     const conferencesReviewedFor = myId
       ? new Set(submissions.filter((s) => s.reviews.some((r) => r.reviewerId === myId)).map((s) => s.conferenceTitle)).size
       : 0;
+    const certificatesCount = abstractsAccepted + conferencesReviewedFor + registrations.length;
 
     return {
       conferencesAttended: registrations.length,
@@ -283,7 +327,7 @@ export function App() {
       conferencesReviewedFor,
       reviewerKudos: myReviews.length * 20,
       awards: 0,
-      certificatesCount: 0,
+      certificatesCount,
     };
   }, [submissions, registrations, authUser?.id]);
 
@@ -587,7 +631,6 @@ export function App() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isSubmitAbstractOpen, setIsSubmitAbstractOpen] = useState(false);
   const [submitAbstractConfId, setSubmitAbstractConfId] = useState<string | undefined>();
-  const [isNetworkingOpen, setIsNetworkingOpen] = useState(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState(false);
 
   // Handlers
@@ -912,6 +955,10 @@ export function App() {
             onSelectConference={handleSelectConference}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
             initialSearchQuery={searchQuery}
+            savedConferenceIds={savedConferenceIds}
+            followedConferenceIds={followedConferenceIds}
+            onToggleSave={handleToggleSaveConference}
+            onToggleFollow={handleToggleFollowConference}
           />
         )}
 
@@ -923,20 +970,26 @@ export function App() {
             onVolunteerReviewer={() => setActiveTab('reviewer')}
             registeredPackageId={registrations.find((r) => r.conferenceId === selectedConference.id)?.packageId || null}
             onRegister={handleRegisterForConference}
-            onExpressCommitteeInterest={(confId) => {
+            isSaved={savedConferenceIds.includes(selectedConference.id)}
+            isFollowed={followedConferenceIds.includes(selectedConference.id)}
+            onToggleSave={() => handleToggleSaveConference(selectedConference.id)}
+            onToggleFollow={() => handleToggleFollowConference(selectedConference.id)}
+            onExpressCommitteeInterest={async (confId) => {
               const conf = conferences.find((c) => c.id === confId);
+              await recordConferenceAction(confId, conf?.title || 'this conference', 'committee_interest').catch(() => {});
               showToast({
                 type: 'success',
-                title: 'Interest sent to the organizer',
-                message: `${conf?.organizerName || 'The organizing committee'} will follow up about joining the Technical Committee.`,
+                title: 'Interest recorded',
+                message: `Saved to your activity. Explore open Technical Committee roles from the Committee tab.`,
               });
             }}
-            onApplySponsorship={(confId) => {
+            onApplySponsorship={async (confId) => {
               const conf = conferences.find((c) => c.id === confId);
+              await recordConferenceAction(confId, conf?.title || 'this conference', 'sponsorship_inquiry').catch(() => {});
               showToast({
                 type: 'success',
-                title: 'Sponsorship inquiry sent',
-                message: `${conf?.organizerName || 'The organizer'} has been notified — explore live packages in the Sponsor Marketplace.`,
+                title: 'Sponsorship inquiry recorded',
+                message: `Saved to your activity — explore live packages in the Sponsor Marketplace.`,
               });
             }}
           />
@@ -946,6 +999,9 @@ export function App() {
           <AbstractTrackerView
             submissions={submissions}
             onOpenNewSubmission={() => setIsSubmitAbstractOpen(true)}
+            onSubmissionUpdated={(updated) =>
+              setSubmissions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+            }
           />
         )}
 
@@ -964,6 +1020,8 @@ export function App() {
           <OrganizerDashboard
             conferences={conferences}
             submissions={submissions}
+            registrationCountsByConference={registrationCountsByConference}
+            feedbackSummary={feedbackSummary}
             sponsorshipPackages={sampleSponsorshipPackages}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
             activatedOpportunityKeys={activatedOpportunityKeys}
@@ -1022,6 +1080,9 @@ export function App() {
         {activeTab === 'certificates' && (
           <CertificatesView
             userProfile={userProfile}
+            submissions={submissions}
+            registrations={registrations}
+            currentUserId={authUser?.id}
             onBack={() => setActiveTab('profile')}
           />
         )}
@@ -1051,11 +1112,6 @@ export function App() {
           affiliation: userProfile.organization,
           bio: userProfile.bio,
         }}
-      />
-
-      <NetworkingModal
-        isOpen={isNetworkingOpen}
-        onClose={() => setIsNetworkingOpen(false)}
       />
 
       <DigitalBadgeModal

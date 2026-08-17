@@ -36,7 +36,15 @@ interface HomeLandingProps {
   onOpenProfile?: (author: PostAuthor) => void;
 }
 
-const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void }> = ({ post, onOpenProfile }) => (
+const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void; onNavigateTab: (tab: string) => void }> = ({
+  post,
+  onOpenProfile,
+  onNavigateTab,
+}) => {
+  const [liked, setLiked] = useState(!!post.userReaction);
+  const likeCount = (post.reactions?.likes ?? 0) + (liked && !post.userReaction ? 1 : 0);
+
+  return (
   <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-4 space-y-3">
     <button
       onClick={() =>
@@ -70,17 +78,24 @@ const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => v
     <p className="text-sm text-slate-800 leading-relaxed">{post.content}</p>
 
     <div className="pt-3 border-t border-slate-100 flex items-center gap-6 text-xs text-slate-500 font-semibold">
-      <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
-        <ThumbsUp className="w-4 h-4" />
-        <span>{post.reactions?.likes ?? 0} Likes</span>
+      <button
+        onClick={() => setLiked((prev) => !prev)}
+        className={`flex items-center gap-1.5 cursor-pointer transition-colors ${liked ? 'text-blue-600' : 'hover:text-blue-600'}`}
+      >
+        <ThumbsUp className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
+        <span>{likeCount} Likes</span>
       </button>
-      <button className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer">
+      <button
+        onClick={() => onNavigateTab('community')}
+        className="hover:text-blue-600 flex items-center gap-1.5 cursor-pointer"
+      >
         <MessageSquare className="w-4 h-4" />
         <span>{post.commentsCount} Comments</span>
       </button>
     </div>
   </div>
-);
+  );
+};
 
 const PromotedConferenceCard: React.FC<{
   conf: Conference;
@@ -312,7 +327,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
                 {post.postType === 'celebration' ? (
                   <CelebrationPostCard post={post} onOpenProfile={onOpenProfile} />
                 ) : (
-                  <PostCard post={post} onOpenProfile={onOpenProfile} />
+                  <PostCard post={post} onOpenProfile={onOpenProfile} onNavigateTab={onNavigateTab} />
                 )}
                 {i === 0 && promotedPool.length > 0 && (
                   <PromotedConferenceCard

@@ -32,6 +32,10 @@ interface ConferenceDetailProps {
   onApplySponsorship: (confId: string) => void;
   registeredPackageId?: string | null;
   onRegister?: (conferenceId: string, conferenceTitle: string, packageId: string, packageName: string) => void;
+  isSaved?: boolean;
+  isFollowed?: boolean;
+  onToggleSave?: () => void;
+  onToggleFollow?: () => void;
 }
 
 export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
@@ -43,13 +47,17 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
   onApplySponsorship,
   registeredPackageId = null,
   onRegister,
+  isSaved = false,
+  isFollowed = false,
+  onToggleSave,
+  onToggleFollow,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'cfp' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
   >('overview');
   const registeredPackage = registeredPackageId;
-  const [saved, setSaved] = useState(false);
-  const [followed, setFollowed] = useState(false);
+  const saved = isSaved;
+  const followed = isFollowed;
 
   return (
     <div className="space-y-8">
@@ -65,18 +73,18 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setSaved(!saved)}
+            onClick={onToggleSave}
             className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors cursor-pointer flex items-center gap-1.5 ${
               saved
                 ? 'bg-blue-50 border-blue-200 text-blue-700'
                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            <Bookmark className="w-3.5 h-3.5 fill-current" />
+            <Bookmark className={`w-3.5 h-3.5 ${saved ? 'fill-current' : ''}`} />
             <span>{saved ? 'Saved' : 'Save'}</span>
           </button>
           <button
-            onClick={() => setFollowed(!followed)}
+            onClick={onToggleFollow}
             className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
               followed
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -484,8 +492,11 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
             <h3 className="text-lg font-bold text-slate-900">Conference Community & Discussions</h3>
             <p>Connect with other registered attendees, keynote speakers, and authors prior to the event.</p>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <span className="font-bold text-slate-900">Active Discussions: 48 topics</span>
-              <p className="pt-1 text-slate-500">Log in as Attendee to join pre-conference networking rooms.</p>
+              <span className="font-bold text-slate-900">Community Feed</span>
+              <p className="pt-1 text-slate-500">
+                Discussion threads scoped to individual conferences aren't available yet — head to the Community tab
+                to connect with other attendees, authors, and reviewers on the platform.
+              </p>
             </div>
           </div>
         )}
