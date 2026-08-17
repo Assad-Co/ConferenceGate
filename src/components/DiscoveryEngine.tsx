@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDate, formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
+import { LiveConferenceSearch } from './LiveConferenceSearch';
 
 interface DiscoveryEngineProps {
   conferences: Conference[];
@@ -447,6 +448,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         )}
       </div>
+
+      <LiveConferenceSearch />
 
       {/* Conference Cards List */}
       <div className="space-y-6">
