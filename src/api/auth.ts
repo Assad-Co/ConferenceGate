@@ -12,6 +12,7 @@ export interface AuthUser {
   country: string | null;
   bio: string | null;
   avatar: string | null;
+  reviewerAvailable: boolean;
 }
 
 export interface ProfileUpdatePayload {
@@ -103,6 +104,17 @@ export async function updateProfile(payload: ProfileUpdatePayload): Promise<Auth
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.user;
+}
+
+export async function updateReviewerAvailability(available: boolean): Promise<AuthUser> {
+  const res = await fetch('/api/auth/me/reviewer-availability', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ available }),
   });
   const data = await parseResponse(res);
   return data.user;

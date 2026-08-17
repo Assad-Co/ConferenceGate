@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './components/auth/AuthScreen';
-import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar, updateProfile } from './api/auth';
+import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar, updateProfile, updateReviewerAvailability } from './api/auth';
 import { resolveAvatar } from './utils/avatar';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
@@ -36,6 +36,8 @@ import {
   recordConferenceAction,
   fetchRegistrationCountsByConference,
   fetchFeedbackSummary,
+  createConferenceRemote,
+  fetchCreatedConferences,
 } from './api/activity';
 import {
   fetchConversations,
@@ -252,6 +254,13 @@ export function App() {
       .then(({ saved, followed }) => {
         setSavedConferenceIds(saved);
         setFollowedConferenceIds(followed);
+      })
+      .catch(() => {});
+    fetchCreatedConferences()
+      .then((created) => {
+        if (created.length === 0) return;
+        const createdIds = new Set(created.map((c) => c.id));
+        setConferences([...created, ...sampleConferences.filter((c) => !createdIds.has(c.id))]);
       })
       .catch(() => {});
   }, [authUser?.id]);
@@ -532,6 +541,7 @@ export function App() {
         bio: user.bio || '',
         avatar,
         ...EMPTY_ACCOUNT_ACHIEVEMENTS,
+        reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
       }));
       setActiveTab('home');
     }
@@ -547,6 +557,17 @@ export function App() {
       setSponsorLogoOverride(avatar);
     } else {
       setUserProfile((prev) => ({ ...prev, avatar }));
+    }
+  };
+
+  const handleToggleReviewerAvailability = async () => {
+    const nextAvailable = !userProfile.reviewerInfo.available;
+    setUserProfile((prev) => ({ ...prev, reviewerInfo: { ...prev.reviewerInfo, available: nextAvailable } }));
+    try {
+      const updatedUser = await updateReviewerAvailability(nextAvailable);
+      setAuthUser(updatedUser);
+    } catch {
+      setUserProfile((prev) => ({ ...prev, reviewerInfo: { ...prev.reviewerInfo, available: !nextAvailable } }));
     }
   };
 
@@ -767,7 +788,7 @@ export function App() {
     });
   };
 
-  const handleCreateConference = (newConfData: Partial<Conference>) => {
+  const handleCreateConference = async (newConfData: Partial<Conference>) => {
     const newConf: Conference = {
       id: `conf_${Date.now()}`,
       title: newConfData.title || 'New Conference',
@@ -791,9 +812,9 @@ export function App() {
       attendeeCount: 100,
       networkAttendeesCount: 10,
       mainThemes: newConfData.mainThemes || ['Innovation'],
-      agendaDays: [],
-      speakers: [],
-      committee: [],
+      agendaDays: newConfData.agendaDays || [],
+      speakers: newConfData.speakers || [],
+      committee: newConfData.committee || [],
       sponsors: [],
       exhibitors: [],
       accommodation: 'Partner Hotels',
@@ -801,12 +822,21 @@ export function App() {
       communityPosts: 0,
     };
 
-    setConferences([newConf, ...conferences]);
-    showToast({
-      type: 'success',
-      title: 'Conference created',
-      message: `"${newConf.title}" is now live in the discovery feed.`,
-    });
+    setConferences((prev) => [newConf, ...prev]);
+    try {
+      await createConferenceRemote(newConf);
+      showToast({
+        type: 'success',
+        title: 'Conference created',
+        message: `"${newConf.title}" is now live in the discovery feed.`,
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't save conference",
+        message: e instanceof Error ? e.message : 'It is visible now, but may not persist after a reload.',
+      });
+    }
   };
 
   const handleAddPost = (content: string) => {
@@ -1013,6 +1043,7 @@ export function App() {
             onCompleteReview={handleCompleteReview}
             volunteeredOpportunityIds={volunteeredOpportunityIds}
             onVolunteer={handleVolunteerForReview}
+            onToggleAvailability={handleToggleReviewerAvailability}
           />
         )}
 
@@ -1020,6 +1051,8 @@ export function App() {
           <OrganizerDashboard
             conferences={conferences}
             submissions={submissions}
+            organizerName={organizerNameOverride || authUser.name}
+            organizerLogo={organizerLogoOverride || resolveAvatar(authUser.avatar, authUser.name)}
             registrationCountsByConference={registrationCountsByConference}
             feedbackSummary={feedbackSummary}
             sponsorshipPackages={sampleSponsorshipPackages}
@@ -1091,7 +1124,11 @@ export function App() {
       </main>
 
       {/* Global SaaS Footer */}
-      <Footer onNavigateTab={setActiveTab} />
+      <Footer
+        onNavigateTab={setActiveTab}
+        onOpenAIAssistant={() => setIsAIModalOpen(true)}
+        onOpenBadge={() => setIsBadgeOpen(true)}
+      />
 
       {/* Modals */}
       <AIAssistantModal

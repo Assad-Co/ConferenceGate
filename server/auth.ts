@@ -34,6 +34,7 @@ function toPublicUser(row: UserRow) {
     country: row.country,
     bio: row.bio,
     avatar: row.avatar,
+    reviewerAvailable: !!row.reviewer_available,
   };
 }
 
@@ -201,6 +202,16 @@ authRouter.patch("/me", requireAuth, (req: AuthedRequest, res) => {
     .join(", ");
   db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...Object.values(updates), req.userId);
 
+  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
+  res.json({ user: toPublicUser(row) });
+});
+
+authRouter.patch("/me/reviewer-availability", requireAuth, (req: AuthedRequest, res) => {
+  const body = req.body || {};
+  if (typeof body.available !== "boolean") {
+    return res.status(400).json({ error: "available must be a boolean" });
+  }
+  db.prepare("UPDATE users SET reviewer_available = ? WHERE id = ?").run(body.available ? 1 : 0, req.userId);
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
   res.json({ user: toPublicUser(row) });
 });

@@ -62,14 +62,21 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, abstractText, topic }),
       });
+      if (!res.ok) throw new Error('AI abstract check failed');
       const data = await res.json();
-      setAiFeedback(data);
+      if (typeof data.score !== 'number') throw new Error('AI abstract check returned no score');
+      setAiFeedback({ ...data, isFallback: false });
     } catch (e) {
       setAiFeedback({
-        score: 92,
-        clarity: 'High scientific clarity and well-formulated research problem statement.',
-        suggestedTracks: ['Reservoir Analytics & AI'],
-        improvements: ['Great abstract structure! Ensure all acronyms are defined on first use.'],
+        score: null,
+        clarity:
+          'The AI quality check is unavailable right now, so this is generic guidance rather than an assessment of your specific abstract.',
+        suggestedTracks: [],
+        improvements: [
+          'State your research problem, methodology, and key findings clearly in the first two sentences.',
+          'Define all acronyms on first use.',
+        ],
+        isFallback: true,
       });
     } finally {
       setAiChecking(false);
@@ -332,14 +339,28 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
 
             {/* AI Feedback Box */}
             {aiFeedback && (
-              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-blue-900">
+              <div
+                className={`p-4 rounded-2xl space-y-2 border ${
+                  aiFeedback.isFallback ? 'bg-amber-50 border-amber-200' : 'bg-blue-50/70 border-blue-200'
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-between text-xs font-bold ${
+                    aiFeedback.isFallback ? 'text-amber-900' : 'text-blue-900'
+                  }`}
+                >
                   <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span>AI Quality Score: {aiFeedback.score}/100</span>
+                    <Sparkles className={`w-4 h-4 ${aiFeedback.isFallback ? 'text-amber-600' : 'text-blue-600'}`} />
+                    <span>
+                      {aiFeedback.isFallback ? 'AI Quality Check Unavailable' : `AI Quality Score: ${aiFeedback.score}/100`}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-blue-600 font-semibold bg-blue-100 px-2 py-0.5 rounded-full">
-                    Pre-Screening Assessment
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      aiFeedback.isFallback ? 'text-amber-700 bg-amber-100' : 'text-blue-600 bg-blue-100'
+                    }`}
+                  >
+                    {aiFeedback.isFallback ? 'Generic Guidance' : 'Pre-Screening Assessment'}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-700">{aiFeedback.clarity}</p>

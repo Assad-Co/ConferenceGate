@@ -15,7 +15,9 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [messages, setMessages] = useState<Array<{ sender: 'ai' | 'user'; text: string; time: string }>>([
+  const [messages, setMessages] = useState<
+    Array<{ sender: 'ai' | 'user'; text: string; time: string; isFallback?: boolean }>
+  >([
     {
       sender: 'ai',
       text: `Hello! I am the Conference Gate AI Assistant. How can I help you today? Ask me about finding matching Call for Papers, reviewing abstracts, committee recommendations, or sponsorship packages.`,
@@ -73,12 +75,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
           context: { platform: 'Conference Gate', currentRole: userRole },
         }),
       });
+      if (!res.ok) throw new Error('AI assistant request failed');
       const data = await res.json();
+      if (!data.reply) throw new Error('AI assistant returned no reply');
       setMessages((prev) => [
         ...prev,
         {
           sender: 'ai',
-          text: data.reply || 'Apologies, I could not generate a response.',
+          text: data.reply,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -87,8 +91,9 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
         ...prev,
         {
           sender: 'ai',
-          text: 'The AI Assistant is currently operating in offline mode. I recommend checking our Conference Discovery Engine for active Call for Papers!',
+          text: 'The AI Assistant is currently offline, so this is a static tip rather than a live answer: check our Conference Discovery Engine for active Call for Papers matching your interests.',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isFallback: true,
         },
       ]);
     } finally {
@@ -139,10 +144,15 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                 {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
               </div>
               <div>
+                {msg.isFallback && (
+                  <div className="text-[10px] font-bold text-amber-600 mb-1 px-1">Offline fallback — not live AI</div>
+                )}
                 <div
                   className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
                     msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-tr-xs'
+                      : msg.isFallback
+                      ? 'bg-amber-50 text-slate-800 border border-amber-200 shadow-xs rounded-tl-xs whitespace-pre-wrap'
                       : 'bg-white text-slate-800 border border-slate-200 shadow-xs rounded-tl-xs whitespace-pre-wrap'
                   }`}
                 >

@@ -1,8 +1,14 @@
 import React from 'react';
-import { ShieldCheck, Globe, Award, Sparkles, Building2, Layers } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Logo } from './Logo';
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigateTab: (tab: string) => void;
+  onOpenAIAssistant?: () => void;
+  onOpenBadge?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant, onOpenBadge }) => {
   return (
     <footer className="bg-blue-50 text-slate-500 py-12 border-t border-blue-100 mt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,11 +31,11 @@ export const Footer: React.FC = () => {
               For Researchers & Reviewers
             </h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#discover" className="hover:text-blue-600 transition-colors">Discover Conferences</a></li>
-              <li><a href="#abstracts" className="hover:text-blue-600 transition-colors">Submit Abstracts & Track Status</a></li>
-              <li><a href="#reviews" className="hover:text-blue-600 transition-colors">Reviewer Opportunity Marketplace</a></li>
-              <li><a href="#kudos" className="hover:text-blue-600 transition-colors">Conference Gate Kudos & Badges</a></li>
-              <li><a href="#certificates" className="hover:text-blue-600 transition-colors">Verified Digital Certificates</a></li>
+              <li><button onClick={() => onNavigateTab('discover')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Discover Conferences</button></li>
+              <li><button onClick={() => onNavigateTab('abstracts')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Submit Abstracts & Track Status</button></li>
+              <li><button onClick={() => onNavigateTab('reviewer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Reviewer Opportunity Marketplace</button></li>
+              <li><button onClick={() => onNavigateTab('profile')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Gate Kudos & Badges</button></li>
+              <li><button onClick={() => onNavigateTab('certificates')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Verified Digital Certificates</button></li>
             </ul>
           </div>
 
@@ -39,11 +45,11 @@ export const Footer: React.FC = () => {
               For Organizers & Committees
             </h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#organizer" className="hover:text-blue-600 transition-colors">Conference Lifecycle Management</a></li>
-              <li><a href="#wizard" className="hover:text-blue-600 transition-colors">Create Conference Wizard</a></li>
-              <li><a href="#ai-matcher" className="hover:text-blue-600 transition-colors">AI Reviewer & Committee Matcher</a></li>
-              <li><a href="#agenda" className="hover:text-blue-600 transition-colors">Drag-and-Drop Agenda Scheduler</a></li>
-              <li><a href="#checkin" className="hover:text-blue-600 transition-colors">Digital Badges & QR Check-In</a></li>
+              <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Lifecycle Management</button></li>
+              <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Create Conference Wizard</button></li>
+              <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">AI Reviewer & Committee Matcher</button></li>
+              <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Drag-and-Drop Agenda Scheduler</button></li>
+              <li><button onClick={onOpenBadge} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Digital Badges & QR Check-In</button></li>
             </ul>
           </div>
 
@@ -53,10 +59,9 @@ export const Footer: React.FC = () => {
               Sponsorship & Platform
             </h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#sponsor" className="hover:text-blue-600 transition-colors">Sponsorship Marketplace</a></li>
-              <li><a href="#roi" className="hover:text-blue-600 transition-colors">Sponsor Marketing ROI Analytics</a></li>
-              <li><a href="#ai-assistant" className="hover:text-blue-600 transition-colors">Conference Gate AI Assistant</a></li>
-              <li><a href="#privacy" className="hover:text-blue-600 transition-colors">Privacy & Role-Based Access</a></li>
+              <li><button onClick={() => onNavigateTab('sponsor')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Sponsorship Marketplace</button></li>
+              <li><button onClick={() => onNavigateTab('sponsor')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Sponsor Marketing ROI Analytics</button></li>
+              <li><button onClick={onOpenAIAssistant} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Gate AI Assistant</button></li>
             </ul>
           </div>
         </div>
