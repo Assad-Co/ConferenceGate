@@ -52,13 +52,16 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
             <div>
               <h4 className="font-extrabold text-base text-white">{userProfile.name}</h4>
               <p className="text-xs text-slate-300">{userProfile.organization}</p>
-              <p className="text-[10px] text-blue-300 font-semibold mt-0.5">Conference Index: 890 • Reviewer Kudos: +280</p>
+              <p className="text-[10px] text-blue-300 font-semibold mt-0.5">
+                {userProfile.contributions.conferencesAttended} Conferences Attended • Reviewer Kudos: +
+                {userProfile.contributions.reviewerKudos}
+              </p>
             </div>
           </div>
 
           <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
             <span>Verified by Conference Gate System</span>
-            <span className="text-white font-bold">ID: #CG-VERIFIED-8902</span>
+            <span className="text-white font-bold">ID: #CG-{userProfile.id.slice(-8).toUpperCase()}</span>
           </div>
         </div>
 

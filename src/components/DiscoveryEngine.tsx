@@ -25,6 +25,10 @@ interface DiscoveryEngineProps {
   onSelectConference: (conf: Conference) => void;
   onOpenSubmitAbstract: (confId?: string) => void;
   initialSearchQuery?: string;
+  savedConferenceIds?: string[];
+  followedConferenceIds?: string[];
+  onToggleSave?: (conferenceId: string) => void;
+  onToggleFollow?: (conferenceId: string) => void;
 }
 
 const FORMAT_OPTIONS: Array<{ value: Conference['format']; label: string; icon: React.ElementType }> = [
@@ -79,12 +83,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onSelectConference,
   onOpenSubmitAbstract,
   initialSearchQuery = '',
+  savedConferenceIds = [],
+  followedConferenceIds = [],
+  onToggleSave,
+  onToggleFollow,
 }) => {
   const [searchTerm, setSearchInput] = useState(initialSearchQuery);
   const [selectedIndustry, setSelectedIndustry] = useState<string>('All');
   const [selectedCfp, setSelectedCfp] = useState<string>('All');
-  const [savedIds, setSavedIds] = useState<string[]>(['conf_1']);
-  const [followedIds, setFollowedIds] = useState<string[]>(['conf_1', 'conf_2']);
+  const savedIds = savedConferenceIds;
+  const followedIds = followedConferenceIds;
 
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [selectedFormats, setSelectedFormats] = useState<Conference['format'][]>([]);
@@ -111,16 +119,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   const toggleSave = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSavedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    onToggleSave?.(id);
   };
 
   const toggleFollow = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFollowedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    onToggleFollow?.(id);
   };
 
   const toggleFormat = (fmt: Conference['format']) => {

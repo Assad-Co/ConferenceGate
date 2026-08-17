@@ -5,6 +5,7 @@ import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration
 import { Logo } from './Logo';
 import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
 import { formatCompactCount } from '../utils/format';
+import { useToast } from './Toast';
 
 interface CelebrationTheme {
   image?: string;
@@ -80,6 +81,21 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
   const [isSaved, setIsSaved] = useState(false);
   const [isReposted, setIsReposted] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const { showToast } = useToast();
+
+  const handleShare = async () => {
+    const shareText = `${post.celebrationHeadline || ''}\n${post.content}\n\n— ${post.authorName} on Conference Gate`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: shareText });
+        return;
+      }
+      await navigator.clipboard.writeText(shareText);
+      showToast({ type: 'success', title: 'Copied to clipboard', message: 'Post text copied — paste it anywhere to share.' });
+    } catch {
+      // User cancelled the native share sheet, or clipboard access was denied — no error needed.
+    }
+  };
 
   const baseReaction = (post.userReaction as ReactionType | undefined) || null;
   const netDelta = userReaction === undefined ? 0 : (userReaction ? 1 : 0) - (baseReaction ? 1 : 0);
@@ -105,7 +121,7 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
   };
 
   const repostsCount = (post.repostsCount || 0) + (isReposted ? 1 : 0);
-  const impressions = post.impressions ?? (totalReactions + post.commentsCount) * 9 + 200;
+  const impressions = post.impressions || 0;
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
@@ -311,7 +327,10 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
             <Repeat2 className="w-4 h-4" />
             <span>{isReposted ? 'Reposted' : 'Repost'}</span>
           </button>
-          <button className="flex-1 py-1 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors">
+          <button
+            onClick={handleShare}
+            className="flex-1 py-1 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors"
+          >
             <Share2 className="w-4 h-4" />
             <span>Share</span>
           </button>

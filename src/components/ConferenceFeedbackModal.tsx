@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles, CalendarDays, Send, User, Building2, UserCog, Tag } from 'lucide-react';
 import { useToast } from './Toast';
 import { ConferenceRole } from '../types';
+import { submitConferenceFeedback } from '../api/activity';
 
 interface ConferenceFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
+  conferenceId?: string;
   conferenceTitle: string;
   organizerName?: string;
   eventDate?: string;
@@ -125,6 +127,7 @@ const RatingTable: React.FC<{
 export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = ({
   isOpen,
   onClose,
+  conferenceId,
   conferenceTitle,
   organizerName = '',
   eventDate = '',
@@ -137,6 +140,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const [comment, setComment] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [role, setRole] = useState<ConferenceRole>(defaultRole || 'Attendee');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) setRole(defaultRole || 'Attendee');
@@ -166,19 +170,31 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     setRatings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Object.keys(ratings).length === 0) return;
-    const ratingSummary = overall ? ` — overall rating: ${overall.label}.` : '.';
-    const roleSummary = ` Submitted as ${role}.`;
-    showToast({
-      type: 'success',
-      title: 'Feedback submitted',
-      message: recipientEmail
-        ? `Thanks for reviewing "${conferenceTitle}"${ratingSummary}${roleSummary} A copy was sent to ${recipientEmail}.`
-        : `Thanks for reviewing "${conferenceTitle}"${ratingSummary}${roleSummary} Organizers use this to improve future sessions.`,
-    });
-    handleClose();
+    if (Object.keys(ratings).length === 0 || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitConferenceFeedback({
+        conferenceId,
+        conferenceTitle,
+        role,
+        ratings,
+        comment: comment.trim() || undefined,
+        recipientEmail: recipientEmail.trim() || undefined,
+      });
+      const ratingSummary = overall ? ` — overall rating: ${overall.label}.` : '.';
+      showToast({
+        type: 'success',
+        title: 'Feedback submitted',
+        message: `Thanks for reviewing "${conferenceTitle}"${ratingSummary} Your response has been recorded for the organizing committee.`,
+      });
+      handleClose();
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Feedback not submitted', message: err.message || 'Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -261,7 +277,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <Send className="w-3.5 h-3.5 text-blue-600" />
-              Send a copy to organizer / employer (optional)
+              Contact email for follow-up (optional)
             </label>
             <input
               type="email"
@@ -270,6 +286,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
               placeholder="organizer@conference.com or hr@yourcompany.com"
               className="w-full p-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs focus:outline-hidden"
             />
+            <p className="text-[10px] text-slate-400">Saved with your feedback record — no email is sent automatically.</p>
           </div>
 
           <div className="flex items-center justify-between gap-4 pt-1 border-t border-slate-100">
@@ -287,10 +304,10 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
             </div>
             <button
               type="submit"
-              disabled={Object.keys(ratings).length === 0}
+              disabled={Object.keys(ratings).length === 0 || submitting}
               className="mt-3 px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-40 shrink-0"
             >
-              Submit Feedback
+              {submitting ? 'Submitting…' : 'Submit Feedback'}
             </button>
           </div>
         </form>

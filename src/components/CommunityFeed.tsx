@@ -25,6 +25,7 @@ import { Post, UserProfile, PostAuthor } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
 import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
 import { formatCompactCount } from '../utils/format';
+import { useToast } from './Toast';
 
 interface CommunityFeedProps {
   posts?: Post[];
@@ -62,6 +63,9 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const [savedPostIds, setSavedPostIds] = useState<Record<string, boolean>>({});
   const [repostedPostIds, setRepostedPostIds] = useState<Record<string, boolean>>({});
   const [analyticsOpenId, setAnalyticsOpenId] = useState<string | null>(null);
+  const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>({});
+  const [moreMenuOpenId, setMoreMenuOpenId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const composerAvatar = userProfile?.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80';
   const composerName = userProfile?.name || 'You';
@@ -89,6 +93,27 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
   const toggleRepost = (postId: string) => {
     setRepostedPostIds((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const handleSharePost = async (post: Post) => {
+    const shareText = `${post.content}\n\n— ${post.authorName} on Conference Gate`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: shareText });
+        return;
+      }
+      await navigator.clipboard.writeText(shareText);
+      showToast({ type: 'success', title: 'Copied to clipboard', message: 'Post text copied — paste it anywhere to share.' });
+    } catch {
+      // User cancelled the native share sheet, or clipboard access was denied — no error needed.
+    }
+    setMoreMenuOpenId(null);
+  };
+
+  const handleHidePost = (postId: string) => {
+    setHiddenPostIds((prev) => ({ ...prev, [postId]: true }));
+    setMoreMenuOpenId(null);
+    showToast({ type: 'success', title: 'Post hidden', message: "You won't see this post in your feed again." });
   };
 
   const handleAddComment = (postId: string) => {
@@ -206,7 +231,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
       {/* Posts List */}
       <div className="space-y-4">
-        {(posts || []).map((post) => {
+        {(posts || []).filter((post) => !hiddenPostIds[post.id]).map((post) => {
           if (post.postType === 'celebration') {
             return <CelebrationPostCard key={post.id} post={post} onOpenProfile={onOpenProfile} />;
           }
@@ -240,7 +265,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
           const isSaved = !!savedPostIds[post.id];
           const isReposted = !!repostedPostIds[post.id];
           const repostsCount = (post.repostsCount || 0) + (isReposted ? 1 : 0);
-          const impressions = post.impressions ?? (totalReactions + post.commentsCount) * 9 + 200;
+          const impressions = post.impressions || 0;
 
           return (
             <div key={post.id} className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -279,9 +304,31 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     >
                       <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
                     </button>
-                    <button className="p-1.5 text-slate-300 hover:text-slate-500 rounded-lg cursor-pointer" title="More">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setMoreMenuOpenId((prev) => (prev === post.id ? null : post.id))}
+                        className="p-1.5 text-slate-300 hover:text-slate-500 rounded-lg cursor-pointer"
+                        title="More"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {moreMenuOpenId === post.id && (
+                        <div className="absolute right-0 top-full mt-1 z-10 w-40 bg-white rounded-xl border border-slate-200 shadow-md py-1">
+                          <button
+                            onClick={() => handleSharePost(post)}
+                            className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            Copy post text
+                          </button>
+                          <button
+                            onClick={() => handleHidePost(post.id)}
+                            className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                          >
+                            Hide this post
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -451,7 +498,10 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                   <Repeat2 className="w-4 h-4" />
                   <span>{isReposted ? 'Reposted' : 'Repost'}</span>
                 </button>
-                <button className="flex-1 py-3 flex items-center justify-center gap-1 hover:text-blue-600 cursor-pointer rounded-lg transition-colors">
+                <button
+                  onClick={() => handleSharePost(post)}
+                  className="flex-1 py-3 flex items-center justify-center gap-1 hover:text-blue-600 cursor-pointer rounded-lg transition-colors"
+                >
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
                 </button>
