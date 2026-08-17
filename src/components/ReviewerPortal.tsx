@@ -22,6 +22,7 @@ interface ReviewerPortalProps {
   onCompleteReview: (abstractId: string, reviewData: any) => void;
   volunteeredOpportunityIds?: string[];
   onVolunteer?: (opportunityId: string, conferenceTitle: string, topic: string) => void;
+  onToggleAvailability?: () => void;
 }
 
 export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
@@ -31,10 +32,20 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   onCompleteReview,
   volunteeredOpportunityIds = [],
   onVolunteer,
+  onToggleAvailability,
 }) => {
   const [activeTab, setActiveTab] = useState<'opportunities' | 'my-reviews' | 'evaluate' | 'history'>('opportunities');
-  const [availableToReview, setAvailableToReview] = useState(userProfile.reviewerInfo.available);
+  const availableToReview = userProfile.reviewerInfo.available;
   const [selectedAbstractId, setSelectedAbstractId] = useState<string>(submissions[0]?.id || '');
+
+  // Papers this reviewer hasn't submitted a review for yet vs. ones they have —
+  // both tabs previously showed the same full submissions list with no real filtering.
+  const pendingSubmissions = submissions.filter(
+    (sub) => !sub.reviews.some((r) => r.reviewerId === userProfile.id)
+  );
+  const completedSubmissions = submissions.filter((sub) =>
+    sub.reviews.some((r) => r.reviewerId === userProfile.id)
+  );
   const [volunteerSuccess, setVolunteerSuccess] = useState<string | null>(null);
 
   // Form State for Evaluation
@@ -143,7 +154,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             <div className="pt-2 border-t border-blue-50 flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Available to Review Abstracts:</span>
               <button
-                onClick={() => setAvailableToReview(!availableToReview)}
+                onClick={onToggleAvailability}
                 className={`px-3 py-1 rounded-full font-bold text-xs transition-colors cursor-pointer ${
                   availableToReview
                     ? 'bg-emerald-500 text-white'
@@ -203,7 +214,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          In-Progress Reviews ({submissions.length})
+          In-Progress Reviews ({pendingSubmissions.length})
         </button>
         <button
           onClick={() => setActiveTab('history')}
@@ -417,38 +428,84 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
             <h3 className="text-base font-bold text-slate-900">
-              {activeTab === 'my-reviews' ? 'Assigned Papers Pending Review' : 'Verified Review History'}
+              {activeTab === 'my-reviews' ? 'Papers Pending Your Review' : 'Verified Review History'}
             </h3>
             <p className="text-xs text-slate-500">
-              All completed reviews are recorded in your permanent, verified Conference Gate record.
+              {activeTab === 'my-reviews'
+                ? "Papers you haven't submitted a review for yet."
+                : 'All completed reviews are recorded in your permanent, verified Conference Gate record.'}
             </p>
           </div>
 
           <div className="space-y-4">
-            {(submissions || []).map((sub) => (
-              <div
-                key={sub.id}
-                className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4"
-              >
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-                    {sub.track}
-                  </span>
-                  <h4 className="font-bold text-sm text-slate-900">{sub.title}</h4>
-                  <p className="text-xs text-slate-500">{sub.conferenceTitle}</p>
+            {activeTab === 'my-reviews' &&
+              (pendingSubmissions.length === 0 ? (
+                <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
+                  No pending papers — you've reviewed everything currently available.
                 </div>
+              ) : (
+                pendingSubmissions.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                        {sub.track}
+                      </span>
+                      <h4 className="font-bold text-sm text-slate-900">{sub.title}</h4>
+                      <p className="text-xs text-slate-500">{sub.conferenceTitle}</p>
+                    </div>
 
-                <button
-                  onClick={() => {
-                    setSelectedAbstractId(sub.id);
-                    setActiveTab('evaluate');
-                  }}
-                  className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer"
-                >
-                  Start Evaluation
-                </button>
-              </div>
-            ))}
+                    <button
+                      onClick={() => {
+                        setSelectedAbstractId(sub.id);
+                        setActiveTab('evaluate');
+                      }}
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer"
+                    >
+                      Start Evaluation
+                    </button>
+                  </div>
+                ))
+              ))}
+
+            {activeTab === 'history' &&
+              (completedSubmissions.length === 0 ? (
+                <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
+                  No completed reviews yet.
+                </div>
+              ) : (
+                completedSubmissions.map((sub) => {
+                  const myReview = sub.reviews.find((r) => r.reviewerId === userProfile.id);
+                  return (
+                    <div
+                      key={sub.id}
+                      className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4"
+                    >
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                          {sub.track}
+                        </span>
+                        <h4 className="font-bold text-sm text-slate-900">{sub.title}</h4>
+                        <p className="text-xs text-slate-500">{sub.conferenceTitle}</p>
+                      </div>
+
+                      {myReview && (
+                        <div className="text-right shrink-0 space-y-1">
+                          <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl inline-flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {myReview.recommendation}
+                          </span>
+                          <div className="text-[11px] text-slate-500 font-semibold">
+                            Score: {myReview.overallScore}/10
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ))}
           </div>
         </div>
       )}

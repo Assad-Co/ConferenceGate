@@ -66,6 +66,11 @@ for (const col of PROFILE_COLUMNS) {
   }
 }
 
+if (!existingColumns.some((c) => c.name === "reviewer_available")) {
+  db.exec("ALTER TABLE users ADD COLUMN reviewer_available INTEGER NOT NULL DEFAULT 0");
+  existingColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+}
+
 export interface UserRow {
   id: string;
   email: string;
@@ -80,6 +85,7 @@ export interface UserRow {
   country: string | null;
   bio: string | null;
   avatar: string | null;
+  reviewer_available: number;
   created_at: string;
 }
 
@@ -183,6 +189,13 @@ db.exec(`
     recipient_group TEXT NOT NULL,
     subject TEXT NOT NULL,
     body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS created_conferences (
+    id TEXT PRIMARY KEY,
+    organizer_id TEXT NOT NULL REFERENCES users(id),
+    data TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -308,6 +321,13 @@ export interface OrganizerBroadcastRow {
   recipient_group: string;
   subject: string;
   body: string;
+  created_at: string;
+}
+
+export interface CreatedConferenceRow {
+  id: string;
+  organizer_id: string;
+  data: string;
   created_at: string;
 }
 

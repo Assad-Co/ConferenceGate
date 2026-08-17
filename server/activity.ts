@@ -11,6 +11,7 @@ import {
   SubmissionRevisionRow,
   OrganizerBroadcastRow,
   ConferenceInterestActionRow,
+  CreatedConferenceRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 
@@ -439,4 +440,27 @@ activityRouter.get("/conference-actions/mine", (req: AuthedRequest, res: Respons
       createdAt: row.created_at,
     })),
   });
+});
+
+// Conferences created via the organizer wizard — stored as an opaque JSON blob since the
+// client-side Conference shape is large and nested; every account can see every created
+// conference, mirroring the platform-wide submissions/registrations views elsewhere.
+activityRouter.post("/conferences", (req: AuthedRequest, res: Response) => {
+  const body = req.body || {};
+  if (typeof body.id !== "string" || !body.id || typeof body.title !== "string" || !body.title.trim()) {
+    return res.status(400).json({ error: "A conference object with id and title is required" });
+  }
+  db.prepare("INSERT INTO created_conferences (id, organizer_id, data) VALUES (?, ?, ?)").run(
+    body.id,
+    req.userId,
+    JSON.stringify(body)
+  );
+  res.status(201).json({ conference: body });
+});
+
+activityRouter.get("/conferences", (_req: AuthedRequest, res: Response) => {
+  const rows = db
+    .prepare("SELECT * FROM created_conferences ORDER BY created_at DESC")
+    .all() as CreatedConferenceRow[];
+  res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
 });

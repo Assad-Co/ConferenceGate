@@ -55,6 +55,8 @@ import { sendMessage } from '../api/messages';
 interface OrganizerDashboardProps {
   conferences: Conference[];
   submissions: AbstractSubmission[];
+  organizerName?: string;
+  organizerLogo?: string;
   registrationCountsByConference?: Record<string, number>;
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
@@ -195,6 +197,8 @@ const AnalyticsGaugeCard: React.FC<{
 export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   conferences,
   submissions,
+  organizerName = 'Conference Organizing Board',
+  organizerLogo = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
   registrationCountsByConference = {},
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
@@ -237,6 +241,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
   const [aiMatches, setAiMatches] = useState<any[] | null>(null);
+  const [aiMatchIsFallback, setAiMatchIsFallback] = useState(false);
   const [selectedSubForAI, setSelectedSubForAI] = useState<AbstractSubmission | null>(null);
   const [invitedReviewerIds, setInvitedReviewerIds] = useState<Record<string, boolean>>({});
   const [invitingReviewerId, setInvitingReviewerId] = useState<string | null>(null);
@@ -352,6 +357,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [committeeMatches, setCommitteeMatches] = useState<
     Array<{ reviewerId: string; matchPercentage: number; reason: string }> | null
   >(null);
+  const [committeeMatchIsFallback, setCommitteeMatchIsFallback] = useState(false);
   const [invitedCandidateIds, setInvitedCandidateIds] = useState<Record<string, boolean>>({});
   const [invitingCandidateId, setInvitingCandidateId] = useState<string | null>(null);
 
@@ -387,6 +393,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     if (committeeCandidatePool.length === 0) return;
     setCommitteeMatchLoading(true);
     setCommitteeMatches(null);
+    setCommitteeMatchIsFallback(false);
     try {
       const res = await fetch('/api/ai/reviewer-match', {
         method: 'POST',
@@ -398,9 +405,12 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           reviewers: committeeCandidatePool,
         }),
       });
+      if (!res.ok) throw new Error('AI match request failed');
       const data = await res.json();
-      setCommitteeMatches(data.matches || []);
+      if (!Array.isArray(data.matches) || data.matches.length === 0) throw new Error('AI returned no matches');
+      setCommitteeMatches(data.matches);
     } catch (e) {
+      setCommitteeMatchIsFallback(true);
       setCommitteeMatches(
         committeeCandidatePool.map((c, idx) => ({
           reviewerId: c.id,
@@ -525,12 +535,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     date: string;
     time: string;
     organizerTimezone: string;
+    meetingLink: string;
   }>({
     title: '',
     attendees: [],
     date: '',
     time: '',
     organizerTimezone: 'Europe/London',
+    meetingLink: '',
   });
   const [scheduledMeetings, setScheduledMeetings] = useState<
     Array<{
@@ -540,16 +552,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       date: string;
       time: string;
       organizerTimezone: string;
-      zoomLink: string;
+      meetingLink: string;
     }>
   >([]);
-
-  const generateZoomLink = () => {
-    const zoomId = Math.floor(1000000000 + Math.random() * 8999999999);
-    const zoomPwd = Math.random().toString(36).slice(2, 8);
-    return `https://zoom.us/j/${zoomId}?pwd=${zoomPwd}`;
-  };
-  const [pendingZoomLink, setPendingZoomLink] = useState(generateZoomLink);
 
   const toggleMeetingAttendee = (name: string) => {
     setMeetingDraft((prev) => ({
@@ -595,17 +600,29 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const handleScheduleMeeting = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!meetingDraft.title.trim() || !meetingDraft.date || !meetingDraft.time || meetingDraft.attendees.length === 0) return;
+    if (
+      !meetingDraft.title.trim() ||
+      !meetingDraft.date ||
+      !meetingDraft.time ||
+      !meetingDraft.meetingLink.trim() ||
+      meetingDraft.attendees.length === 0
+    )
+      return;
     setScheduledMeetings((prev) => [
       {
         id: `mtg_${Date.now()}`,
         ...meetingDraft,
-        zoomLink: pendingZoomLink,
       },
       ...prev,
     ]);
-    setMeetingDraft({ title: '', attendees: [], date: '', time: '', organizerTimezone: meetingDraft.organizerTimezone });
-    setPendingZoomLink(generateZoomLink());
+    setMeetingDraft({
+      title: '',
+      attendees: [],
+      date: '',
+      time: '',
+      organizerTimezone: meetingDraft.organizerTimezone,
+      meetingLink: '',
+    });
   };
 
   // Sponsorship Opportunities Catalog State
@@ -838,6 +855,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const handleAIMatchReviewers = async (sub: AbstractSubmission) => {
     setSelectedSubForAI(sub);
     setAiMatchLoading(true);
+    setAiMatchIsFallback(false);
 
     // Real candidates, drawn from people who have already completed peer reviews on the
     // platform — excludes the submission's own author.
@@ -860,9 +878,12 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           reviewers: candidatePool,
         }),
       });
+      if (!res.ok) throw new Error('AI match request failed');
       const data = await res.json();
-      setAiMatches(data.matches || []);
+      if (!Array.isArray(data.matches) || data.matches.length === 0) throw new Error('AI returned no matches');
+      setAiMatches(data.matches);
     } catch (e) {
+      setAiMatchIsFallback(true);
       setAiMatches(
         candidatePool.map((c, idx) => ({
           reviewerId: c.id,
@@ -931,17 +952,23 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const handleWizardSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const locationParts = newConfLocation.split(',').map((s) => s.trim());
+    const city = locationParts[0] || 'TBD';
+    const countryRaw = locationParts[1] || 'TBD';
+    const venueMatch = countryRaw.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    const country = venueMatch ? venueMatch[1].trim() : countryRaw;
+    const venue = venueMatch ? venueMatch[2].trim() : 'Venue TBD';
     onCreateConference({
       title: newConfTitle || 'International Energy & Subsurface Congress 2026',
-      organizerName: 'Global Scientific Association',
-      organizerLogo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
+      organizerName,
+      organizerLogo,
       banner: newConfBanner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
       logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=200&q=80',
       description: 'Newly created international congress focusing on energy transition, geosciences, and subsurface AI.',
       industry: newConfIndustry,
       topics: ['Energy', 'Geosciences', 'Subsurface AI'],
       tracks: newConfTracks.split(',').map((t) => t.trim()),
-      location: { city: 'Paris', country: 'France', venue: 'Palais des Congrès de Paris' },
+      location: { city, country, venue },
       dates: { start: newConfStartDate, end: newConfEndDate },
       format: 'Hybrid',
       priceRange: '$300 - $900',
@@ -1597,6 +1624,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 </button>
               </div>
 
+              {!aiMatchLoading && aiMatchIsFallback && aiMatches && aiMatches.length > 0 && (
+                <div className="px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-semibold flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                  AI matching is unavailable right now — showing candidates ranked by review count instead of a live
+                  AI score.
+                </div>
+              )}
+
               {aiMatchLoading ? (
                 <div className="text-center py-6 text-xs text-slate-500 font-medium">
                   Calculating graph neural match scores against global reviewer pool...
@@ -1690,6 +1725,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             {committeeMatchLoading && (
               <div className="text-center py-6 text-xs text-slate-500 font-medium">
                 Calculating experience and participation match scores against the global candidate pool…
+              </div>
+            )}
+
+            {!committeeMatchLoading && committeeMatchIsFallback && committeeMatches && committeeMatches.length > 0 && (
+              <div className="px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-semibold flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                AI matching is unavailable right now — showing candidates ranked by review count instead of a live AI
+                score.
               </div>
             )}
 
@@ -2049,12 +2092,12 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             )}
           </div>
 
-          {/* Schedule Committee Meeting via Zoom */}
+          {/* Schedule Committee Meeting */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <Video className="w-5 h-5 text-blue-600" />
               <h3 className="font-bold text-sm text-slate-900">
-                Schedule a Follow-Up Meeting — Technical Committee (Zoom)
+                Schedule a Follow-Up Meeting — Technical Committee
               </h3>
             </div>
             <form onSubmit={handleScheduleMeeting} className="space-y-3 text-xs">
@@ -2197,23 +2240,30 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 </div>
               )}
 
-              {/* Zoom Link Preview — visible as soon as date & time are picked, before the meeting is scheduled */}
-              {meetingDraft.date && meetingDraft.time && (
-                <div className="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-800">
-                    <Video className="w-3.5 h-3.5" />
-                    <span>Your Zoom Link (ready once scheduled)</span>
-                  </div>
-                  <span className="text-[11px] font-mono text-emerald-900 break-all">{pendingZoomLink}</span>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-slate-500 font-semibold">
+                  Meeting Link (Zoom, Google Meet, Teams, etc.)
+                </span>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={meetingDraft.meetingLink}
+                  onChange={(e) => setMeetingDraft({ ...meetingDraft, meetingLink: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Conference Gate doesn't generate meeting rooms — paste the link from your own video conferencing
+                  account.
+                </p>
+              </div>
 
               <button
                 type="submit"
                 className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Video className="w-3.5 h-3.5" />
-                <span>Schedule Zoom Meeting</span>
+                <span>Schedule Meeting</span>
               </button>
             </form>
 
@@ -2231,13 +2281,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       Attendees: <strong>{mtg.attendees.join(', ')}</strong>
                     </div>
                     <a
-                      href={mtg.zoomLink}
+                      href={mtg.meetingLink}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 hover:underline"
                     >
                       <Video className="w-3 h-3" />
-                      {mtg.zoomLink}
+                      {mtg.meetingLink}
                     </a>
                   </div>
                 ))}

@@ -1,4 +1,4 @@
-import { AbstractSubmission } from '../types';
+import { AbstractSubmission, Conference } from '../types';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
@@ -190,6 +190,23 @@ export async function fetchMyBroadcasts(): Promise<OrganizerBroadcast[]> {
   const res = await fetch('/api/activity/broadcasts/mine', { credentials: 'include' });
   const data = await parseResponse(res);
   return data.broadcasts;
+}
+
+export async function createConferenceRemote(conference: Conference): Promise<Conference> {
+  const res = await fetch('/api/activity/conferences', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(conference),
+  });
+  const data = await parseResponse(res);
+  return data.conference;
+}
+
+export async function fetchCreatedConferences(): Promise<Conference[]> {
+  const res = await fetch('/api/activity/conferences', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.conferences;
 }
 
 export async function recordConferenceAction(
