@@ -201,6 +201,15 @@ Provide constructive feedback in JSON format with fields:
     });
   }
 
+  // Catches errors forwarded by asyncHandler-wrapped routes (e.g. an unexpected database
+  // error) so the one failing request gets a 500 response instead of crashing the whole
+  // process for every connected user via an unhandled promise rejection.
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("Unhandled request error:", err);
+    if (res.headersSent) return;
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  });
+
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Conference Gate server running at http://localhost:${PORT}`);
   });

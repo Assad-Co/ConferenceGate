@@ -39,6 +39,8 @@ import {
   fetchFeedbackSummary,
   createConferenceRemote,
   fetchCreatedConferences,
+  fetchOrganizerActivityFeed,
+  OrganizerActivityItem,
 } from './api/activity';
 import {
   fetchConversations,
@@ -138,6 +140,8 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
+  const [organizerActivityFeed, setOrganizerActivityFeed] = useState<OrganizerActivityItem[]>([]);
+  const [readOrganizerNotificationIds, setReadOrganizerNotificationIds] = useState<Set<string>>(new Set());
   const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({
     'opp_conference__Gold Sponsor': true,
     'opp_workshop__Workshop Sponsor': true,
@@ -264,7 +268,10 @@ export function App() {
         setConferences([...created, ...sampleConferences.filter((c) => !createdIds.has(c.id))]);
       })
       .catch(() => {});
-  }, [authUser?.id]);
+    if (authUser.role === 'organizer') {
+      fetchOrganizerActivityFeed().then(setOrganizerActivityFeed).catch(() => {});
+    }
+  }, [authUser?.id, authUser?.role]);
 
   const handleToggleSaveConference = async (conferenceId: string) => {
     try {
@@ -362,6 +369,63 @@ export function App() {
   const [viewedAuthor, setViewedAuthor] = useState<PostAuthor | null>(null);
 
   const totalUnreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+
+  // Real, organizer-specific notifications: unread messages plus sponsorship/committee
+  // interest and new abstract submissions on conferences this organizer created — replacing
+  // demo notification content for this role.
+  const organizerNotifications: NotificationItem[] = React.useMemo(() => {
+    const messageItems: Array<NotificationItem & { sortKey: string }> = conversations
+      .filter((c) => c.unreadCount > 0)
+      .map((c) => {
+        const id = `msg_${c.partnerId}`;
+        return {
+          id,
+          title: `New message from ${c.partner.name}`,
+          message: c.lastMessage || 'Sent you a message',
+          timestamp: new Date(c.lastMessageAt).toLocaleString(),
+          sortKey: c.lastMessageAt,
+          read: readOrganizerNotificationIds.has(id),
+          type: 'followup' as const,
+        };
+      });
+
+    const activityItems: Array<NotificationItem & { sortKey: string }> = organizerActivityFeed.map((item) => {
+      const read = readOrganizerNotificationIds.has(item.id);
+      const timestamp = new Date(item.createdAt).toLocaleString();
+      const base = { id: item.id, timestamp, sortKey: item.createdAt, read };
+      if (item.kind === 'sponsorship_inquiry') {
+        return {
+          ...base,
+          title: 'Sponsorship inquiry',
+          message: `${item.actorName} is interested in sponsoring ${item.conferenceTitle}`,
+          type: 'sponsorship' as const,
+        };
+      }
+      if (item.kind === 'committee_interest') {
+        return {
+          ...base,
+          title: 'Technical committee interest',
+          message: `${item.actorName} expressed interest in joining the committee for ${item.conferenceTitle}`,
+          type: 'invitation' as const,
+        };
+      }
+      return {
+        ...base,
+        title: 'New abstract submission',
+        message: `${item.actorName} submitted "${item.abstractTitle}" to ${item.conferenceTitle}`,
+        type: 'abstract' as const,
+      };
+    });
+
+    return [...messageItems, ...activityItems]
+      .sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1))
+      .map(({ sortKey, ...rest }) => rest);
+  }, [conversations, organizerActivityFeed, readOrganizerNotificationIds]);
+
+  const handleMarkOrganizerNotificationRead = (id: string) =>
+    setReadOrganizerNotificationIds((prev) => new Set(prev).add(id));
+  const handleMarkAllOrganizerNotificationsRead = () =>
+    setReadOrganizerNotificationIds(new Set(organizerNotifications.map((n) => n.id)));
 
   const refreshConversations = () => {
     fetchConversations().then(setConversations).catch(() => {});
@@ -941,11 +1005,14 @@ export function App() {
           updateAvatar(dataUrl).then(setAuthUser).catch(() => {});
         }}
         onOpenEditProfile={() => setIsEditProfileOpen(true)}
-        notifications={notifications}
+        notifications={authUser.role === 'organizer' ? organizerNotifications : notifications}
         sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
         onOpenNotifications={() => {
+          if (authUser.role === 'organizer') {
+            fetchOrganizerActivityFeed().then(setOrganizerActivityFeed).catch(() => {});
+          }
           setProfileInitialTab('notifications');
           setActiveTab('profile');
         }}
@@ -1108,9 +1175,13 @@ export function App() {
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
-            notifications={notifications}
-            onMarkNotificationRead={handleMarkNotificationRead}
-            onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+            notifications={authUser.role === 'organizer' ? organizerNotifications : notifications}
+            onMarkNotificationRead={
+              authUser.role === 'organizer' ? handleMarkOrganizerNotificationRead : handleMarkNotificationRead
+            }
+            onMarkAllNotificationsRead={
+              authUser.role === 'organizer' ? handleMarkAllOrganizerNotificationsRead : handleMarkAllNotificationsRead
+            }
             onAvatarChange={handleAvatarChange}
             hasCustomAvatar={!!authUser.avatar}
             onEditProfile={handleEditProfile}

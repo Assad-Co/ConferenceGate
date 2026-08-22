@@ -3,6 +3,7 @@ import crypto from "crypto";
 import type { WebSocket } from "ws";
 import { dbGet, dbAll, dbRun, UserRow, ConversationRow, MessageRow } from "./db";
 import { AuthedRequest, requireAuth, publicUserSummary } from "./auth";
+import { asyncHandler } from "./asyncHandler";
 
 export const messagesRouter = Router();
 messagesRouter.use(requireAuth);
@@ -34,7 +35,7 @@ function toMessageDTO(row: MessageRow) {
   };
 }
 
-messagesRouter.get("/conversations", async (req: AuthedRequest, res: Response) => {
+messagesRouter.get("/conversations", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const me = req.userId!;
   const convs = await dbAll<ConversationRow>("SELECT * FROM conversations WHERE user_a = ? OR user_b = ?", [
     me,
@@ -69,9 +70,9 @@ messagesRouter.get("/conversations", async (req: AuthedRequest, res: Response) =
     .sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1));
 
   res.json({ conversations: result });
-});
+}));
 
-messagesRouter.get("/unread-count", async (req: AuthedRequest, res: Response) => {
+messagesRouter.get("/unread-count", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const me = req.userId!;
   const row = (await dbGet<{ n: number }>(
     `SELECT COUNT(*) as n FROM messages m
@@ -80,9 +81,9 @@ messagesRouter.get("/unread-count", async (req: AuthedRequest, res: Response) =>
     [me, me, me]
   ))!;
   res.json({ unreadCount: row.n });
-});
+}));
 
-messagesRouter.get("/conversations/:partnerId/messages", async (req: AuthedRequest, res: Response) => {
+messagesRouter.get("/conversations/:partnerId/messages", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const me = req.userId!;
   const partnerId = req.params.partnerId;
   const partner = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [partnerId]);
@@ -99,9 +100,9 @@ messagesRouter.get("/conversations/:partnerId/messages", async (req: AuthedReque
     conv.id,
   ]);
   res.json({ partner: publicUserSummary(partner), messages: rows.map(toMessageDTO) });
-});
+}));
 
-messagesRouter.post("/conversations/:partnerId/read", async (req: AuthedRequest, res: Response) => {
+messagesRouter.post("/conversations/:partnerId/read", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const me = req.userId!;
   const partnerId = req.params.partnerId;
   const conv = await findConversation(me, partnerId);
@@ -112,7 +113,7 @@ messagesRouter.post("/conversations/:partnerId/read", async (req: AuthedRequest,
     );
   }
   res.json({ ok: true });
-});
+}));
 
 // --- Real-time delivery -----------------------------------------------------
 
@@ -146,7 +147,7 @@ function broadcastToUser(userId: string, payload: unknown) {
 
 const MAX_MESSAGE_LENGTH = 4000;
 
-messagesRouter.post("/conversations/:partnerId/messages", async (req: AuthedRequest, res: Response) => {
+messagesRouter.post("/conversations/:partnerId/messages", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const me = req.userId!;
   const partnerId = req.params.partnerId;
   if (partnerId === me) {
@@ -186,9 +187,9 @@ messagesRouter.post("/conversations/:partnerId/messages", async (req: AuthedRequ
   });
 
   res.status(201).json({ message: dto });
-});
+}));
 
-messagesRouter.get("/users/search", async (req: AuthedRequest, res: Response) => {
+messagesRouter.get("/users/search", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   if (!q) {
     return res.json({ users: [] });
@@ -198,4 +199,4 @@ messagesRouter.get("/users/search", async (req: AuthedRequest, res: Response) =>
     `%${q}%`,
   ]);
   res.json({ users: rows.map(publicUserSummary) });
-});
+}));
