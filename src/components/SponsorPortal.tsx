@@ -317,11 +317,13 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-base text-slate-900">{pkg.name}</h3>
+                      <h3 className="font-bold text-base text-slate-900">{pkg.tier} Sponsorship Package</h3>
                       <p className="text-xs text-slate-500">{pkg.conferenceTitle}</p>
                     </div>
 
-                    <p className="text-xs text-slate-600 leading-relaxed">{pkg.description}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {pkg.boothSpace} • {pkg.speakingOps}
+                    </p>
 
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                       <div className="text-[10px] font-bold uppercase text-slate-400">Included Benefits</div>

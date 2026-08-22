@@ -407,7 +407,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       });
       if (!res.ok) throw new Error('AI match request failed');
       const data = await res.json();
-      if (!Array.isArray(data.matches) || data.matches.length === 0) throw new Error('AI returned no matches');
+      if (data.isFallback || !Array.isArray(data.matches) || data.matches.length === 0)
+        throw new Error('AI returned no matches');
       setCommitteeMatches(data.matches);
     } catch (e) {
       setCommitteeMatchIsFallback(true);
@@ -880,7 +881,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       });
       if (!res.ok) throw new Error('AI match request failed');
       const data = await res.json();
-      if (!Array.isArray(data.matches) || data.matches.length === 0) throw new Error('AI returned no matches');
+      if (data.isFallback || !Array.isArray(data.matches) || data.matches.length === 0)
+        throw new Error('AI returned no matches');
       setAiMatches(data.matches);
     } catch (e) {
       setAiMatchIsFallback(true);

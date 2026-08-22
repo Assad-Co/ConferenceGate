@@ -29,7 +29,7 @@ interface NavbarProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   setActiveTab?: (tab: string) => void;
-  userProfile?: UserProfile;
+  userProfile: UserProfile;
   organizerIdentity?: { name: string; logo: string };
   sponsorIdentity?: { name: string; logo: string };
   onOrganizerLogoChange?: (dataUrl: string) => void;
@@ -122,17 +122,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleOpenSponsorAlerts = onOpenSponsorAlerts || (() => handleTabChange('sponsor'));
   const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
   const isOrganizerRole = role === 'organizer';
-  const defaultProfile = userProfile || {
-    name: 'Dr. Elena Rostova',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-    title: 'Senior Geoscience Researcher',
-  };
-
   const identity = isOrganizerRole && organizerIdentity
     ? { name: organizerIdentity.name, avatar: organizerIdentity.logo }
     : isSponsorRole && sponsorIdentity
     ? { name: sponsorIdentity.name, avatar: sponsorIdentity.logo }
-    : defaultProfile;
+    : userProfile;
   const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
   const identityTab = isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'profile';
   const canCustomizeLogo = (isOrganizerRole && !!onOrganizerLogoChange) || (isSponsorRole && !!onSponsorLogoChange);

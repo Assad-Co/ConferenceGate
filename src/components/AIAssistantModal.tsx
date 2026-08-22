@@ -28,7 +28,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   const getPresets = () => {
-    switch (userRole) {
+    switch (userRole.toLowerCase()) {
       case 'organizer':
         return [
           'Find qualified reviewers for petroleum systems & AI track',
@@ -77,7 +77,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
       });
       if (!res.ok) throw new Error('AI assistant request failed');
       const data = await res.json();
-      if (!data.reply) throw new Error('AI assistant returned no reply');
+      if (data.isFallback || !data.reply) throw new Error('AI assistant unavailable');
       setMessages((prev) => [
         ...prev,
         {

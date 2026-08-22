@@ -1134,7 +1134,7 @@ export function App() {
       <AIAssistantModal
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
-        activeRole={activeRole}
+        userRole={activeRole}
       />
 
       <AbstractSubmissionModal
