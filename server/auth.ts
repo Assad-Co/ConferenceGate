@@ -5,13 +5,27 @@ import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { db, UserRow } from "./db";
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(48).toString("hex");
-if (!process.env.JWT_SECRET) {
+// If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
+// the database — otherwise every server restart (a redeploy, a host spinning down an idle
+// instance, etc.) would mint a new secret and silently log out every signed-in user.
+function resolveJwtSecret(): string {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+
+  const existing = db.prepare("SELECT value FROM app_secrets WHERE key = 'jwt_secret'").get() as
+    | { value: string }
+    | undefined;
+  if (existing) return existing.value;
+
+  const generated = crypto.randomBytes(48).toString("hex");
+  db.prepare("INSERT INTO app_secrets (key, value) VALUES ('jwt_secret', ?)").run(generated);
   console.warn(
-    "[auth] JWT_SECRET is not set — using a random secret generated at startup. " +
-      "Sessions will be invalidated on every restart. Set JWT_SECRET in your environment for production."
+    "[auth] JWT_SECRET is not set — generated a secret and persisted it in the database so " +
+      "sessions survive restarts. Set JWT_SECRET in your environment for full control over rotation."
   );
+  return generated;
 }
+
+const JWT_SECRET = resolveJwtSecret();
 
 export const COOKIE_NAME = "cg_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
