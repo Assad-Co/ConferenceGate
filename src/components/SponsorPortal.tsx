@@ -11,9 +11,11 @@ import {
   Bell,
   BellRing,
   CheckCheck,
+  Clock,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+import { SponsorApplicationSummary } from '../api/sponsors';
 import { useToast } from './Toast';
 
 interface SponsorAlert {
@@ -27,12 +29,12 @@ interface SponsorAlert {
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities?: SponsorshipOpportunity[];
-  activatedOpportunityKeys?: Record<string, boolean>;
+  myApplications: SponsorApplicationSummary[];
   sponsorProfile: SponsorProfile;
   sponsorAlerts?: SponsorAlert[];
   onMarkAlertRead?: (id: string) => void;
   onMarkAllAlertsRead?: () => void;
-  onSponsorshipAccepted?: (pkg: { tier: string; conferenceTitle: string }) => void;
+  onApplyForSponsorship?: (packageId: string) => void;
 }
 
 const StarRating: React.FC<{ rating: number; size?: string }> = ({ rating, size = 'w-3.5 h-3.5' }) => (
@@ -49,32 +51,16 @@ const StarRating: React.FC<{ rating: number; size?: string }> = ({ rating, size 
 export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   sponsorshipPackages,
   sponsorshipOpportunities = [],
-  activatedOpportunityKeys = {},
+  myApplications,
   sponsorProfile,
   sponsorAlerts = [],
   onMarkAlertRead = (_id: string) => {},
   onMarkAllAlertsRead = () => {},
-  onSponsorshipAccepted = (_pkg: { tier: string; conferenceTitle: string }) => {},
+  onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'booth' | 'profile'>('marketplace');
-  const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'profile'>('marketplace');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
-
-  const [boothForm, setBoothForm] = useState({
-    companyName: sponsorProfile.companyName,
-    headline: '',
-    whitepaperLink: '',
-  });
-
-  const handleSaveBoothConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    showToast({
-      type: 'success',
-      title: 'Booth configuration saved',
-      message: 'Your digital exhibition booth has been updated.',
-    });
-  };
 
   const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
 
@@ -85,46 +71,79 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
   const verified = isSponsorVerified(sponsorProfile);
 
-  const handleApplySponsorship = (pkg: { tier: string; conferenceTitle: string }) => {
-    if (!verified) return;
-    setAppliedSuccess(true);
-    onSponsorshipAccepted(pkg);
-    setTimeout(() => setAppliedSuccess(false), 4000);
+  const applicationByPackageId = useMemo(() => {
+    const map = new Map<string, SponsorApplicationSummary>();
+    myApplications.forEach((a) => map.set(a.packageId, a));
+    return map;
+  }, [myApplications]);
+
+  const handleApplySponsorship = (packageId: string) => {
+    if (!verified || applicationByPackageId.has(packageId)) return;
+    onApplyForSponsorship(packageId);
   };
 
-  // Organizer-activated opportunity packages, flattened and ranked by fit for this sponsor.
-  const activatedOpportunities = useMemo(() => {
-    const rows: Array<{
-      key: string;
-      opportunityName: string;
-      opportunityDescription: string;
-      tier: string;
-      price: number;
-      slots: number;
-      benefits: string[];
-      matchScore: number;
-    }> = [];
-    sponsorshipOpportunities.forEach((opp) => {
-      opp.packages.forEach((pkg) => {
-        const key = `${opp.id}__${pkg.tier}`;
-        if (!activatedOpportunityKeys[key]) return;
-        rows.push({
-          key,
-          opportunityName: opp.name,
-          opportunityDescription: opp.description,
-          tier: pkg.tier,
-          price: pkg.price,
-          slots: pkg.slots,
-          benefits: pkg.benefits,
-          matchScore: sponsorOpportunityMatch(sponsorProfile, opp.idealSectors),
-        });
-      });
-    });
-    return rows.sort((a, b) => b.matchScore - a.matchScore);
-  }, [sponsorshipOpportunities, activatedOpportunityKeys, sponsorProfile]);
+  const opportunityById = useMemo(
+    () => new Map(sponsorshipOpportunities.map((o) => [o.id, o])),
+    [sponsorshipOpportunities]
+  );
+
+  // Packages an organizer created directly vs. ones activated from the opportunity catalog —
+  // the latter get a match % against this sponsor's real profile.
+  const standardPackages = sponsorshipPackages.filter((p) => !p.sourceOpportunityId);
+  const suggestedPackages = useMemo(() => {
+    return sponsorshipPackages
+      .filter((p) => !!p.sourceOpportunityId)
+      .map((pkg) => {
+        const opportunityId = pkg.sourceOpportunityId!.split('__')[0];
+        const opp = opportunityById.get(opportunityId);
+        return {
+          pkg,
+          opportunityName: opp?.name || pkg.tier,
+          opportunityDescription: opp?.description || '',
+          matchScore: sponsorOpportunityMatch(sponsorProfile, opp?.idealSectors || []),
+        };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore);
+  }, [sponsorshipPackages, opportunityById, sponsorProfile]);
 
   const sortedHistory = [...(sponsorProfile.sponsorshipHistory || [])].sort((a, b) => b.year - a.year);
   const historyYearsSpan = sortedHistory.length > 0 ? sortedHistory[0].year - sortedHistory[sortedHistory.length - 1].year + 1 : 0;
+
+  const renderApplyButton = (packageId: string) => {
+    const application = applicationByPackageId.get(packageId);
+    if (application) {
+      if (application.status === 'Approved') {
+        return (
+          <div className="w-full py-3 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-xl text-center flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4" />
+            Approved
+          </div>
+        );
+      }
+      if (application.status === 'Rejected') {
+        return (
+          <div className="w-full py-3 bg-slate-100 text-slate-500 font-bold text-xs rounded-xl text-center">
+            Not approved this time
+          </div>
+        );
+      }
+      return (
+        <div className="w-full py-3 bg-blue-50 text-blue-700 font-bold text-xs rounded-xl text-center flex items-center justify-center gap-1.5">
+          <Clock className="w-4 h-4" />
+          Applied — Pending Review
+        </div>
+      );
+    }
+    return (
+      <button
+        onClick={() => handleApplySponsorship(packageId)}
+        disabled={!verified}
+        className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-900"
+      >
+        {verified ? 'Apply for Sponsorship' : 'Applications Restricted'}
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -165,11 +184,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-              Sponsor Marketplace & Real-Time ROI Analytics
+              Sponsor Marketplace & ROI Dashboard
             </h1>
             <p className="text-xs text-slate-600">
               Connect corporate brands with world-class technical and scientific conferences, and track your
-              sponsorship packages, opportunities, and organizer ratings in one place.
+              sponsorship packages, applications, and organizer ratings in one place.
             </p>
           </div>
 
@@ -192,7 +211,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <div className="text-xs text-rose-800">
             <span className="font-bold">Your account cannot apply for new sponsorships right now.</span>{' '}
             {sponsorVerificationReason(sponsorProfile)} Conference Gate requires a minimum {SPONSOR_RATING_THRESHOLD.toFixed(1)}/5
-            rating from past organizers and attendees before a sponsor can register for opportunities. See your Sponsor
+            rating from past organizers before a sponsor can register for opportunities. See your Sponsor
             Profile tab for details and past feedback.
           </div>
         </div>
@@ -208,7 +227,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          Sponsorship Marketplace ({sponsorshipPackages.length + activatedOpportunities.length})
+          Sponsorship Marketplace ({sponsorshipPackages.length})
           {unreadAlertCount > 0 && (
             <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
               {unreadAlertCount}
@@ -224,16 +243,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           }`}
         >
           Sponsor ROI Dashboard & Leads
-        </button>
-        <button
-          onClick={() => setActiveTab('booth')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
-            activeTab === 'booth'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          Digital Exhibition Booth Setup
         </button>
         <button
           onClick={() => setActiveTab('profile')}
@@ -298,121 +307,131 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           )}
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-bold text-slate-900">Standard Sponsorship Tiers</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sponsorshipPackages.map((pkg) => (
-                <div
-                  key={pkg.id}
-                  className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-900 font-extrabold text-xs rounded-full uppercase tracking-wider">
-                        {pkg.tier} Tier
-                      </span>
-                      <span className="text-2xl font-extrabold text-slate-900">
-                        ${pkg.price.toLocaleString()}
-                      </span>
-                    </div>
+          {standardPackages.length === 0 && suggestedPackages.length === 0 ? (
+            <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
+              No sponsorship packages have been published by organizers yet. Check back soon.
+            </div>
+          ) : (
+            <>
+              {standardPackages.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="text-sm font-bold text-slate-900">Published Sponsorship Packages</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {standardPackages.map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-900 font-extrabold text-xs rounded-full uppercase tracking-wider">
+                              {pkg.tier} Tier
+                            </span>
+                            <span className="text-2xl font-extrabold text-slate-900">
+                              ${pkg.price.toLocaleString()}
+                            </span>
+                          </div>
 
-                    <div>
-                      <h3 className="font-bold text-base text-slate-900">{pkg.tier} Sponsorship Package</h3>
-                      <p className="text-xs text-slate-500">{pkg.conferenceTitle}</p>
-                    </div>
+                          <div>
+                            <h3 className="font-bold text-base text-slate-900">{pkg.tier} Sponsorship Package</h3>
+                            <p className="text-xs text-slate-500">{pkg.conferenceTitle}</p>
+                          </div>
 
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      {pkg.boothSpace} • {pkg.speakingOps}
-                    </p>
+                          {(pkg.boothSpace || pkg.speakingOps) && (
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              {[pkg.boothSpace, pkg.speakingOps].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
 
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <div className="text-[10px] font-bold uppercase text-slate-400">Included Benefits</div>
-                      <ul className="space-y-1.5 text-xs text-slate-700">
-                        {pkg.benefits.map((ben, idx) => (
-                          <li key={idx} className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <span>{ben}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                          <div className="text-[11px] text-slate-500">
+                            {pkg.availableSlots} of {pkg.totalSlots} slots available
+                          </div>
+
+                          {pkg.benefits.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                              <div className="text-[10px] font-bold uppercase text-slate-400">Included Benefits</div>
+                              <ul className="space-y-1.5 text-xs text-slate-700">
+                                {pkg.benefits.map((ben, idx) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>{ben}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {renderApplyButton(pkg.id)}
+                      </div>
+                    ))}
                   </div>
-
-                  <button
-                    onClick={() => handleApplySponsorship({ tier: pkg.tier, conferenceTitle: pkg.conferenceTitle })}
-                    disabled={!verified}
-                    className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-900"
-                  >
-                    {verified ? 'Apply for Sponsorship' : 'Applications Restricted'}
-                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {activatedOpportunities.length > 0 && (
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Organizer-Suggested Sponsorship Opportunities</h2>
-                <p className="text-xs text-slate-500">
-                  Curated add-on opportunities the organizer has activated for this conference, ranked by how well they match your
-                  sponsor profile.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activatedOpportunities.map((row) => (
-                  <div
-                    key={row.key}
-                    className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          {row.matchScore}% Match
-                        </span>
-                        <span className="text-2xl font-extrabold text-slate-900">
-                          ${row.price.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="font-bold text-base text-slate-900">{row.opportunityName}</h3>
-                        <p className="text-xs text-slate-500">{row.tier} · Up to {row.slots} sponsor{row.slots === 1 ? '' : 's'}</p>
-                      </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed">{row.opportunityDescription}</p>
-
-                      <div className="space-y-2 pt-2 border-t border-slate-100">
-                        <div className="text-[10px] font-bold uppercase text-slate-400">Included Benefits</div>
-                        <ul className="space-y-1.5 text-xs text-slate-700">
-                          {row.benefits.map((ben, idx) => (
-                            <li key={idx} className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{ben}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleApplySponsorship({ tier: row.tier, conferenceTitle: row.opportunityName })}
-                      disabled={!verified}
-                      className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-900"
-                    >
-                      {verified ? 'Apply for Sponsorship' : 'Applications Restricted'}
-                    </button>
+              {suggestedPackages.length > 0 && (
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900">Organizer-Suggested Sponsorship Opportunities</h2>
+                    <p className="text-xs text-slate-500">
+                      Curated add-on opportunities organizers have activated, ranked by how well they match your
+                      sponsor profile.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {suggestedPackages.map(({ pkg, opportunityName, opportunityDescription, matchScore }) => (
+                      <div
+                        key={pkg.id}
+                        className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              {matchScore}% Match
+                            </span>
+                            <span className="text-2xl font-extrabold text-slate-900">
+                              ${pkg.price.toLocaleString()}
+                            </span>
+                          </div>
 
-          {appliedSuccess && (
-            <div className="p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold text-center">
-              ✓ Sponsorship application submitted! The conference organizing committee will contact your team for branding assets.
-            </div>
+                          <div>
+                            <h3 className="font-bold text-base text-slate-900">{opportunityName}</h3>
+                            <p className="text-xs text-slate-500">
+                              {pkg.tier} · {pkg.conferenceTitle}
+                            </p>
+                          </div>
+
+                          {opportunityDescription && (
+                            <p className="text-xs text-slate-600 leading-relaxed">{opportunityDescription}</p>
+                          )}
+
+                          <div className="text-[11px] text-slate-500">
+                            {pkg.availableSlots} of {pkg.totalSlots} slots available
+                          </div>
+
+                          {pkg.benefits.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                              <div className="text-[10px] font-bold uppercase text-slate-400">Included Benefits</div>
+                              <ul className="space-y-1.5 text-xs text-slate-700">
+                                {pkg.benefits.map((ben, idx) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <span>{ben}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {renderApplyButton(pkg.id)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -422,15 +441,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Sponsorship Packages</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Packages in Marketplace</div>
               <div className="text-2xl font-extrabold text-slate-900">{sponsorshipPackages.length}</div>
-              <div className="text-[11px] font-semibold text-slate-500">Available across the marketplace</div>
+              <div className="text-[11px] font-semibold text-slate-500">Published across all conferences</div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Organizer-Suggested Opportunities</div>
-              <div className="text-2xl font-extrabold text-blue-600">{activatedOpportunities.length}</div>
-              <div className="text-[11px] font-semibold text-slate-500">Matched to your sponsor profile</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Applications Submitted</div>
+              <div className="text-2xl font-extrabold text-blue-600">{myApplications.length}</div>
+              <div className="text-[11px] font-semibold text-slate-500">
+                {myApplications.filter((a) => a.status === 'Pending').length} pending review
+              </div>
             </div>
 
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
@@ -447,68 +468,21 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           </div>
 
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500">
-            Logo impression tracking, digital booth traffic, and lead-capture analytics aren't wired up to live
-            tracking yet — this dashboard will populate with real engagement data as those integrations go live.
+            Logo impression tracking and digital booth traffic analytics aren't wired up to live tracking yet — the
+            numbers above (packages, applications, rating, and history) are real and update as you apply, get
+            approved, and receive organizer feedback.
           </div>
         </div>
       )}
 
-      {/* Tab 3: Digital Booth Setup */}
-      {activeTab === 'booth' && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6 max-w-2xl mx-auto shadow-xs">
-          <h2 className="text-lg font-bold text-slate-900">Digital Exhibition Booth Customizer</h2>
-          <p className="text-xs text-slate-500">
-            Configure your corporate logo, promotional video embed, representative booth staff, and downloadable whitepapers.
-          </p>
-
-          <form onSubmit={handleSaveBoothConfig} className="space-y-4 text-xs">
-            <div className="space-y-1.5">
-              <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Company Name</label>
-              <input
-                type="text"
-                value={boothForm.companyName}
-                onChange={(e) => setBoothForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Booth Headline / Motto</label>
-              <input
-                type="text"
-                value={boothForm.headline}
-                onChange={(e) => setBoothForm((prev) => ({ ...prev, headline: e.target.value }))}
-                placeholder="e.g. Pioneering AI-Driven Subsurface Energy Solutions"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">Whitepaper Download Link</label>
-              <input
-                type="text"
-                value={boothForm.whitepaperLink}
-                onChange={(e) => setBoothForm((prev) => ({ ...prev, whitepaperLink: e.target.value }))}
-                placeholder="https://yourcompany.com/whitepaper.pdf"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-              />
-            </div>
-
-            <button type="submit" className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
-              Save Booth Configuration
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Tab 4: Sponsor Profile & Verification */}
+      {/* Tab 3: Sponsor Profile & Verification */}
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <img
-                  src={sponsorProfile.logo}
+                  src={sponsorProfile.logo || undefined}
                   alt={sponsorProfile.companyName}
                   className="w-16 h-16 rounded-2xl object-cover ring-2 ring-slate-100"
                 />
@@ -537,7 +511,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
             <p className="text-xs text-slate-600 leading-relaxed">{sponsorProfile.description}</p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Active Sponsorships</div>
                 <div className="text-lg font-extrabold text-slate-900">{sponsorProfile.activeSponsorshipsCount}</div>
@@ -545,14 +519,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Leads Captured</div>
                 <div className="text-lg font-extrabold text-blue-700">{sponsorProfile.leadsCaptured}</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                <div className="text-[10px] font-bold text-slate-400 uppercase">ROI Score</div>
-                <div className="text-lg font-extrabold text-emerald-700">{sponsorProfile.roiScore}</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                <div className="text-[10px] font-bold text-slate-400 uppercase">Profile Views</div>
-                <div className="text-lg font-extrabold text-slate-900">{sponsorProfile.profileViews.toLocaleString()}</div>
               </div>
             </div>
 
@@ -599,7 +565,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <MessageSquareQuote className="w-5 h-5 text-blue-600" />
-              <h3 className="font-bold text-sm text-slate-900">Feedback from Organizers & Professionals</h3>
+              <h3 className="font-bold text-sm text-slate-900">Feedback from Organizers</h3>
             </div>
             <div className="space-y-3">
               {sponsorProfile.reviews.map((r) => (

@@ -243,6 +243,41 @@ export async function initDb(): Promise<void> {
       recipient_email TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS sponsorship_packages (
+      id TEXT PRIMARY KEY,
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      tier TEXT NOT NULL,
+      price REAL NOT NULL DEFAULT 0,
+      benefits TEXT NOT NULL DEFAULT '[]',
+      booth_space TEXT,
+      speaking_ops TEXT,
+      total_slots INTEGER NOT NULL DEFAULT 1,
+      source_opportunity_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsorship_applications (
+      id TEXT PRIMARY KEY,
+      package_id TEXT NOT NULL REFERENCES sponsorship_packages(id),
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Approved', 'Rejected')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      decided_at TEXT,
+      UNIQUE(package_id, sponsor_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsor_reviews (
+      id TEXT PRIMARY KEY,
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      conference_title TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   const submissionColumns = await tableColumns("submissions");
@@ -391,5 +426,39 @@ export interface ConferenceFeedbackRow {
   overall_score: number;
   comment: string | null;
   recipient_email: string | null;
+  created_at: string;
+}
+
+export interface SponsorshipPackageRow {
+  id: string;
+  conference_id: string;
+  conference_title: string;
+  organizer_id: string;
+  tier: string;
+  price: number;
+  benefits: string;
+  booth_space: string | null;
+  speaking_ops: string | null;
+  total_slots: number;
+  source_opportunity_id: string | null;
+  created_at: string;
+}
+
+export interface SponsorshipApplicationRow {
+  id: string;
+  package_id: string;
+  sponsor_id: string;
+  status: "Pending" | "Approved" | "Rejected";
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface SponsorReviewRow {
+  id: string;
+  sponsor_id: string;
+  organizer_id: string;
+  conference_title: string;
+  rating: number;
+  comment: string | null;
   created_at: string;
 }

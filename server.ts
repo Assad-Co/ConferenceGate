@@ -9,6 +9,7 @@ import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./s
 import { googleSearchRouter } from "./server/googleSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
+import { sponsorsRouter } from "./server/sponsors";
 import { initDb } from "./server/db";
 
 async function startServer() {
@@ -40,6 +41,9 @@ async function startServer() {
 
   // Persistent, real-time direct messaging
   app.use("/api/messages", messagesRouter);
+
+  // Real sponsorship packages, applications, and reviews
+  app.use("/api/sponsors", sponsorsRouter);
 
   // AI Routes using Gemini SDK
   const getAIClient = () => {

@@ -269,21 +269,21 @@ export interface AbstractSubmission {
   reviews: AbstractReview[];
 }
 
+// A real, organizer-published sponsorship package for one of their own conferences (see
+// src/api/sponsors.ts). availableSlots is computed server-side from approved applications.
 export interface SponsorshipPackage {
   id: string;
   conferenceId: string;
   conferenceTitle: string;
-  tier: 'Diamond' | 'Platinum' | 'Gold' | 'Silver' | 'Bronze' | 'Specialty';
+  organizerId: string;
+  tier: string;
   price: number;
   benefits: string[];
-  logoExposure: string;
-  websiteExposure: string;
-  appExposure: string;
   boothSpace: string;
   speakingOps: string;
-  complimentaryRegistrations: number;
   availableSlots: number;
   totalSlots: number;
+  sourceOpportunityId?: string | null;
 }
 
 export interface SponsorshipOpportunity {
@@ -298,7 +298,7 @@ export interface SponsorshipOpportunity {
 export interface SponsorReview {
   id: string;
   reviewerName: string;
-  reviewerRole: 'Organizer' | 'Attendee' | 'Committee Chair';
+  reviewerRole: 'Organizer';
   conferenceTitle: string;
   rating: number;
   comment: string;
@@ -311,22 +311,18 @@ export interface SponsorHistoryEntry {
   tier: string;
 }
 
+// A sponsor's real, derived profile — rating/reviews/history/verification are all computed
+// from real sponsor_reviews and sponsorship_applications rows (see src/api/sponsors.ts).
+// Company identity (name/logo/description/industry) comes from the sponsor's own account
+// fields (organization/avatar/bio/title), same as the organizer profile.
 export interface SponsorProfile {
   id: string;
   companyName: string;
-  logo: string;
+  logo: string | null;
   description: string;
   industry: string;
-  products: string[];
-  preferredSectors: string[];
-  preferredRegions: string[];
-  budgetRange: string;
   activeSponsorshipsCount: number;
   leadsCaptured: number;
-  roiScore: number;
-  profileViews: number;
-  logoImpressions: number;
-  contactEmail: string;
   rating: number;
   reviewsCount: number;
   reviews: SponsorReview[];
