@@ -160,10 +160,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  // Organizer and sponsor accounts manage their own dashboard, not a personal attendee
+  // journey — the Home feed and My Abstracts tracker aren't relevant to them.
+  const isAttendeeRole = !isOrganizerRole && !isSponsorRole;
   const navItems: Array<{ id: string; label: string; icon: React.ElementType; match: string[] }> = [
-    { id: 'home', label: 'Home', icon: Home, match: ['home'] },
-    { id: 'discover', label: 'Discover', icon: Layers, match: ['discover'] },
-    { id: 'abstracts', label: 'My Abstracts', icon: FileText, match: ['abstracts'] },
+    ...(isAttendeeRole ? [{ id: 'home', label: 'Home', icon: Home, match: ['home'] }] : []),
+    ...(isAttendeeRole ? [{ id: 'discover', label: 'Discover', icon: Layers, match: ['discover'] }] : []),
+    ...(isAttendeeRole ? [{ id: 'abstracts', label: 'My Abstracts', icon: FileText, match: ['abstracts'] }] : []),
     { id: 'community', label: 'Feed', icon: Users, match: ['community', 'feed'] },
     ...(role === 'reviewer' ? [{ id: 'reviewer', label: 'Reviewer', icon: Award, match: ['reviewer', 'reviews'] }] : []),
     ...(role === 'organizer' ? [{ id: 'organizer', label: 'Organizer', icon: Building2, match: ['organizer'] }] : []),
@@ -177,7 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Brand Logo + Search, LinkedIn-style */}
           <div className="flex items-center gap-2 min-w-[132px] md:min-w-[250px] shrink-0 md:shrink">
             <button
-              onClick={() => handleTabChange('home')}
+              onClick={() => handleTabChange(isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'home')}
               className="flex items-center group text-left cursor-pointer shrink-0"
             >
               <Logo className="h-11 w-auto" />
