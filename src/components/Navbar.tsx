@@ -200,8 +200,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Center Icon Nav, LinkedIn-style — always visible, never tucked behind a menu */}
-          <nav className="flex items-center h-14 shrink-0">
+          {/* Center Icon Nav, LinkedIn-style — always visible, never tucked behind a menu.
+              Extra padding/gap so a short tab list (e.g. organizer/sponsor accounts, which
+              only get 2 tabs) still fills its space instead of looking sparse. */}
+          <nav className="flex items-center gap-1 sm:gap-3 lg:gap-5 h-14 shrink-0">
             {navItems.map((item) => {
               const isActive = item.match.includes(activeTab);
               const Icon = item.icon;
@@ -210,7 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={item.id}
                   onClick={() => handleTabChange(item.id)}
                   title={item.label}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2.5 sm:px-4 h-14 min-w-[44px] sm:min-w-[64px] border-b-2 transition-colors cursor-pointer shrink-0 ${
+                  className={`flex flex-col items-center justify-center gap-0.5 px-3 sm:px-5 lg:px-6 h-14 min-w-[44px] sm:min-w-[72px] border-b-2 transition-colors cursor-pointer shrink-0 ${
                     isActive
                       ? 'border-slate-900 text-slate-900'
                       : 'border-transparent text-slate-500 hover:text-slate-900'
