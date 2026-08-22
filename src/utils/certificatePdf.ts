@@ -70,7 +70,6 @@ export function downloadCertificatePDF(cert: CertificateData) {
   doc.text(`Issued by: ${cert.issuer}`, 80, footerY + 22);
   doc.text(`Date: ${cert.date}`, 80, footerY + 38);
   doc.text(`Verification code: ${cert.verificationHash}`, pageWidth - 80, footerY + 22, { align: 'right' });
-  doc.text('Verify at conferencegate.example/verify', pageWidth - 80, footerY + 38, { align: 'right' });
 
   const filename = `${cert.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`;
   doc.save(filename);

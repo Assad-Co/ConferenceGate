@@ -57,9 +57,11 @@ async function startServer() {
       const ai = getAIClient();
 
       if (!ai) {
-        // Fallback response if GEMINI_API_KEY is not configured
+        // GEMINI_API_KEY is not configured — flagged so the client shows this as a
+        // fallback rather than presenting it as a live AI response.
         return res.json({
           reply: `[Conference Gate AI Assistant - Standby Mode]\n\nI can help you discover conferences, match abstract reviewers, recommend technical committee candidates, and optimize sponsorship ROI. Key recommendation for ${userRole || 'professional'}: Explore our featured Call for Papers in Energy and AI Innovation!`,
+          isFallback: true,
         });
       }
 
@@ -95,13 +97,9 @@ Additional Context: ${JSON.stringify(context || {})}`;
       const ai = getAIClient();
 
       if (!ai) {
-        // Mock fallback matching calculation
-        const matches = (reviewers || []).map((rev: any, idx: number) => ({
-          reviewerId: rev.id,
-          matchPercentage: Math.min(98, 92 - idx * 5),
-          reason: `High expertise alignment in ${abstractTopic || 'topic'} and past publications.`,
-        }));
-        return res.json({ matches });
+        // GEMINI_API_KEY is not configured — flagged so the client falls back to its
+        // own honest, review-count-derived ranking instead of presenting this as live AI.
+        return res.json({ matches: [], isFallback: true });
       }
 
       const prompt = `Analyze this abstract submission and rank the candidate reviewers based on subject matter alignment, previous review activity, and topic relevance.
@@ -143,12 +141,9 @@ Return a JSON array of objects with fields: reviewerId (string), matchPercentage
       const ai = getAIClient();
 
       if (!ai) {
-        return res.json({
-          score: 88,
-          clarity: "Excellent structure and well-defined research problem statement.",
-          suggestedTracks: ["Technical Innovation", "Applied Geosciences & Data Science"],
-          improvements: ["Consider expanding on quantitative experimental methodology in paragraph 2."],
-        });
+        // GEMINI_API_KEY is not configured — flagged so the client shows generic
+        // guidance rather than presenting a fabricated per-abstract score as real.
+        return res.json({ isFallback: true });
       }
 
       const prompt = `Perform a scientific/technical quality pre-screening check for this abstract submission:

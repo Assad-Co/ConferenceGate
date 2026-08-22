@@ -64,7 +64,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
       });
       if (!res.ok) throw new Error('AI abstract check failed');
       const data = await res.json();
-      if (typeof data.score !== 'number') throw new Error('AI abstract check returned no score');
+      if (data.isFallback || typeof data.score !== 'number') throw new Error('AI abstract check unavailable');
       setAiFeedback({ ...data, isFallback: false });
     } catch (e) {
       setAiFeedback({
