@@ -19,6 +19,7 @@ import { UserProfileView } from './components/UserProfileView';
 import { CommunityFeed } from './components/CommunityFeed';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
+import { EditProfileModal } from './components/EditProfileModal';
 import { CertificatesView } from './components/CertificatesView';
 import { PersonProfileModal } from './components/PersonProfileModal';
 import { MessagesPanel } from './components/MessagesPanel';
@@ -522,11 +523,11 @@ export function App() {
     setActiveRole(mappedRole);
     const avatar = resolveAvatar(user.avatar, user.name);
     if (mappedRole === 'Organizer') {
-      setOrganizerNameOverride(user.name);
+      setOrganizerNameOverride(user.organization || user.name);
       setOrganizerLogoOverride(avatar);
       setActiveTab('organizer');
     } else if (mappedRole === 'Sponsor') {
-      setSponsorNameOverride(user.name);
+      setSponsorNameOverride(user.organization || user.name);
       setSponsorLogoOverride(avatar);
       setActiveTab('sponsor');
     } else {
@@ -593,9 +594,9 @@ export function App() {
       bio: updatedUser.bio || '',
     }));
     if (updatedUser.role === 'organizer') {
-      setOrganizerNameOverride(updatedUser.name);
+      setOrganizerNameOverride(updatedUser.organization || updatedUser.name);
     } else if (updatedUser.role === 'sponsor') {
-      setSponsorNameOverride(updatedUser.name);
+      setSponsorNameOverride(updatedUser.organization || updatedUser.name);
     }
   };
 
@@ -653,6 +654,7 @@ export function App() {
   const [isSubmitAbstractOpen, setIsSubmitAbstractOpen] = useState(false);
   const [submitAbstractConfId, setSubmitAbstractConfId] = useState<string | undefined>();
   const [isBadgeOpen, setIsBadgeOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   // Handlers
   const handleRoleChange = (role: UserRole) => {
@@ -938,6 +940,7 @@ export function App() {
           setSponsorLogoOverride(dataUrl);
           updateAvatar(dataUrl).then(setAuthUser).catch(() => {});
         }}
+        onOpenEditProfile={() => setIsEditProfileOpen(true)}
         notifications={notifications}
         sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
@@ -1051,8 +1054,12 @@ export function App() {
           <OrganizerDashboard
             conferences={conferences}
             submissions={submissions}
-            organizerName={organizerNameOverride || authUser.name}
+            organizerName={organizerNameOverride || authUser.organization || authUser.name}
             organizerLogo={organizerLogoOverride || resolveAvatar(authUser.avatar, authUser.name)}
+            organizerBio={authUser.bio || ''}
+            organizerCity={authUser.city || ''}
+            organizerCountry={authUser.country || ''}
+            onEditOrganizerProfile={() => setIsEditProfileOpen(true)}
             registrationCountsByConference={registrationCountsByConference}
             feedbackSummary={feedbackSummary}
             sponsorshipPackages={sampleSponsorshipPackages}
@@ -1156,6 +1163,24 @@ export function App() {
         onClose={() => setIsBadgeOpen(false)}
         userProfile={userProfile}
       />
+
+      {(authUser.role === 'organizer' || authUser.role === 'sponsor') && (
+        <EditProfileModal
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+          variant={authUser.role}
+          initialValues={{
+            name: authUser.name,
+            title: authUser.title || '',
+            organization: authUser.organization || '',
+            department: authUser.department || '',
+            city: authUser.city || '',
+            country: authUser.country || '',
+            bio: authUser.bio || '',
+          }}
+          onSave={handleEditProfile}
+        />
+      )}
 
       <PersonProfileModal
         author={viewedAuthor}
