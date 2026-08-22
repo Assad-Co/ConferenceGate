@@ -964,7 +964,7 @@ export function App() {
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
       >
-        {activeTab === 'home' && (
+        {activeTab === 'home' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <HomeLanding
             conferences={conferences}
             onSelectConference={handleSelectConference}
@@ -979,7 +979,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'discover' && (
+        {activeTab === 'discover' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <DiscoveryEngine
             conferences={conferences}
             onSelectConference={handleSelectConference}
@@ -1025,7 +1025,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'abstracts' && (
+        {activeTab === 'abstracts' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <AbstractTrackerView
             submissions={submissions}
             onOpenNewSubmission={() => setIsSubmitAbstractOpen(true)}
