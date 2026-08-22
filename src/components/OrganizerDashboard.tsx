@@ -46,12 +46,14 @@ import {
   MessageSquareQuote,
   MapPin,
 } from 'lucide-react';
-import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
+import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity } from '../types';
 import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+import { resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 import { sendBroadcast, fetchMyBroadcasts, OrganizerBroadcast } from '../api/activity';
 import { sendMessage } from '../api/messages';
+import { SponsorApplicant, ReviewableSponsor } from '../api/sponsors';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
@@ -66,10 +68,10 @@ interface OrganizerDashboardProps {
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities: SponsorshipOpportunity[];
-  activatedOpportunityKeys: Record<string, boolean>;
-  onToggleOpportunityPackage: (key: string) => void;
-  sponsorApplicants?: SponsorProfile[];
-  reviewableSponsors?: SponsorProfile[];
+  onActivateOpportunityPackage: (opp: { key: string; tier: string; price: number; slots: number; benefits: string[] }) => void;
+  sponsorApplicants?: SponsorApplicant[];
+  onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
+  reviewableSponsors?: ReviewableSponsor[];
   onReviewSponsor?: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string }) => void;
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
@@ -212,9 +214,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
   sponsorshipOpportunities,
-  activatedOpportunityKeys,
-  onToggleOpportunityPackage,
+  onActivateOpportunityPackage,
   sponsorApplicants = [],
+  onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
   reviewableSponsors = [],
   onReviewSponsor = (_sponsorId: string, _review: { conferenceTitle: string; rating: number; comment: string }) => {},
   onCreateConference,
@@ -238,15 +240,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(s.status)
     ).length;
     const totalReviews = relevantSubmissions.reduce((sum, s) => sum + s.reviews.length, 0);
-    const activeOpportunityCount = Object.values(activatedOpportunityKeys).filter(Boolean).length;
     return {
       totalRegistrations,
       submissionsCount: relevantSubmissions.length,
       acceptedSubmissions,
       totalReviews,
-      activeSponsorshipPackages: sponsorshipPackages.length + activeOpportunityCount,
+      activeSponsorshipPackages: sponsorshipPackages.length,
     };
-  }, [conferences, submissions, registrationCountsByConference, activatedOpportunityKeys, sponsorshipPackages]);
+  }, [conferences, submissions, registrationCountsByConference, sponsorshipPackages]);
 
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
   const [aiMatches, setAiMatches] = useState<any[] | null>(null);
@@ -726,21 +727,24 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     fuchsia: Gift,
   };
 
-  const verifiedSponsorCount = sponsorApplicants.filter((s) => isSponsorVerified(s)).length;
+  const verifiedSponsorCount = new Set(
+    sponsorApplicants.filter((a) => isSponsorVerified(a.sponsor)).map((a) => a.sponsor.id)
+  ).size;
   const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, string>>({});
-  const [approvedApplicantIds, setApprovedApplicantIds] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
-  const handleApproveApplicant = (applicant: SponsorProfile) => {
-    setApprovedApplicantIds((prev) => ({ ...prev, [applicant.id]: true }));
-    onNotifySponsors(
-      'Sponsorship Registration Approved',
-      `${applicant.companyName}'s registration has been approved by the organizing committee.`
-    );
+  const handleDecideApplicant = (applicant: SponsorApplicant, status: 'Approved' | 'Rejected') => {
+    onDecideApplication(applicant.applicationId, status);
+    if (status === 'Approved') {
+      onNotifySponsors(
+        'Sponsorship Registration Approved',
+        `${applicant.sponsor.companyName}'s registration has been approved by the organizing committee.`
+      );
+    }
     showToast({
-      type: 'success',
-      title: 'Registration approved',
-      message: `${applicant.companyName} has been notified and approved for sponsorship.`,
+      type: status === 'Approved' ? 'success' : 'info',
+      title: status === 'Approved' ? 'Registration approved' : 'Registration rejected',
+      message: `${applicant.sponsor.companyName} has been ${status.toLowerCase()}.`,
     });
   };
 
@@ -759,6 +763,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     rating: 0,
     comment: '',
   });
+
+  // reviewableSponsors/conferences load asynchronously after mount — default the form once they arrive.
+  useEffect(() => {
+    setSponsorReviewDraft((prev) => ({
+      ...prev,
+      sponsorId: prev.sponsorId || reviewableSponsors[0]?.id || '',
+      conferenceTitle: prev.conferenceTitle || conferences[0]?.title || '',
+    }));
+  }, [reviewableSponsors, conferences]);
   const [sponsorReviewsSent, setSponsorReviewsSent] = useState<
     Array<{ id: string; sponsorName: string; conferenceTitle: string; rating: number; comment: string; date: string }>
   >([]);
@@ -1164,6 +1177,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           {/* Managed Conferences List */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-4 shadow-xs">
             <h3 className="text-base font-bold text-slate-900">Managed Conferences</h3>
+            {conferences.length === 0 ? (
+              <div className="text-xs text-slate-400 font-medium py-6 text-center">
+                You haven't created a conference yet. Use the Create Conference Wizard tab to publish your first one.
+              </div>
+            ) : (
             <div className="space-y-4">
               {(conferences || []).map((conf) => (
                 <div key={conf.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -1191,6 +1209,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       )}
@@ -2383,7 +2402,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   <div className="p-4 space-y-2">
                     {opp.packages.map((pkg) => {
                       const key = `${opp.id}__${pkg.tier}`;
-                      const isActive = !!activatedOpportunityKeys[key];
+                      const isActive = sponsorshipPackages.some((p) => p.sourceOpportunityId === key);
                       return (
                         <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                           <div className="flex items-center justify-between gap-3">
@@ -2401,11 +2420,21 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                             </div>
                           </div>
                           <button
-                            onClick={() => onToggleOpportunityPackage(key)}
-                            className={`mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors ${
+                            onClick={() =>
+                              !isActive &&
+                              onActivateOpportunityPackage({
+                                key,
+                                tier: pkg.tier,
+                                price: pkg.price,
+                                slots: pkg.slots,
+                                benefits: pkg.benefits,
+                              })
+                            }
+                            disabled={isActive}
+                            className={`mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors ${
                               isActive
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-blue-900 hover:bg-blue-950 text-white'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                                : 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
                             }`}
                           >
                             {isActive ? '✓ Active in Marketplace' : 'Activate for This Conference'}
@@ -2471,18 +2500,19 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   Sponsor Verification Queue
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Every applicant is screened against past ratings from organizers and attendees. Sponsors averaging
-                  below {SPONSOR_RATING_THRESHOLD.toFixed(1)}/5 are automatically restricted from registering — no manual
+                  Every applicant is screened against past ratings from organizers. Sponsors averaging below{' '}
+                  {SPONSOR_RATING_THRESHOLD.toFixed(1)}/5 are automatically restricted from approval — no manual
                   review needed to keep low-quality sponsors out.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {sponsorApplicants.map((applicant) => {
-                  const eligible = isSponsorVerified(applicant);
+                  const eligible = isSponsorVerified(applicant.sponsor);
+                  const decided = applicant.status !== 'Pending';
                   return (
                     <div
-                      key={applicant.id}
+                      key={applicant.applicationId}
                       className={`bg-white rounded-2xl border p-5 space-y-3 shadow-xs ${
                         eligible ? 'border-slate-200' : 'border-rose-200'
                       }`}
@@ -2490,13 +2520,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={applicant.logo}
-                            alt={applicant.companyName}
+                            src={resolveAvatar(applicant.sponsor.logo, applicant.sponsor.companyName)}
+                            alt={applicant.sponsor.companyName}
                             className="w-11 h-11 rounded-xl object-cover shrink-0"
                           />
                           <div className="min-w-0">
-                            <div className="font-bold text-xs text-slate-900 truncate">{applicant.companyName}</div>
-                            <div className="text-[11px] text-slate-500 truncate">{applicant.industry}</div>
+                            <div className="font-bold text-xs text-slate-900 truncate">{applicant.sponsor.companyName}</div>
+                            <div className="text-[11px] text-slate-500 truncate">
+                              {applicant.sponsor.industry || 'Corporate Sponsor'} · Applied for {applicant.tier} ·{' '}
+                              {applicant.conferenceTitle}
+                            </div>
                           </div>
                         </div>
                         {eligible ? (
@@ -2518,45 +2551,64 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                             <Star
                               key={n}
                               className={`w-3.5 h-3.5 ${
-                                n <= Math.round(applicant.rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                                n <= Math.round(applicant.sponsor.rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
                               }`}
                             />
                           ))}
                         </div>
-                        <span className="text-xs font-bold text-slate-700">{applicant.rating.toFixed(1)} / 5</span>
-                        <span className="text-[10px] text-slate-400">({applicant.reviewsCount} reviews)</span>
+                        <span className="text-xs font-bold text-slate-700">{applicant.sponsor.rating.toFixed(1)} / 5</span>
+                        <span className="text-[10px] text-slate-400">({applicant.sponsor.reviewsCount} reviews)</span>
                       </div>
 
                       <div className="text-[11px] text-slate-500">
-                        {applicant.sponsorshipHistory.length} sponsorship{applicant.sponsorshipHistory.length === 1 ? '' : 's'} on
-                        record{applicant.sponsorshipHistory[0] && (
-                          <> · most recent: {applicant.sponsorshipHistory[0].conferenceTitle} ({applicant.sponsorshipHistory[0].year})</>
+                        {applicant.sponsor.sponsorshipHistory.length} sponsorship
+                        {applicant.sponsor.sponsorshipHistory.length === 1 ? '' : 's'} on record
+                        {applicant.sponsor.sponsorshipHistory[0] && (
+                          <>
+                            {' '}
+                            · most recent: {applicant.sponsor.sponsorshipHistory[0].conferenceTitle} (
+                            {applicant.sponsor.sponsorshipHistory[0].year})
+                          </>
                         )}
                       </div>
 
                       {!eligible && (
                         <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2">
-                          {sponsorVerificationReason(applicant)}
+                          {sponsorVerificationReason(applicant.sponsor)}
                         </p>
                       )}
 
-                      <button
-                        disabled={!eligible || !!approvedApplicantIds[applicant.id]}
-                        onClick={() => handleApproveApplicant(applicant)}
-                        className={`w-full py-2 rounded-xl font-bold text-[11px] transition-colors ${
-                          approvedApplicantIds[applicant.id]
-                            ? 'bg-emerald-50 text-emerald-700 cursor-default'
-                            : eligible
-                            ? 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
-                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                        }`}
-                      >
-                        {approvedApplicantIds[applicant.id]
-                          ? 'Approved ✓'
-                          : eligible
-                          ? 'Approve Registration'
-                          : 'Blocked — Rating Below Threshold'}
-                      </button>
+                      {decided ? (
+                        <div
+                          className={`w-full py-2 rounded-xl font-bold text-[11px] text-center ${
+                            applicant.status === 'Approved'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {applicant.status === 'Approved' ? 'Approved ✓' : 'Rejected'}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={!eligible}
+                            onClick={() => handleDecideApplicant(applicant, 'Approved')}
+                            className={`flex-1 py-2 rounded-xl font-bold text-[11px] transition-colors ${
+                              eligible
+                                ? 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {eligible ? 'Approve Registration' : 'Blocked — Rating Below Threshold'}
+                          </button>
+                          <button
+                            onClick={() => handleDecideApplicant(applicant, 'Rejected')}
+                            className="px-3 py-2 rounded-xl font-bold text-[11px] border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

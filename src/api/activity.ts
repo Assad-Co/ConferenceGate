@@ -209,6 +209,13 @@ export async function fetchCreatedConferences(): Promise<Conference[]> {
   return data.conferences;
 }
 
+/** Only the conferences the current organizer created — scopes their dashboard to their own data. */
+export async function fetchMyCreatedConferences(): Promise<Conference[]> {
+  const res = await fetch('/api/activity/conferences/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.conferences;
+}
+
 export async function recordConferenceAction(
   conferenceId: string,
   conferenceTitle: string,

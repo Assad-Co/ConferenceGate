@@ -374,9 +374,15 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
   res.status(201).json({ ok: true, overallScore });
 }));
 
-activityRouter.get("/feedback/summary", asyncHandler(async (_req: AuthedRequest, res: Response) => {
+// Scoped to feedback left on conferences this organizer created — not a platform-wide average,
+// which would mix in every other organizer's events.
+activityRouter.get("/feedback/summary", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const row = (await dbGet<{ avgScore: number | null; count: number }>(
-    "SELECT AVG(overall_score) as avgScore, COUNT(*) as count FROM conference_feedback"
+    `SELECT AVG(cf.overall_score) as avgScore, COUNT(*) as count
+     FROM conference_feedback cf
+     JOIN created_conferences cc ON cc.id = cf.conference_id
+     WHERE cc.organizer_id = ?`,
+    [req.userId!]
   ))!;
   res.json({ averageScore: row.avgScore || 0, responseCount: row.count });
 }));
@@ -483,6 +489,17 @@ activityRouter.post("/conferences", asyncHandler(async (req: AuthedRequest, res:
 
 activityRouter.get("/conferences", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<CreatedConferenceRow>("SELECT * FROM created_conferences ORDER BY created_at DESC");
+  res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
+}));
+
+// Only the conferences this specific organizer created — used to scope the Organizer Dashboard
+// (stats, analytics, committee roster, etc.) to their own data instead of every conference on
+// the platform.
+activityRouter.get("/conferences/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<CreatedConferenceRow>(
+    "SELECT * FROM created_conferences WHERE organizer_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
   res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
 }));
 

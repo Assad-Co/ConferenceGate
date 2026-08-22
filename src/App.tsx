@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar, updateProfile, updateReviewerAvailability } from './api/auth';
 import { resolveAvatar } from './utils/avatar';
+import { isSponsorVerified } from './utils/sponsorVerification';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
@@ -39,6 +40,7 @@ import {
   fetchFeedbackSummary,
   createConferenceRemote,
   fetchCreatedConferences,
+  fetchMyCreatedConferences,
   fetchOrganizerActivityFeed,
   OrganizerActivityItem,
 } from './api/activity';
@@ -53,16 +55,27 @@ import {
   MessageSocketEvent,
   PublicUser,
 } from './api/messages';
+import {
+  fetchSponsorshipPackages,
+  createSponsorshipPackage,
+  applyForSponsorship,
+  fetchMySponsorApplications,
+  fetchApplicantsForMyPackages,
+  decideSponsorApplication,
+  fetchReviewableSponsors,
+  submitSponsorReview,
+  fetchMySponsorProfile,
+  SponsorApplicationSummary,
+  SponsorApplicant,
+  ReviewableSponsor,
+} from './api/sponsors';
 
 import {
   sampleConferences,
   currentUserProfile,
   sampleFeedPosts,
   sampleReviewOpportunities,
-  sampleSponsorshipPackages,
-  sampleSponsorProfile,
   sampleSponsorshipOpportunities,
-  sampleSponsorApplicants,
   sampleNotifications,
 } from './data/mockData';
 import {
@@ -72,6 +85,7 @@ import {
   NotificationItem,
   Post,
   SponsorProfile,
+  SponsorshipPackage,
   UserRole,
   UserProfile,
   PostAuthor,
@@ -142,14 +156,6 @@ export function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
   const [organizerActivityFeed, setOrganizerActivityFeed] = useState<OrganizerActivityItem[]>([]);
   const [readOrganizerNotificationIds, setReadOrganizerNotificationIds] = useState<Set<string>>(new Set());
-  const [activatedOpportunityKeys, setActivatedOpportunityKeys] = useState<Record<string, boolean>>({
-    'opp_conference__Gold Sponsor': true,
-    'opp_workshop__Workshop Sponsor': true,
-    'opp_icebreaker__Exclusive Sponsor': true,
-    'opp_gifts__Exclusive Sponsor': true,
-  });
-  const handleToggleOpportunityPackage = (key: string) =>
-    setActivatedOpportunityKeys((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const [organizerLogoOverride, setOrganizerLogoOverride] = useState<string | null>(null);
   const [sponsorLogoOverride, setSponsorLogoOverride] = useState<string | null>(null);
@@ -175,57 +181,159 @@ export function App() {
   const handleMarkAllSponsorAlertsRead = () =>
     setSponsorAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
 
-  // All sponsors an organizer can rate — the current/primary sponsor (index 0, shown in the
-  // Sponsor Marketplace) plus the applicant pool shown in the Sponsor Verification Queue.
-  const [allSponsorProfiles, setAllSponsorProfiles] = useState<SponsorProfile[]>([
-    sampleSponsorProfile,
-    ...sampleSponsorApplicants,
-  ]);
-  const primarySponsorProfile = allSponsorProfiles[0];
-  const sponsorApplicantProfiles = allSponsorProfiles.slice(1);
+  // Real sponsorship marketplace state — packages an organizer actually published, sponsors'
+  // real applications to them, and derived-from-real-activity sponsor profile stats. See
+  // src/api/sponsors.ts and server/sponsors.ts.
+  const [myConferences, setMyConferences] = useState<Conference[]>([]);
+  const [sponsorshipPackagesReal, setSponsorshipPackagesReal] = useState<SponsorshipPackage[]>([]);
+  const [myApplications, setMyApplications] = useState<SponsorApplicationSummary[]>([]);
+  const [packageApplicants, setPackageApplicants] = useState<SponsorApplicant[]>([]);
+  const [reviewableSponsorsReal, setReviewableSponsorsReal] = useState<ReviewableSponsor[]>([]);
+  const [mySponsorProfileStats, setMySponsorProfileStats] = useState<{
+    rating: number;
+    reviewsCount: number;
+    activeSponsorshipsCount: number;
+    leadsCaptured: number;
+    sponsorshipHistory: { year: number; conferenceTitle: string; tier: string }[];
+    reviews: SponsorProfile['reviews'];
+  }>({ rating: 0, reviewsCount: 0, activeSponsorshipsCount: 0, leadsCaptured: 0, sponsorshipHistory: [], reviews: [] });
 
-  const handleReviewSponsor = (
+  // Only this organizer's own published packages, not every organizer's.
+  const organizerOwnPackages = sponsorshipPackagesReal.filter((p) =>
+    myConferences.some((c) => c.id === p.conferenceId)
+  );
+
+  const sponsorProfileForPortal: SponsorProfile = {
+    id: authUser?.id || '',
+    companyName: sponsorNameOverride || authUser?.organization || authUser?.name || '',
+    logo: sponsorLogoOverride || resolveAvatar(authUser?.avatar ?? null, authUser?.name || ''),
+    description: authUser?.bio || '',
+    industry: authUser?.title || '',
+    ...mySponsorProfileStats,
+    verificationStatus: isSponsorVerified(mySponsorProfileStats) ? 'Verified' : 'Restricted',
+  };
+
+  const refreshOrganizerSponsorData = () => {
+    fetchApplicantsForMyPackages().then(setPackageApplicants).catch(() => {});
+    fetchReviewableSponsors().then(setReviewableSponsorsReal).catch(() => {});
+  };
+
+  const handleActivateOpportunityPackage = async (opp: {
+    key: string;
+    name: string;
+    tier: string;
+    price: number;
+    slots: number;
+    benefits: string[];
+  }) => {
+    const targetConference = myConferences[0];
+    if (!targetConference) {
+      showToast({
+        type: 'info',
+        title: 'Create a conference first',
+        message: 'Publish a conference from the Wizard tab before activating sponsorship packages.',
+      });
+      return;
+    }
+    try {
+      const pkg = await createSponsorshipPackage({
+        conferenceId: targetConference.id,
+        tier: opp.tier,
+        price: opp.price,
+        benefits: opp.benefits,
+        totalSlots: opp.slots,
+        sourceOpportunityId: opp.key,
+      });
+      setSponsorshipPackagesReal((prev) => [pkg, ...prev]);
+      showToast({
+        type: 'success',
+        title: 'Package activated',
+        message: `${opp.tier} is now live in the Sponsor Marketplace for ${targetConference.title}.`,
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't activate package",
+        message: e instanceof Error ? e.message : 'Please try again.',
+      });
+    }
+  };
+
+  const handleApplyForSponsorship = async (packageId: string) => {
+    try {
+      const application = await applyForSponsorship(packageId);
+      setMyApplications((prev) => [application, ...prev.filter((a) => a.packageId !== packageId)]);
+      showToast({
+        type: 'achievement',
+        title: 'Sponsorship application submitted',
+        message: `${application.tier} for ${application.conferenceTitle} — the organizer will review your application.`,
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't submit application",
+        message: e instanceof Error ? e.message : 'Please try again.',
+      });
+    }
+  };
+
+  const handleDecideApplication = async (applicationId: string, status: 'Approved' | 'Rejected') => {
+    const applicant = packageApplicants.find((a) => a.applicationId === applicationId);
+    try {
+      await decideSponsorApplication(applicationId, status);
+      refreshOrganizerSponsorData();
+      if (status === 'Approved' && applicant) {
+        postCelebration(
+          'sponsorship-accepted',
+          '🤝 Sponsorship Confirmed!',
+          `${applicant.sponsor.companyName} is proud to confirm ${applicant.tier} Tier sponsorship for ${applicant.conferenceTitle}! We look forward to connecting with the community.`,
+          {
+            authorName: applicant.sponsor.companyName,
+            authorTitle: 'Corporate Sponsor',
+            authorOrg: applicant.conferenceTitle,
+            authorAvatar: resolveAvatar(applicant.sponsor.logo, applicant.sponsor.companyName),
+            conferenceBadge: applicant.conferenceTitle,
+          }
+        );
+      }
+      showToast({
+        type: status === 'Approved' ? 'success' : 'info',
+        title: status === 'Approved' ? 'Applicant approved' : 'Applicant rejected',
+        message: `The sponsor has been ${status.toLowerCase()}.`,
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't update application",
+        message: e instanceof Error ? e.message : 'Please try again.',
+      });
+    }
+  };
+
+  const handleSubmitSponsorReview = async (
     sponsorId: string,
     review: { conferenceTitle: string; rating: number; comment: string }
   ) => {
-    let updatedSponsorName = '';
-    let updatedRating = 0;
-    setAllSponsorProfiles((prev) =>
-      prev.map((s) => {
-        if (s.id !== sponsorId) return s;
-        const newReview = {
-          id: `srev_${Date.now()}`,
-          reviewerName: conferences[0]?.organizerName || 'Conference Organizer',
-          reviewerRole: 'Organizer' as const,
-          conferenceTitle: review.conferenceTitle,
-          rating: review.rating,
-          comment: review.comment,
-          date: new Date().toISOString().split('T')[0],
-        };
-        const newReviewsCount = s.reviewsCount + 1;
-        const newRating = Math.round(((s.rating * s.reviewsCount + review.rating) / newReviewsCount) * 10) / 10;
-        updatedSponsorName = s.companyName;
-        updatedRating = newRating;
-        return {
-          ...s,
-          reviews: [newReview, ...s.reviews],
-          reviewsCount: newReviewsCount,
-          rating: newRating,
-          verificationStatus: newRating >= 3.0 ? 'Verified' : 'Restricted',
-        };
-      })
-    );
-    if (sponsorId === primarySponsorProfile.id) {
-      handleNotifySponsors(
-        `New Feedback from ${conferences[0]?.organizerName || 'Conference Organizer'}`,
-        `You received a ${review.rating}/5 review for ${review.conferenceTitle}: "${review.comment}"`
-      );
+    try {
+      await submitSponsorReview({
+        sponsorId,
+        conferenceTitle: review.conferenceTitle,
+        rating: review.rating,
+        comment: review.comment,
+      });
+      refreshOrganizerSponsorData();
+      showToast({
+        type: 'success',
+        title: 'Feedback sent to sponsor',
+        message: 'Your review has been recorded and updates their marketplace rating.',
+      });
+    } catch (e) {
+      showToast({
+        type: 'info',
+        title: "Couldn't send feedback",
+        message: e instanceof Error ? e.message : 'Please try again.',
+      });
     }
-    showToast({
-      type: 'success',
-      title: 'Feedback sent to sponsor',
-      message: `${updatedSponsorName || 'Sponsor'}'s rating is now ${updatedRating.toFixed(1)}/5.`,
-    });
   };
 
   const handleMarkNotificationRead = (id: string) =>
@@ -270,6 +378,16 @@ export function App() {
       .catch(() => {});
     if (authUser.role === 'organizer') {
       fetchOrganizerActivityFeed().then(setOrganizerActivityFeed).catch(() => {});
+      fetchMyCreatedConferences().then(setMyConferences).catch(() => {});
+      fetchApplicantsForMyPackages().then(setPackageApplicants).catch(() => {});
+      fetchReviewableSponsors().then(setReviewableSponsorsReal).catch(() => {});
+    }
+    if (authUser.role === 'sponsor') {
+      fetchMySponsorApplications().then(setMyApplications).catch(() => {});
+      fetchMySponsorProfile().then(setMySponsorProfileStats).catch(() => {});
+    }
+    if (authUser.role === 'organizer' || authUser.role === 'sponsor') {
+      fetchSponsorshipPackages().then(setSponsorshipPackagesReal).catch(() => {});
     }
   }, [authUser?.id, authUser?.role]);
 
@@ -889,6 +1007,7 @@ export function App() {
     };
 
     setConferences((prev) => [newConf, ...prev]);
+    setMyConferences((prev) => [newConf, ...prev]);
     try {
       await createConferenceRemote(newConf);
       showToast({
@@ -923,26 +1042,6 @@ export function App() {
     };
     setPosts([newPost, ...posts]);
     showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
-  };
-
-  const handleSponsorshipAccepted = (pkg: { tier: string; conferenceTitle: string }) => {
-    postCelebration(
-      'sponsorship-accepted',
-      '🤝 Sponsorship Confirmed!',
-      `${primarySponsorProfile.companyName} is proud to confirm ${pkg.tier} Tier sponsorship for ${pkg.conferenceTitle}! We look forward to connecting with the community.`,
-      {
-        authorName: primarySponsorProfile.companyName,
-        authorTitle: 'Corporate Sponsor',
-        authorOrg: pkg.conferenceTitle,
-        authorAvatar: primarySponsorProfile.logo,
-        conferenceBadge: pkg.conferenceTitle,
-      }
-    );
-    showToast({
-      type: 'achievement',
-      title: 'Sponsorship confirmed',
-      message: `${pkg.tier} tier package reserved for ${pkg.conferenceTitle}.`,
-    });
   };
 
   const handleInviteToCommittee = (reviewerName: string, conferenceTitle: string) => {
@@ -993,8 +1092,8 @@ export function App() {
             : undefined
         }
         sponsorIdentity={{
-          name: sponsorNameOverride || primarySponsorProfile.companyName,
-          logo: sponsorLogoOverride || primarySponsorProfile.logo,
+          name: sponsorNameOverride || authUser.organization || authUser.name,
+          logo: sponsorLogoOverride || resolveAvatar(authUser.avatar, authUser.name),
         }}
         onOrganizerLogoChange={(dataUrl) => {
           setOrganizerLogoOverride(dataUrl);
@@ -1119,7 +1218,7 @@ export function App() {
 
         {activeTab === 'organizer' && authUser.role === 'organizer' && (
           <OrganizerDashboard
-            conferences={conferences}
+            conferences={myConferences}
             submissions={submissions}
             organizerName={organizerNameOverride || authUser.organization || authUser.name}
             organizerLogo={organizerLogoOverride || resolveAvatar(authUser.avatar, authUser.name)}
@@ -1129,13 +1228,13 @@ export function App() {
             onEditOrganizerProfile={() => setIsEditProfileOpen(true)}
             registrationCountsByConference={registrationCountsByConference}
             feedbackSummary={feedbackSummary}
-            sponsorshipPackages={sampleSponsorshipPackages}
+            sponsorshipPackages={organizerOwnPackages}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
-            activatedOpportunityKeys={activatedOpportunityKeys}
-            onToggleOpportunityPackage={handleToggleOpportunityPackage}
-            sponsorApplicants={sponsorApplicantProfiles}
-            reviewableSponsors={allSponsorProfiles}
-            onReviewSponsor={handleReviewSponsor}
+            onActivateOpportunityPackage={handleActivateOpportunityPackage}
+            sponsorApplicants={packageApplicants}
+            onDecideApplication={handleDecideApplication}
+            reviewableSponsors={reviewableSponsorsReal}
+            onReviewSponsor={handleSubmitSponsorReview}
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
@@ -1145,14 +1244,14 @@ export function App() {
 
         {activeTab === 'sponsor' && authUser.role === 'sponsor' && (
           <SponsorPortal
-            sponsorshipPackages={sampleSponsorshipPackages}
+            sponsorshipPackages={sponsorshipPackagesReal}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
-            activatedOpportunityKeys={activatedOpportunityKeys}
-            sponsorProfile={primarySponsorProfile}
+            myApplications={myApplications}
+            sponsorProfile={sponsorProfileForPortal}
             sponsorAlerts={sponsorAlerts}
             onMarkAlertRead={handleMarkSponsorAlertRead}
             onMarkAllAlertsRead={handleMarkAllSponsorAlertsRead}
-            onSponsorshipAccepted={handleSponsorshipAccepted}
+            onApplyForSponsorship={handleApplyForSponsorship}
           />
         )}
 
