@@ -16,6 +16,7 @@ import {
   CreatedConferenceRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
+import { asyncHandler } from "./asyncHandler";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -84,13 +85,13 @@ function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
   };
 }
 
-activityRouter.get("/submissions", async (_req: AuthedRequest, res: Response) => {
+activityRouter.get("/submissions", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<SubmissionRow>("SELECT * FROM submissions ORDER BY submission_date DESC");
   const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews");
   res.json({ submissions: rows.map((row) => toSubmissionDTO(row, reviewRows)) });
-});
+}));
 
-activityRouter.post("/submissions", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/submissions", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.title !== "string" || !body.title.trim()) {
     return res.status(400).json({ error: "Abstract title is required" });
@@ -131,9 +132,9 @@ activityRouter.post("/submissions", async (req: AuthedRequest, res: Response) =>
 
   const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
   res.status(201).json({ submission: toSubmissionDTO(row, []) });
-});
+}));
 
-activityRouter.post("/submissions/:id/reviews", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/submissions/:id/reviews", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
   if (!submission) {
     return res.status(404).json({ error: "Submission not found" });
@@ -185,9 +186,9 @@ activityRouter.post("/submissions/:id/reviews", async (req: AuthedRequest, res: 
     submission.id,
   ]);
   res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
-});
+}));
 
-activityRouter.post("/submissions/:id/revisions", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/submissions/:id/revisions", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
   if (!submission) {
     return res.status(404).json({ error: "Submission not found" });
@@ -218,9 +219,9 @@ activityRouter.post("/submissions/:id/revisions", async (req: AuthedRequest, res
     submission.id,
   ]);
   res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
-});
+}));
 
-activityRouter.post("/reviews/volunteer", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/reviews/volunteer", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.opportunityId !== "string" || !body.opportunityId) {
     return res.status(400).json({ error: "opportunityId is required" });
@@ -237,16 +238,16 @@ activityRouter.post("/reviews/volunteer", async (req: AuthedRequest, res: Respon
   }
 
   res.status(201).json({ ok: true });
-});
+}));
 
-activityRouter.get("/reviews/volunteers/mine", async (req: AuthedRequest, res: Response) => {
+activityRouter.get("/reviews/volunteers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const rows = await dbAll<ReviewVolunteerRow>("SELECT * FROM review_volunteers WHERE reviewer_id = ?", [
     req.userId!,
   ]);
   res.json({ opportunityIds: rows.map((r) => r.opportunity_id) });
-});
+}));
 
-activityRouter.post("/registrations", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/registrations", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.conferenceId !== "string" || !body.conferenceId) {
     return res.status(400).json({ error: "conferenceId is required" });
@@ -273,9 +274,9 @@ activityRouter.post("/registrations", async (req: AuthedRequest, res: Response) 
   }
 
   res.status(201).json({ ok: true });
-});
+}));
 
-activityRouter.get("/registrations/mine", async (req: AuthedRequest, res: Response) => {
+activityRouter.get("/registrations/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const rows = await dbAll<ConferenceRegistrationRow>(
     "SELECT * FROM conference_registrations WHERE user_id = ? ORDER BY registered_at DESC",
     [req.userId!]
@@ -289,20 +290,20 @@ activityRouter.get("/registrations/mine", async (req: AuthedRequest, res: Respon
       registeredAt: r.registered_at,
     })),
   });
-});
+}));
 
 // Organizer-facing aggregate counts — every registered account is visible to organizers so they
 // can see real registration totals per conference, mirroring the platform-wide submissions view.
-activityRouter.get("/registrations/counts-by-conference", async (_req: AuthedRequest, res: Response) => {
+activityRouter.get("/registrations/counts-by-conference", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<{ conference_id: string; count: number }>(
     "SELECT conference_id, COUNT(*) as count FROM conference_registrations GROUP BY conference_id"
   );
   res.json({
     counts: Object.fromEntries(rows.map((r) => [r.conference_id, r.count])),
   });
-});
+}));
 
-activityRouter.get("/conference-interactions/mine", async (req: AuthedRequest, res: Response) => {
+activityRouter.get("/conference-interactions/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const rows = await dbAll<ConferenceInteractionRow>("SELECT * FROM conference_interactions WHERE user_id = ?", [
     req.userId!,
   ]);
@@ -310,9 +311,9 @@ activityRouter.get("/conference-interactions/mine", async (req: AuthedRequest, r
     saved: rows.filter((r) => r.type === "saved").map((r) => r.conference_id),
     followed: rows.filter((r) => r.type === "followed").map((r) => r.conference_id),
   });
-});
+}));
 
-activityRouter.post("/conference-interactions/toggle", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conference-interactions/toggle", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId : "";
   const type = body.type === "saved" || body.type === "followed" ? body.type : null;
@@ -338,9 +339,9 @@ activityRouter.post("/conference-interactions/toggle", async (req: AuthedRequest
     type,
   ]);
   res.status(201).json({ active: true });
-});
+}));
 
-activityRouter.post("/feedback", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
     return res.status(400).json({ error: "conferenceTitle is required" });
@@ -371,16 +372,16 @@ activityRouter.post("/feedback", async (req: AuthedRequest, res: Response) => {
   );
 
   res.status(201).json({ ok: true, overallScore });
-});
+}));
 
-activityRouter.get("/feedback/summary", async (_req: AuthedRequest, res: Response) => {
+activityRouter.get("/feedback/summary", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const row = (await dbGet<{ avgScore: number | null; count: number }>(
     "SELECT AVG(overall_score) as avgScore, COUNT(*) as count FROM conference_feedback"
   ))!;
   res.json({ averageScore: row.avgScore || 0, responseCount: row.count });
-});
+}));
 
-activityRouter.post("/broadcasts", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.subject !== "string" || !body.subject.trim()) {
     return res.status(400).json({ error: "Subject is required" });
@@ -405,9 +406,9 @@ activityRouter.post("/broadcasts", async (req: AuthedRequest, res: Response) => 
       createdAt: row.created_at,
     },
   });
-});
+}));
 
-activityRouter.get("/broadcasts/mine", async (req: AuthedRequest, res: Response) => {
+activityRouter.get("/broadcasts/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const rows = await dbAll<OrganizerBroadcastRow>(
     "SELECT * FROM organizer_broadcasts WHERE organizer_id = ? ORDER BY created_at DESC",
     [req.userId!]
@@ -421,9 +422,9 @@ activityRouter.get("/broadcasts/mine", async (req: AuthedRequest, res: Response)
       createdAt: row.created_at,
     })),
   });
-});
+}));
 
-activityRouter.post("/conference-actions", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conference-actions", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId : "";
   const conferenceTitle = typeof body.conferenceTitle === "string" ? body.conferenceTitle : "";
@@ -447,9 +448,9 @@ activityRouter.post("/conference-actions", async (req: AuthedRequest, res: Respo
     [id, req.userId!, conferenceId, conferenceTitle, kind]
   );
   res.status(201).json({ alreadyRecorded: false });
-});
+}));
 
-activityRouter.get("/conference-actions/mine", async (req: AuthedRequest, res: Response) => {
+activityRouter.get("/conference-actions/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const rows = await dbAll<ConferenceInterestActionRow>(
     "SELECT * FROM conference_interest_actions WHERE user_id = ? ORDER BY created_at DESC",
     [req.userId!]
@@ -462,12 +463,12 @@ activityRouter.get("/conference-actions/mine", async (req: AuthedRequest, res: R
       createdAt: row.created_at,
     })),
   });
-});
+}));
 
 // Conferences created via the organizer wizard — stored as an opaque JSON blob since the
 // client-side Conference shape is large and nested; every account can see every created
 // conference, mirroring the platform-wide submissions/registrations views elsewhere.
-activityRouter.post("/conferences", async (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conferences", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.id !== "string" || !body.id || typeof body.title !== "string" || !body.title.trim()) {
     return res.status(400).json({ error: "A conference object with id and title is required" });
@@ -478,9 +479,74 @@ activityRouter.post("/conferences", async (req: AuthedRequest, res: Response) =>
     JSON.stringify(body),
   ]);
   res.status(201).json({ conference: body });
-});
+}));
 
-activityRouter.get("/conferences", async (_req: AuthedRequest, res: Response) => {
+activityRouter.get("/conferences", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<CreatedConferenceRow>("SELECT * FROM created_conferences ORDER BY created_at DESC");
   res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
-});
+}));
+
+// Real activity on conferences this organizer created — sponsorship/committee interest and new
+// abstract submissions — so the organizer's notification bell can surface genuine events instead
+// of demo content.
+activityRouter.get("/organizer/activity-feed", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const myConferences = await dbAll<{ id: string }>("SELECT id FROM created_conferences WHERE organizer_id = ?", [
+    req.userId!,
+  ]);
+  if (myConferences.length === 0) {
+    return res.json({ items: [] });
+  }
+
+  const ids = myConferences.map((c) => c.id);
+  const placeholders = ids.map(() => "?").join(", ");
+
+  const interestRows = await dbAll<{
+    id: string;
+    conference_title: string;
+    kind: "committee_interest" | "sponsorship_inquiry";
+    created_at: string;
+    actor_name: string;
+  }>(
+    `SELECT cia.id, cia.conference_title, cia.kind, cia.created_at, u.name as actor_name
+     FROM conference_interest_actions cia
+     JOIN users u ON u.id = cia.user_id
+     WHERE cia.conference_id IN (${placeholders})
+     ORDER BY cia.created_at DESC`,
+    ids
+  );
+
+  const submissionRows = await dbAll<{
+    id: string;
+    conference_title: string;
+    title: string;
+    submission_date: string;
+    submitter_name: string;
+  }>(
+    `SELECT s.id, s.conference_title, s.title, s.submission_date, u.name as submitter_name
+     FROM submissions s
+     JOIN users u ON u.id = s.submitter_id
+     WHERE s.conference_id IN (${placeholders})
+     ORDER BY s.submission_date DESC`,
+    ids
+  );
+
+  const items = [
+    ...interestRows.map((row) => ({
+      id: `cia_${row.id}`,
+      kind: row.kind,
+      conferenceTitle: row.conference_title,
+      actorName: row.actor_name,
+      createdAt: row.created_at,
+    })),
+    ...submissionRows.map((row) => ({
+      id: `sub_${row.id}`,
+      kind: "abstract_submission" as const,
+      conferenceTitle: row.conference_title,
+      abstractTitle: row.title,
+      actorName: row.submitter_name,
+      createdAt: row.submission_date,
+    })),
+  ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+  res.json({ items });
+}));

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { dbGet, dbRun, UserRow } from "./db";
+import { asyncHandler } from "./asyncHandler";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -115,7 +116,7 @@ export function publicUserSummary(row: UserRow) {
 
 export const authRouter = Router();
 
-authRouter.post("/signup", async (req, res) => {
+authRouter.post("/signup", asyncHandler(async (req, res) => {
   const { role, name, email, password, organization, title } = req.body || {};
 
   if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
@@ -159,9 +160,9 @@ authRouter.post("/signup", async (req, res) => {
   const token = signToken(row.id);
   setSessionCookie(res, token);
   res.status(201).json({ user: toPublicUser(row) });
-});
+}));
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (typeof email !== "string" || typeof password !== "string") {
     return res.status(400).json({ error: "Email and password are required" });
@@ -182,26 +183,26 @@ authRouter.post("/login", async (req, res) => {
   const token = signToken(row.id);
   setSessionCookie(res, token);
   res.json({ user: toPublicUser(row) });
-});
+}));
 
 authRouter.post("/logout", (_req, res) => {
   res.clearCookie(COOKIE_NAME, { path: "/" });
   res.json({ ok: true });
 });
 
-authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
+authRouter.get("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
   const row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]);
   if (!row) {
     res.clearCookie(COOKIE_NAME, { path: "/" });
     return res.status(401).json({ error: "Not authenticated" });
   }
   res.json({ user: toPublicUser(row) });
-});
+}));
 
 const EDITABLE_PROFILE_FIELDS = ["name", "title", "organization", "department", "city", "country", "bio"] as const;
 const MAX_BIO_LENGTH = 600;
 
-authRouter.patch("/me", requireAuth, async (req: AuthedRequest, res) => {
+authRouter.patch("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
   const body = req.body || {};
   const updates: Record<string, string | null> = {};
 
@@ -232,9 +233,9 @@ authRouter.patch("/me", requireAuth, async (req: AuthedRequest, res) => {
 
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
-});
+}));
 
-authRouter.patch("/me/reviewer-availability", requireAuth, async (req: AuthedRequest, res) => {
+authRouter.patch("/me/reviewer-availability", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
   const body = req.body || {};
   if (typeof body.available !== "boolean") {
     return res.status(400).json({ error: "available must be a boolean" });
@@ -242,11 +243,11 @@ authRouter.patch("/me/reviewer-availability", requireAuth, async (req: AuthedReq
   await dbRun("UPDATE users SET reviewer_available = ? WHERE id = ?", [body.available ? 1 : 0, req.userId!]);
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
-});
+}));
 
 const MAX_AVATAR_LENGTH = 2_000_000; // ~1.5MB decoded, comfortably under the request body limit
 
-authRouter.post("/avatar", requireAuth, async (req: AuthedRequest, res) => {
+authRouter.post("/avatar", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
   const { avatar } = req.body || {};
 
   if (avatar !== null && typeof avatar !== "string") {
@@ -264,11 +265,11 @@ authRouter.post("/avatar", requireAuth, async (req: AuthedRequest, res) => {
   await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatar, req.userId!]);
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
-});
+}));
 
 const googleClient = process.env.GOOGLE_OAUTH_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID) : null;
 
-authRouter.post("/google", async (req, res) => {
+authRouter.post("/google", asyncHandler(async (req, res) => {
   const { credential, role } = req.body || {};
 
   if (!googleClient) {
@@ -329,4 +330,4 @@ authRouter.post("/google", async (req, res) => {
   const token = signToken(row!.id);
   setSessionCookie(res, token);
   res.json({ user: toPublicUser(row!) });
-});
+}));

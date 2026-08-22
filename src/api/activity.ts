@@ -223,3 +223,18 @@ export async function recordConferenceAction(
   const data = await parseResponse(res);
   return !data.alreadyRecorded;
 }
+
+export interface OrganizerActivityItem {
+  id: string;
+  kind: 'committee_interest' | 'sponsorship_inquiry' | 'abstract_submission';
+  conferenceTitle: string;
+  actorName: string;
+  abstractTitle?: string;
+  createdAt: string;
+}
+
+export async function fetchOrganizerActivityFeed(): Promise<OrganizerActivityItem[]> {
+  const res = await fetch('/api/activity/organizer/activity-feed', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.items;
+}
