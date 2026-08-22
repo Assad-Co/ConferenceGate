@@ -5,12 +5,19 @@ import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { WebSocketServer } from "ws";
-import { authRouter, verifySessionToken, COOKIE_NAME } from "./server/auth";
+import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
 import { googleSearchRouter } from "./server/googleSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
+import { initDb } from "./server/db";
 
 async function startServer() {
+  // The database schema and the JWT signing secret both require an async round-trip to
+  // resolve (a remote Turso database, or falling back to a local SQLite file) — both must
+  // be ready before any request can be handled.
+  await initDb();
+  await initAuthSecret();
+
   const app = express();
   const PORT = 3000;
 

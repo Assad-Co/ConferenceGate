@@ -3,29 +3,42 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import { db, UserRow } from "./db";
+import { dbGet, dbRun, UserRow } from "./db";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
 // instance, etc.) would mint a new secret and silently log out every signed-in user.
-function resolveJwtSecret(): string {
-  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+// Resolved once during server startup via initAuthSecret() (see server.ts) rather than at
+// module-load time, since resolving it now requires an async database round-trip.
+let JWT_SECRET: string | null = null;
 
-  const existing = db.prepare("SELECT value FROM app_secrets WHERE key = 'jwt_secret'").get() as
-    | { value: string }
-    | undefined;
-  if (existing) return existing.value;
+export async function initAuthSecret(): Promise<void> {
+  if (process.env.JWT_SECRET) {
+    JWT_SECRET = process.env.JWT_SECRET;
+    return;
+  }
+
+  const existing = await dbGet<{ value: string }>("SELECT value FROM app_secrets WHERE key = 'jwt_secret'");
+  if (existing) {
+    JWT_SECRET = existing.value;
+    return;
+  }
 
   const generated = crypto.randomBytes(48).toString("hex");
-  db.prepare("INSERT INTO app_secrets (key, value) VALUES ('jwt_secret', ?)").run(generated);
+  await dbRun("INSERT INTO app_secrets (key, value) VALUES ('jwt_secret', ?)", [generated]);
   console.warn(
     "[auth] JWT_SECRET is not set — generated a secret and persisted it in the database so " +
       "sessions survive restarts. Set JWT_SECRET in your environment for full control over rotation."
   );
-  return generated;
+  JWT_SECRET = generated;
 }
 
-const JWT_SECRET = resolveJwtSecret();
+function getJwtSecret(): string {
+  if (!JWT_SECRET) {
+    throw new Error("JWT secret has not been initialized yet — initAuthSecret() must be awaited at startup.");
+  }
+  return JWT_SECRET;
+}
 
 export const COOKIE_NAME = "cg_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -53,7 +66,7 @@ function toPublicUser(row: UserRow) {
 }
 
 function signToken(userId: string) {
-  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn: "7d" });
 }
 
 function setSessionCookie(res: Response, token: string) {
@@ -74,7 +87,7 @@ export interface AuthedRequest extends Request {
 export function verifySessionToken(token: string | undefined | null): string | null {
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub: string };
     return payload.sub;
   } catch {
     return null;
@@ -102,7 +115,7 @@ export function publicUserSummary(row: UserRow) {
 
 export const authRouter = Router();
 
-authRouter.post("/signup", (req, res) => {
+authRouter.post("/signup", async (req, res) => {
   const { role, name, email, password, organization, title } = req.body || {};
 
   if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
@@ -119,7 +132,7 @@ authRouter.post("/signup", (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(normalizedEmail);
+  const existing = await dbGet("SELECT id FROM users WHERE email = ?", [normalizedEmail]);
   if (existing) {
     return res.status(409).json({ error: "An account with this email already exists" });
   }
@@ -128,33 +141,34 @@ authRouter.post("/signup", (req, res) => {
   const passwordHash = bcrypt.hashSync(password, 10);
   const normalizedRole = role.toLowerCase() as AuthRole;
 
-  db.prepare(
+  await dbRun(
     `INSERT INTO users (id, email, password_hash, role, name, organization, title)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    normalizedEmail,
-    passwordHash,
-    normalizedRole,
-    name.trim(),
-    typeof organization === "string" && organization.trim() ? organization.trim() : null,
-    typeof title === "string" && title.trim() ? title.trim() : null
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      normalizedEmail,
+      passwordHash,
+      normalizedRole,
+      name.trim(),
+      typeof organization === "string" && organization.trim() ? organization.trim() : null,
+      typeof title === "string" && title.trim() ? title.trim() : null,
+    ]
   );
 
-  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow;
+  const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
   const token = signToken(row.id);
   setSessionCookie(res, token);
   res.status(201).json({ user: toPublicUser(row) });
 });
 
-authRouter.post("/login", (req, res) => {
+authRouter.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (typeof email !== "string" || typeof password !== "string") {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const row = db.prepare("SELECT * FROM users WHERE email = ?").get(normalizedEmail) as UserRow | undefined;
+  const row = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   if (!row) {
     return res.status(401).json({ error: "Invalid email or password" });
   }
@@ -175,8 +189,8 @@ authRouter.post("/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
-authRouter.get("/me", requireAuth, (req: AuthedRequest, res) => {
-  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow | undefined;
+authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
+  const row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]);
   if (!row) {
     res.clearCookie(COOKIE_NAME, { path: "/" });
     return res.status(401).json({ error: "Not authenticated" });
@@ -187,7 +201,7 @@ authRouter.get("/me", requireAuth, (req: AuthedRequest, res) => {
 const EDITABLE_PROFILE_FIELDS = ["name", "title", "organization", "department", "city", "country", "bio"] as const;
 const MAX_BIO_LENGTH = 600;
 
-authRouter.patch("/me", requireAuth, (req: AuthedRequest, res) => {
+authRouter.patch("/me", requireAuth, async (req: AuthedRequest, res) => {
   const body = req.body || {};
   const updates: Record<string, string | null> = {};
 
@@ -214,25 +228,25 @@ authRouter.patch("/me", requireAuth, (req: AuthedRequest, res) => {
   const setClause = Object.keys(updates)
     .map((field) => `${field} = ?`)
     .join(", ");
-  db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...Object.values(updates), req.userId);
+  await dbRun(`UPDATE users SET ${setClause} WHERE id = ?`, [...Object.values(updates), req.userId!]);
 
-  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
+  const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
 });
 
-authRouter.patch("/me/reviewer-availability", requireAuth, (req: AuthedRequest, res) => {
+authRouter.patch("/me/reviewer-availability", requireAuth, async (req: AuthedRequest, res) => {
   const body = req.body || {};
   if (typeof body.available !== "boolean") {
     return res.status(400).json({ error: "available must be a boolean" });
   }
-  db.prepare("UPDATE users SET reviewer_available = ? WHERE id = ?").run(body.available ? 1 : 0, req.userId);
-  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
+  await dbRun("UPDATE users SET reviewer_available = ? WHERE id = ?", [body.available ? 1 : 0, req.userId!]);
+  const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
 });
 
 const MAX_AVATAR_LENGTH = 2_000_000; // ~1.5MB decoded, comfortably under the request body limit
 
-authRouter.post("/avatar", requireAuth, (req: AuthedRequest, res) => {
+authRouter.post("/avatar", requireAuth, async (req: AuthedRequest, res) => {
   const { avatar } = req.body || {};
 
   if (avatar !== null && typeof avatar !== "string") {
@@ -247,8 +261,8 @@ authRouter.post("/avatar", requireAuth, (req: AuthedRequest, res) => {
     }
   }
 
-  db.prepare("UPDATE users SET avatar = ? WHERE id = ?").run(avatar, req.userId);
-  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(req.userId) as UserRow;
+  await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatar, req.userId!]);
+  const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: toPublicUser(row) });
 });
 
@@ -284,13 +298,13 @@ authRouter.post("/google", async (req, res) => {
   const name = payload.name || email;
   const picture = payload.picture || null;
 
-  let row = db.prepare("SELECT * FROM users WHERE google_id = ?").get(googleId) as UserRow | undefined;
+  let row = await dbGet<UserRow>("SELECT * FROM users WHERE google_id = ?", [googleId]);
 
   if (!row) {
-    const byEmail = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as UserRow | undefined;
+    const byEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [email]);
     if (byEmail) {
-      db.prepare("UPDATE users SET google_id = ? WHERE id = ?").run(googleId, byEmail.id);
-      row = db.prepare("SELECT * FROM users WHERE id = ?").get(byEmail.id) as UserRow;
+      await dbRun("UPDATE users SET google_id = ? WHERE id = ?", [googleId, byEmail.id]);
+      row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [byEmail.id]);
     }
   }
 
@@ -304,14 +318,15 @@ authRouter.post("/google", async (req, res) => {
 
     const id = crypto.randomUUID();
     const normalizedRole = role.toLowerCase() as AuthRole;
-    db.prepare(
+    await dbRun(
       `INSERT INTO users (id, email, password_hash, google_id, role, name, avatar)
-       VALUES (?, ?, NULL, ?, ?, ?, ?)`
-    ).run(id, email, googleId, normalizedRole, name, picture);
-    row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow;
+       VALUES (?, ?, NULL, ?, ?, ?, ?)`,
+      [id, email, googleId, normalizedRole, name, picture]
+    );
+    row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]);
   }
 
-  const token = signToken(row.id);
+  const token = signToken(row!.id);
   setSessionCookie(res, token);
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: toPublicUser(row!) });
 });

@@ -1,7 +1,9 @@
 import { Router, Response } from "express";
 import crypto from "crypto";
 import {
-  db,
+  dbGet,
+  dbAll,
+  dbRun,
   SubmissionRow,
   SubmissionReviewRow,
   ReviewVolunteerRow,
@@ -82,13 +84,13 @@ function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
   };
 }
 
-activityRouter.get("/submissions", (_req: AuthedRequest, res: Response) => {
-  const rows = db.prepare("SELECT * FROM submissions ORDER BY submission_date DESC").all() as SubmissionRow[];
-  const reviewRows = db.prepare("SELECT * FROM submission_reviews").all() as SubmissionReviewRow[];
+activityRouter.get("/submissions", async (_req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<SubmissionRow>("SELECT * FROM submissions ORDER BY submission_date DESC");
+  const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews");
   res.json({ submissions: rows.map((row) => toSubmissionDTO(row, reviewRows)) });
 });
 
-activityRouter.post("/submissions", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/submissions", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.title !== "string" || !body.title.trim()) {
     return res.status(400).json({ error: "Abstract title is required" });
@@ -101,37 +103,38 @@ activityRouter.post("/submissions", (req: AuthedRequest, res: Response) => {
   }
 
   const id = `sub_${crypto.randomUUID()}`;
-  db.prepare(
+  await dbRun(
     `INSERT INTO submissions (
       id, submitter_id, conference_id, conference_title, title, track, topic, keywords,
       abstract_text, preferred_type, primary_author_name, primary_author_email,
       primary_author_affiliation, primary_author_bio, co_authors, conflict_of_interest, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted')`
-  ).run(
-    id,
-    req.userId,
-    body.conferenceId,
-    body.conferenceTitle || "",
-    body.title.trim(),
-    body.track || null,
-    body.topic || null,
-    JSON.stringify(Array.isArray(body.keywords) ? body.keywords : []),
-    body.abstractText.trim(),
-    body.preferredType === "Poster" ? "Poster" : "Oral",
-    body.primaryAuthor?.name || "",
-    body.primaryAuthor?.email || "",
-    body.primaryAuthor?.affiliation || null,
-    body.primaryAuthor?.bio || null,
-    JSON.stringify(Array.isArray(body.coAuthors) ? body.coAuthors : []),
-    body.conflictOfInterest || null
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted')`,
+    [
+      id,
+      req.userId!,
+      body.conferenceId,
+      body.conferenceTitle || "",
+      body.title.trim(),
+      body.track || null,
+      body.topic || null,
+      JSON.stringify(Array.isArray(body.keywords) ? body.keywords : []),
+      body.abstractText.trim(),
+      body.preferredType === "Poster" ? "Poster" : "Oral",
+      body.primaryAuthor?.name || "",
+      body.primaryAuthor?.email || "",
+      body.primaryAuthor?.affiliation || null,
+      body.primaryAuthor?.bio || null,
+      JSON.stringify(Array.isArray(body.coAuthors) ? body.coAuthors : []),
+      body.conflictOfInterest || null,
+    ]
   );
 
-  const row = db.prepare("SELECT * FROM submissions WHERE id = ?").get(id) as SubmissionRow;
+  const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
   res.status(201).json({ submission: toSubmissionDTO(row, []) });
 });
 
-activityRouter.post("/submissions/:id/reviews", (req: AuthedRequest, res: Response) => {
-  const submission = db.prepare("SELECT * FROM submissions WHERE id = ?").get(req.params.id) as SubmissionRow | undefined;
+activityRouter.post("/submissions/:id/reviews", async (req: AuthedRequest, res: Response) => {
+  const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
   if (!submission) {
     return res.status(404).json({ error: "Submission not found" });
   }
@@ -144,9 +147,10 @@ activityRouter.post("/submissions/:id/reviews", (req: AuthedRequest, res: Respon
     return res.status(400).json({ error: "A valid recommendation is required" });
   }
 
-  const reviewerRow = db.prepare("SELECT name, organization FROM users WHERE id = ?").get(req.userId) as
-    | { name: string; organization: string | null }
-    | undefined;
+  const reviewerRow = await dbGet<{ name: string; organization: string | null }>(
+    "SELECT name, organization FROM users WHERE id = ?",
+    [req.userId!]
+  );
 
   const reviewId = `rev_${crypto.randomUUID()}`;
   const scoreValues = Object.values(body.scores || {}) as number[];
@@ -154,34 +158,37 @@ activityRouter.post("/submissions/:id/reviews", (req: AuthedRequest, res: Respon
     ? Number((scoreValues.reduce((a, b) => a + Number(b), 0) / scoreValues.length).toFixed(1))
     : 0;
 
-  db.prepare(
+  await dbRun(
     `INSERT INTO submission_reviews (
       id, submission_id, reviewer_id, reviewer_name, reviewer_org, scores, overall_score,
       comments_to_author, confidential_comments, recommendation
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    reviewId,
-    submission.id,
-    req.userId,
-    reviewerRow?.name || "Reviewer",
-    reviewerRow?.organization || null,
-    JSON.stringify(body.scores || {}),
-    overall,
-    body.commentsToAuthor.trim(),
-    body.confidentialComments || null,
-    body.recommendation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      reviewId,
+      submission.id,
+      req.userId!,
+      reviewerRow?.name || "Reviewer",
+      reviewerRow?.organization || null,
+      JSON.stringify(body.scores || {}),
+      overall,
+      body.commentsToAuthor.trim(),
+      body.confidentialComments || null,
+      body.recommendation,
+    ]
   );
 
   const newStatus = RECOMMENDATION_TO_STATUS[body.recommendation] || submission.status;
-  db.prepare("UPDATE submissions SET status = ? WHERE id = ?").run(newStatus, submission.id);
+  await dbRun("UPDATE submissions SET status = ? WHERE id = ?", [newStatus, submission.id]);
 
-  const updatedRow = db.prepare("SELECT * FROM submissions WHERE id = ?").get(submission.id) as SubmissionRow;
-  const reviewRows = db.prepare("SELECT * FROM submission_reviews WHERE submission_id = ?").all(submission.id) as SubmissionReviewRow[];
+  const updatedRow = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [submission.id]))!;
+  const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews WHERE submission_id = ?", [
+    submission.id,
+  ]);
   res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
 });
 
-activityRouter.post("/submissions/:id/revisions", (req: AuthedRequest, res: Response) => {
-  const submission = db.prepare("SELECT * FROM submissions WHERE id = ?").get(req.params.id) as SubmissionRow | undefined;
+activityRouter.post("/submissions/:id/revisions", async (req: AuthedRequest, res: Response) => {
+  const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
   if (!submission) {
     return res.status(404).json({ error: "Submission not found" });
   }
@@ -195,22 +202,25 @@ activityRouter.post("/submissions/:id/revisions", (req: AuthedRequest, res: Resp
   }
 
   const revisionId = `subrev_${crypto.randomUUID()}`;
-  db.prepare("INSERT INTO submission_revisions (id, submission_id, author_id, note) VALUES (?, ?, ?, ?)").run(
+  await dbRun("INSERT INTO submission_revisions (id, submission_id, author_id, note) VALUES (?, ?, ?, ?)", [
     revisionId,
     submission.id,
-    req.userId,
-    note
+    req.userId!,
+    note,
+  ]);
+  await dbRun(
+    "UPDATE submissions SET revisions_count = revisions_count + 1, status = 'Revised Abstract Submitted' WHERE id = ?",
+    [submission.id]
   );
-  db.prepare(
-    "UPDATE submissions SET revisions_count = revisions_count + 1, status = 'Revised Abstract Submitted' WHERE id = ?"
-  ).run(submission.id);
 
-  const updatedRow = db.prepare("SELECT * FROM submissions WHERE id = ?").get(submission.id) as SubmissionRow;
-  const reviewRows = db.prepare("SELECT * FROM submission_reviews WHERE submission_id = ?").all(submission.id) as SubmissionReviewRow[];
+  const updatedRow = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [submission.id]))!;
+  const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews WHERE submission_id = ?", [
+    submission.id,
+  ]);
   res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
 });
 
-activityRouter.post("/reviews/volunteer", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/reviews/volunteer", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.opportunityId !== "string" || !body.opportunityId) {
     return res.status(400).json({ error: "opportunityId is required" });
@@ -218,9 +228,10 @@ activityRouter.post("/reviews/volunteer", (req: AuthedRequest, res: Response) =>
 
   const id = `vol_${crypto.randomUUID()}`;
   try {
-    db.prepare(
-      `INSERT INTO review_volunteers (id, reviewer_id, opportunity_id, conference_title, topic) VALUES (?, ?, ?, ?, ?)`
-    ).run(id, req.userId, body.opportunityId, body.conferenceTitle || "", body.topic || null);
+    await dbRun(
+      `INSERT INTO review_volunteers (id, reviewer_id, opportunity_id, conference_title, topic) VALUES (?, ?, ?, ?, ?)`,
+      [id, req.userId!, body.opportunityId, body.conferenceTitle || "", body.topic || null]
+    );
   } catch {
     // Already volunteered for this opportunity — idempotent no-op.
   }
@@ -228,44 +239,47 @@ activityRouter.post("/reviews/volunteer", (req: AuthedRequest, res: Response) =>
   res.status(201).json({ ok: true });
 });
 
-activityRouter.get("/reviews/volunteers/mine", (req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM review_volunteers WHERE reviewer_id = ?")
-    .all(req.userId) as ReviewVolunteerRow[];
+activityRouter.get("/reviews/volunteers/mine", async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<ReviewVolunteerRow>("SELECT * FROM review_volunteers WHERE reviewer_id = ?", [
+    req.userId!,
+  ]);
   res.json({ opportunityIds: rows.map((r) => r.opportunity_id) });
 });
 
-activityRouter.post("/registrations", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/registrations", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.conferenceId !== "string" || !body.conferenceId) {
     return res.status(400).json({ error: "conferenceId is required" });
   }
 
-  const existing = db
-    .prepare("SELECT id FROM conference_registrations WHERE user_id = ? AND conference_id = ?")
-    .get(req.userId, body.conferenceId) as { id: string } | undefined;
+  const existing = await dbGet<{ id: string }>(
+    "SELECT id FROM conference_registrations WHERE user_id = ? AND conference_id = ?",
+    [req.userId!, body.conferenceId]
+  );
 
   if (existing) {
-    db.prepare("UPDATE conference_registrations SET package_id = ?, package_name = ? WHERE id = ?").run(
+    await dbRun("UPDATE conference_registrations SET package_id = ?, package_name = ? WHERE id = ?", [
       body.packageId || null,
       body.packageName || null,
-      existing.id
-    );
+      existing.id,
+    ]);
   } else {
     const id = `reg_${crypto.randomUUID()}`;
-    db.prepare(
+    await dbRun(
       `INSERT INTO conference_registrations (id, user_id, conference_id, conference_title, package_id, package_name)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, req.userId, body.conferenceId, body.conferenceTitle || "", body.packageId || null, body.packageName || null);
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, req.userId!, body.conferenceId, body.conferenceTitle || "", body.packageId || null, body.packageName || null]
+    );
   }
 
   res.status(201).json({ ok: true });
 });
 
-activityRouter.get("/registrations/mine", (req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM conference_registrations WHERE user_id = ? ORDER BY registered_at DESC")
-    .all(req.userId) as ConferenceRegistrationRow[];
+activityRouter.get("/registrations/mine", async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<ConferenceRegistrationRow>(
+    "SELECT * FROM conference_registrations WHERE user_id = ? ORDER BY registered_at DESC",
+    [req.userId!]
+  );
   res.json({
     registrations: rows.map((r) => ({
       conferenceId: r.conference_id,
@@ -279,26 +293,26 @@ activityRouter.get("/registrations/mine", (req: AuthedRequest, res: Response) =>
 
 // Organizer-facing aggregate counts — every registered account is visible to organizers so they
 // can see real registration totals per conference, mirroring the platform-wide submissions view.
-activityRouter.get("/registrations/counts-by-conference", (_req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT conference_id, COUNT(*) as count FROM conference_registrations GROUP BY conference_id")
-    .all() as Array<{ conference_id: string; count: number }>;
+activityRouter.get("/registrations/counts-by-conference", async (_req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<{ conference_id: string; count: number }>(
+    "SELECT conference_id, COUNT(*) as count FROM conference_registrations GROUP BY conference_id"
+  );
   res.json({
     counts: Object.fromEntries(rows.map((r) => [r.conference_id, r.count])),
   });
 });
 
-activityRouter.get("/conference-interactions/mine", (req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM conference_interactions WHERE user_id = ?")
-    .all(req.userId) as ConferenceInteractionRow[];
+activityRouter.get("/conference-interactions/mine", async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<ConferenceInteractionRow>("SELECT * FROM conference_interactions WHERE user_id = ?", [
+    req.userId!,
+  ]);
   res.json({
     saved: rows.filter((r) => r.type === "saved").map((r) => r.conference_id),
     followed: rows.filter((r) => r.type === "followed").map((r) => r.conference_id),
   });
 });
 
-activityRouter.post("/conference-interactions/toggle", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conference-interactions/toggle", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId : "";
   const type = body.type === "saved" || body.type === "followed" ? body.type : null;
@@ -306,23 +320,27 @@ activityRouter.post("/conference-interactions/toggle", (req: AuthedRequest, res:
     return res.status(400).json({ error: "conferenceId and a valid type ('saved' or 'followed') are required" });
   }
 
-  const existing = db
-    .prepare("SELECT id FROM conference_interactions WHERE user_id = ? AND conference_id = ? AND type = ?")
-    .get(req.userId, conferenceId, type) as { id: string } | undefined;
+  const existing = await dbGet<{ id: string }>(
+    "SELECT id FROM conference_interactions WHERE user_id = ? AND conference_id = ? AND type = ?",
+    [req.userId!, conferenceId, type]
+  );
 
   if (existing) {
-    db.prepare("DELETE FROM conference_interactions WHERE id = ?").run(existing.id);
+    await dbRun("DELETE FROM conference_interactions WHERE id = ?", [existing.id]);
     return res.json({ active: false });
   }
 
   const id = `ci_${crypto.randomUUID()}`;
-  db.prepare(
-    "INSERT INTO conference_interactions (id, user_id, conference_id, type) VALUES (?, ?, ?, ?)"
-  ).run(id, req.userId, conferenceId, type);
+  await dbRun("INSERT INTO conference_interactions (id, user_id, conference_id, type) VALUES (?, ?, ?, ?)", [
+    id,
+    req.userId!,
+    conferenceId,
+    type,
+  ]);
   res.status(201).json({ active: true });
 });
 
-activityRouter.post("/feedback", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/feedback", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
     return res.status(400).json({ error: "conferenceTitle is required" });
@@ -335,33 +353,34 @@ activityRouter.post("/feedback", (req: AuthedRequest, res: Response) => {
   const overallScore = Number((scoreValues.reduce((a, b) => a + Number(b), 0) / scoreValues.length).toFixed(2));
 
   const id = `fb_${crypto.randomUUID()}`;
-  db.prepare(
+  await dbRun(
     `INSERT INTO conference_feedback (
       id, user_id, conference_id, conference_title, role, ratings, overall_score, comment, recipient_email
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    req.userId,
-    body.conferenceId || null,
-    body.conferenceTitle.trim(),
-    body.role || "Attendee",
-    JSON.stringify(ratings),
-    overallScore,
-    body.comment || null,
-    body.recipientEmail || null
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      req.userId!,
+      body.conferenceId || null,
+      body.conferenceTitle.trim(),
+      body.role || "Attendee",
+      JSON.stringify(ratings),
+      overallScore,
+      body.comment || null,
+      body.recipientEmail || null,
+    ]
   );
 
   res.status(201).json({ ok: true, overallScore });
 });
 
-activityRouter.get("/feedback/summary", (_req: AuthedRequest, res: Response) => {
-  const row = db
-    .prepare("SELECT AVG(overall_score) as avgScore, COUNT(*) as count FROM conference_feedback")
-    .get() as { avgScore: number | null; count: number };
+activityRouter.get("/feedback/summary", async (_req: AuthedRequest, res: Response) => {
+  const row = (await dbGet<{ avgScore: number | null; count: number }>(
+    "SELECT AVG(overall_score) as avgScore, COUNT(*) as count FROM conference_feedback"
+  ))!;
   res.json({ averageScore: row.avgScore || 0, responseCount: row.count });
 });
 
-activityRouter.post("/broadcasts", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/broadcasts", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.subject !== "string" || !body.subject.trim()) {
     return res.status(400).json({ error: "Subject is required" });
@@ -371,11 +390,12 @@ activityRouter.post("/broadcasts", (req: AuthedRequest, res: Response) => {
   }
 
   const id = `bc_${crypto.randomUUID()}`;
-  db.prepare(
-    "INSERT INTO organizer_broadcasts (id, organizer_id, recipient_group, subject, body) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, req.userId, body.recipientGroup || "All Attendees", body.subject.trim(), body.body.trim());
+  await dbRun(
+    "INSERT INTO organizer_broadcasts (id, organizer_id, recipient_group, subject, body) VALUES (?, ?, ?, ?, ?)",
+    [id, req.userId!, body.recipientGroup || "All Attendees", body.subject.trim(), body.body.trim()]
+  );
 
-  const row = db.prepare("SELECT * FROM organizer_broadcasts WHERE id = ?").get(id) as OrganizerBroadcastRow;
+  const row = (await dbGet<OrganizerBroadcastRow>("SELECT * FROM organizer_broadcasts WHERE id = ?", [id]))!;
   res.status(201).json({
     broadcast: {
       id: row.id,
@@ -387,10 +407,11 @@ activityRouter.post("/broadcasts", (req: AuthedRequest, res: Response) => {
   });
 });
 
-activityRouter.get("/broadcasts/mine", (req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM organizer_broadcasts WHERE organizer_id = ? ORDER BY created_at DESC")
-    .all(req.userId) as OrganizerBroadcastRow[];
+activityRouter.get("/broadcasts/mine", async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<OrganizerBroadcastRow>(
+    "SELECT * FROM organizer_broadcasts WHERE organizer_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
   res.json({
     broadcasts: rows.map((row) => ({
       id: row.id,
@@ -402,36 +423,37 @@ activityRouter.get("/broadcasts/mine", (req: AuthedRequest, res: Response) => {
   });
 });
 
-activityRouter.post("/conference-actions", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conference-actions", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId : "";
   const conferenceTitle = typeof body.conferenceTitle === "string" ? body.conferenceTitle : "";
   const kind = body.kind === "committee_interest" || body.kind === "sponsorship_inquiry" ? body.kind : null;
   if (!conferenceId || !conferenceTitle || !kind) {
-    return res
-      .status(400)
-      .json({ error: "conferenceId, conferenceTitle, and a valid kind are required" });
+    return res.status(400).json({ error: "conferenceId, conferenceTitle, and a valid kind are required" });
   }
 
-  const existing = db
-    .prepare("SELECT id FROM conference_interest_actions WHERE user_id = ? AND conference_id = ? AND kind = ?")
-    .get(req.userId, conferenceId, kind) as { id: string } | undefined;
+  const existing = await dbGet<{ id: string }>(
+    "SELECT id FROM conference_interest_actions WHERE user_id = ? AND conference_id = ? AND kind = ?",
+    [req.userId!, conferenceId, kind]
+  );
 
   if (existing) {
     return res.json({ alreadyRecorded: true });
   }
 
   const id = `cia_${crypto.randomUUID()}`;
-  db.prepare(
-    "INSERT INTO conference_interest_actions (id, user_id, conference_id, conference_title, kind) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, req.userId, conferenceId, conferenceTitle, kind);
+  await dbRun(
+    "INSERT INTO conference_interest_actions (id, user_id, conference_id, conference_title, kind) VALUES (?, ?, ?, ?, ?)",
+    [id, req.userId!, conferenceId, conferenceTitle, kind]
+  );
   res.status(201).json({ alreadyRecorded: false });
 });
 
-activityRouter.get("/conference-actions/mine", (req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM conference_interest_actions WHERE user_id = ? ORDER BY created_at DESC")
-    .all(req.userId) as ConferenceInterestActionRow[];
+activityRouter.get("/conference-actions/mine", async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<ConferenceInterestActionRow>(
+    "SELECT * FROM conference_interest_actions WHERE user_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
   res.json({
     actions: rows.map((row) => ({
       conferenceId: row.conference_id,
@@ -445,22 +467,20 @@ activityRouter.get("/conference-actions/mine", (req: AuthedRequest, res: Respons
 // Conferences created via the organizer wizard — stored as an opaque JSON blob since the
 // client-side Conference shape is large and nested; every account can see every created
 // conference, mirroring the platform-wide submissions/registrations views elsewhere.
-activityRouter.post("/conferences", (req: AuthedRequest, res: Response) => {
+activityRouter.post("/conferences", async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.id !== "string" || !body.id || typeof body.title !== "string" || !body.title.trim()) {
     return res.status(400).json({ error: "A conference object with id and title is required" });
   }
-  db.prepare("INSERT INTO created_conferences (id, organizer_id, data) VALUES (?, ?, ?)").run(
+  await dbRun("INSERT INTO created_conferences (id, organizer_id, data) VALUES (?, ?, ?)", [
     body.id,
-    req.userId,
-    JSON.stringify(body)
-  );
+    req.userId!,
+    JSON.stringify(body),
+  ]);
   res.status(201).json({ conference: body });
 });
 
-activityRouter.get("/conferences", (_req: AuthedRequest, res: Response) => {
-  const rows = db
-    .prepare("SELECT * FROM created_conferences ORDER BY created_at DESC")
-    .all() as CreatedConferenceRow[];
+activityRouter.get("/conferences", async (_req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<CreatedConferenceRow>("SELECT * FROM created_conferences ORDER BY created_at DESC");
   res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
 });
