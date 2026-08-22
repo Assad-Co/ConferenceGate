@@ -1,38 +1,78 @@
 import React, { useState } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
-import { UserProfile } from '../types';
+
+export interface EditProfileValues {
+  name: string;
+  title: string;
+  organization: string;
+  department: string;
+  city: string;
+  country: string;
+  bio: string;
+}
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userProfile: UserProfile;
-  onSave: (payload: {
-    name: string;
-    title: string;
-    organization: string;
-    department: string;
-    city: string;
-    country: string;
-    bio: string;
-  }) => Promise<void>;
+  initialValues: EditProfileValues;
+  variant?: 'professional' | 'organizer' | 'sponsor';
+  onSave: (payload: EditProfileValues) => Promise<void>;
 }
 
 const inputClass =
   'w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600';
 const labelClass = 'block text-xs font-bold text-slate-600 mb-1.5';
 
-export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, userProfile, onSave }) => {
-  const [name, setName] = useState(userProfile.name);
-  const [title, setTitle] = useState(userProfile.title);
-  const [organization, setOrganization] = useState(userProfile.organization);
-  const [department, setDepartment] = useState(userProfile.department);
-  const [city, setCity] = useState(userProfile.city);
-  const [country, setCountry] = useState(userProfile.country);
-  const [bio, setBio] = useState(userProfile.bio);
+const VARIANT_COPY = {
+  professional: {
+    title: 'Edit Profile',
+    organizationLabel: 'Organization',
+    organizationPlaceholder: 'e.g. University of Oxford',
+    departmentLabel: 'Department',
+    departmentPlaceholder: 'e.g. Earth Sciences',
+    bioLabel: 'Bio',
+    bioPlaceholder: 'Tell the community a bit about your work and interests...',
+  },
+  organizer: {
+    title: 'Edit Organizer Profile',
+    organizationLabel: 'Organizing Company / Association Name',
+    organizationPlaceholder: 'e.g. Global Energy Summit Board',
+    departmentLabel: 'Division / Team',
+    departmentPlaceholder: 'e.g. Program Committee',
+    bioLabel: 'About the Organization',
+    bioPlaceholder: 'Describe your organization, its mission, and the events it runs...',
+  },
+  sponsor: {
+    title: 'Edit Sponsor Profile',
+    organizationLabel: 'Company Name',
+    organizationPlaceholder: 'e.g. TotalEnergies Digital & Geosciences Labs',
+    departmentLabel: 'Division / Team',
+    departmentPlaceholder: 'e.g. Sponsorships & Partnerships',
+    bioLabel: 'About the Company',
+    bioPlaceholder: 'Describe your company and what you look for in a sponsorship...',
+  },
+} as const;
+
+export const EditProfileModal: React.FC<EditProfileModalProps> = ({
+  isOpen,
+  onClose,
+  initialValues,
+  variant = 'professional',
+  onSave,
+}) => {
+  const [name, setName] = useState(initialValues.name);
+  const [title, setTitle] = useState(initialValues.title);
+  const [organization, setOrganization] = useState(initialValues.organization);
+  const [department, setDepartment] = useState(initialValues.department);
+  const [city, setCity] = useState(initialValues.city);
+  const [country, setCountry] = useState(initialValues.country);
+  const [bio, setBio] = useState(initialValues.bio);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   if (!isOpen) return null;
+
+  const copy = VARIANT_COPY[variant];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +104,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
-          <h2 className="text-lg font-extrabold text-slate-900">Edit Profile</h2>
+          <h2 className="text-lg font-extrabold text-slate-900">{copy.title}</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
@@ -72,37 +112,37 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className={labelClass}>Full Name</label>
+            <label className={labelClass}>{variant === 'professional' ? 'Full Name' : 'Your Name'}</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Title / Position</label>
+            <label className={labelClass}>{variant === 'professional' ? 'Title / Position' : 'Your Role'}</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Senior Research Fellow"
+              placeholder={variant === 'professional' ? 'e.g. Senior Research Fellow' : 'e.g. Program Director'}
               className={inputClass}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Organization</label>
+              <label className={labelClass}>{copy.organizationLabel}</label>
               <input
                 type="text"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
-                placeholder="e.g. University of Oxford"
+                placeholder={copy.organizationPlaceholder}
                 className={inputClass}
               />
             </div>
             <div>
-              <label className={labelClass}>Department</label>
+              <label className={labelClass}>{copy.departmentLabel}</label>
               <input
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g. Earth Sciences"
+                placeholder={copy.departmentPlaceholder}
                 className={inputClass}
               />
             </div>
@@ -118,13 +158,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             </div>
           </div>
           <div>
-            <label className={labelClass}>Bio</label>
+            <label className={labelClass}>{copy.bioLabel}</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
               maxLength={600}
-              placeholder="Tell the community a bit about your work and interests..."
+              placeholder={copy.bioPlaceholder}
               className={`${inputClass} resize-none`}
             />
             <div className="text-[10px] text-slate-400 text-right mt-1">{bio.length}/600</div>

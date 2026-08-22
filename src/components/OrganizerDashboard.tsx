@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   MessageSquareQuote,
+  MapPin,
 } from 'lucide-react';
 import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
 import { formatDate } from '../utils/date';
@@ -57,6 +58,10 @@ interface OrganizerDashboardProps {
   submissions: AbstractSubmission[];
   organizerName?: string;
   organizerLogo?: string;
+  organizerBio?: string;
+  organizerCity?: string;
+  organizerCountry?: string;
+  onEditOrganizerProfile?: () => void;
   registrationCountsByConference?: Record<string, number>;
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
@@ -199,6 +204,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   submissions,
   organizerName = 'Conference Organizing Board',
   organizerLogo = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
+  organizerBio = '',
+  organizerCity = '',
+  organizerCountry = '',
+  onEditOrganizerProfile,
   registrationCountsByConference = {},
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
@@ -1090,6 +1099,42 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* Tab 1: Overview KPIs */}
       {activeTab === 'overview' && (
         <div className="space-y-8">
+          {/* Organizer Company Profile */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="flex items-center gap-4 min-w-0">
+              <img
+                src={organizerLogo}
+                alt={organizerName}
+                className="w-16 h-16 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-600">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Verified Organizer
+                </div>
+                <h3 className="font-extrabold text-base text-slate-900 truncate">{organizerName}</h3>
+                {(organizerCity || organizerCountry) && (
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                    <MapPin className="w-3 h-3" />
+                    <span>{[organizerCity, organizerCountry].filter(Boolean).join(', ')}</span>
+                  </div>
+                )}
+                <p className="text-xs text-slate-600 mt-1 max-w-xl">
+                  {organizerBio || 'No company description yet — add one so attendees and sponsors know who you are.'}
+                </p>
+              </div>
+            </div>
+            {onEditOrganizerProfile && (
+              <button
+                onClick={onEditOrganizerProfile}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit Profile
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Registrations</div>

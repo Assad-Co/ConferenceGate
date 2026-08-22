@@ -636,7 +636,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         <EditProfileModal
           isOpen={isEditProfileOpen}
           onClose={() => setIsEditProfileOpen(false)}
-          userProfile={userProfile}
+          initialValues={{
+            name: userProfile.name,
+            title: userProfile.title,
+            organization: userProfile.organization,
+            department: userProfile.department,
+            city: userProfile.city,
+            country: userProfile.country,
+            bio: userProfile.bio,
+          }}
           onSave={onEditProfile}
         />
       )}

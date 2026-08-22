@@ -34,6 +34,7 @@ interface NavbarProps {
   sponsorIdentity?: { name: string; logo: string };
   onOrganizerLogoChange?: (dataUrl: string) => void;
   onSponsorLogoChange?: (dataUrl: string) => void;
+  onOpenEditProfile?: () => void;
   notifications?: NotificationItem[];
   sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
@@ -61,6 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   sponsorIdentity,
   onOrganizerLogoChange,
   onSponsorLogoChange,
+  onOpenEditProfile,
   notifications = [],
   sponsorAlerts = [],
   unreadMessageCount = 0,
@@ -375,7 +377,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
             <div className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
               <button
-                onClick={() => handleTabChange(identityTab)}
+                onClick={() => {
+                  if ((isOrganizerRole || isSponsorRole) && onOpenEditProfile) {
+                    onOpenEditProfile();
+                  } else {
+                    handleTabChange(identityTab);
+                  }
+                }}
+                title={isOrganizerRole || isSponsorRole ? 'Edit profile' : undefined}
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <span className="relative shrink-0">
