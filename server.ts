@@ -10,7 +10,8 @@ import { googleSearchRouter } from "./server/googleSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
-import { initDb } from "./server/db";
+import { postsRouter } from "./server/posts";
+import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -45,6 +46,9 @@ async function startServer() {
   // Real sponsorship packages, applications, and reviews
   app.use("/api/sponsors", sponsorsRouter);
 
+  // Real community feed: posts, reactions, comments, reposts, saves
+  app.use("/api/posts", postsRouter);
+
   // AI Routes using Gemini SDK
   const getAIClient = () => {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -61,6 +65,59 @@ async function startServer() {
     });
   };
 
+  // Looks up the authenticated user's own real activity so the assistant's answers about
+  // "your abstracts", "your conferences", or "your sponsorships" are grounded in fact rather
+  // than hallucinated. Returns null when the request has no valid session — the assistant
+  // then falls back to answering generically, without ever inventing account-specific data.
+  async function buildRealUserContext(req: express.Request): Promise<Record<string, unknown> | null> {
+    const userId = verifySessionToken(req.cookies?.[COOKIE_NAME]);
+    if (!userId) return null;
+
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [userId]);
+    if (!user) return null;
+
+    if (user.role === "organizer") {
+      const created = await dbAll<CreatedConferenceRow>(
+        "SELECT * FROM created_conferences WHERE organizer_id = ? ORDER BY created_at DESC",
+        [userId]
+      );
+      const conferences = created.map((c) => JSON.parse(c.data)?.title).filter(Boolean);
+      const pendingApplicants = (await dbGet<{ count: number }>(
+        `SELECT COUNT(*) as count FROM sponsorship_applications sa
+         JOIN sponsorship_packages sp ON sp.id = sa.package_id
+         WHERE sp.organizer_id = ? AND sa.status = 'Pending'`,
+        [userId]
+      ))!.count;
+      return { role: "organizer", name: user.name, conferencesCreated: conferences, pendingSponsorApplicants: pendingApplicants };
+    }
+
+    if (user.role === "sponsor") {
+      const applications = await dbAll<SponsorshipApplicationRow & { tier: string; conference_title: string }>(
+        `SELECT sa.*, sp.tier as tier, sp.conference_title as conference_title
+         FROM sponsorship_applications sa
+         JOIN sponsorship_packages sp ON sp.id = sa.package_id
+         WHERE sa.sponsor_id = ? ORDER BY sa.created_at DESC`,
+        [userId]
+      );
+      return {
+        role: "sponsor",
+        name: user.name,
+        companyName: user.organization,
+        sponsorshipApplications: applications.map((a) => ({ conference: a.conference_title, tier: a.tier, status: a.status })),
+      };
+    }
+
+    const submissions = await dbAll<SubmissionRow>(
+      "SELECT * FROM submissions WHERE submitter_id = ? ORDER BY submission_date DESC",
+      [userId]
+    );
+    return {
+      role: "professional",
+      name: user.name,
+      abstractSubmissions: submissions.map((s) => ({ title: s.title, conference: s.conference_title, status: s.status })),
+    };
+  }
+
   // AI Assistant Route
   app.post("/api/ai/assistant", async (req, res) => {
     try {
@@ -76,11 +133,16 @@ async function startServer() {
         });
       }
 
+      const realUserContext = await buildRealUserContext(req);
+
       const systemInstruction = `You are the Conference Gate AI Assistant — an intelligent, authoritative advisor embedded in the Conference Gate SaaS platform.
 Conference Gate is the global platform for conference discovery, event management, abstract review, technical committees, sponsorship, and verified conference identity.
 Your goal is to answer queries for Professionals, Reviewers, Organizers, and Sponsors with concise, highly professional insights.
 Current user role context: ${userRole || 'Professional'}.
-Additional Context: ${JSON.stringify(context || {})}`;
+Additional Context: ${JSON.stringify(context || {})}
+${realUserContext
+  ? `The user is authenticated. Here is their real, verified activity on the platform — use it when they ask about "my abstracts", "my conferences", "my sponsorships", or similar, and never invent activity beyond what is listed here:\n${JSON.stringify(realUserContext)}`
+  : "The user is not authenticated, or has no activity on file yet — do not claim to know their personal abstracts, conferences, or sponsorships; answer generally instead."}`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.6-flash",

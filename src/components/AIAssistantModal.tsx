@@ -69,6 +69,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
       const res = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           prompt: text,
           userRole,

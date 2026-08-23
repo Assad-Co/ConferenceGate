@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, ThumbsUp, MessageSquare, Share2, Award, PartyPopper, Lightbulb, BarChart3, Sparkles } from 'lucide-react';
+import { ThumbsUp, MessageSquare, Share2, Award, PartyPopper, Lightbulb, BarChart3, Sparkles } from 'lucide-react';
 import { Post, UserProfile } from '../types';
 
 const compact = (n: number): string => {
@@ -27,11 +27,12 @@ const StatTile: React.FC<{ icon: React.ElementType; label: string; value: number
 
 interface ProfileAnalyticsProps {
   userProfile: UserProfile;
+  currentUserId?: string;
   posts: Post[];
 }
 
-export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile, posts }) => {
-  const myPosts = posts.filter((p) => p.authorName === userProfile.name);
+export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile, currentUserId, posts }) => {
+  const myPosts = posts.filter((p) => (currentUserId ? p.authorUserId === currentUserId : p.authorName === userProfile.name));
 
   if (myPosts.length === 0) {
     return (
@@ -41,8 +42,8 @@ export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile,
         </div>
         <h3 className="text-sm font-bold text-slate-900">No engagement yet</h3>
         <p className="text-xs text-slate-500 max-w-sm mx-auto">
-          Share a paper acceptance, CFP alert, or milestone from your feed to start tracking impressions, reactions,
-          and comments here.
+          Share a paper acceptance, CFP alert, or milestone from your feed to start tracking reactions and comments
+          here.
         </p>
       </div>
     );
@@ -50,13 +51,12 @@ export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile,
 
   const summary = myPosts.reduce(
     (acc, p) => {
-      acc.impressions += p.impressions || 0;
       acc.reactions += p.reactions.likes + p.reactions.celebrates + p.reactions.insightful + p.reactions.kudos;
       acc.comments += p.commentsCount;
       acc.reposts += p.repostsCount || 0;
       return acc;
     },
-    { impressions: 0, reactions: 0, comments: 0, reposts: 0 }
+    { reactions: 0, comments: 0, reposts: 0 }
   );
 
   const reactionBreakdown = (Object.keys(REACTION_META) as Array<keyof typeof REACTION_META>)
@@ -64,7 +64,13 @@ export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile,
     .filter((r) => r.count > 0);
   const totalReactions = reactionBreakdown.reduce((sum, r) => sum + r.count, 0);
 
-  const topPosts = [...myPosts].sort((a, b) => (b.impressions || 0) - (a.impressions || 0)).slice(0, 3);
+  const topPosts = [...myPosts]
+    .sort((a, b) => {
+      const totalA = a.reactions.likes + a.reactions.celebrates + a.reactions.insightful + a.reactions.kudos;
+      const totalB = b.reactions.likes + b.reactions.celebrates + b.reactions.insightful + b.reactions.kudos;
+      return totalB - totalA;
+    })
+    .slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -78,8 +84,7 @@ export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile,
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatTile icon={Eye} label="Impressions" value={summary.impressions} />
+      <div className="grid grid-cols-3 gap-3">
         <StatTile icon={ThumbsUp} label="Reactions" value={summary.reactions} />
         <StatTile icon={MessageSquare} label="Comments" value={summary.comments} />
         <StatTile icon={Share2} label="Reposts" value={summary.reposts} />
@@ -136,7 +141,6 @@ export const ProfileAnalytics: React.FC<ProfileAnalyticsProps> = ({ userProfile,
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed line-clamp-2">{post.content}</p>
                 <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-500 font-semibold flex-wrap">
-                  <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{compact(post.impressions || 0)}</span>
                   <span className="flex items-center gap-1">
                     <ThumbsUp className="w-3.5 h-3.5" />
                     {compact(post.reactions.likes + post.reactions.celebrates + post.reactions.insightful + post.reactions.kudos)}

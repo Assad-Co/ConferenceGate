@@ -375,6 +375,8 @@ export interface FeedPost {
   timestamp: string;
   postType: 'announcement' | 'achievement' | 'cfp' | 'speaker' | 'sponsorship' | 'review' | 'celebration';
   conferenceBadge?: string;
+  /** Real conference id, when this post's conference badge references an actual conference in the catalog. */
+  conferenceId?: string;
   celebrationKind?: CelebrationKind;
   celebrationHeadline?: string;
   reactions: {
@@ -385,8 +387,9 @@ export interface FeedPost {
   };
   userReaction?: 'like' | 'celebrate' | 'insightful' | 'kudos';
   commentsCount: number;
-  impressions?: number;
   repostsCount?: number;
+  isSaved?: boolean;
+  isReposted?: boolean;
 }
 
 /** A post author's public identity — enough to show a lightweight profile and start a conversation. */

@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { Conference, UserProfile, Post, PostAuthor } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
+import { ConferenceLink } from './ConferenceLink';
+import { ReactionType } from './reactionMeta';
+import { resolveAvatar } from '../utils/avatar';
 import { formatDate, formatDateRange } from '../utils/date';
 
 interface HomeLandingProps {
@@ -32,17 +35,23 @@ interface HomeLandingProps {
   userProfile: UserProfile;
   posts: Post[];
   onAddPost: (content: string) => void;
+  onReact: (postId: string, reaction: ReactionType) => void;
+  onToggleRepost: (postId: string) => void;
+  onToggleSave: (postId: string) => void;
   onOpenDigitalBadge: () => void;
   onOpenProfile?: (author: PostAuthor) => void;
 }
 
-const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void; onNavigateTab: (tab: string) => void }> = ({
-  post,
-  onOpenProfile,
-  onNavigateTab,
-}) => {
-  const [liked, setLiked] = useState(!!post.userReaction);
-  const likeCount = (post.reactions?.likes ?? 0) + (liked && !post.userReaction ? 1 : 0);
+const PostCard: React.FC<{
+  post: Post;
+  conferences: Conference[];
+  onSelectConference: (conf: Conference) => void;
+  onOpenProfile?: (author: PostAuthor) => void;
+  onNavigateTab: (tab: string) => void;
+  onReact: (postId: string, reaction: ReactionType) => void;
+}> = ({ post, conferences, onSelectConference, onOpenProfile, onNavigateTab, onReact }) => {
+  const liked = post.userReaction === 'like';
+  const likeCount = post.reactions?.likes ?? 0;
 
   return (
   <div className="bg-white rounded-lg border border-slate-200 shadow-xs p-4 space-y-3">
@@ -58,7 +67,7 @@ const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => v
       }
       className="flex items-center gap-3 text-left cursor-pointer group/author"
     >
-      <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
+      <img src={resolveAvatar(post.authorAvatar, post.authorName)} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
       <div className="min-w-0 text-xs">
         <div className="font-bold text-slate-900 flex items-center gap-1 group-hover/author:text-blue-700 transition-colors">
           <span className="truncate">{post.authorName}</span>
@@ -70,16 +79,20 @@ const PostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => v
     </button>
 
     {post.conferenceBadge && (
-      <div className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold">
-        {post.conferenceBadge}
-      </div>
+      <ConferenceLink
+        conferences={conferences}
+        conferenceId={post.conferenceId || ''}
+        conferenceTitle={post.conferenceBadge}
+        onSelectConference={onSelectConference}
+        className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold"
+      />
     )}
 
     <p className="text-sm text-slate-800 leading-relaxed">{post.content}</p>
 
     <div className="pt-3 border-t border-slate-100 flex items-center gap-6 text-xs text-slate-500 font-semibold">
       <button
-        onClick={() => setLiked((prev) => !prev)}
+        onClick={() => onReact(post.id, 'like')}
         className={`flex items-center gap-1.5 cursor-pointer transition-colors ${liked ? 'text-blue-600' : 'hover:text-blue-600'}`}
       >
         <ThumbsUp className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
@@ -155,6 +168,9 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   userProfile,
   posts,
   onAddPost,
+  onReact,
+  onToggleRepost,
+  onToggleSave,
   onOpenDigitalBadge,
   onOpenProfile,
 }) => {
@@ -325,9 +341,24 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             {posts.slice(0, 2).map((post, i) => (
               <React.Fragment key={post.id}>
                 {post.postType === 'celebration' ? (
-                  <CelebrationPostCard post={post} onOpenProfile={onOpenProfile} />
+                  <CelebrationPostCard
+                    post={post}
+                    onOpenProfile={onOpenProfile}
+                    conferences={conferences}
+                    onSelectConference={onSelectConference}
+                    onReact={onReact}
+                    onToggleRepost={onToggleRepost}
+                    onToggleSave={onToggleSave}
+                  />
                 ) : (
-                  <PostCard post={post} onOpenProfile={onOpenProfile} onNavigateTab={onNavigateTab} />
+                  <PostCard
+                    post={post}
+                    conferences={conferences}
+                    onSelectConference={onSelectConference}
+                    onOpenProfile={onOpenProfile}
+                    onNavigateTab={onNavigateTab}
+                    onReact={onReact}
+                  />
                 )}
                 {i === 0 && promotedPool.length > 0 && (
                   <PromotedConferenceCard
