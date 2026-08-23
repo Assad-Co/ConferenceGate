@@ -493,23 +493,25 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       <div className="space-y-6">
         {filtered.length === 0 ? (
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
-              <Search className="w-8 h-8 text-slate-300 mx-auto" />
-              <h3 className="text-base font-bold text-slate-800">No matching conferences in our catalog</h3>
-              <p className="text-xs text-slate-500">
-                Try adjusting your search criteria or clearing selected filters.
-              </p>
-              <button
-                onClick={() => {
-                  setSelectedIndustry('All');
-                  setSelectedCfp('All');
-                  resetAllFilters();
-                }}
-                className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
+            {!searchTerm.trim() && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+                <Search className="w-8 h-8 text-slate-300 mx-auto" />
+                <h3 className="text-base font-bold text-slate-800">No matching conferences in our catalog</h3>
+                <p className="text-xs text-slate-500">
+                  Try adjusting your search criteria or clearing selected filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedIndustry('All');
+                    setSelectedCfp('All');
+                    resetAllFilters();
+                  }}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
 
             {searchTerm.trim() && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -542,7 +544,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   )}
 
                   {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-4">No web results either. Try different keywords.</p>
+                    <p className="text-xs text-slate-400 text-center py-4">No web results found. Try different keywords.</p>
                   )}
 
                   {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
