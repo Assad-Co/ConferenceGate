@@ -21,6 +21,14 @@ function isConfigured() {
   return !!process.env.BRAVE_SEARCH_API_KEY;
 }
 
+// Nudges the underlying web search toward actual conference/event listings rather than
+// generic informational pages about the topic — this panel is "search the web for a
+// conference we haven't added yet", not a general-purpose search box.
+const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo)\b/i;
+function toConferenceQuery(query: string): string {
+  return CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
+}
+
 async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   const cacheKey = query.trim().toLowerCase();
   const cached = cache.get(cacheKey);
@@ -29,7 +37,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   }
 
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
-  url.searchParams.set("q", query);
+  url.searchParams.set("q", toConferenceQuery(query));
   url.searchParams.set("count", "10");
 
   const res = await fetch(url.toString(), {
