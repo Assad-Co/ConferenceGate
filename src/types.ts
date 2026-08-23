@@ -163,6 +163,9 @@ export interface Conference {
   banner: string;
   organizerName: string;
   organizerLogo: string;
+  /** Real link to the conference's own official website — the source of truth for its actual
+   * program, speakers, and committee, since we don't fabricate those details ourselves. */
+  officialWebsite?: string;
   description: string;
   topics: string[];
   tracks: string[];
