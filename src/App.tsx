@@ -1262,7 +1262,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'discover' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
+        {activeTab === 'discover' && (
           <DiscoveryEngine
             conferences={conferences}
             onSelectConference={handleSelectConference}
