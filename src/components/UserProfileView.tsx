@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
+import { ConferenceLink } from './ConferenceLink';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
@@ -38,6 +39,7 @@ interface UserProfileViewProps {
   posts?: Post[];
   registrations?: ConferenceRegistration[];
   conferences?: Conference[];
+  onSelectConference?: (conf: Conference) => void;
   onOpenBadgeModal: () => void;
   onOpenCertificates: () => void;
   initialTab?: ProfileTab;
@@ -87,6 +89,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   posts = [],
   registrations = [],
   conferences = [],
+  onSelectConference = () => {},
   onOpenBadgeModal,
   onOpenCertificates,
   initialTab = 'conferences',
@@ -395,7 +398,13 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 {ATTENDED_CONFERENCES.map((conf) => (
                   <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                     <div>
-                      <h4 className="font-bold text-xs text-slate-900">{conf.title}</h4>
+                      <ConferenceLink
+                        conferences={conferences}
+                        conferenceId={conf.id}
+                        conferenceTitle={conf.title}
+                        onSelectConference={onSelectConference}
+                        className="font-bold text-xs text-slate-900"
+                      />
                       <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

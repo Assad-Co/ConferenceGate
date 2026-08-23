@@ -13,12 +13,15 @@ import {
   Filter,
   Users,
 } from 'lucide-react';
-import { UserProfile, ReviewOpportunity, AbstractSubmission } from '../types';
+import { UserProfile, ReviewOpportunity, AbstractSubmission, Conference } from '../types';
+import { ConferenceLink } from './ConferenceLink';
 
 interface ReviewerPortalProps {
   userProfile: UserProfile;
   opportunities: ReviewOpportunity[];
   submissions: AbstractSubmission[];
+  conferences: Conference[];
+  onSelectConference: (conf: Conference) => void;
   onCompleteReview: (abstractId: string, reviewData: any) => void;
   volunteeredOpportunityIds?: string[];
   onVolunteer?: (opportunityId: string, conferenceTitle: string, topic: string) => void;
@@ -29,6 +32,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   userProfile,
   opportunities,
   submissions,
+  conferences,
+  onSelectConference,
   onCompleteReview,
   volunteeredOpportunityIds = [],
   onVolunteer,
@@ -250,7 +255,13 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                       {opp.track}
                     </span>
                     <h3 className="font-bold text-base text-slate-900 mt-1">{opp.topic}</h3>
-                    <p className="text-xs text-slate-500 font-medium">{opp.conferenceTitle}</p>
+                    <ConferenceLink
+                      conferences={conferences}
+                      conferenceId={opp.conferenceId}
+                      conferenceTitle={opp.conferenceTitle}
+                      onSelectConference={onSelectConference}
+                      className="text-xs text-slate-500 font-medium"
+                    />
                   </div>
                   <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
                     {opp.abstractsCount} Papers
@@ -304,7 +315,13 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             </span>
             <h2 className="text-xl font-bold text-slate-900">{selectedSub.title}</h2>
             <div className="text-xs text-slate-500">
-              Track: {selectedSub.track} • Target: {selectedSub.conferenceTitle}
+              Track: {selectedSub.track} • Target:{' '}
+              <ConferenceLink
+                conferences={conferences}
+                conferenceId={selectedSub.conferenceId}
+                conferenceTitle={selectedSub.conferenceTitle}
+                onSelectConference={onSelectConference}
+              />
             </div>
           </div>
 
@@ -454,7 +471,13 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                         {sub.track}
                       </span>
                       <h4 className="font-bold text-sm text-slate-900">{sub.title}</h4>
-                      <p className="text-xs text-slate-500">{sub.conferenceTitle}</p>
+                      <ConferenceLink
+                        conferences={conferences}
+                        conferenceId={sub.conferenceId}
+                        conferenceTitle={sub.conferenceTitle}
+                        onSelectConference={onSelectConference}
+                        className="text-xs text-slate-500"
+                      />
                     </div>
 
                     <button
@@ -488,7 +511,13 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                           {sub.track}
                         </span>
                         <h4 className="font-bold text-sm text-slate-900">{sub.title}</h4>
-                        <p className="text-xs text-slate-500">{sub.conferenceTitle}</p>
+                        <ConferenceLink
+                          conferences={conferences}
+                          conferenceId={sub.conferenceId}
+                          conferenceTitle={sub.conferenceTitle}
+                          onSelectConference={onSelectConference}
+                          className="text-xs text-slate-500"
+                        />
                       </div>
 
                       {myReview && (

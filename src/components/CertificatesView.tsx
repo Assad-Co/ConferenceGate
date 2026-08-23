@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Award, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
-import { AbstractSubmission, UserProfile } from '../types';
+import { AbstractSubmission, UserProfile, Conference } from '../types';
 import { ConferenceRegistration } from '../api/activity';
 import { downloadCertificatePDF } from '../utils/certificatePdf';
+import { ConferenceLink } from './ConferenceLink';
 
 interface CertificatesViewProps {
   userProfile: UserProfile;
   submissions: AbstractSubmission[];
   registrations: ConferenceRegistration[];
+  conferences: Conference[];
+  onSelectConference: (conf: Conference) => void;
   currentUserId?: string;
   onBack: () => void;
 }
@@ -16,6 +19,7 @@ interface Certificate {
   id: string;
   title: string;
   event: string;
+  conferenceId: string;
   paperTitle: string;
   date: string;
   issuer: string;
@@ -37,6 +41,8 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   userProfile,
   submissions,
   registrations,
+  conferences,
+  onSelectConference,
   currentUserId,
   onBack,
 }) => {
@@ -53,6 +59,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
             id: `paper_${s.id}`,
             title: 'Certificate of Paper Presentation',
             event: s.conferenceTitle,
+            conferenceId: s.conferenceId,
             paperTitle: s.title,
             date: s.submissionDate,
             issuer: `Technical Committee, ${s.conferenceTitle}`,
@@ -60,7 +67,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           });
         });
 
-      const reviewsByConference = new Map<string, { count: number; latestDate: string }>();
+      const reviewsByConference = new Map<string, { count: number; latestDate: string; conferenceId: string }>();
       submissions.forEach((s) => {
         s.reviews
           .filter((r) => r.reviewerId === currentUserId)
@@ -70,7 +77,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
               existing.count += 1;
               if (r.date > existing.latestDate) existing.latestDate = r.date;
             } else {
-              reviewsByConference.set(s.conferenceTitle, { count: 1, latestDate: r.date });
+              reviewsByConference.set(s.conferenceTitle, { count: 1, latestDate: r.date, conferenceId: s.conferenceId });
             }
           });
       });
@@ -79,6 +86,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           id: `review_${conferenceTitle}`,
           title: 'Certificate of Peer Reviewer Service',
           event: conferenceTitle,
+          conferenceId: info.conferenceId,
           paperTitle: `Verified Peer Review of ${info.count} Technical Paper${info.count === 1 ? '' : 's'} (+${info.count * 20} Kudos)`,
           date: info.latestDate,
           issuer: 'Conference Gate Global Reviewer Board',
@@ -92,6 +100,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         id: `attend_${r.conferenceId}`,
         title: 'Certificate of Technical Conference Registration',
         event: r.conferenceTitle,
+        conferenceId: r.conferenceId,
         paperTitle: r.packageName ? `Registered Attendee — ${r.packageName}` : 'Registered Attendee',
         date: r.registeredAt.split(' ')[0].split('T')[0],
         issuer: 'Conference Gate',
@@ -170,7 +179,13 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                     <span className="text-[10px] text-slate-400 font-mono">{cert.verificationHash}</span>
                   </div>
                   <h3 className="font-bold text-base text-slate-900">{cert.title}</h3>
-                  <p className="text-xs font-semibold text-blue-700">{cert.event}</p>
+                  <ConferenceLink
+                    conferences={conferences}
+                    conferenceId={cert.conferenceId}
+                    conferenceTitle={cert.event}
+                    onSelectConference={onSelectConference}
+                    className="text-xs font-semibold text-blue-700"
+                  />
                   <p className="text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200">
                     {cert.paperTitle}
                   </p>

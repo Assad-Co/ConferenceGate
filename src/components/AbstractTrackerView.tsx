@@ -11,18 +11,23 @@ import {
   Plus,
   Send,
 } from 'lucide-react';
-import { AbstractSubmission } from '../types';
+import { AbstractSubmission, Conference } from '../types';
 import { submitRevision } from '../api/activity';
 import { useToast } from './Toast';
+import { ConferenceLink } from './ConferenceLink';
 
 interface AbstractTrackerViewProps {
   submissions: AbstractSubmission[];
+  conferences: Conference[];
+  onSelectConference: (conf: Conference) => void;
   onOpenNewSubmission: () => void;
   onSubmissionUpdated?: (submission: AbstractSubmission) => void;
 }
 
 export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
   submissions,
+  conferences,
+  onSelectConference,
   onOpenNewSubmission,
   onSubmissionUpdated,
 }) => {
@@ -115,7 +120,12 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   {sub.title}
                 </h4>
                 <div className="text-[11px] text-slate-500 mt-2 line-clamp-1">
-                  {sub.conferenceTitle}
+                  <ConferenceLink
+                    conferences={conferences}
+                    conferenceId={sub.conferenceId}
+                    conferenceTitle={sub.conferenceTitle}
+                    onSelectConference={onSelectConference}
+                  />
                 </div>
                 <div className="text-[10px] text-slate-400 mt-1">
                   Submitted on {sub.submissionDate}
@@ -136,9 +146,13 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                     {currentSub.track}
                   </span>
                   <span className="text-xs text-slate-400">•</span>
-                  <span className="text-xs text-slate-600 font-medium">
-                    {currentSub.conferenceTitle}
-                  </span>
+                  <ConferenceLink
+                    conferences={conferences}
+                    conferenceId={currentSub.conferenceId}
+                    conferenceTitle={currentSub.conferenceTitle}
+                    onSelectConference={onSelectConference}
+                    className="text-xs text-slate-600 font-medium"
+                  />
                 </div>
                 <h2 className="text-xl font-bold text-slate-900 leading-snug">
                   {currentSub.title}
