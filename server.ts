@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
-import { googleSearchRouter } from "./server/googleSearch";
+import { braveSearchRouter } from "./server/braveSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
@@ -34,8 +34,8 @@ async function startServer() {
   // Auth routes
   app.use("/api/auth", authRouter);
 
-  // Live conference search (Google Custom Search)
-  app.use("/api/search", googleSearchRouter);
+  // Live conference search (Brave Search API)
+  app.use("/api/search", braveSearchRouter);
 
   // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations
   app.use("/api/activity", activityRouter);

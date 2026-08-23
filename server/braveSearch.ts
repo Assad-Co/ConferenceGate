@@ -14,11 +14,11 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — keeps us well within the free 100 queries/day quota
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — keeps us well within Brave's free 2,000 queries/month quota
 const cache = new Map<string, CacheEntry>();
 
 function isConfigured() {
-  return !!process.env.GOOGLE_SEARCH_API_KEY && !!process.env.GOOGLE_SEARCH_ENGINE_ID;
+  return !!process.env.BRAVE_SEARCH_API_KEY;
 }
 
 async function searchConferences(query: string): Promise<LiveSearchResult[]> {
@@ -28,36 +28,39 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
     return cached.data;
   }
 
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.set("key", process.env.GOOGLE_SEARCH_API_KEY!);
-  url.searchParams.set("cx", process.env.GOOGLE_SEARCH_ENGINE_ID!);
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", query);
-  url.searchParams.set("num", "10");
+  url.searchParams.set("count", "10");
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
+    },
+  });
   const body = await res.json();
 
   if (!res.ok) {
-    const message = body?.error?.message || `Google Search API error (${res.status})`;
+    const message = body?.error?.detail || body?.error?.message || `Brave Search API error (${res.status})`;
     throw new Error(message);
   }
 
-  const items: any[] = body.items || [];
+  const items: any[] = body.web?.results || [];
   const results: LiveSearchResult[] = items.map((item) => ({
     title: item.title || "",
-    link: item.link || "",
-    snippet: item.snippet || "",
-    displayLink: item.displayLink || "",
-    thumbnail: item.pagemap?.cse_thumbnail?.[0]?.src || item.pagemap?.cse_image?.[0]?.src || null,
+    link: item.url || "",
+    snippet: item.description || "",
+    displayLink: item.meta_url?.hostname || item.profile?.name || "",
+    thumbnail: item.thumbnail?.src || null,
   }));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
 }
 
-export const googleSearchRouter = Router();
+export const braveSearchRouter = Router();
 
-googleSearchRouter.get(
+braveSearchRouter.get(
   "/conferences",
   asyncHandler(async (req, res) => {
     const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
@@ -68,7 +71,7 @@ googleSearchRouter.get(
 
     if (!isConfigured()) {
       return res.status(503).json({
-        error: "Live search is not configured on the server. Set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID.",
+        error: "Live search is not configured on the server. Set BRAVE_SEARCH_API_KEY.",
       });
     }
 
@@ -76,7 +79,7 @@ googleSearchRouter.get(
       const results = await searchConferences(query);
       res.json({ results });
     } catch (error: any) {
-      console.error("Google Search error:", error);
+      console.error("Brave Search error:", error);
       res.status(502).json({ error: error.message || "Live search failed. Please try again." });
     }
   })
