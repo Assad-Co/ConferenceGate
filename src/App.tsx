@@ -1278,6 +1278,8 @@ export function App() {
         {activeTab === 'abstracts' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <AbstractTrackerView
             submissions={submissions}
+            conferences={conferences}
+            onSelectConference={handleSelectConference}
             onOpenNewSubmission={() => setIsSubmitAbstractOpen(true)}
             onSubmissionUpdated={(updated) =>
               setSubmissions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
@@ -1290,6 +1292,8 @@ export function App() {
             userProfile={userProfile}
             opportunities={sampleReviewOpportunities}
             submissions={submissions}
+            conferences={conferences}
+            onSelectConference={handleSelectConference}
             onCompleteReview={handleCompleteReview}
             volunteeredOpportunityIds={volunteeredOpportunityIds}
             onVolunteer={handleVolunteerForReview}
@@ -1352,6 +1356,7 @@ export function App() {
             posts={posts}
             registrations={registrations}
             conferences={conferences}
+            onSelectConference={handleSelectConference}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
@@ -1370,6 +1375,8 @@ export function App() {
             userProfile={userProfile}
             submissions={submissions}
             registrations={registrations}
+            conferences={conferences}
+            onSelectConference={handleSelectConference}
             currentUserId={authUser?.id}
             onBack={() => setActiveTab('profile')}
           />
