@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   Calendar,
@@ -15,10 +15,13 @@ import {
   Map,
   X,
   ChevronDown,
+  Loader2,
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDate, formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
-import { LiveConferenceSearch } from './LiveConferenceSearch';
+import { searchConferencesOnTheWeb, LiveSearchResult } from '../api/search';
 
 interface DiscoveryEngineProps {
   conferences: Conference[];
@@ -204,6 +207,39 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       matchesCityMap
     );
   });
+
+  // When nothing in our curated catalog matches the typed keyword, automatically fall back to
+  // a live web search for the same term — no separate "search the web" step required.
+  const [webResults, setWebResults] = useState<LiveSearchResult[] | null>(null);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webSearchError, setWebSearchError] = useState<string | null>(null);
+  const lastWebQueryRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    if (filtered.length > 0 || !trimmed) {
+      setWebResults(null);
+      setWebSearchError(null);
+      lastWebQueryRef.current = null;
+      return;
+    }
+
+    const handle = setTimeout(() => {
+      if (lastWebQueryRef.current === trimmed) return;
+      lastWebQueryRef.current = trimmed;
+      setWebSearchLoading(true);
+      setWebSearchError(null);
+      searchConferencesOnTheWeb(trimmed)
+        .then((data) => setWebResults(data))
+        .catch((e) => {
+          setWebResults(null);
+          setWebSearchError(e.message || 'Live search failed. Please try again.');
+        })
+        .finally(() => setWebSearchLoading(false));
+    }, 500);
+
+    return () => clearTimeout(handle);
+  }, [searchTerm, filtered.length]);
 
   return (
     <div className="space-y-8">
@@ -453,27 +489,94 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         )}
       </div>
 
-      <LiveConferenceSearch />
-
       {/* Conference Cards List */}
       <div className="space-y-6">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-            <Search className="w-8 h-8 text-slate-300 mx-auto" />
-            <h3 className="text-base font-bold text-slate-800">No matching conferences found</h3>
-            <p className="text-xs text-slate-500">
-              Try adjusting your search criteria or clearing selected filters.
-            </p>
-            <button
-              onClick={() => {
-                setSelectedIndustry('All');
-                setSelectedCfp('All');
-                resetAllFilters();
-              }}
-              className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
-            >
-              Reset Filters
-            </button>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+              <Search className="w-8 h-8 text-slate-300 mx-auto" />
+              <h3 className="text-base font-bold text-slate-800">No matching conferences in our catalog</h3>
+              <p className="text-xs text-slate-500">
+                Try adjusting your search criteria or clearing selected filters.
+              </p>
+              <button
+                onClick={() => {
+                  setSelectedIndustry('All');
+                  setSelectedCfp('All');
+                  resetAllFilters();
+                }}
+                className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
+              >
+                Reset Filters
+              </button>
+            </div>
+
+            {searchTerm.trim() && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="p-5 flex items-center gap-3 border-b border-slate-100">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                    <Globe className="w-4.5 h-4.5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Live Web Results for "{searchTerm.trim()}"</h3>
+                    <p className="text-[11px] text-slate-500">
+                      Not in our verified catalog yet — these come from a live web search, so always confirm details
+                      on the organizer's official site before registering or submitting.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  {webSearchLoading && (
+                    <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400 font-semibold">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching the web...
+                    </div>
+                  )}
+
+                  {!webSearchLoading && webSearchError && (
+                    <div className="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{webSearchError}</span>
+                    </div>
+                  )}
+
+                  {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-4">No web results either. Try different keywords.</p>
+                  )}
+
+                  {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
+                    <div className="space-y-3">
+                      {webResults.map((result, idx) => (
+                        <a
+                          key={idx}
+                          href={result.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group"
+                        >
+                          {result.thumbnail && (
+                            <img
+                              src={result.thumbnail}
+                              alt=""
+                              className="w-14 h-14 rounded-lg object-cover shrink-0 bg-slate-200"
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                              <span className="truncate">{result.title}</span>
+                              <ExternalLink className="w-3 h-3 shrink-0 text-slate-400" />
+                            </div>
+                            <div className="text-[10px] text-emerald-700 font-semibold truncate mt-0.5">{result.displayLink}</div>
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">{result.snippet}</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           filtered.map((conf) => {

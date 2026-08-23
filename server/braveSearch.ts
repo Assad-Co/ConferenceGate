@@ -46,7 +46,13 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
       "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
     },
   });
-  const body = await res.json();
+  const rawText = await res.text();
+  let body: any = {};
+  try {
+    body = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    throw new Error(`Live search failed (unexpected response, HTTP ${res.status}). Please try again.`);
+  }
 
   if (!res.ok) {
     const message = body?.error?.detail || body?.error?.message || `Brave Search API error (${res.status})`;
