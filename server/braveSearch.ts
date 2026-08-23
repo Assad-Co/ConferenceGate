@@ -7,6 +7,7 @@ export interface LiveSearchResult {
   snippet: string;
   displayLink: string;
   thumbnail: string | null;
+  favicon: string | null;
 }
 
 interface CacheEntry {
@@ -83,6 +84,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
     snippet: stripHtml(item.description || ""),
     displayLink: item.meta_url?.hostname || item.profile?.name || "",
     thumbnail: item.thumbnail?.src || null,
+    favicon: item.meta_url?.favicon || item.profile?.img || null,
   }));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });

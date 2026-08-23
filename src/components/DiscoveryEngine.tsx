@@ -514,8 +514,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             )}
 
             {searchTerm.trim() && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="p-5 flex items-center gap-3 border-b border-slate-100">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
                     <Globe className="w-4.5 h-4.5 text-indigo-600" />
                   </div>
@@ -528,55 +528,87 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   </div>
                 </div>
 
-                <div className="p-5 space-y-3">
-                  {webSearchLoading && (
-                    <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400 font-semibold">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Searching the web...
-                    </div>
-                  )}
+                {webSearchLoading && (
+                  <div className="bg-white rounded-2xl border border-slate-200 flex items-center justify-center gap-2 py-12 text-xs text-slate-400 font-semibold">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Searching the web...
+                  </div>
+                )}
 
-                  {!webSearchLoading && webSearchError && (
-                    <div className="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{webSearchError}</span>
-                    </div>
-                  )}
+                {!webSearchLoading && webSearchError && (
+                  <div className="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{webSearchError}</span>
+                  </div>
+                )}
 
-                  {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-4">No web results found. Try different keywords.</p>
-                  )}
+                {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                    <p className="text-xs text-slate-400">No web results found. Try different keywords.</p>
+                  </div>
+                )}
 
-                  {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
-                    <div className="space-y-3">
-                      {webResults.map((result, idx) => (
-                        <a
-                          key={idx}
-                          href={result.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors group"
-                        >
-                          {result.thumbnail && (
+                {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
+                  <div className="space-y-6">
+                    {webResults.map((result, idx) => (
+                      <a
+                        key={idx}
+                        href={result.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 flex flex-col lg:flex-row gap-6 group"
+                      >
+                        {/* Thumbnail / Placeholder */}
+                        <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-slate-900 flex items-center justify-center">
+                          {result.thumbnail ? (
                             <img
                               src={result.thumbnail}
                               alt=""
-                              className="w-14 h-14 rounded-lg object-cover shrink-0 bg-slate-200"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90"
                             />
+                          ) : (
+                            <Globe className="w-10 h-10 text-slate-600" />
                           )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                              <span className="truncate">{result.title}</span>
-                              <ExternalLink className="w-3 h-3 shrink-0 text-slate-400" />
-                            </div>
-                            <div className="text-[10px] text-emerald-700 font-semibold truncate mt-0.5">{result.displayLink}</div>
-                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">{result.snippet}</p>
+                          <div className="absolute top-3 left-3 bg-white/90 text-slate-800 font-bold text-[10px] uppercase px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            Web Result
                           </div>
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        </div>
+
+                        {/* Info Block */}
+                        <div className="flex-1 flex flex-col justify-between space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <h2 className="text-lg font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">
+                                  {result.title}
+                                </h2>
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 mt-1.5">
+                                  {result.favicon && (
+                                    <img src={result.favicon} alt="" className="w-3.5 h-3.5 rounded-sm shrink-0" />
+                                  )}
+                                  <span className="truncate">{result.displayLink}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                              {result.snippet}
+                            </p>
+                          </div>
+
+                          {/* Card Action Row */}
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+                            <span className="px-4 py-1.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
+                              Visit Website
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
