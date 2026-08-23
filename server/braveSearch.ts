@@ -21,6 +21,23 @@ function isConfigured() {
   return !!process.env.BRAVE_SEARCH_API_KEY;
 }
 
+// Brave highlights matched keywords with <strong> tags and HTML-escapes entities in the
+// title/description fields — strip that markup so plain text reaches the client.
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+function stripHtml(text: string): string {
+  return decodeHtmlEntities(text.replace(/<[^>]*>/g, ""));
+}
+
 // Nudges the underlying web search toward actual conference/event listings rather than
 // generic informational pages about the topic — this panel is "search the web for a
 // conference we haven't added yet", not a general-purpose search box.
@@ -61,9 +78,9 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
 
   const items: any[] = body.web?.results || [];
   const results: LiveSearchResult[] = items.map((item) => ({
-    title: item.title || "",
+    title: stripHtml(item.title || ""),
     link: item.url || "",
-    snippet: item.description || "",
+    snippet: stripHtml(item.description || ""),
     displayLink: item.meta_url?.hostname || item.profile?.name || "",
     thumbnail: item.thumbnail?.src || null,
   }));
