@@ -704,6 +704,21 @@ export function App() {
     const mappedRole = AUTH_ROLE_TO_USER_ROLE[user.role];
     setActiveRole(mappedRole);
     const avatar = resolveAvatar(user.avatar, user.name);
+    // Real identity fields sync for every role — the Profile page (Notifications, Conferences
+    // History) reads from this for organizers and sponsors too, not just professionals.
+    setUserProfile((prev) => ({
+      ...prev,
+      name: user.name,
+      title: user.title || '',
+      organization: user.organization || '',
+      department: user.department || '',
+      city: user.city || '',
+      country: user.country || '',
+      bio: user.bio || '',
+      avatar,
+      ...EMPTY_ACCOUNT_ACHIEVEMENTS,
+      reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
+    }));
     if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.organization || user.name);
       setOrganizerLogoOverride(avatar);
@@ -713,19 +728,6 @@ export function App() {
       setSponsorLogoOverride(avatar);
       setActiveTab('sponsor');
     } else {
-      setUserProfile((prev) => ({
-        ...prev,
-        name: user.name,
-        title: user.title || '',
-        organization: user.organization || '',
-        department: user.department || '',
-        city: user.city || '',
-        country: user.country || '',
-        bio: user.bio || '',
-        avatar,
-        ...EMPTY_ACCOUNT_ACHIEVEMENTS,
-        reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
-      }));
       setActiveTab('home');
     }
   };
@@ -734,12 +736,12 @@ export function App() {
     const updatedUser = await updateAvatar(dataUrl);
     setAuthUser(updatedUser);
     const avatar = resolveAvatar(updatedUser.avatar, updatedUser.name);
+    // The Profile page's own header always reads userProfile.avatar, regardless of role.
+    setUserProfile((prev) => ({ ...prev, avatar }));
     if (updatedUser.role === 'organizer') {
       setOrganizerLogoOverride(avatar);
     } else if (updatedUser.role === 'sponsor') {
       setSponsorLogoOverride(avatar);
-    } else {
-      setUserProfile((prev) => ({ ...prev, avatar }));
     }
   };
 
@@ -1274,6 +1276,7 @@ export function App() {
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
+            variant={authUser.role === 'organizer' ? 'organizer' : authUser.role === 'sponsor' ? 'sponsor' : 'professional'}
             notifications={authUser.role === 'organizer' ? organizerNotifications : notifications}
             onMarkNotificationRead={
               authUser.role === 'organizer' ? handleMarkOrganizerNotificationRead : handleMarkNotificationRead
