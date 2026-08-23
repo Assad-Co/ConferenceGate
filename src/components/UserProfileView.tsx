@@ -41,6 +41,10 @@ interface UserProfileViewProps {
   onOpenBadgeModal: () => void;
   onOpenCertificates: () => void;
   initialTab?: ProfileTab;
+  /** Organizers and sponsors already have their own full dashboards (conference management,
+   * sponsorship packages, etc.) — this page shows only what's still relevant to them
+   * personally, not the professional-reviewer tabs (papers, peer reviews, committee, badges). */
+  variant?: 'professional' | 'organizer' | 'sponsor';
   notifications: NotificationItem[];
   onMarkNotificationRead: (id: string) => void;
   onMarkAllNotificationsRead: () => void;
@@ -86,6 +90,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onOpenBadgeModal,
   onOpenCertificates,
   initialTab = 'conferences',
+  variant = 'professional',
   notifications,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
@@ -282,24 +287,29 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <span>Edit Profile</span>
               </button>
             )}
-            <button
-              onClick={onOpenBadgeModal}
-              className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
-            >
-              <Award className="w-4 h-4" />
-              <span>Digital Badge</span>
-            </button>
-            <button
-              onClick={onOpenCertificates}
-              className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              <span>Certificates</span>
-            </button>
+            {variant === 'professional' && (
+              <>
+                <button
+                  onClick={onOpenBadgeModal}
+                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>Digital Badge</span>
+                </button>
+                <button
+                  onClick={onOpenCertificates}
+                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Certificates</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Verified Conference Reputation Stats Grid */}
+        {/* Verified Conference Reputation Stats Grid — professional/reviewer achievements only */}
+        {variant === 'professional' && (
         <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Conference Gate Index</div>
@@ -326,18 +336,27 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees} Positions</div>
           </div>
         </div>
+        )}
 
-        {/* Profile Tabs */}
+        {/* Profile Tabs — organizers and sponsors already have a full dashboard elsewhere for
+            everything else, so their profile page only needs Notifications and their own
+            conference attendance history. */}
         <div className="px-6 sm:px-8 border-t border-slate-200 flex gap-6 overflow-x-auto text-xs font-semibold text-slate-600">
-          {[
-            { id: 'notifications', label: 'Notifications' },
-            { id: 'conferences', label: 'Conferences History' },
-            { id: 'papers', label: 'Papers & Abstracts' },
-            { id: 'reviews', label: 'Peer Reviews & Kudos' },
-            { id: 'committee', label: 'Committee Positions' },
-            { id: 'badges', label: 'Verified Badges' },
-            { id: 'analytics', label: 'Engagement Analytics' },
-          ].map((tab) => (
+          {(variant === 'professional'
+            ? [
+                { id: 'notifications', label: 'Notifications' },
+                { id: 'conferences', label: 'Conferences History' },
+                { id: 'papers', label: 'Papers & Abstracts' },
+                { id: 'reviews', label: 'Peer Reviews & Kudos' },
+                { id: 'committee', label: 'Committee Positions' },
+                { id: 'badges', label: 'Verified Badges' },
+                { id: 'analytics', label: 'Engagement Analytics' },
+              ]
+            : [
+                { id: 'notifications', label: 'Notifications' },
+                { id: 'conferences', label: 'Conferences History' },
+              ]
+          ).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as ProfileTab)}
