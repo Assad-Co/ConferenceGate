@@ -4,6 +4,7 @@ export interface LiveSearchResult {
   snippet: string;
   displayLink: string;
   thumbnail: string | null;
+  favicon: string | null;
 }
 
 export async function searchConferencesOnTheWeb(query: string): Promise<LiveSearchResult[]> {
