@@ -1380,9 +1380,13 @@ export function App() {
 
       {/* Global SaaS Footer */}
       <Footer
-        onNavigateTab={setActiveTab}
+        onNavigateTab={(tab) => {
+          if (tab === 'profile') setProfileInitialTab('conferences');
+          setActiveTab(tab);
+        }}
         onOpenAIAssistant={() => setIsAIModalOpen(true)}
         onOpenBadge={() => setIsBadgeOpen(true)}
+        role={authUser.role}
       />
 
       {/* Modals */}
