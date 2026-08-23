@@ -156,6 +156,7 @@ export function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
   const [organizerActivityFeed, setOrganizerActivityFeed] = useState<OrganizerActivityItem[]>([]);
   const [readOrganizerNotificationIds, setReadOrganizerNotificationIds] = useState<Set<string>>(new Set());
+  const [readSponsorNotificationIds, setReadSponsorNotificationIds] = useState<Set<string>>(new Set());
 
   const [organizerLogoOverride, setOrganizerLogoOverride] = useState<string | null>(null);
   const [sponsorLogoOverride, setSponsorLogoOverride] = useState<string | null>(null);
@@ -544,6 +545,85 @@ export function App() {
     setReadOrganizerNotificationIds((prev) => new Set(prev).add(id));
   const handleMarkAllOrganizerNotificationsRead = () =>
     setReadOrganizerNotificationIds(new Set(organizerNotifications.map((n) => n.id)));
+
+  // Real, sponsor-specific notifications: unread messages plus this sponsor's own real
+  // application decisions and reviews received from organizers.
+  const sponsorNotifications: NotificationItem[] = React.useMemo(() => {
+    const messageItems: Array<NotificationItem & { sortKey: string }> = conversations
+      .filter((c) => c.unreadCount > 0)
+      .map((c) => {
+        const id = `msg_${c.partnerId}`;
+        return {
+          id,
+          title: `New message from ${c.partner.name}`,
+          message: c.lastMessage || 'Sent you a message',
+          timestamp: new Date(c.lastMessageAt).toLocaleString(),
+          sortKey: c.lastMessageAt,
+          read: readSponsorNotificationIds.has(id),
+          type: 'followup' as const,
+        };
+      });
+
+    const applicationItems: Array<NotificationItem & { sortKey: string }> = myApplications
+      .filter((a) => a.status !== 'Pending')
+      .map((a) => {
+        const id = `sapp_${a.id}`;
+        return {
+          id,
+          title: a.status === 'Approved' ? 'Sponsorship application approved' : 'Sponsorship application update',
+          message:
+            a.status === 'Approved'
+              ? `Your ${a.tier} tier application for ${a.conferenceTitle} was approved.`
+              : `Your ${a.tier} tier application for ${a.conferenceTitle} was not approved this time.`,
+          timestamp: new Date(a.createdAt).toLocaleString(),
+          sortKey: a.createdAt,
+          read: readSponsorNotificationIds.has(id),
+          type: 'sponsorship' as const,
+        };
+      });
+
+    const reviewItems: Array<NotificationItem & { sortKey: string }> = mySponsorProfileStats.reviews.map((r) => {
+      const id = `srev_${r.id}`;
+      return {
+        id,
+        title: 'New organizer review',
+        message: `${r.reviewerName} rated your sponsorship of ${r.conferenceTitle} ${r.rating}/5: "${r.comment}"`,
+        timestamp: new Date(r.date).toLocaleString(),
+        sortKey: r.date,
+        read: readSponsorNotificationIds.has(id),
+        type: 'review' as const,
+      };
+    });
+
+    return [...messageItems, ...applicationItems, ...reviewItems]
+      .sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1))
+      .map(({ sortKey, ...rest }) => rest);
+  }, [conversations, myApplications, mySponsorProfileStats.reviews, readSponsorNotificationIds]);
+
+  const handleMarkSponsorNotificationRead = (id: string) =>
+    setReadSponsorNotificationIds((prev) => new Set(prev).add(id));
+  const handleMarkAllSponsorNotificationsRead = () =>
+    setReadSponsorNotificationIds(new Set(sponsorNotifications.map((n) => n.id)));
+
+  // Real, role-specific notifications wherever they're displayed (Navbar bell + Profile page).
+  const displayedNotifications =
+    authUser?.role === 'organizer'
+      ? organizerNotifications
+      : authUser?.role === 'sponsor'
+      ? sponsorNotifications
+      : notifications;
+  const displayedOnMarkNotificationRead =
+    authUser?.role === 'organizer'
+      ? handleMarkOrganizerNotificationRead
+      : authUser?.role === 'sponsor'
+      ? handleMarkSponsorNotificationRead
+      : handleMarkNotificationRead;
+  const displayedOnMarkAllNotificationsRead =
+    authUser?.role === 'organizer'
+      ? handleMarkAllOrganizerNotificationsRead
+      : authUser?.role === 'sponsor'
+      ? handleMarkAllSponsorNotificationsRead
+      : handleMarkAllNotificationsRead;
 
   const refreshConversations = () => {
     fetchConversations().then(setConversations).catch(() => {});
@@ -1105,8 +1185,7 @@ export function App() {
           setSponsorLogoOverride(dataUrl);
           updateAvatar(dataUrl).then(setAuthUser).catch(() => {});
         }}
-        onOpenEditProfile={() => setIsEditProfileOpen(true)}
-        notifications={authUser.role === 'organizer' ? organizerNotifications : notifications}
+        notifications={displayedNotifications}
         sponsorAlerts={sponsorAlerts}
         onOpenDigitalBadge={() => setIsBadgeOpen(true)}
         onSearch={(q) => setSearchQuery(q)}
@@ -1277,13 +1356,9 @@ export function App() {
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
             variant={authUser.role === 'organizer' ? 'organizer' : authUser.role === 'sponsor' ? 'sponsor' : 'professional'}
-            notifications={authUser.role === 'organizer' ? organizerNotifications : notifications}
-            onMarkNotificationRead={
-              authUser.role === 'organizer' ? handleMarkOrganizerNotificationRead : handleMarkNotificationRead
-            }
-            onMarkAllNotificationsRead={
-              authUser.role === 'organizer' ? handleMarkAllOrganizerNotificationsRead : handleMarkAllNotificationsRead
-            }
+            notifications={displayedNotifications}
+            onMarkNotificationRead={displayedOnMarkNotificationRead}
+            onMarkAllNotificationsRead={displayedOnMarkAllNotificationsRead}
             onAvatarChange={handleAvatarChange}
             hasCustomAvatar={!!authUser.avatar}
             onEditProfile={handleEditProfile}

@@ -34,7 +34,6 @@ interface NavbarProps {
   sponsorIdentity?: { name: string; logo: string };
   onOrganizerLogoChange?: (dataUrl: string) => void;
   onSponsorLogoChange?: (dataUrl: string) => void;
-  onOpenEditProfile?: () => void;
   notifications?: NotificationItem[];
   sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
@@ -62,7 +61,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   sponsorIdentity,
   onOrganizerLogoChange,
   onSponsorLogoChange,
-  onOpenEditProfile,
   notifications = [],
   sponsorAlerts = [],
   unreadMessageCount = 0,
@@ -130,7 +128,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     ? { name: sponsorIdentity.name, avatar: sponsorIdentity.logo }
     : userProfile;
   const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
-  const identityTab = isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'profile';
+  // Clicking your own identity always opens the Profile page (Notifications, Conferences
+  // History, and an Edit Profile button there) — the organizer/sponsor dashboards themselves
+  // are reached via the logo or the dedicated nav pill instead.
+  const identityTab = 'profile';
   const canCustomizeLogo = (isOrganizerRole && !!onOrganizerLogoChange) || (isSponsorRole && !!onSponsorLogoChange);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -377,14 +378,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
             <div className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
               <button
-                onClick={() => {
-                  if ((isOrganizerRole || isSponsorRole) && onOpenEditProfile) {
-                    onOpenEditProfile();
-                  } else {
-                    handleTabChange(identityTab);
-                  }
-                }}
-                title={isOrganizerRole || isSponsorRole ? 'Edit profile' : undefined}
+                onClick={() => handleTabChange(identityTab)}
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <span className="relative shrink-0">
