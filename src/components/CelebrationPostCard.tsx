@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { ThumbsUp, MessageSquare, Share2, Eye, Repeat2, Bookmark, X } from 'lucide-react';
-import { CelebrationKind, Post, PostAuthor } from '../types';
+import React from 'react';
+import { MessageSquare, Share2, Repeat2, Bookmark, Award, Send } from 'lucide-react';
+import { CelebrationKind, Post, PostAuthor, Conference } from '../types';
 import { KudosRibbon, SponsorshipAcceptedIllustration, BestOrganizerIllustration } from './celebrationIllustrations';
 import { Logo } from './Logo';
-import { ReactionType, REACTION_META, reactionCountKey } from './reactionMeta';
-import { formatCompactCount } from '../utils/format';
+import { ReactionType, REACTION_META } from './reactionMeta';
+import { ConferenceLink } from './ConferenceLink';
+import { PostComment } from '../api/posts';
+import { resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 
 interface CelebrationTheme {
@@ -68,20 +70,68 @@ const THEME: Record<CelebrationKind, CelebrationTheme> = {
   },
 };
 
-export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author: PostAuthor) => void }> = ({
+interface CelebrationPostCardProps {
+  post: Post;
+  onOpenProfile?: (author: PostAuthor) => void;
+  conferences?: Conference[];
+  onSelectConference?: (conf: Conference) => void;
+  onReact: (postId: string, reaction: ReactionType) => void;
+  onToggleRepost: (postId: string) => void;
+  onToggleSave: (postId: string) => void;
+  onFetchComments?: (postId: string) => Promise<PostComment[]>;
+  onAddComment?: (postId: string, text: string) => Promise<void>;
+  composerAvatar?: string;
+}
+
+export const CelebrationPostCard: React.FC<CelebrationPostCardProps> = ({
   post,
   onOpenProfile,
+  conferences = [],
+  onSelectConference = () => {},
+  onReact,
+  onToggleRepost,
+  onToggleSave,
+  onFetchComments,
+  onAddComment,
+  composerAvatar,
 }) => {
   const kind = post.celebrationKind || 'abstract-accepted';
   const theme = THEME[kind];
   const { Illustration } = theme;
 
-  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
-  const [userReaction, setUserReaction] = useState<ReactionType | null | undefined>(undefined);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isReposted, setIsReposted] = useState(false);
-  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = React.useState(false);
+  const [commentBoxOpen, setCommentBoxOpen] = React.useState(false);
+  const [comments, setComments] = React.useState<PostComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = React.useState(false);
+  const [commentDraft, setCommentDraft] = React.useState('');
   const { showToast } = useToast();
+
+  const toggleComments = async () => {
+    const opening = !commentBoxOpen;
+    setCommentBoxOpen(opening);
+    if (opening && onFetchComments) {
+      setCommentsLoading(true);
+      try {
+        setComments(await onFetchComments(post.id));
+      } catch {
+        showToast({ type: 'info', title: "Couldn't load comments", message: 'Please try again.' });
+      } finally {
+        setCommentsLoading(false);
+      }
+    }
+  };
+
+  const handleAddComment = async () => {
+    const text = commentDraft.trim();
+    if (!text || !onAddComment || !onFetchComments) return;
+    setCommentDraft('');
+    try {
+      await onAddComment(post.id, text);
+      setComments(await onFetchComments(post.id));
+    } catch {
+      showToast({ type: 'info', title: "Couldn't post comment", message: 'Please try again.' });
+    }
+  };
 
   const handleShare = async () => {
     const shareText = `${post.celebrationHeadline || ''}\n${post.content}\n\n— ${post.authorName} on Conference Gate`;
@@ -97,31 +147,18 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
     }
   };
 
-  const baseReaction = (post.userReaction as ReactionType | undefined) || null;
-  const netDelta = userReaction === undefined ? 0 : (userReaction ? 1 : 0) - (baseReaction ? 1 : 0);
-  const activeReaction = userReaction === undefined ? baseReaction : userReaction;
-
-  const reactionCounts = { ...post.reactions };
-  if (netDelta !== 0 && activeReaction) {
-    reactionCounts[reactionCountKey(activeReaction)] += netDelta;
-  }
+  const activeReaction = post.userReaction || null;
+  const reactionCounts = post.reactions;
   const totalReactions =
     (reactionCounts.likes || 0) + (reactionCounts.celebrates || 0) + (reactionCounts.insightful || 0) + (reactionCounts.kudos || 0);
   const presentReactions = (Object.keys(REACTION_META) as ReactionType[]).filter(
-    (t) => (reactionCounts as any)[reactionCountKey(t)] > 0
+    (t) => (reactionCounts as any)[t === 'like' ? 'likes' : t === 'celebrate' ? 'celebrates' : t] > 0
   );
   const activeMeta = activeReaction ? REACTION_META[activeReaction] : null;
 
-  const toggleReaction = (type: ReactionType) => {
-    setUserReaction((prev) => {
-      const current = prev === undefined ? baseReaction : prev;
-      return current === type ? null : type;
-    });
-    setReactionPickerOpen(false);
-  };
-
-  const repostsCount = (post.repostsCount || 0) + (isReposted ? 1 : 0);
-  const impressions = post.impressions || 0;
+  const isSaved = !!post.isSaved;
+  const isReposted = !!post.isReposted;
+  const repostsCount = post.repostsCount || 0;
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
@@ -180,7 +217,7 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
             }
             className="flex items-center gap-3 text-left cursor-pointer group/author"
           >
-            <img src={post.authorAvatar} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
+            <img src={resolveAvatar(post.authorAvatar, post.authorName)} alt={post.authorName} className="w-10 h-10 rounded-full object-cover shrink-0" />
             <div className="min-w-0 text-xs">
               <div className="font-bold text-slate-900 truncate group-hover/author:text-blue-700 transition-colors">{post.authorName}</div>
               <div className="text-slate-500 truncate">{post.authorTitle} · {post.authorOrg}</div>
@@ -188,7 +225,7 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
             </div>
           </button>
           <button
-            onClick={() => setIsSaved((v) => !v)}
+            onClick={() => onToggleSave(post.id)}
             className={`p-1.5 rounded-lg cursor-pointer transition-colors shrink-0 ${
               isSaved ? 'text-blue-600' : 'text-slate-300 hover:text-slate-500'
             }`}
@@ -199,9 +236,13 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
         </div>
 
         {post.conferenceBadge && (
-          <div className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold">
-            {post.conferenceBadge}
-          </div>
+          <ConferenceLink
+            conferences={conferences}
+            conferenceId={post.conferenceId || ''}
+            conferenceTitle={post.conferenceBadge}
+            onSelectConference={onSelectConference}
+            className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold"
+          />
         )}
 
         <p className="text-sm text-slate-800 leading-relaxed">{post.content}</p>
@@ -231,51 +272,6 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
             <div className="flex items-center gap-2.5">
               {repostsCount > 0 && <span className="font-semibold">{repostsCount} reposts</span>}
               {post.commentsCount > 0 && <span className="font-semibold">{post.commentsCount} comments</span>}
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setAnalyticsOpen(true)}
-                className="flex items-center gap-1 font-semibold hover:underline cursor-pointer"
-                title="View impression analytics"
-              >
-                <Eye className="w-3 h-3" />
-                {formatCompactCount(impressions)} impressions
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Impression Analytics Popover */}
-        {analyticsOpen && (
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-900 flex items-center gap-1.5">
-                <Eye className="w-3.5 h-3.5 text-blue-600" />
-                Post Impressions
-              </span>
-              <button
-                onClick={() => setAnalyticsOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-white rounded-lg border border-slate-200 py-2">
-                <div className="text-sm font-extrabold text-slate-900">{formatCompactCount(impressions)}</div>
-                <div className="text-[9px] text-slate-500 font-semibold uppercase">Impressions</div>
-              </div>
-              <div className="bg-white rounded-lg border border-slate-200 py-2">
-                <div className="text-sm font-extrabold text-slate-900">{totalReactions}</div>
-                <div className="text-[9px] text-slate-500 font-semibold uppercase">Reactions</div>
-              </div>
-              <div className="bg-white rounded-lg border border-slate-200 py-2">
-                <div className="text-sm font-extrabold text-slate-900">{post.commentsCount}</div>
-                <div className="text-[9px] text-slate-500 font-semibold uppercase">Comments</div>
-              </div>
-              <div className="bg-white rounded-lg border border-slate-200 py-2">
-                <div className="text-sm font-extrabold text-slate-900">{repostsCount}</div>
-                <div className="text-[9px] text-slate-500 font-semibold uppercase">Reposts</div>
-              </div>
             </div>
           </div>
         )}
@@ -294,7 +290,10 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
                   return (
                     <button
                       key={t}
-                      onClick={() => toggleReaction(t)}
+                      onClick={() => {
+                        onReact(post.id, t);
+                        setReactionPickerOpen(false);
+                      }}
                       title={meta.label}
                       className={`w-8 h-8 rounded-full ${meta.bg} flex items-center justify-center cursor-pointer hover:scale-110 transition-transform`}
                     >
@@ -305,21 +304,24 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
               </div>
             )}
             <button
-              onClick={() => toggleReaction(activeReaction || 'like')}
+              onClick={() => onReact(post.id, activeReaction || 'like')}
               className={`w-full py-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg transition-colors ${
                 activeReaction ? activeMeta?.color : 'hover:text-blue-600'
               }`}
             >
-              {activeMeta ? <activeMeta.icon className="w-4 h-4 fill-current" /> : <ThumbsUp className="w-4 h-4" />}
+              {activeMeta ? <activeMeta.icon className="w-4 h-4 fill-current" /> : <Award className="w-4 h-4" />}
               <span>{activeMeta ? activeMeta.label : 'Like'}</span>
             </button>
           </div>
-          <button className="flex-1 py-1 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors">
+          <button
+            onClick={toggleComments}
+            className="flex-1 py-1 flex items-center justify-center gap-1.5 hover:text-blue-600 cursor-pointer rounded-lg transition-colors"
+          >
             <MessageSquare className="w-4 h-4" />
             <span>Comment</span>
           </button>
           <button
-            onClick={() => setIsReposted((v) => !v)}
+            onClick={() => onToggleRepost(post.id)}
             className={`flex-1 py-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg transition-colors ${
               isReposted ? 'text-emerald-600' : 'hover:text-emerald-600'
             }`}
@@ -335,6 +337,53 @@ export const CelebrationPostCard: React.FC<{ post: Post; onOpenProfile?: (author
             <span>Share</span>
           </button>
         </div>
+
+        {commentBoxOpen && (
+          <div className="pt-1 space-y-3">
+            {commentsLoading ? (
+              <p className="text-[11px] text-slate-400">Loading comments...</p>
+            ) : (
+              comments.map((c) => (
+                <div key={c.id} className="flex items-start gap-2">
+                  <img
+                    src={c.authorAvatar || composerAvatar}
+                    alt=""
+                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                  />
+                  <div className="bg-slate-50 rounded-2xl px-3 py-2 text-[11px] text-slate-700 flex-1">
+                    <span className="font-bold text-slate-900">{c.authorName} </span>
+                    {c.text}
+                  </div>
+                </div>
+              ))
+            )}
+            {onAddComment && (
+              <div className="flex items-center gap-2">
+                <img src={composerAvatar} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                <input
+                  type="text"
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddComment();
+                    }
+                  }}
+                  placeholder="Add a comment..."
+                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-full text-[11px] focus:outline-hidden"
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={!commentDraft.trim()}
+                  className="p-2 text-blue-600 hover:text-blue-800 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

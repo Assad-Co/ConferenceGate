@@ -35,6 +35,7 @@ type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' 
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
+  currentUserId?: string;
   submissions?: AbstractSubmission[];
   posts?: Post[];
   registrations?: ConferenceRegistration[];
@@ -85,6 +86,7 @@ interface AttendedConference {
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
   userProfile,
+  currentUserId,
   submissions = [],
   posts = [],
   registrations = [],
@@ -645,7 +647,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         )}
 
-        {activeTab === 'analytics' && <ProfileAnalytics userProfile={userProfile} posts={posts} />}
+        {activeTab === 'analytics' && <ProfileAnalytics userProfile={userProfile} currentUserId={currentUserId} posts={posts} />}
       </div>
 
       <ConferenceFeedbackModal

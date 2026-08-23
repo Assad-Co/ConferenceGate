@@ -18,6 +18,7 @@ import { OrganizerDashboard } from './components/OrganizerDashboard';
 import { SponsorPortal } from './components/SponsorPortal';
 import { UserProfileView } from './components/UserProfileView';
 import { CommunityFeed } from './components/CommunityFeed';
+import { ReactionType } from './components/reactionMeta';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { EditProfileModal } from './components/EditProfileModal';
@@ -69,11 +70,19 @@ import {
   SponsorApplicant,
   ReviewableSponsor,
 } from './api/sponsors';
+import {
+  fetchFeed,
+  createPost as createPostApi,
+  reactToPost,
+  fetchComments as fetchCommentsApi,
+  addComment as addCommentApi,
+  toggleRepost as toggleRepostApi,
+  toggleSave as toggleSaveApi,
+} from './api/posts';
 
 import {
   sampleConferences,
   currentUserProfile,
-  sampleFeedPosts,
   sampleReviewOpportunities,
   sampleSponsorshipOpportunities,
   sampleNotifications,
@@ -350,7 +359,7 @@ export function App() {
   // App Data State
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
   const [submissions, setSubmissions] = useState<AbstractSubmission[]>([]);
-  const [posts, setPosts] = useState<Post[]>(sampleFeedPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [userProfile, setUserProfile] = useState(currentUserProfile);
 
   // Real tracked activity — persisted server-side, loaded once authenticated.
@@ -362,6 +371,7 @@ export function App() {
   useEffect(() => {
     if (!authUser) return;
     fetchSubmissions().then(setSubmissions).catch(() => {});
+    fetchFeed().then(setPosts).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
     fetchMyConferenceInteractions()
@@ -416,6 +426,9 @@ export function App() {
     if (!authUser) return;
     if (['abstracts', 'reviewer', 'organizer'].includes(activeTab)) {
       fetchSubmissions().then(setSubmissions).catch(() => {});
+    }
+    if (['home', 'community'].includes(activeTab)) {
+      fetchFeed().then(setPosts).catch(() => {});
     }
   }, [activeTab, authUser?.id]);
 
@@ -894,23 +907,24 @@ export function App() {
       conferenceBadge?: string;
     }
   ) => {
-    const celebration: Post = {
-      id: `post_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      authorName: opts?.authorName || userProfile.name,
-      authorTitle: opts?.authorTitle || userProfile.title,
-      authorOrg: opts?.authorOrg || userProfile.organization,
-      authorAvatar: opts?.authorAvatar || userProfile.avatar,
-      authorUserId: opts?.authorName ? opts?.authorUserId : authUser?.id,
+    const conferenceId = opts?.conferenceBadge
+      ? conferences.find((c) => c.title === opts.conferenceBadge)?.id
+      : undefined;
+    createPostApi({
       content,
-      timestamp: 'Just now',
       postType: 'celebration',
       celebrationKind: kind,
       celebrationHeadline: headline,
-      conferenceBadge: opts?.conferenceBadge,
-      reactions: { likes: 0, celebrates: 0, insightful: 0, kudos: 0 },
-      commentsCount: 0,
-    };
-    setPosts((prev) => [celebration, ...prev]);
+      conferenceId,
+      conferenceTitle: opts?.conferenceBadge,
+      authorName: opts?.authorName,
+      authorTitle: opts?.authorTitle,
+      authorOrg: opts?.authorOrg,
+      authorAvatar: opts?.authorAvatar,
+      authorUserId: opts?.authorName ? opts?.authorUserId : undefined,
+    })
+      .then((post) => setPosts((prev) => [post, ...prev]))
+      .catch(() => {});
   };
 
   // Modals State
@@ -1107,23 +1121,39 @@ export function App() {
   };
 
   const handleAddPost = (content: string) => {
-    const newPost: Post = {
-      id: `post_${Date.now()}`,
-      authorName: userProfile.name,
-      authorAvatar: userProfile.avatar,
-      authorTitle: userProfile.title,
-      authorOrg: userProfile.organization,
-      authorUserId: authUser?.id,
-      content,
-      timestamp: 'Just now',
-      postType: 'announcement',
-      reactions: { likes: 0, celebrates: 0, insightful: 0, kudos: 0 },
-      commentsCount: 0,
-      impressions: 0,
-      repostsCount: 0,
-    };
-    setPosts([newPost, ...posts]);
-    showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
+    createPostApi({ content, postType: 'announcement' })
+      .then((post) => {
+        setPosts((prev) => [post, ...prev]);
+        showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
+      })
+      .catch((e) => {
+        showToast({ type: 'info', title: "Couldn't post update", message: e instanceof Error ? e.message : 'Please try again.' });
+      });
+  };
+
+  const handleReactToPost = (postId: string, reaction: ReactionType) => {
+    reactToPost(postId, reaction)
+      .then((updated) => setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p))))
+      .catch(() => {});
+  };
+
+  const handleToggleRepost = (postId: string) => {
+    toggleRepostApi(postId)
+      .then((updated) => setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p))))
+      .catch(() => {});
+  };
+
+  const handleToggleSavePost = (postId: string) => {
+    toggleSaveApi(postId)
+      .then((updated) => setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p))))
+      .catch(() => {});
+  };
+
+  const handleFetchPostComments = (postId: string) => fetchCommentsApi(postId);
+
+  const handleAddPostComment = async (postId: string, text: string) => {
+    await addCommentApi(postId, text);
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p)));
   };
 
   const handleInviteToCommittee = (reviewerName: string, conferenceTitle: string) => {
@@ -1224,6 +1254,9 @@ export function App() {
             userProfile={userProfile}
             posts={posts}
             onAddPost={handleAddPost}
+            onReact={handleReactToPost}
+            onToggleRepost={handleToggleRepost}
+            onToggleSave={handleToggleSavePost}
             onOpenDigitalBadge={() => setIsBadgeOpen(true)}
             onOpenProfile={handleOpenProfile}
           />
@@ -1344,6 +1377,13 @@ export function App() {
           <CommunityFeed
             posts={posts}
             onAddPost={handleAddPost}
+            onReact={handleReactToPost}
+            onToggleRepost={handleToggleRepost}
+            onToggleSave={handleToggleSavePost}
+            onFetchComments={handleFetchPostComments}
+            onAddComment={handleAddPostComment}
+            conferences={conferences}
+            onSelectConference={handleSelectConference}
             userProfile={userProfile}
             onOpenProfile={handleOpenProfile}
           />
@@ -1352,6 +1392,7 @@ export function App() {
         {activeTab === 'profile' && (
           <UserProfileView
             userProfile={userProfile}
+            currentUserId={authUser.id}
             submissions={submissions}
             posts={posts}
             registrations={registrations}

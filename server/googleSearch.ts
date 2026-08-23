@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { asyncHandler } from "./asyncHandler";
 
 export interface LiveSearchResult {
   title: string;
@@ -56,24 +57,27 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
 
 export const googleSearchRouter = Router();
 
-googleSearchRouter.get("/conferences", async (req, res) => {
-  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+googleSearchRouter.get(
+  "/conferences",
+  asyncHandler(async (req, res) => {
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
 
-  if (!query || query.length < 2) {
-    return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
-  }
+    if (!query || query.length < 2) {
+      return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
+    }
 
-  if (!isConfigured()) {
-    return res.status(503).json({
-      error: "Live search is not configured on the server. Set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID.",
-    });
-  }
+    if (!isConfigured()) {
+      return res.status(503).json({
+        error: "Live search is not configured on the server. Set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID.",
+      });
+    }
 
-  try {
-    const results = await searchConferences(query);
-    res.json({ results });
-  } catch (error: any) {
-    console.error("Google Search error:", error);
-    res.status(502).json({ error: error.message || "Live search failed. Please try again." });
-  }
-});
+    try {
+      const results = await searchConferences(query);
+      res.json({ results });
+    } catch (error: any) {
+      console.error("Google Search error:", error);
+      res.status(502).json({ error: error.message || "Live search failed. Please try again." });
+    }
+  })
+);

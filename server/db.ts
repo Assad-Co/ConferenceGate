@@ -278,6 +278,56 @@ export async function initDb(): Promise<void> {
       comment TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS posts (
+      id TEXT PRIMARY KEY,
+      author_id TEXT NOT NULL REFERENCES users(id),
+      author_name TEXT NOT NULL,
+      author_title TEXT,
+      author_org TEXT,
+      author_avatar TEXT,
+      author_user_id TEXT REFERENCES users(id),
+      content TEXT NOT NULL,
+      post_type TEXT NOT NULL DEFAULT 'announcement',
+      conference_id TEXT,
+      conference_title TEXT,
+      celebration_kind TEXT,
+      celebration_headline TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS post_reactions (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      reaction TEXT NOT NULL CHECK(reaction IN ('like', 'celebrate', 'insightful', 'kudos')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(post_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id),
+      author_id TEXT NOT NULL REFERENCES users(id),
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS post_reposts (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(post_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS post_saves (
+      id TEXT PRIMARY KEY,
+      post_id TEXT NOT NULL REFERENCES posts(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(post_id, user_id)
+    );
   `);
 
   const submissionColumns = await tableColumns("submissions");
@@ -460,5 +510,52 @@ export interface SponsorReviewRow {
   conference_title: string;
   rating: number;
   comment: string | null;
+  created_at: string;
+}
+
+export interface PostRow {
+  id: string;
+  author_id: string;
+  author_name: string;
+  author_title: string | null;
+  author_org: string | null;
+  author_avatar: string | null;
+  author_user_id: string | null;
+  content: string;
+  post_type: string;
+  conference_id: string | null;
+  conference_title: string | null;
+  celebration_kind: string | null;
+  celebration_headline: string | null;
+  created_at: string;
+}
+
+export interface PostReactionRow {
+  id: string;
+  post_id: string;
+  user_id: string;
+  reaction: "like" | "celebrate" | "insightful" | "kudos";
+  created_at: string;
+}
+
+export interface PostCommentRow {
+  id: string;
+  post_id: string;
+  author_id: string;
+  text: string;
+  created_at: string;
+}
+
+export interface PostRepostRow {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PostSaveRow {
+  id: string;
+  post_id: string;
+  user_id: string;
   created_at: string;
 }
