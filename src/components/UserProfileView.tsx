@@ -21,6 +21,7 @@ import {
   Camera,
   Loader2,
   Pencil,
+  Linkedin,
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
@@ -61,7 +62,9 @@ interface UserProfileViewProps {
     city: string;
     country: string;
     bio: string;
+    linkedinUrl: string;
   }) => Promise<void>;
+  currentUserEmail?: string;
 }
 
 const ABSTRACT_STATUS_STYLE: Record<string, string> = {
@@ -102,6 +105,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onAvatarChange,
   hasCustomAvatar = false,
   onEditProfile,
+  currentUserEmail,
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
@@ -159,7 +163,14 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     }
   };
 
-  const mySubmissions = submissions.filter((s) => s.primaryAuthor.name === userProfile.name);
+  // Includes abstracts where this account is only a co-author (matched by email) — real prior
+  // engagement recorded by someone else's submission, surfaced automatically.
+  const myEmail = currentUserEmail?.trim().toLowerCase();
+  const mySubmissions = submissions.filter(
+    (s) =>
+      s.primaryAuthor.name === userProfile.name ||
+      (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail))
+  );
 
   const committeeEntries = [
     ...userProfile.verifiedAchievements
@@ -256,6 +267,17 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                     <MapPin className="w-3.5 h-3.5 text-rose-500" />
                     {[userProfile.city, userProfile.country].filter(Boolean).join(', ')}
                   </span>
+                )}
+                {userProfile.linkedinUrl && (
+                  <a
+                    href={userProfile.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-blue-700 hover:underline font-semibold"
+                  >
+                    <Linkedin className="w-3.5 h-3.5" />
+                    LinkedIn
+                  </a>
                 )}
               </div>
               {onAvatarChange && (
@@ -674,6 +696,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             city: userProfile.city,
             country: userProfile.country,
             bio: userProfile.bio,
+            linkedinUrl: userProfile.linkedinUrl,
           }}
           onSave={onEditProfile}
         />

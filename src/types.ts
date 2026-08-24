@@ -51,6 +51,7 @@ export interface UserProfile {
   city: string;
   avatar: string;
   bio: string;
+  linkedinUrl: string;
   education: string[];
   certifications: string[];
   expertise: string[];

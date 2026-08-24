@@ -9,6 +9,7 @@ export interface EditProfileValues {
   city: string;
   country: string;
   bio: string;
+  linkedinUrl: string;
 }
 
 interface EditProfileModalProps {
@@ -67,6 +68,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [city, setCity] = useState(initialValues.city);
   const [country, setCountry] = useState(initialValues.country);
   const [bio, setBio] = useState(initialValues.bio);
+  const [linkedinUrl, setLinkedinUrl] = useState(initialValues.linkedinUrl);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -91,6 +93,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         city: city.trim(),
         country: country.trim(),
         bio: bio.trim(),
+        linkedinUrl: linkedinUrl.trim(),
       });
       onClose();
     } catch (err: any) {
@@ -156,6 +159,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <label className={labelClass}>Country</label>
               <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass} />
             </div>
+          </div>
+          <div>
+            <label className={labelClass}>LinkedIn Username or URL</label>
+            <input
+              type="text"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              placeholder="e.g. jane-smith or linkedin.com/in/jane-smith"
+              className={inputClass}
+            />
           </div>
           <div>
             <label className={labelClass}>{copy.bioLabel}</label>

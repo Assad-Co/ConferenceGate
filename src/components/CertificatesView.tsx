@@ -12,6 +12,7 @@ interface CertificatesViewProps {
   conferences: Conference[];
   onSelectConference: (conf: Conference) => void;
   currentUserId?: string;
+  currentUserEmail?: string;
   onBack: () => void;
 }
 
@@ -44,16 +45,25 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   conferences,
   onSelectConference,
   currentUserId,
+  currentUserEmail,
   onBack,
 }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const certificates = useMemo<Certificate[]>(() => {
     const certs: Certificate[] = [];
+    const myEmail = currentUserEmail?.trim().toLowerCase();
 
     if (currentUserId) {
+      // Includes abstracts where this account is only a co-author (matched by email) — real
+      // prior engagement recorded by someone else's submission, surfaced automatically.
       submissions
-        .filter((s) => s.submitterId === currentUserId && ACCEPTED_STATUSES.includes(s.status))
+        .filter(
+          (s) =>
+            ACCEPTED_STATUSES.includes(s.status) &&
+            (s.submitterId === currentUserId ||
+              (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail)))
+        )
         .forEach((s) => {
           certs.push({
             id: `paper_${s.id}`,
@@ -109,7 +119,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
     });
 
     return certs;
-  }, [submissions, registrations, currentUserId]);
+  }, [submissions, registrations, currentUserId, currentUserEmail]);
 
   const handleDownload = (certId: string) => {
     const cert = certificates.find((c) => c.id === certId);
