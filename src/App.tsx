@@ -11,6 +11,7 @@ import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
 import { ConferenceDetail } from './components/ConferenceDetail';
+import { ExternalConferenceDetail } from './components/ExternalConferenceDetail';
 import { AbstractSubmissionModal } from './components/AbstractSubmissionModal';
 import { AbstractTrackerView } from './components/AbstractTrackerView';
 import { ReviewerPortal } from './components/ReviewerPortal';
@@ -79,6 +80,7 @@ import {
   toggleRepost as toggleRepostApi,
   toggleSave as toggleSaveApi,
 } from './api/posts';
+import { LiveSearchResult } from './api/search';
 
 import {
   sampleConferences,
@@ -160,6 +162,7 @@ export function App() {
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
+  const [selectedExternalResult, setSelectedExternalResult] = useState<LiveSearchResult | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
@@ -948,6 +951,11 @@ export function App() {
     setActiveTab('detail');
   };
 
+  const handleOpenExternalResult = (result: LiveSearchResult) => {
+    setSelectedExternalResult(result);
+    setActiveTab('external-detail');
+  };
+
   const handleRegisterForConference = async (
     conferenceId: string,
     conferenceTitle: string,
@@ -1267,11 +1275,19 @@ export function App() {
             conferences={conferences}
             onSelectConference={handleSelectConference}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
+            onOpenExternalResult={handleOpenExternalResult}
             initialSearchQuery={searchQuery}
             savedConferenceIds={savedConferenceIds}
             followedConferenceIds={followedConferenceIds}
             onToggleSave={handleToggleSaveConference}
             onToggleFollow={handleToggleFollowConference}
+          />
+        )}
+
+        {activeTab === 'external-detail' && selectedExternalResult && (
+          <ExternalConferenceDetail
+            result={selectedExternalResult}
+            onBack={() => setActiveTab('discover')}
           />
         )}
 
