@@ -17,6 +17,7 @@ import {
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
+import { fetchOrcidConferenceWorks } from "./orcid";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -469,6 +470,18 @@ activityRouter.get("/conference-actions/mine", asyncHandler(async (req: AuthedRe
       createdAt: row.created_at,
     })),
   });
+}));
+
+// Real conference papers/abstracts/posters from the account's own public ORCID record — an
+// external, self-curated source, kept separate from Conference Gate's own submissions so the
+// two are never confused with each other.
+activityRouter.get("/orcid-works/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const row = await dbGet<{ orcid_id: string | null }>("SELECT orcid_id FROM users WHERE id = ?", [req.userId!]);
+  if (!row?.orcid_id) {
+    return res.json({ orcidId: null, works: [] });
+  }
+  const works = await fetchOrcidConferenceWorks(row.orcid_id);
+  res.json({ orcidId: row.orcid_id, works });
 }));
 
 // Conferences created via the organizer wizard — stored as an opaque JSON blob since the
