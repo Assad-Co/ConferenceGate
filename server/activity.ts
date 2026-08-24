@@ -19,6 +19,8 @@ import {
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { searchCrossRefConferencePapers } from "./crossref";
+import { searchSemanticScholarConferencePapers } from "./semanticscholar";
+import { searchDblpConferencePapers } from "./dblp";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -483,10 +485,12 @@ function toExternalPaperDTO(row: ExternalPaperMatchRow) {
   };
 }
 
-// Real conference papers matched by name against CrossRef's public index — the one option that
-// needs nothing extra from the account beyond the name it already has. Names collide, so a
-// candidate is never shown as "theirs" until they explicitly confirm it via the /decide route
-// below; already-decided DOIs (confirmed or dismissed) are excluded from future candidate lists.
+// Real conference papers matched by name against three free, public, zero-signup indexes —
+// CrossRef, Semantic Scholar, and DBLP — the one option that needs nothing extra from the
+// account beyond the name it already has. Names collide, so a candidate is never shown as
+// "theirs" until they explicitly confirm it via the /decide route below; already-decided
+// entries (confirmed or dismissed) are excluded from future candidate lists, and the same paper
+// indexed by more than one source is de-duplicated by normalized title.
 activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const user = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
   const decided = await dbAll<ExternalPaperMatchRow>("SELECT * FROM external_paper_matches WHERE user_id = ?", [
@@ -494,8 +498,28 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
   ]);
   const decidedDois = new Set(decided.map((r) => r.doi));
 
-  const rawCandidates = user?.name ? await searchCrossRefConferencePapers(user.name) : [];
-  const candidates = rawCandidates.filter((c) => !decidedDois.has(c.doi));
+  const [crossRef, semanticScholar, dblp] = user?.name
+    ? await Promise.all([
+        searchCrossRefConferencePapers(user.name),
+        searchSemanticScholarConferencePapers(user.name),
+        searchDblpConferencePapers(user.name),
+      ])
+    : [[], [], []];
+
+  const merged = [
+    ...crossRef.map((c) => ({ doi: c.doi, title: c.title, venue: c.venue, year: c.year, url: c.url })),
+    ...semanticScholar.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
+    ...dblp.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
+  ];
+
+  const seenTitles = new Set<string>();
+  const candidates = merged.filter((c) => {
+    if (decidedDois.has(c.doi)) return false;
+    const normalizedTitle = c.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (seenTitles.has(normalizedTitle)) return false;
+    seenTitles.add(normalizedTitle);
+    return true;
+  });
 
   res.json({
     confirmed: decided.filter((r) => r.status === "confirmed").map(toExternalPaperDTO),

@@ -178,9 +178,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail))
   );
 
-  // Conference papers matched by name against CrossRef's public index — needs no field from the
-  // account beyond the name it already has. Candidates are never treated as confirmed until the
-  // person explicitly says so, since names aren't unique.
+  // Conference papers matched by name against free public indexes (CrossRef, Semantic Scholar,
+  // DBLP) — needs no field from the account beyond the name it already has. Candidates are
+  // never treated as confirmed until the person explicitly says so, since names aren't unique.
   const [externalConfirmed, setExternalConfirmed] = useState<ExternalPaper[]>([]);
   const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
   const [externalLoading, setExternalLoading] = useState(false);
@@ -558,15 +558,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               {externalLoading ? (
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Searching CrossRef...
+                  Searching CrossRef, Semantic Scholar, and DBLP...
                 </div>
               ) : (
                 <>
                   {externalCandidates.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-[11px] text-slate-400">
-                        Found by searching your name in CrossRef's public index of published conference papers.
-                        Names aren't unique — confirm only the ones that are actually yours.
+                        Found by searching your name in public indexes of published conference papers
+                        (CrossRef, Semantic Scholar, DBLP). Names aren't unique — confirm only the ones that are
+                        actually yours.
                       </p>
                       {externalCandidates.map((paper) => (
                         <div
@@ -628,7 +629,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   )}
 
                   {externalCandidates.length === 0 && externalConfirmed.length === 0 && (
-                    <p className="text-xs text-slate-400">No conference papers matched your name on CrossRef.</p>
+                    <p className="text-xs text-slate-400">No conference papers matched your name.</p>
                   )}
                 </>
               )}
