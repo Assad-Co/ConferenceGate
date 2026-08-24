@@ -16,6 +16,7 @@ import {
   CreatedConferenceRow,
   ExternalPaperMatchRow,
   SelfReportedAttendanceRow,
+  SelfReportedCommitteePositionRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
@@ -731,5 +732,76 @@ activityRouter.delete("/self-reported-attendance/:id", asyncHandler(async (req: 
     return res.status(404).json({ error: "Not found" });
   }
   await dbRun("DELETE FROM self_reported_attendance WHERE id = ?", [req.params.id]);
+  res.json({ ok: true });
+}));
+
+function toSelfReportedCommitteePositionDTO(row: SelfReportedCommitteePositionRow) {
+  return {
+    id: row.id,
+    conferenceName: row.conference_name,
+    position: row.position,
+    year: row.year,
+    proofImage: row.proof_image,
+    createdAt: row.created_at,
+  };
+}
+
+// Same honesty pattern as self-reported-attendance above — committee/chair service has no
+// public, name-searchable source either, so this is self-reported by the account.
+activityRouter.get("/committee-positions/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<SelfReportedCommitteePositionRow>(
+    "SELECT * FROM self_reported_committee_positions WHERE user_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
+  res.json({ entries: rows.map(toSelfReportedCommitteePositionDTO) });
+}));
+
+activityRouter.post("/committee-positions", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const body = req.body || {};
+  const conferenceName = typeof body.conferenceName === "string" ? body.conferenceName.trim() : "";
+  const position = typeof body.position === "string" ? body.position.trim() : "";
+  if (!conferenceName || !position) {
+    return res.status(400).json({ error: "Conference name and position are required" });
+  }
+
+  if (body.proofImage !== undefined && body.proofImage !== null) {
+    if (typeof body.proofImage !== "string" || !body.proofImage.startsWith("data:image/")) {
+      return res.status(400).json({ error: "proofImage must be an image data URL" });
+    }
+    if (body.proofImage.length > MAX_PROOF_IMAGE_LENGTH) {
+      return res.status(400).json({ error: "Image is too large" });
+    }
+  }
+
+  const id = `scp_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO self_reported_committee_positions (id, user_id, conference_name, position, year, proof_image)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      req.userId!,
+      conferenceName,
+      position,
+      typeof body.year === "string" && body.year.trim() ? body.year.trim() : null,
+      typeof body.proofImage === "string" ? body.proofImage : null,
+    ]
+  );
+
+  const row = (await dbGet<SelfReportedCommitteePositionRow>(
+    "SELECT * FROM self_reported_committee_positions WHERE id = ?",
+    [id]
+  ))!;
+  res.status(201).json({ entry: toSelfReportedCommitteePositionDTO(row) });
+}));
+
+activityRouter.delete("/committee-positions/:id", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const row = await dbGet<SelfReportedCommitteePositionRow>(
+    "SELECT * FROM self_reported_committee_positions WHERE id = ?",
+    [req.params.id]
+  );
+  if (!row || row.user_id !== req.userId) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  await dbRun("DELETE FROM self_reported_committee_positions WHERE id = ?", [req.params.id]);
   res.json({ ok: true });
 }));
