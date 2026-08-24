@@ -129,3 +129,29 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
   const data = await parseResponse(res);
   return data.user;
 }
+
+export interface PendingLinkedInProfile {
+  name: string;
+  email: string | null;
+  avatar: string | null;
+}
+
+/** Reads back the verified LinkedIn identity stashed server-side after the OAuth redirect, for a
+ * brand-new account that still needs to pick a role. Returns null if there's no pending sign-in
+ * (nothing in progress, or it expired). */
+export async function fetchPendingLinkedInProfile(): Promise<PendingLinkedInProfile | null> {
+  const res = await fetch('/api/auth/linkedin/pending', { credentials: 'include' });
+  if (res.status === 404) return null;
+  return parseResponse(res);
+}
+
+export async function completeLinkedInSignup(role: AuthRole): Promise<AuthUser> {
+  const res = await fetch('/api/auth/linkedin/complete-signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ role }),
+  });
+  const data = await parseResponse(res);
+  return data.user;
+}

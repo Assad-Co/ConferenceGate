@@ -354,3 +354,190 @@ authRouter.post("/google", asyncHandler(async (req, res) => {
   setSessionCookie(res, token);
   res.json({ user: toPublicUser(row!) });
 }));
+
+// --- LinkedIn Sign-In (OAuth 2.0 authorization code + OpenID Connect) ---
+//
+// Unlike Google Identity Services, LinkedIn has no client-side-only flow that yields a
+// verifiable token in the browser — it's a standard redirect: we send the browser to
+// LinkedIn's consent screen, LinkedIn redirects back here with a one-time code, and the
+// server exchanges that code for an access token and then the person's real name/email/photo
+// via LinkedIn's own OpenID Connect userinfo endpoint. LinkedIn's API has no scope that
+// returns publications, certifications, or conference history for any third-party app, so
+// this can only ever supply identity fields — never abstracts/conferences/certificates,
+// which continue to come from Conference Gate's own real records.
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || null;
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || null;
+const LINKEDIN_STATE_COOKIE = "cg_li_state";
+const LINKEDIN_PENDING_COOKIE = "cg_li_pending";
+const LINKEDIN_OAUTH_TTL_MS = 10 * 60 * 1000; // 10 minutes — just long enough to complete the redirect round trip
+
+function linkedinRedirectUri(req: Request): string {
+  const base = (process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
+  return `${base}/api/auth/linkedin/callback`;
+}
+
+authRouter.get("/linkedin/start", (req, res) => {
+  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+    return res.redirect("/?authError=linkedin_not_configured");
+  }
+
+  const state = crypto.randomBytes(16).toString("hex");
+  res.cookie(LINKEDIN_STATE_COOKIE, state, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: LINKEDIN_OAUTH_TTL_MS,
+    path: "/",
+  });
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: LINKEDIN_CLIENT_ID,
+    redirect_uri: linkedinRedirectUri(req),
+    scope: "openid profile email",
+    state,
+  });
+  res.redirect(`https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`);
+});
+
+authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
+  const { code, state, error } = req.query as Record<string, string | undefined>;
+  const cookieState = req.cookies?.[LINKEDIN_STATE_COOKIE];
+  res.clearCookie(LINKEDIN_STATE_COOKIE, { path: "/" });
+
+  if (error || !code || !state || !cookieState || state !== cookieState || !LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+    return res.redirect("/?authError=linkedin_failed");
+  }
+
+  try {
+    const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: linkedinRedirectUri(req),
+        client_id: LINKEDIN_CLIENT_ID,
+        client_secret: LINKEDIN_CLIENT_SECRET,
+      }),
+    });
+    const tokenText = await tokenRes.text();
+    const tokenBody = tokenText ? JSON.parse(tokenText) : {};
+    if (!tokenRes.ok || typeof tokenBody.access_token !== "string") {
+      return res.redirect("/?authError=linkedin_failed");
+    }
+
+    const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokenBody.access_token}` },
+    });
+    const profileText = await profileRes.text();
+    const profile = profileText ? JSON.parse(profileText) : {};
+    if (!profileRes.ok || typeof profile.sub !== "string") {
+      return res.redirect("/?authError=linkedin_failed");
+    }
+
+    const linkedinId: string = profile.sub;
+    const email: string | null = typeof profile.email === "string" ? profile.email.toLowerCase() : null;
+    const name: string = profile.name || email || "LinkedIn Member";
+    const picture: string | null = typeof profile.picture === "string" ? profile.picture : null;
+
+    let row = await dbGet<UserRow>("SELECT * FROM users WHERE linkedin_id = ?", [linkedinId]);
+
+    if (!row && email) {
+      const byEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [email]);
+      if (byEmail) {
+        await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, byEmail.id]);
+        row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [byEmail.id]);
+      }
+    }
+
+    if (row) {
+      const token = signToken(row.id);
+      setSessionCookie(res, token);
+      return res.redirect("/");
+    }
+
+    // Brand-new account — stash the verified LinkedIn identity in a short-lived signed cookie
+    // and send the browser to the role picker, mirroring the Google Sign-In new-account flow.
+    // (LinkedIn's authorization code is single-use, so unlike Google's ID token it can't just
+    // be replayed once the person picks a role — the verified profile has to be held server-side.)
+    const pendingToken = jwt.sign({ linkedinId, name, email, avatar: picture }, getJwtSecret(), {
+      expiresIn: "10m",
+    });
+    res.cookie(LINKEDIN_PENDING_COOKIE, pendingToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: LINKEDIN_OAUTH_TTL_MS,
+      path: "/",
+    });
+    return res.redirect("/?linkedinNeedsRole=1");
+  } catch {
+    return res.redirect("/?authError=linkedin_failed");
+  }
+}));
+
+interface PendingLinkedInProfile {
+  linkedinId: string;
+  name: string;
+  email: string | null;
+  avatar: string | null;
+}
+
+function readPendingLinkedInProfile(req: Request): PendingLinkedInProfile | null {
+  const token = req.cookies?.[LINKEDIN_PENDING_COOKIE];
+  if (!token) return null;
+  try {
+    return jwt.verify(token, getJwtSecret()) as PendingLinkedInProfile;
+  } catch {
+    return null;
+  }
+}
+
+authRouter.get("/linkedin/pending", (req, res) => {
+  const pending = readPendingLinkedInProfile(req);
+  if (!pending) {
+    return res.status(404).json({ error: "No pending LinkedIn sign-in" });
+  }
+  res.json({ name: pending.name, email: pending.email, avatar: pending.avatar });
+});
+
+authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
+  const pending = readPendingLinkedInProfile(req);
+  if (!pending) {
+    return res.status(400).json({ error: "Your LinkedIn sign-in expired. Please try again." });
+  }
+  if (!pending.email) {
+    return res.status(400).json({ error: "LinkedIn did not share an email address for this account." });
+  }
+
+  const { role } = req.body || {};
+  if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
+    return res.status(400).json({ error: "role must be one of: professional, organizer, sponsor" });
+  }
+
+  const normalizedRole = role.toLowerCase() as AuthRole;
+  const normalizedEmail = pending.email.toLowerCase();
+
+  // Someone may already have an account under this email (e.g. signed up with a password) —
+  // link the LinkedIn identity to it instead of creating a duplicate account.
+  const existingByEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
+  let row: UserRow;
+  if (existingByEmail) {
+    await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [pending.linkedinId, existingByEmail.id]);
+    row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [existingByEmail.id]))!;
+  } else {
+    const id = crypto.randomUUID();
+    await dbRun(
+      `INSERT INTO users (id, email, password_hash, linkedin_id, role, name, avatar)
+       VALUES (?, ?, NULL, ?, ?, ?, ?)`,
+      [id, normalizedEmail, pending.linkedinId, normalizedRole, pending.name, pending.avatar]
+    );
+    row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
+  }
+
+  res.clearCookie(LINKEDIN_PENDING_COOKIE, { path: "/" });
+  const token = signToken(row.id);
+  setSessionCookie(res, token);
+  res.status(201).json({ user: toPublicUser(row) });
+}));
