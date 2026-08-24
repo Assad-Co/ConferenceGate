@@ -41,14 +41,23 @@ const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ m
   </div>
 );
 
-const PersonCard: React.FC<{ name: string; title: string | null; org: string | null; role: string | null }> = ({
+const PersonCard: React.FC<{ name: string; title: string | null; org: string | null; role: string | null; imageUrl?: string | null }> = ({
   name,
   title,
   org,
   role,
+  imageUrl,
 }) => (
   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-4">
-    <img src={generateInitialsAvatar(name)} alt="" className="w-12 h-12 rounded-xl object-cover ring-1 ring-slate-300 shrink-0" />
+    <img
+      src={imageUrl || generateInitialsAvatar(name)}
+      alt=""
+      className="w-12 h-12 rounded-xl object-cover ring-1 ring-slate-300 shrink-0"
+      onError={(e) => {
+        e.currentTarget.onerror = null;
+        e.currentTarget.src = generateInitialsAvatar(name);
+      }}
+    />
     <div className="text-xs">
       {role && (
         <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{role}</span>
@@ -346,9 +355,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         {ses.speakerName && (
                           <div className="flex items-center gap-3 shrink-0">
                             <img
-                              src={generateInitialsAvatar(ses.speakerName)}
+                              src={ses.speakerImageUrl || generateInitialsAvatar(ses.speakerName)}
                               alt=""
                               className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-500/20"
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = generateInitialsAvatar(ses.speakerName!);
+                              }}
                             />
                             <div className="text-xs font-bold text-slate-900">{ses.speakerName}</div>
                           </div>
@@ -368,7 +381,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {data.speakers.map((spk, idx) => (
-                      <PersonCard key={idx} name={spk.name} title={spk.title} org={spk.org} role={spk.role || 'Speaker'} />
+                      <PersonCard key={idx} name={spk.name} title={spk.title} org={spk.org} role={spk.role || 'Speaker'} imageUrl={spk.imageUrl} />
                     ))}
                   </div>
                 )}
@@ -386,7 +399,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {data.committee.map((cm, idx) => (
-                      <PersonCard key={idx} name={cm.name} title={cm.title} org={cm.org} role={cm.role} />
+                      <PersonCard key={idx} name={cm.name} title={cm.title} org={cm.org} role={cm.role} imageUrl={cm.imageUrl} />
                     ))}
                   </div>
                 )}
@@ -405,6 +418,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {data.sponsors.map((sp, idx) => (
                       <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
+                        {sp.logoUrl && (
+                          <img
+                            src={sp.logoUrl}
+                            alt=""
+                            className="w-12 h-12 rounded-xl object-cover mx-auto"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        )}
                         <div className="font-bold text-xs text-slate-900">{sp.name}</div>
                         {sp.tier && (
                           <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-md">
