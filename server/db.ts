@@ -93,7 +93,7 @@ export async function initDb(): Promise<void> {
     `);
   }
 
-  const PROFILE_COLUMNS = ["department", "city", "country", "bio", "linkedin_url"] as const;
+  const PROFILE_COLUMNS = ["department", "city", "country", "bio", "linkedin_url", "linkedin_id"] as const;
   for (const col of PROFILE_COLUMNS) {
     if (!existingColumns.some((c) => c.name === col)) {
       await db.executeMultiple(`ALTER TABLE users ADD COLUMN ${col} TEXT;`);
@@ -350,6 +350,7 @@ export interface UserRow {
   country: string | null;
   bio: string | null;
   linkedin_url: string | null;
+  linkedin_id: string | null;
   avatar: string | null;
   reviewer_available: number;
   created_at: string;

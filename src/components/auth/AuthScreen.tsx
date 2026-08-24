@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UserCheck, Building2, Briefcase, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Logo } from '../Logo';
-import { signup, login, googleAuth, AuthRole, AuthUser, SignupPayload } from '../../api/auth';
+import {
+  signup,
+  login,
+  googleAuth,
+  fetchPendingLinkedInProfile,
+  completeLinkedInSignup,
+  AuthRole,
+  AuthUser,
+  SignupPayload,
+  PendingLinkedInProfile,
+} from '../../api/auth';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { LinkedInSignInButton } from './LinkedInSignInButton';
 
 interface AuthScreenProps {
   onAuthenticated: (user: AuthUser) => void;
@@ -63,9 +74,50 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [googleProfile, setGoogleProfile] = useState<{ name: string; email: string; avatar: string | null } | null>(
     null
   );
-  const [googleRole, setGoogleRole] = useState<AuthRole>('professional');
+  const [pendingLinkedIn, setPendingLinkedIn] = useState<PendingLinkedInProfile | null>(null);
+  const [oauthRole, setOauthRole] = useState<AuthRole>('professional');
 
   const activeRoleConfig = ROLE_OPTIONS.find((r) => r.value === selectedRole)!;
+
+  // Picking up after the LinkedIn OAuth redirect round trip, or surfacing an error from it —
+  // both arrive as query params on the page LinkedIn (or our own callback) sends the browser back to.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
+    const needsRole = params.get('linkedinNeedsRole');
+    if (!authError && !needsRole) return;
+
+    window.history.replaceState(null, '', window.location.pathname);
+
+    if (authError === 'linkedin_not_configured') {
+      setError('LinkedIn Sign-In is not configured yet.');
+      return;
+    }
+    if (authError === 'linkedin_failed') {
+      setError('Could not sign in with LinkedIn. Please try again.');
+      return;
+    }
+    if (needsRole) {
+      setMode('signup');
+      fetchPendingLinkedInProfile()
+        .then((profile) => {
+          if (profile) {
+            setPendingLinkedIn(profile);
+            setOauthRole('professional');
+          } else {
+            setError('Your LinkedIn sign-in expired. Please try again.');
+          }
+        })
+        .catch(() => setError('Your LinkedIn sign-in expired. Please try again.'));
+    }
+  }, []);
+
+  const oauthPending: { kind: 'google' | 'linkedin'; profile: { name: string; email: string | null; avatar: string | null } } | null =
+    pendingGoogleCredential && googleProfile
+      ? { kind: 'google', profile: googleProfile }
+      : pendingLinkedIn
+      ? { kind: 'linkedin', profile: pendingLinkedIn }
+      : null;
 
   const handleGoogleCredential = async (credential: string) => {
     setError(null);
@@ -75,7 +127,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       if ('needsRole' in result) {
         setPendingGoogleCredential(credential);
         setGoogleProfile(result.google);
-        setGoogleRole('professional');
+        setOauthRole('professional');
       } else {
         onAuthenticated(result);
       }
@@ -86,14 +138,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
-  const handleConfirmGoogleRole = async () => {
-    if (!pendingGoogleCredential) return;
+  const handleConfirmOauthRole = async () => {
+    if (!oauthPending) return;
     setError(null);
     setLoading(true);
     try {
-      const result = await googleAuth(pendingGoogleCredential, googleRole);
-      if (!('needsRole' in result)) {
-        onAuthenticated(result);
+      if (oauthPending.kind === 'google') {
+        if (!pendingGoogleCredential) return;
+        const result = await googleAuth(pendingGoogleCredential, oauthRole);
+        if (!('needsRole' in result)) {
+          onAuthenticated(result);
+        }
+      } else {
+        const user = await completeLinkedInSignup(oauthRole);
+        onAuthenticated(user);
       }
     } catch (err: any) {
       setError(err.message || 'Unable to create your account.');
@@ -102,9 +160,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
-  const cancelGoogleRolePicker = () => {
+  const cancelOauthRolePicker = () => {
     setPendingGoogleCredential(null);
     setGoogleProfile(null);
+    setPendingLinkedIn(null);
     setError(null);
   };
 
@@ -181,10 +240,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       <Logo className="h-10 w-auto mb-6" />
 
       <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
-        {pendingGoogleCredential && googleProfile ? (
+        {oauthPending ? (
           <div className="p-6 sm:p-8">
             <button
-              onClick={cancelGoogleRolePicker}
+              onClick={cancelOauthRolePicker}
               className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 mb-4 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -192,12 +251,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </button>
 
             <div className="flex items-center gap-3 mb-5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              {googleProfile.avatar && (
-                <img src={googleProfile.avatar} alt={googleProfile.name} className="w-10 h-10 rounded-full object-cover" />
+              {oauthPending.profile.avatar && (
+                <img
+                  src={oauthPending.profile.avatar}
+                  alt={oauthPending.profile.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
               )}
               <div className="min-w-0">
-                <div className="text-sm font-bold text-slate-900 truncate">{googleProfile.name}</div>
-                <div className="text-xs text-slate-500 truncate">{googleProfile.email}</div>
+                <div className="text-sm font-bold text-slate-900 truncate">{oauthPending.profile.name}</div>
+                <div className="text-xs text-slate-500 truncate">{oauthPending.profile.email}</div>
               </div>
             </div>
 
@@ -207,12 +270,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <div className="grid grid-cols-3 gap-2 mb-6">
               {ROLE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
-                const isActive = googleRole === opt.value;
+                const isActive = oauthRole === opt.value;
                 return (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setGoogleRole(opt.value)}
+                    onClick={() => setOauthRole(opt.value)}
                     className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors cursor-pointer ${
                       isActive
                         ? 'border-blue-600 bg-blue-50 text-blue-900'
@@ -234,7 +297,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             )}
 
             <button
-              onClick={handleConfirmGoogleRole}
+              onClick={handleConfirmOauthRole}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer"
             >
@@ -315,7 +378,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
-              <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+              <div className="space-y-2.5">
+                <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+                <LinkedInSignInButton text="signin_with" />
+              </div>
 
               <p className="text-center text-xs text-slate-500 mt-5">
                 New to Conference Gate?{' '}
@@ -460,7 +526,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
-              <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
+              <div className="space-y-2.5">
+                <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
+                <LinkedInSignInButton text="signup_with" />
+              </div>
 
               <p className="text-center text-xs text-slate-500 mt-5">
                 Already have an account?{' '}
