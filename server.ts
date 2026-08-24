@@ -263,10 +263,28 @@ Provide constructive feedback in JSON format with fields:
   const extractionCache = new Map<string, ExtractionCacheEntry>();
   const EXTRACTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-  function stripHtmlToText(html: string): string {
-    return html
+  // Strips a page down to readable text for the LLM, but first swaps every <img> tag for an
+  // inline [IMAGE: absolute-url] marker (resolving relative src/data-src against the page's own
+  // URL) so the model can associate a real photo URL with the name it appears next to — instead
+  // of us ever having to guess or fabricate one.
+  function prepareHtmlForExtraction(html: string, baseUrl: string): string {
+    let cleaned = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<!--[\s\S]*?-->/g, " ")
+      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
+
+    cleaned = cleaned.replace(/<img\b[^>]*\b(?:src|data-src)=["']([^"']+)["'][^>]*>/gi, (_match, src) => {
+      try {
+        const abs = new URL(src, baseUrl).href;
+        return ` [IMAGE: ${abs}] `;
+      } catch {
+        return " ";
+      }
+    });
+
+    return cleaned
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;/gi, " ")
       .replace(/&amp;/gi, "&")
@@ -305,7 +323,7 @@ Provide constructive feedback in JSON format with fields:
           redirect: "follow",
         });
         const html = await pageRes.text();
-        pageText = stripHtmlToText(html).slice(0, 18000);
+        pageText = prepareHtmlForExtraction(html, cacheKey).slice(0, 24000);
       } catch (fetchErr) {
         console.error("Failed to fetch page for extraction:", fetchErr);
       }
@@ -317,6 +335,8 @@ Provide constructive feedback in JSON format with fields:
       }
 
       const prompt = `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
+
+The text below has every <img> tag replaced with an inline marker like "[IMAGE: https://example.com/photo.jpg]" positioned where that image appeared in the page. When a marker appears right next to a person's name or a sponsor's name, that is very likely their real photo or logo — copy that exact URL into the matching imageUrl/logoUrl field. If no marker appears near a name, use null. Never invent or guess an image URL, and never reuse an unrelated image for a different person.
 
 Page title: "${typeof title === "string" ? title : ""}"
 Page URL: "${cacheKey}"
@@ -335,10 +355,10 @@ Return JSON with exactly this shape:
   "cfpStatus": string | null,
   "cfpDeadline": string | null,
   "submissionUrl": string | null,
-  "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "track": string | null }],
-  "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null }],
-  "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null }],
-  "sponsors": [{ "name": string, "tier": string | null }],
+  "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null }],
+  "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
+  "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
+  "sponsors": [{ "name": string, "tier": string | null, "logoUrl": string | null }],
   "accommodationText": string | null,
   "travelText": string | null
 }`;

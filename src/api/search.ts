@@ -23,6 +23,7 @@ export interface AgendaSessionExtract {
   time: string | null;
   title: string;
   speakerName: string | null;
+  speakerImageUrl: string | null;
   track: string | null;
 }
 
@@ -31,11 +32,13 @@ export interface PersonExtract {
   title: string | null;
   org: string | null;
   role: string | null;
+  imageUrl: string | null;
 }
 
 export interface SponsorExtract {
   name: string;
   tier: string | null;
+  logoUrl: string | null;
 }
 
 export interface ExtractedConferenceDetails {
