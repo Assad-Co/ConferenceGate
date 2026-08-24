@@ -23,6 +23,8 @@ import {
   Pencil,
   Linkedin,
   Search,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
@@ -30,12 +32,18 @@ import { ConferenceLink } from './ConferenceLink';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
+import { AddAttendanceModal } from './AddAttendanceModal';
 import { resizeImageFile } from '../utils/image';
 import {
   ConferenceRegistration,
   fetchMyExternalPapers,
   decideExternalPaper,
   ExternalPaper,
+  fetchMySelfReportedAttendance,
+  addSelfReportedAttendance,
+  removeSelfReportedAttendance,
+  SelfReportedAttendance,
+  AddSelfReportedAttendancePayload,
 } from '../api/activity';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
@@ -222,6 +230,46 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       // Non-critical — the candidate just stays in the list to try again.
     } finally {
       setDecidingDoi(null);
+    }
+  };
+
+  // Plain attendance (no presentation) has no real, name-searchable public source anywhere —
+  // attendee lists are private to organizers. This is the account typing it in themselves,
+  // always shown labeled self-reported and never mixed with verified registrations.
+  const [selfReported, setSelfReported] = useState<SelfReportedAttendance[]>([]);
+  const [selfReportedLoading, setSelfReportedLoading] = useState(false);
+  const [isAddAttendanceOpen, setIsAddAttendanceOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelfReportedLoading(true);
+    fetchMySelfReportedAttendance()
+      .then((entries) => {
+        if (!cancelled) setSelfReported(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setSelfReported([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSelfReportedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
+
+  const handleAddSelfReportedAttendance = async (payload: AddSelfReportedAttendancePayload) => {
+    const entry = await addSelfReportedAttendance(payload);
+    setSelfReported((prev) => [entry, ...prev]);
+  };
+
+  const handleRemoveSelfReportedAttendance = async (id: string) => {
+    const previous = selfReported;
+    setSelfReported((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await removeSelfReportedAttendance(id);
+    } catch {
+      setSelfReported(previous);
     }
   };
 
@@ -503,6 +551,70 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 No verified conference attendance on record yet. Once you register for a conference through Conference
                 Gate, it'll appear here.
               </p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'conferences' && (
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900">Self-Reported Attendance</h3>
+              <button
+                onClick={() => setIsAddAttendanceOpen(true)}
+                className="px-3 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 rounded-lg cursor-pointer flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add a Past Conference
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Plain attendance isn't in any public database anywhere, so this is self-reported by you —
+              not verified by Conference Gate.
+            </p>
+            {selfReportedLoading ? (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading...
+              </div>
+            ) : selfReported.length > 0 ? (
+              <div className="space-y-3">
+                {selfReported.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start justify-between gap-3"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      {entry.proofImage && (
+                        <img
+                          src={entry.proofImage}
+                          alt=""
+                          className="w-12 h-12 rounded-lg object-cover ring-1 ring-slate-300 shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-xs text-slate-900">{entry.conferenceName}</h4>
+                        <p className="text-[11px] text-slate-500">
+                          {[entry.location, entry.year, entry.role].filter(Boolean).join(' • ')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                        Self-Reported
+                      </span>
+                      <button
+                        onClick={() => handleRemoveSelfReportedAttendance(entry.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">No self-reported conferences yet.</p>
             )}
           </div>
         )}
@@ -839,6 +951,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           onSave={onEditProfile}
         />
       )}
+
+      <AddAttendanceModal
+        isOpen={isAddAttendanceOpen}
+        onClose={() => setIsAddAttendanceOpen(false)}
+        onAdd={handleAddSelfReportedAttendance}
+      />
     </div>
   );
 };
