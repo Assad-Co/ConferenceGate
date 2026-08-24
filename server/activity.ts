@@ -15,6 +15,7 @@ import {
   ConferenceInterestActionRow,
   CreatedConferenceRow,
   ExternalPaperMatchRow,
+  SelfReportedAttendanceRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
@@ -659,4 +660,76 @@ activityRouter.get("/organizer/activity-feed", asyncHandler(async (req: AuthedRe
   ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   res.json({ items });
+}));
+
+function toSelfReportedAttendanceDTO(row: SelfReportedAttendanceRow) {
+  return {
+    id: row.id,
+    conferenceName: row.conference_name,
+    location: row.location,
+    year: row.year,
+    role: row.role,
+    proofImage: row.proof_image,
+    createdAt: row.created_at,
+  };
+}
+
+const MAX_PROOF_IMAGE_LENGTH = 2_000_000; // ~1.5MB decoded, comfortably under the request body limit
+
+// Plain attendance (no presentation) has no real, public, name-searchable source anywhere —
+// attendee lists are private to organizers. This is the one honest way to capture it: the
+// account types it in themselves, and it's always returned/labeled as self-reported, never
+// mixed with Conference Gate's own verified registrations.
+activityRouter.get("/self-reported-attendance/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<SelfReportedAttendanceRow>(
+    "SELECT * FROM self_reported_attendance WHERE user_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
+  res.json({ entries: rows.map(toSelfReportedAttendanceDTO) });
+}));
+
+activityRouter.post("/self-reported-attendance", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const body = req.body || {};
+  const conferenceName = typeof body.conferenceName === "string" ? body.conferenceName.trim() : "";
+  if (!conferenceName) {
+    return res.status(400).json({ error: "Conference name is required" });
+  }
+
+  if (body.proofImage !== undefined && body.proofImage !== null) {
+    if (typeof body.proofImage !== "string" || !body.proofImage.startsWith("data:image/")) {
+      return res.status(400).json({ error: "proofImage must be an image data URL" });
+    }
+    if (body.proofImage.length > MAX_PROOF_IMAGE_LENGTH) {
+      return res.status(400).json({ error: "Image is too large" });
+    }
+  }
+
+  const id = `sra_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO self_reported_attendance (id, user_id, conference_name, location, year, role, proof_image)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      req.userId!,
+      conferenceName,
+      typeof body.location === "string" && body.location.trim() ? body.location.trim() : null,
+      typeof body.year === "string" && body.year.trim() ? body.year.trim() : null,
+      typeof body.role === "string" && body.role.trim() ? body.role.trim() : null,
+      typeof body.proofImage === "string" ? body.proofImage : null,
+    ]
+  );
+
+  const row = (await dbGet<SelfReportedAttendanceRow>("SELECT * FROM self_reported_attendance WHERE id = ?", [id]))!;
+  res.status(201).json({ entry: toSelfReportedAttendanceDTO(row) });
+}));
+
+activityRouter.delete("/self-reported-attendance/:id", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const row = await dbGet<SelfReportedAttendanceRow>("SELECT * FROM self_reported_attendance WHERE id = ?", [
+    req.params.id,
+  ]);
+  if (!row || row.user_id !== req.userId) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  await dbRun("DELETE FROM self_reported_attendance WHERE id = ?", [req.params.id]);
+  res.json({ ok: true });
 }));

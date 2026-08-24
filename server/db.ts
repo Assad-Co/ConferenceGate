@@ -344,6 +344,21 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(user_id, doi)
     );
+
+    -- Plain attendance (no presentation) is never in any public database anywhere — attendee
+    -- lists are private to organizers, so there's no honest way to gather it automatically.
+    -- This is the one place the account types it in themselves; always shown labeled
+    -- self-reported/unverified, never mixed with Conference Gate's own verified registrations.
+    CREATE TABLE IF NOT EXISTS self_reported_attendance (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      conference_name TEXT NOT NULL,
+      location TEXT,
+      year TEXT,
+      role TEXT,
+      proof_image TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   const submissionColumns = await tableColumns("submissions");
@@ -587,5 +602,16 @@ export interface ExternalPaperMatchRow {
   year: string | null;
   url: string | null;
   status: "confirmed" | "dismissed";
+  created_at: string;
+}
+
+export interface SelfReportedAttendanceRow {
+  id: string;
+  user_id: string;
+  conference_name: string;
+  location: string | null;
+  year: string | null;
+  role: string | null;
+  proof_image: string | null;
   created_at: string;
 }

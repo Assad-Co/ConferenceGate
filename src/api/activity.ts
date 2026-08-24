@@ -272,3 +272,52 @@ export async function decideExternalPaper(paper: ExternalPaper, decision: 'confi
   });
   await parseResponse(res);
 }
+
+export interface SelfReportedAttendance {
+  id: string;
+  conferenceName: string;
+  location: string | null;
+  year: string | null;
+  role: string | null;
+  proofImage: string | null;
+  createdAt: string;
+}
+
+export interface AddSelfReportedAttendancePayload {
+  conferenceName: string;
+  location?: string;
+  year?: string;
+  role?: string;
+  proofImage?: string | null;
+}
+
+/** Plain attendance (no presentation) has no real public source anywhere — this is the account
+ * typing it in themselves. Always returned/shown labeled self-reported, never mixed with
+ * Conference Gate's own verified registrations. */
+export async function fetchMySelfReportedAttendance(): Promise<SelfReportedAttendance[]> {
+  const res = await fetch('/api/activity/self-reported-attendance/mine', { credentials: 'include' });
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => ({ entries: [] }));
+  return data.entries || [];
+}
+
+export async function addSelfReportedAttendance(
+  payload: AddSelfReportedAttendancePayload
+): Promise<SelfReportedAttendance> {
+  const res = await fetch('/api/activity/self-reported-attendance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.entry;
+}
+
+export async function removeSelfReportedAttendance(id: string): Promise<void> {
+  const res = await fetch(`/api/activity/self-reported-attendance/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  await parseResponse(res);
+}
