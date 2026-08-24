@@ -23,6 +23,7 @@ import {
   Pencil,
   Linkedin,
   Link2,
+  Search,
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
@@ -31,7 +32,14 @@ import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { resizeImageFile } from '../utils/image';
-import { ConferenceRegistration, fetchMyOrcidWorks, OrcidWork } from '../api/activity';
+import {
+  ConferenceRegistration,
+  fetchMyOrcidWorks,
+  OrcidWork,
+  fetchMyExternalPapers,
+  decideExternalPaper,
+  ExternalPaper,
+} from '../api/activity';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
 
@@ -201,6 +209,53 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       cancelled = true;
     };
   }, [userProfile.orcidId]);
+
+  // Conference papers matched by name against CrossRef's public index — needs no field from the
+  // account beyond the name it already has. Candidates are never treated as confirmed until the
+  // person explicitly says so, since names aren't unique.
+  const [externalConfirmed, setExternalConfirmed] = useState<ExternalPaper[]>([]);
+  const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
+  const [externalLoading, setExternalLoading] = useState(false);
+  const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setExternalLoading(true);
+    fetchMyExternalPapers()
+      .then((res) => {
+        if (!cancelled) {
+          setExternalConfirmed(res.confirmed);
+          setExternalCandidates(res.candidates);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExternalConfirmed([]);
+          setExternalCandidates([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setExternalLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
+
+  const handleDecideExternalPaper = async (paper: ExternalPaper, decision: 'confirmed' | 'dismissed') => {
+    setDecidingDoi(paper.doi);
+    try {
+      await decideExternalPaper(paper, decision);
+      setExternalCandidates((prev) => prev.filter((p) => p.doi !== paper.doi));
+      if (decision === 'confirmed') {
+        setExternalConfirmed((prev) => [...prev, paper]);
+      }
+    } catch {
+      // Non-critical — the candidate just stays in the list to try again.
+    } finally {
+      setDecidingDoi(null);
+    }
+  };
 
   const committeeEntries = [
     ...userProfile.verifiedAchievements
@@ -577,6 +632,90 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">No conference papers found on your public ORCID record.</p>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Search className="w-4 h-4 text-indigo-600" />
+                Possible Conference Papers (matched by name)
+              </h3>
+              {externalLoading ? (
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Searching CrossRef...
+                </div>
+              ) : (
+                <>
+                  {externalCandidates.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-slate-400">
+                        Found by searching your name in CrossRef's public index of published conference papers.
+                        Names aren't unique — confirm only the ones that are actually yours.
+                      </p>
+                      {externalCandidates.map((paper) => (
+                        <div
+                          key={paper.doi}
+                          className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-slate-900">{paper.title}</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {[paper.venue, paper.year].filter(Boolean).join(' • ')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => handleDecideExternalPaper(paper, 'dismissed')}
+                              disabled={decidingDoi === paper.doi}
+                              className="px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-lg cursor-pointer disabled:opacity-50"
+                            >
+                              Not me
+                            </button>
+                            <button
+                              onClick={() => handleDecideExternalPaper(paper, 'confirmed')}
+                              disabled={decidingDoi === paper.doi}
+                              className="px-2.5 py-1.5 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg cursor-pointer disabled:opacity-50"
+                            >
+                              Yes, that's me
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {externalConfirmed.length > 0 && (
+                    <div className="space-y-2">
+                      {externalCandidates.length > 0 && (
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider pt-2">Confirmed</p>
+                      )}
+                      {externalConfirmed.map((paper) => (
+                        <div key={paper.doi} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                          <h4 className="font-bold text-xs text-slate-900">{paper.title}</h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {[paper.venue, paper.year].filter(Boolean).join(' • ')}
+                          </p>
+                          {paper.url && (
+                            <a
+                              href={paper.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] text-indigo-700 mt-1 font-semibold hover:underline"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View record
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {externalCandidates.length === 0 && externalConfirmed.length === 0 && (
+                    <p className="text-xs text-slate-400">No conference papers matched your name on CrossRef.</p>
+                  )}
+                </>
               )}
             </div>
 

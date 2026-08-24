@@ -328,6 +328,22 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(post_id, user_id)
     );
+
+    -- Name-matched conference papers from CrossRef's public index. Never shown as the account's
+    -- own until the person explicitly confirms it — names collide, so a match alone is never
+    -- proof of authorship.
+    CREATE TABLE IF NOT EXISTS external_paper_matches (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      doi TEXT NOT NULL,
+      title TEXT NOT NULL,
+      venue TEXT,
+      year TEXT,
+      url TEXT,
+      status TEXT NOT NULL CHECK(status IN ('confirmed', 'dismissed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, doi)
+    );
   `);
 
   const submissionColumns = await tableColumns("submissions");
@@ -560,5 +576,17 @@ export interface PostSaveRow {
   id: string;
   post_id: string;
   user_id: string;
+  created_at: string;
+}
+
+export interface ExternalPaperMatchRow {
+  id: string;
+  user_id: string;
+  doi: string;
+  title: string;
+  venue: string | null;
+  year: string | null;
+  url: string | null;
+  status: "confirmed" | "dismissed";
   created_at: string;
 }
