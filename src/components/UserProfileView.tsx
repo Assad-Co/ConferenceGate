@@ -22,7 +22,6 @@ import {
   Loader2,
   Pencil,
   Linkedin,
-  Link2,
   Search,
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
@@ -34,8 +33,6 @@ import { EditProfileModal } from './EditProfileModal';
 import { resizeImageFile } from '../utils/image';
 import {
   ConferenceRegistration,
-  fetchMyOrcidWorks,
-  OrcidWork,
   fetchMyExternalPapers,
   decideExternalPaper,
   ExternalPaper,
@@ -72,7 +69,6 @@ interface UserProfileViewProps {
     country: string;
     bio: string;
     linkedinUrl: string;
-    orcidId: string;
   }) => Promise<void>;
   currentUserEmail?: string;
 }
@@ -181,34 +177,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       s.primaryAuthor.name === userProfile.name ||
       (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail))
   );
-
-  // Real conference papers/abstracts/posters pulled from the account's own public ORCID
-  // record — kept separate from mySubmissions since these were never submitted through
-  // Conference Gate itself.
-  const [orcidWorks, setOrcidWorks] = useState<OrcidWork[]>([]);
-  const [orcidWorksLoading, setOrcidWorksLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userProfile.orcidId) {
-      setOrcidWorks([]);
-      return;
-    }
-    let cancelled = false;
-    setOrcidWorksLoading(true);
-    fetchMyOrcidWorks()
-      .then((res) => {
-        if (!cancelled) setOrcidWorks(res.works);
-      })
-      .catch(() => {
-        if (!cancelled) setOrcidWorks([]);
-      })
-      .finally(() => {
-        if (!cancelled) setOrcidWorksLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userProfile.orcidId]);
 
   // Conference papers matched by name against CrossRef's public index — needs no field from the
   // account beyond the name it already has. Candidates are never treated as confirmed until the
@@ -362,17 +330,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   >
                     <Linkedin className="w-3.5 h-3.5" />
                     LinkedIn
-                  </a>
-                )}
-                {userProfile.orcidId && (
-                  <a
-                    href={`https://orcid.org/${userProfile.orcidId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-emerald-700 hover:underline font-semibold"
-                  >
-                    <Link2 className="w-3.5 h-3.5" />
-                    ORCID
                   </a>
                 )}
               </div>
@@ -590,48 +547,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">No abstract submissions on record yet.</p>
-              )}
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-emerald-600" />
-                Conference Papers & Presentations (via ORCID)
-              </h3>
-              {!userProfile.orcidId ? (
-                <p className="text-xs text-slate-400">
-                  Add your ORCID iD in Edit Profile to automatically show conference papers, abstracts, and
-                  posters already linked to your public ORCID record here.
-                </p>
-              ) : orcidWorksLoading ? (
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Loading from ORCID...
-                </div>
-              ) : orcidWorks.length > 0 ? (
-                <div className="space-y-2">
-                  {orcidWorks.map((work, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                      <h4 className="font-bold text-xs text-slate-900">{work.title}</h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        {[work.venue, work.year].filter(Boolean).join(' • ') || work.type.replace(/-/g, ' ')}
-                      </p>
-                      {work.url && (
-                        <a
-                          href={work.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[10px] text-emerald-700 mt-1 font-semibold hover:underline"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          View record
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400">No conference papers found on your public ORCID record.</p>
               )}
             </div>
 
@@ -919,7 +834,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             country: userProfile.country,
             bio: userProfile.bio,
             linkedinUrl: userProfile.linkedinUrl,
-            orcidId: userProfile.orcidId,
           }}
           onSave={onEditProfile}
         />

@@ -822,7 +822,6 @@ export function App() {
       country: user.country || '',
       bio: user.bio || '',
       linkedinUrl: user.linkedinUrl || '',
-      orcidId: user.orcidId || '',
       avatar,
       ...EMPTY_ACCOUNT_ACHIEVEMENTS,
       reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
@@ -873,7 +872,6 @@ export function App() {
     country: string;
     bio: string;
     linkedinUrl: string;
-    orcidId: string;
   }) => {
     const updatedUser = await updateProfile(payload);
     setAuthUser(updatedUser);
@@ -887,7 +885,6 @@ export function App() {
       country: updatedUser.country || '',
       bio: updatedUser.bio || '',
       linkedinUrl: updatedUser.linkedinUrl || '',
-      orcidId: updatedUser.orcidId || '',
     }));
     if (updatedUser.role === 'organizer') {
       setOrganizerNameOverride(updatedUser.organization || updatedUser.name);
@@ -1512,7 +1509,6 @@ export function App() {
             country: authUser.country || '',
             bio: authUser.bio || '',
             linkedinUrl: authUser.linkedinUrl || '',
-            orcidId: authUser.orcidId || '',
           }}
           onSave={handleEditProfile}
         />

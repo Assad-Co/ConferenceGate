@@ -246,24 +246,6 @@ export async function fetchOrganizerActivityFeed(): Promise<OrganizerActivityIte
   return data.items;
 }
 
-export interface OrcidWork {
-  title: string;
-  type: string;
-  year: string | null;
-  venue: string | null;
-  url: string | null;
-}
-
-/** Real conference papers/abstracts/posters pulled from the account's own public ORCID record.
- * Returns an empty list (never throws) if no ORCID iD is set, ORCID isn't configured, or the
- * person simply has no public conference works — the UI treats all three as the same honest
- * empty state. */
-export async function fetchMyOrcidWorks(): Promise<{ orcidId: string | null; works: OrcidWork[] }> {
-  const res = await fetch('/api/activity/orcid-works/mine', { credentials: 'include' });
-  if (!res.ok) return { orcidId: null, works: [] };
-  return res.json().catch(() => ({ orcidId: null, works: [] }));
-}
-
 export interface ExternalPaper {
   doi: string;
   title: string;

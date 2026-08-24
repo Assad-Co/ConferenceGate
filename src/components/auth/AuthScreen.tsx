@@ -67,7 +67,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [organization, setOrganization] = useState('');
   const [title, setTitle] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [orcidId, setOrcidId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -175,7 +174,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     setOrganization('');
     setTitle('');
     setLinkedinUrl('');
-    setOrcidId('');
     setError(null);
   };
 
@@ -227,7 +225,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         organization: organization.trim() || undefined,
         title: title.trim() || undefined,
         linkedinUrl: linkedinUrl.trim() || undefined,
-        orcidId: orcidId.trim() || undefined,
       };
       const user = await signup(payload);
       onAuthenticated(user);
@@ -480,22 +477,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   <p className="text-[11px] text-slate-400 mt-1">
                     We link to your public profile. Any abstract you're already listed as a co-author on
                     (matched by this email) shows up in your profile automatically.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">
-                    ORCID iD <span className="font-normal text-slate-400">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={orcidId}
-                    onChange={(e) => setOrcidId(e.target.value)}
-                    placeholder="e.g. 0000-0002-1825-0097"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Your real conference papers, abstracts, and posters already linked to your ORCID
-                    record show up in your profile automatically.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

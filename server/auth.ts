@@ -5,7 +5,6 @@ import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
-import { normalizeOrcidId } from "./orcid";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -63,7 +62,6 @@ function toPublicUser(row: UserRow) {
     country: row.country,
     bio: row.bio,
     linkedinUrl: row.linkedin_url,
-    orcidId: row.orcid_id,
     avatar: row.avatar,
     reviewerAvailable: !!row.reviewer_available,
   };
@@ -134,7 +132,7 @@ export function publicUserSummary(row: UserRow) {
 export const authRouter = Router();
 
 authRouter.post("/signup", asyncHandler(async (req, res) => {
-  const { role, name, email, password, organization, title, linkedinUrl, orcidId } = req.body || {};
+  const { role, name, email, password, organization, title, linkedinUrl } = req.body || {};
 
   if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
     return res.status(400).json({ error: "role must be one of: professional, organizer, sponsor" });
@@ -160,8 +158,8 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
   const normalizedRole = role.toLowerCase() as AuthRole;
 
   await dbRun(
-    `INSERT INTO users (id, email, password_hash, role, name, organization, title, linkedin_url, orcid_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (id, email, password_hash, role, name, organization, title, linkedin_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       normalizedEmail,
@@ -171,7 +169,6 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
       typeof organization === "string" && organization.trim() ? organization.trim() : null,
       typeof title === "string" && title.trim() ? title.trim() : null,
       normalizeLinkedInUrl(linkedinUrl),
-      normalizeOrcidId(orcidId),
     ]
   );
 
@@ -246,16 +243,6 @@ authRouter.patch("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res
       return res.status(400).json({ error: "linkedinUrl must be a string or null" });
     }
     updates.linkedin_url = normalizeLinkedInUrl(body.linkedinUrl);
-  }
-
-  if ("orcidId" in body) {
-    if (body.orcidId !== null && typeof body.orcidId !== "string") {
-      return res.status(400).json({ error: "orcidId must be a string or null" });
-    }
-    if (body.orcidId && !normalizeOrcidId(body.orcidId)) {
-      return res.status(400).json({ error: "That doesn't look like a valid ORCID iD (e.g. 0000-0002-1825-0097)." });
-    }
-    updates.orcid_id = normalizeOrcidId(body.orcidId);
   }
 
   if (Object.keys(updates).length === 0) {
