@@ -10,6 +10,7 @@ export interface EditProfileValues {
   country: string;
   bio: string;
   linkedinUrl: string;
+  orcidId: string;
 }
 
 interface EditProfileModalProps {
@@ -69,6 +70,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [country, setCountry] = useState(initialValues.country);
   const [bio, setBio] = useState(initialValues.bio);
   const [linkedinUrl, setLinkedinUrl] = useState(initialValues.linkedinUrl);
+  const [orcidId, setOrcidId] = useState(initialValues.orcidId);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -94,6 +96,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         country: country.trim(),
         bio: bio.trim(),
         linkedinUrl: linkedinUrl.trim(),
+        orcidId: orcidId.trim(),
       });
       onClose();
     } catch (err: any) {
@@ -169,6 +172,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               placeholder="e.g. jane-smith or linkedin.com/in/jane-smith"
               className={inputClass}
             />
+          </div>
+          <div>
+            <label className={labelClass}>ORCID iD</label>
+            <input
+              type="text"
+              value={orcidId}
+              onChange={(e) => setOrcidId(e.target.value)}
+              placeholder="e.g. 0000-0002-1825-0097"
+              className={inputClass}
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Your real conference papers, abstracts, and posters already linked to your ORCID
+              record show up in your profile automatically.
+            </p>
           </div>
           <div>
             <label className={labelClass}>{copy.bioLabel}</label>
