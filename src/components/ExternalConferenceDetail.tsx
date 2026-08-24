@@ -444,6 +444,22 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'venue' && (
               <div className="space-y-6 text-xs text-slate-600">
                 <h3 className="text-lg font-bold text-slate-900">Venue, Accommodation & Travel</h3>
+                {data?.locationText ? (
+                  <div className="rounded-2xl overflow-hidden border border-slate-200">
+                    <iframe
+                      title="Venue location map"
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(data.locationText)}&output=embed`}
+                      className="w-full h-64 border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                ) : (
+                  <EmptyExtractState
+                    message="No venue location was found on this page, so a map can't be shown."
+                    sourceUrl={result.link}
+                  />
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                     <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">

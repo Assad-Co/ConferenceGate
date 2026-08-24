@@ -493,6 +493,15 @@ export function App() {
     };
   }, [submissions, registrations, authUser?.id, authUser?.email]);
 
+  // Discover shows only real, organizer-created conferences (submitted through the app) plus
+  // live web results — never the static seed catalog, which was only ever meant as starter
+  // demo data, not something to present as if it were live/current.
+  const sampleConferenceIds = React.useMemo(() => new Set(sampleConferences.map((c) => c.id)), []);
+  const discoverConferences = React.useMemo(
+    () => conferences.filter((c) => !sampleConferenceIds.has(c.id)),
+    [conferences, sampleConferenceIds]
+  );
+
   useEffect(() => {
     setUserProfile((prev) => ({
       ...prev,
@@ -1285,7 +1294,7 @@ export function App() {
 
         {activeTab === 'discover' && (
           <DiscoveryEngine
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
             onOpenExternalResult={handleOpenExternalResult}
