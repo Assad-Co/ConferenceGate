@@ -451,7 +451,17 @@ export function App() {
   // A real account's stats are derived from its own persisted activity, never fabricated.
   const myContributions = React.useMemo(() => {
     const myId = authUser?.id;
-    const mySubmissions = myId ? submissions.filter((s) => s.submitterId === myId) : [];
+    const myEmail = authUser?.email?.trim().toLowerCase();
+    // Includes abstracts where this account is only listed as a co-author (matched by email) —
+    // real prior engagement recorded by someone else's submission, surfaced automatically
+    // rather than requiring the co-author to re-enter it themselves.
+    const mySubmissions = myId
+      ? submissions.filter(
+          (s) =>
+            s.submitterId === myId ||
+            (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail))
+        )
+      : [];
     const abstractsAccepted = mySubmissions.filter((s) =>
       ['Accepted', 'Accepted for Oral', 'Accepted for Poster'].includes(s.status)
     ).length;
@@ -481,7 +491,7 @@ export function App() {
       awards: 0,
       certificatesCount,
     };
-  }, [submissions, registrations, authUser?.id]);
+  }, [submissions, registrations, authUser?.id, authUser?.email]);
 
   useEffect(() => {
     setUserProfile((prev) => ({
@@ -811,6 +821,7 @@ export function App() {
       city: user.city || '',
       country: user.country || '',
       bio: user.bio || '',
+      linkedinUrl: user.linkedinUrl || '',
       avatar,
       ...EMPTY_ACCOUNT_ACHIEVEMENTS,
       reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
@@ -860,6 +871,7 @@ export function App() {
     city: string;
     country: string;
     bio: string;
+    linkedinUrl: string;
   }) => {
     const updatedUser = await updateProfile(payload);
     setAuthUser(updatedUser);
@@ -872,6 +884,7 @@ export function App() {
       city: updatedUser.city || '',
       country: updatedUser.country || '',
       bio: updatedUser.bio || '',
+      linkedinUrl: updatedUser.linkedinUrl || '',
     }));
     if (updatedUser.role === 'organizer') {
       setOrganizerNameOverride(updatedUser.organization || updatedUser.name);
@@ -1409,6 +1422,7 @@ export function App() {
           <UserProfileView
             userProfile={userProfile}
             currentUserId={authUser.id}
+            currentUserEmail={authUser.email}
             submissions={submissions}
             posts={posts}
             registrations={registrations}
@@ -1435,6 +1449,7 @@ export function App() {
             conferences={conferences}
             onSelectConference={handleSelectConference}
             currentUserId={authUser?.id}
+            currentUserEmail={authUser?.email}
             onBack={() => setActiveTab('profile')}
           />
         )}
@@ -1493,6 +1508,7 @@ export function App() {
             city: authUser.city || '',
             country: authUser.country || '',
             bio: authUser.bio || '',
+            linkedinUrl: authUser.linkedinUrl || '',
           }}
           onSave={handleEditProfile}
         />

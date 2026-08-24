@@ -61,9 +61,24 @@ function toPublicUser(row: UserRow) {
     city: row.city,
     country: row.country,
     bio: row.bio,
+    linkedinUrl: row.linkedin_url,
     avatar: row.avatar,
     reviewerAvailable: !!row.reviewer_available,
   };
+}
+
+// Accepts a bare username ("jsmith"), a profile path ("in/jsmith"), or a full URL, and always
+// stores a real, clickable linkedin.com URL — never guesses or invents one.
+function normalizeLinkedInUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  let value = raw.trim().replace(/^@/, "");
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  value = value.replace(/^(www\.)?linkedin\.com\//i, "").replace(/^in\//i, "");
+  if (!value) return null;
+  return `https://www.linkedin.com/in/${value}`;
 }
 
 function signToken(userId: string) {
@@ -117,7 +132,7 @@ export function publicUserSummary(row: UserRow) {
 export const authRouter = Router();
 
 authRouter.post("/signup", asyncHandler(async (req, res) => {
-  const { role, name, email, password, organization, title } = req.body || {};
+  const { role, name, email, password, organization, title, linkedinUrl } = req.body || {};
 
   if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
     return res.status(400).json({ error: "role must be one of: professional, organizer, sponsor" });
@@ -143,8 +158,8 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
   const normalizedRole = role.toLowerCase() as AuthRole;
 
   await dbRun(
-    `INSERT INTO users (id, email, password_hash, role, name, organization, title)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (id, email, password_hash, role, name, organization, title, linkedin_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       normalizedEmail,
@@ -153,6 +168,7 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
       name.trim(),
       typeof organization === "string" && organization.trim() ? organization.trim() : null,
       typeof title === "string" && title.trim() ? title.trim() : null,
+      normalizeLinkedInUrl(linkedinUrl),
     ]
   );
 
@@ -220,6 +236,13 @@ authRouter.patch("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res
       return res.status(400).json({ error: `Bio must be ${MAX_BIO_LENGTH} characters or fewer` });
     }
     updates[field] = trimmed || null;
+  }
+
+  if ("linkedinUrl" in body) {
+    if (body.linkedinUrl !== null && typeof body.linkedinUrl !== "string") {
+      return res.status(400).json({ error: "linkedinUrl must be a string or null" });
+    }
+    updates.linkedin_url = normalizeLinkedInUrl(body.linkedinUrl);
   }
 
   if (Object.keys(updates).length === 0) {
