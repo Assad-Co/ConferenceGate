@@ -14,10 +14,12 @@ import {
   OrganizerBroadcastRow,
   ConferenceInterestActionRow,
   CreatedConferenceRow,
+  ExternalPaperMatchRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { fetchOrcidConferenceWorks } from "./orcid";
+import { searchCrossRefConferencePapers } from "./crossref";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -482,6 +484,73 @@ activityRouter.get("/orcid-works/mine", asyncHandler(async (req: AuthedRequest, 
   }
   const works = await fetchOrcidConferenceWorks(row.orcid_id);
   res.json({ orcidId: row.orcid_id, works });
+}));
+
+function toExternalPaperDTO(row: ExternalPaperMatchRow) {
+  return {
+    doi: row.doi,
+    title: row.title,
+    venue: row.venue,
+    year: row.year,
+    url: row.url,
+  };
+}
+
+// Real conference papers matched by name against CrossRef's public index — the one option that
+// needs nothing extra from the account beyond the name it already has. Names collide, so a
+// candidate is never shown as "theirs" until they explicitly confirm it via the /decide route
+// below; already-decided DOIs (confirmed or dismissed) are excluded from future candidate lists.
+activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const user = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+  const decided = await dbAll<ExternalPaperMatchRow>("SELECT * FROM external_paper_matches WHERE user_id = ?", [
+    req.userId!,
+  ]);
+  const decidedDois = new Set(decided.map((r) => r.doi));
+
+  const rawCandidates = user?.name ? await searchCrossRefConferencePapers(user.name) : [];
+  const candidates = rawCandidates.filter((c) => !decidedDois.has(c.doi));
+
+  res.json({
+    confirmed: decided.filter((r) => r.status === "confirmed").map(toExternalPaperDTO),
+    candidates,
+  });
+}));
+
+activityRouter.post("/external-papers/decide", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const body = req.body || {};
+  const doi = typeof body.doi === "string" ? body.doi.trim() : "";
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const decision = body.decision === "confirmed" || body.decision === "dismissed" ? body.decision : null;
+  if (!doi || !title || !decision) {
+    return res.status(400).json({ error: "doi, title, and a valid decision are required" });
+  }
+
+  const id = `epm_${crypto.randomUUID()}`;
+  try {
+    await dbRun(
+      `INSERT INTO external_paper_matches (id, user_id, doi, title, venue, year, url, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        req.userId!,
+        doi,
+        title,
+        typeof body.venue === "string" ? body.venue : null,
+        typeof body.year === "string" ? body.year : null,
+        typeof body.url === "string" ? body.url : null,
+        decision,
+      ]
+    );
+  } catch {
+    // Already decided this DOI — update the decision instead of erroring.
+    await dbRun("UPDATE external_paper_matches SET status = ? WHERE user_id = ? AND doi = ?", [
+      decision,
+      req.userId!,
+      doi,
+    ]);
+  }
+
+  res.status(201).json({ ok: true });
 }));
 
 // Conferences created via the organizer wizard — stored as an opaque JSON blob since the

@@ -263,3 +263,30 @@ export async function fetchMyOrcidWorks(): Promise<{ orcidId: string | null; wor
   if (!res.ok) return { orcidId: null, works: [] };
   return res.json().catch(() => ({ orcidId: null, works: [] }));
 }
+
+export interface ExternalPaper {
+  doi: string;
+  title: string;
+  venue: string | null;
+  year: string | null;
+  url: string | null;
+}
+
+/** Real conference papers matched by name against CrossRef's public index — `confirmed` are
+ * ones the account has already said are theirs, `candidates` are unconfirmed matches still
+ * awaiting a yes/no. Names collide, so nothing in `candidates` is ever shown as confirmed fact. */
+export async function fetchMyExternalPapers(): Promise<{ confirmed: ExternalPaper[]; candidates: ExternalPaper[] }> {
+  const res = await fetch('/api/activity/external-papers/mine', { credentials: 'include' });
+  if (!res.ok) return { confirmed: [], candidates: [] };
+  return res.json().catch(() => ({ confirmed: [], candidates: [] }));
+}
+
+export async function decideExternalPaper(paper: ExternalPaper, decision: 'confirmed' | 'dismissed'): Promise<void> {
+  const res = await fetch('/api/activity/external-papers/decide', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ ...paper, decision }),
+  });
+  await parseResponse(res);
+}
