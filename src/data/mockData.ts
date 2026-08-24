@@ -22,7 +22,6 @@ export const currentUserProfile: UserProfile = {
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
   bio: 'Prof. Dr. John Smith leads energy informatics and AI innovation research at Oxford. He has published over 20 peer-reviewed papers on petroleum systems analysis, machine learning applications, and blockchain for smart grids.',
   linkedinUrl: '',
-  orcidId: '',
   education: [
     'Ph.D. in Computer Science, University of Cambridge (2014)',
     'M.Sc. in Petroleum Geosciences, Imperial College London (2010)',

@@ -12,7 +12,6 @@ export interface AuthUser {
   country: string | null;
   bio: string | null;
   linkedinUrl: string | null;
-  orcidId: string | null;
   avatar: string | null;
   reviewerAvailable: boolean;
 }
@@ -26,7 +25,6 @@ export interface ProfileUpdatePayload {
   country?: string;
   bio?: string;
   linkedinUrl?: string;
-  orcidId?: string;
 }
 
 export interface SignupPayload {
@@ -37,7 +35,6 @@ export interface SignupPayload {
   organization?: string;
   title?: string;
   linkedinUrl?: string;
-  orcidId?: string;
 }
 
 async function parseResponse(res: Response) {
