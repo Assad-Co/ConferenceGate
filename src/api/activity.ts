@@ -321,3 +321,47 @@ export async function removeSelfReportedAttendance(id: string): Promise<void> {
   });
   await parseResponse(res);
 }
+
+export interface SelfReportedCommitteePosition {
+  id: string;
+  conferenceName: string;
+  position: string;
+  year: string | null;
+  proofImage: string | null;
+  createdAt: string;
+}
+
+export interface AddCommitteePositionPayload {
+  conferenceName: string;
+  position: string;
+  year?: string;
+  proofImage?: string | null;
+}
+
+/** Committee/chair service has no public, name-searchable source either — this is the account
+ * typing it in themselves. Always returned/shown labeled self-reported. */
+export async function fetchMyCommitteePositions(): Promise<SelfReportedCommitteePosition[]> {
+  const res = await fetch('/api/activity/committee-positions/mine', { credentials: 'include' });
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => ({ entries: [] }));
+  return data.entries || [];
+}
+
+export async function addCommitteePosition(payload: AddCommitteePositionPayload): Promise<SelfReportedCommitteePosition> {
+  const res = await fetch('/api/activity/committee-positions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.entry;
+}
+
+export async function removeCommitteePosition(id: string): Promise<void> {
+  const res = await fetch(`/api/activity/committee-positions/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  await parseResponse(res);
+}

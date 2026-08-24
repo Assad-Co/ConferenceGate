@@ -33,6 +33,7 @@ import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { AddAttendanceModal } from './AddAttendanceModal';
+import { AddCommitteePositionModal } from './AddCommitteePositionModal';
 import { resizeImageFile } from '../utils/image';
 import {
   ConferenceRegistration,
@@ -44,6 +45,11 @@ import {
   removeSelfReportedAttendance,
   SelfReportedAttendance,
   AddSelfReportedAttendancePayload,
+  fetchMyCommitteePositions,
+  addCommitteePosition,
+  removeCommitteePosition,
+  SelfReportedCommitteePosition,
+  AddCommitteePositionPayload,
 } from '../api/activity';
 
 type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
@@ -270,6 +276,45 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       await removeSelfReportedAttendance(id);
     } catch {
       setSelfReported(previous);
+    }
+  };
+
+  // Same honesty pattern as self-reported attendance — committee/chair service has no public,
+  // name-searchable source either, so this is the account typing it in themselves.
+  const [selfReportedCommittee, setSelfReportedCommittee] = useState<SelfReportedCommitteePosition[]>([]);
+  const [committeeLoading, setCommitteeLoading] = useState(false);
+  const [isAddCommitteeOpen, setIsAddCommitteeOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCommitteeLoading(true);
+    fetchMyCommitteePositions()
+      .then((entries) => {
+        if (!cancelled) setSelfReportedCommittee(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setSelfReportedCommittee([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCommitteeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
+
+  const handleAddCommitteePosition = async (payload: AddCommitteePositionPayload) => {
+    const entry = await addCommitteePosition(payload);
+    setSelfReportedCommittee((prev) => [entry, ...prev]);
+  };
+
+  const handleRemoveCommitteePosition = async (id: string) => {
+    const previous = selfReportedCommittee;
+    setSelfReportedCommittee((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await removeCommitteePosition(id);
+    } catch {
+      setSelfReportedCommittee(previous);
     }
   };
 
@@ -892,6 +937,68 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             ) : (
               <p className="text-xs text-slate-400">No committee positions on record yet.</p>
             )}
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-900">Self-Reported Committee Positions</h4>
+                <button
+                  onClick={() => setIsAddCommitteeOpen(true)}
+                  className="px-3 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 rounded-lg cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add a Committee Position
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Committee or chair service has no public database to pull from either, so this is
+                self-reported by you — not verified by Conference Gate.
+              </p>
+              {committeeLoading ? (
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading...
+                </div>
+              ) : selfReportedCommittee.length > 0 ? (
+                <div className="space-y-3">
+                  {selfReportedCommittee.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        {entry.proofImage && (
+                          <img
+                            src={entry.proofImage}
+                            alt=""
+                            className="w-12 h-12 rounded-lg object-cover ring-1 ring-slate-300 shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-slate-900">{entry.conferenceName}</h4>
+                          <p className="text-[11px] text-slate-500">
+                            {[entry.position, entry.year].filter(Boolean).join(' • ')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                          Self-Reported
+                        </span>
+                        <button
+                          onClick={() => handleRemoveCommitteePosition(entry.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No self-reported committee positions yet.</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -956,6 +1063,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         isOpen={isAddAttendanceOpen}
         onClose={() => setIsAddAttendanceOpen(false)}
         onAdd={handleAddSelfReportedAttendance}
+      />
+
+      <AddCommitteePositionModal
+        isOpen={isAddCommitteeOpen}
+        onClose={() => setIsAddCommitteeOpen(false)}
+        onAdd={handleAddCommitteePosition}
       />
     </div>
   );

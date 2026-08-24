@@ -359,6 +359,19 @@ export async function initDb(): Promise<void> {
       proof_image TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- Same honesty pattern as self_reported_attendance: committee/chair service has no public,
+    -- name-searchable source either, so this is self-reported by the account, always labeled
+    -- as such, never mixed with any verified achievement record.
+    CREATE TABLE IF NOT EXISTS self_reported_committee_positions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      conference_name TEXT NOT NULL,
+      position TEXT NOT NULL,
+      year TEXT,
+      proof_image TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   const submissionColumns = await tableColumns("submissions");
@@ -612,6 +625,16 @@ export interface SelfReportedAttendanceRow {
   location: string | null;
   year: string | null;
   role: string | null;
+  proof_image: string | null;
+  created_at: string;
+}
+
+export interface SelfReportedCommitteePositionRow {
+  id: string;
+  user_id: string;
+  conference_name: string;
+  position: string;
+  year: string | null;
   proof_image: string | null;
   created_at: string;
 }
