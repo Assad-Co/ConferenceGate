@@ -27,6 +27,7 @@ interface DiscoveryEngineProps {
   conferences: Conference[];
   onSelectConference: (conf: Conference) => void;
   onOpenSubmitAbstract: (confId?: string) => void;
+  onOpenExternalResult: (result: LiveSearchResult) => void;
   initialSearchQuery?: string;
   savedConferenceIds?: string[];
   followedConferenceIds?: string[];
@@ -85,6 +86,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   conferences,
   onSelectConference,
   onOpenSubmitAbstract,
+  onOpenExternalResult,
   initialSearchQuery = '',
   savedConferenceIds = [],
   followedConferenceIds = [],
@@ -551,12 +553,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
                   <div className="space-y-6">
                     {webResults.map((result, idx) => (
-                      <a
+                      <div
                         key={idx}
-                        href={result.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 flex flex-col lg:flex-row gap-6 group"
+                        onClick={() => onOpenExternalResult(result)}
+                        className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 cursor-pointer flex flex-col lg:flex-row gap-6 group"
                       >
                         {/* Thumbnail / Placeholder */}
                         <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-slate-900 flex items-center justify-center">
@@ -598,14 +598,23 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                           </div>
 
                           {/* Card Action Row */}
-                          <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
-                            <span className="px-4 py-1.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
-                              Visit Website
-                              <ExternalLink className="w-3.5 h-3.5" />
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <a
+                              href={result.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[11px] text-slate-400 hover:text-indigo-600 font-semibold flex items-center gap-1 cursor-pointer"
+                            >
+                              Visit site directly
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <span className="px-4 py-1.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors">
+                              View Details
                             </span>
                           </div>
                         </div>
-                      </a>
+                      </div>
                     ))}
                   </div>
                 )}

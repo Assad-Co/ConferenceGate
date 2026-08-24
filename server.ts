@@ -12,6 +12,7 @@ import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { postsRouter } from "./server/posts";
 import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
+import { isSafeExternalUrl } from "./server/urlSafety";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -249,6 +250,136 @@ Provide constructive feedback in JSON format with fields:
     } catch (error: any) {
       console.error("AI Abstract Check error:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI-powered extraction of conference details from a live web search result's own page —
+  // for results not in our verified catalog. Only ever reports what's explicitly present on
+  // the page (never invented), cached per-URL since fetch + LLM extraction is expensive.
+  interface ExtractionCacheEntry {
+    data: Record<string, unknown>;
+    expiresAt: number;
+  }
+  const extractionCache = new Map<string, ExtractionCacheEntry>();
+  const EXTRACTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+  function stripHtmlToText(html: string): string {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&#x27;|&apos;/gi, "'")
+      .replace(/&quot;/gi, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  app.post("/api/ai/extract-conference", async (req, res) => {
+    try {
+      const { url, title } = req.body;
+      if (typeof url !== "string" || !url.trim()) {
+        return res.status(400).json({ error: "url is required" });
+      }
+
+      const cacheKey = url.trim();
+      const cached = extractionCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return res.json(cached.data);
+      }
+
+      const ai = getAIClient();
+      if (!ai) {
+        return res.json({ extracted: false, isFallback: true });
+      }
+
+      if (!(await isSafeExternalUrl(cacheKey))) {
+        return res.status(400).json({ error: "That URL cannot be fetched." });
+      }
+
+      let pageText = "";
+      try {
+        const pageRes = await fetch(cacheKey, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; ConferenceGateBot/1.0)" },
+          redirect: "follow",
+        });
+        const html = await pageRes.text();
+        pageText = stripHtmlToText(html).slice(0, 18000);
+      } catch (fetchErr) {
+        console.error("Failed to fetch page for extraction:", fetchErr);
+      }
+
+      if (!pageText) {
+        const fallback = { extracted: false, isFallback: false, fetchFailed: true };
+        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+        return res.json(fallback);
+      }
+
+      const prompt = `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
+
+Page title: "${typeof title === "string" ? title : ""}"
+Page URL: "${cacheKey}"
+
+Page text:
+"""
+${pageText}
+"""
+
+Return JSON with exactly this shape:
+{
+  "overviewSummary": string | null,
+  "datesText": string | null,
+  "locationText": string | null,
+  "format": string | null,
+  "cfpStatus": string | null,
+  "cfpDeadline": string | null,
+  "submissionUrl": string | null,
+  "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "track": string | null }],
+  "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null }],
+  "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null }],
+  "sponsors": [{ "name": string, "tier": string | null }],
+  "accommodationText": string | null,
+  "travelText": string | null
+}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+        config: { responseMimeType: "application/json" },
+      });
+
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(response.text || "{}");
+      } catch (e) {
+        console.error("Failed to parse extraction JSON", e);
+      }
+
+      const result = {
+        extracted: true,
+        isFallback: false,
+        sourceUrl: cacheKey,
+        overviewSummary: parsed.overviewSummary || null,
+        datesText: parsed.datesText || null,
+        locationText: parsed.locationText || null,
+        format: parsed.format || null,
+        cfpStatus: parsed.cfpStatus || null,
+        cfpDeadline: parsed.cfpDeadline || null,
+        submissionUrl: parsed.submissionUrl || null,
+        agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
+        speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
+        committee: Array.isArray(parsed.committee) ? parsed.committee : [],
+        sponsors: Array.isArray(parsed.sponsors) ? parsed.sponsors : [],
+        accommodationText: parsed.accommodationText || null,
+        travelText: parsed.travelText || null,
+      };
+
+      extractionCache.set(cacheKey, { data: result, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Conference extraction error:", error);
+      res.status(500).json({ error: error.message || "Extraction failed. Please try again." });
     }
   });
 
