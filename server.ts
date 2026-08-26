@@ -338,6 +338,8 @@ Provide constructive feedback in JSON format with fields:
 
 The text below has every <img> tag replaced with an inline marker like "[IMAGE: https://example.com/photo.jpg]" positioned where that image appeared in the page. When a marker appears right next to a person's name or a sponsor's name, that is very likely their real photo or logo — copy that exact URL into the matching imageUrl/logoUrl field. If no marker appears near a name, use null. Never invent or guess an image URL, and never reuse an unrelated image for a different person.
 
+For submissionRequirements, look specifically for what authors are told about how to prepare their submission — format (PDF, Word), page or word limits, citation style, blind-review requirements, or template to use — and summarize only what's explicitly stated in a sentence or two. For submissionTemplateUrl, only use a URL that literally appears in the page text (e.g. a link to a template document or formatting guidelines); never guess a URL from context.
+
 Page title: "${typeof title === "string" ? title : ""}"
 Page URL: "${cacheKey}"
 
@@ -355,6 +357,8 @@ Return JSON with exactly this shape:
   "cfpStatus": string | null,
   "cfpDeadline": string | null,
   "submissionUrl": string | null,
+  "submissionRequirements": string | null,
+  "submissionTemplateUrl": string | null,
   "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null }],
   "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
   "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
@@ -387,6 +391,8 @@ Return JSON with exactly this shape:
         cfpStatus: parsed.cfpStatus || null,
         cfpDeadline: parsed.cfpDeadline || null,
         submissionUrl: parsed.submissionUrl || null,
+        submissionRequirements: parsed.submissionRequirements || null,
+        submissionTemplateUrl: parsed.submissionTemplateUrl || null,
         agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
         speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
         committee: Array.isArray(parsed.committee) ? parsed.committee : [],
