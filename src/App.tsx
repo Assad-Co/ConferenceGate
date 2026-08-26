@@ -1124,6 +1124,7 @@ export function App() {
       attendeeCount: 100,
       networkAttendeesCount: 10,
       mainThemes: newConfData.mainThemes || ['Innovation'],
+      submissionGuidelines: newConfData.submissionGuidelines ?? null,
       agendaDays: newConfData.agendaDays || [],
       speakers: newConfData.speakers || [],
       committee: newConfData.committee || [],

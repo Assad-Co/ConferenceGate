@@ -311,6 +311,19 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
             ))}
           </div>
 
+          {/* Organizer-Set Submission Guidelines */}
+          {selectedConf?.submissionGuidelines && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-amber-900 text-[11px] uppercase tracking-wider">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Submission Requirements from the Organizer</span>
+              </div>
+              <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-wrap">
+                {selectedConf.submissionGuidelines}
+              </p>
+            </div>
+          )}
+
           {/* Abstract Text & AI Quality Check */}
           <div className="space-y-2 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between">
