@@ -52,11 +52,33 @@ function toConferenceQuery(query: string): string {
 
 // Drops generic "list of conferences" roundup/directory pages — a page enumerating many
 // events isn't itself a single real conference, which is what a search result here is meant
-// to represent.
+// to represent. Plural "conferences" is the key tell: a real single event is named
+// "... Conference" (singular) — "Conferences" (plural) almost always means a directory/roundup
+// of many events, e.g. "Upcoming Technology Conferences in USA 2026" or "Top IT Conferences in
+// the United States".
 const LISTICLE_RE =
-  /\b(top\s*\d+|\d+\s*(best|top)|best\s+\d+|list of|round[\s-]?up|conferences?\s+to\s+attend|\d+\s+conferences|upcoming conferences)\b/i;
-function looksLikeListicle(title: string, snippet: string): boolean {
-  return LISTICLE_RE.test(title) || LISTICLE_RE.test(snippet);
+  /\b(top\s*\d+|\d+\s*(best|top)|best\s+\d+|list of|round[\s-]?up|conferences?\s+to\s+attend|\d+\s+conferences|upcoming conferences|top\s+\w+\s+conferences|conferences\s+in\b|conferences\s+20\d{2}\s*[\/\-]\s*20\d{2})\b/i;
+
+// Domains that are themselves conference directories/aggregators rather than a single event's
+// own site — every result from these hosts is a listing page, regardless of title wording.
+const LISTICLE_DOMAINS = new Set([
+  "10times.com",
+  "allconferencealert.com",
+  "allconferences.com",
+  "conferencealerts.com",
+  "clocate.com",
+  "conferenceindex.org",
+  "dev.events",
+  "eventseye.com",
+  "conferenceseries.com",
+  "myconferencetimes.com",
+  "techconferences.co",
+]);
+
+function looksLikeListicle(title: string, snippet: string, displayLink: string): boolean {
+  if (LISTICLE_RE.test(title) || LISTICLE_RE.test(snippet)) return true;
+  const host = displayLink.toLowerCase().replace(/^www\./, "");
+  return LISTICLE_DOMAINS.has(host);
 }
 
 // Drops results that only mention a past year (e.g. a leftover page for a prior edition) and
@@ -113,7 +135,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
       thumbnail: item.thumbnail?.src || null,
       favicon: item.meta_url?.favicon || item.profile?.img || null,
     }))
-    .filter((r) => !looksLikeListicle(r.title, r.snippet) && !looksOutdated(r.title, r.snippet));
+    .filter((r) => !looksLikeListicle(r.title, r.snippet, r.displayLink) && !looksOutdated(r.title, r.snippet));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
