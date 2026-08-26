@@ -50,28 +50,15 @@ function toConferenceQuery(query: string): string {
   return YEAR_IN_QUERY_RE.test(withKeyword) ? withKeyword : `${withKeyword} ${new Date().getFullYear()}`;
 }
 
-// Drops generic "list of conferences" roundup/directory pages — a page enumerating many
-// events isn't itself a single real conference, which is what a search result here is meant
-// to represent. Plural "conferences" is the key tell: a real single event is named
-// "... Conference" (singular) — "Conferences" (plural) almost always means a directory/roundup
-// of many events, e.g. "Upcoming Technology Conferences in USA 2026", "Top IT Conferences in
-// the United States", "The Best IT/Tech Conferences & Events of 2026", or "Top Ten Tech
-// Conferences 2026". The "top"/"best" clause allows an arbitrary gap before "conferences" since
-// real titles interpose all sorts of words/punctuation ("Best IT/Tech Conferences", "Top Ten
-// Tech Conferences") rather than a bare number.
-const LISTICLE_RE = new RegExp(
-  [
-    "\\b(top|best)\\b[\\s\\S]{0,40}?\\bconferences\\b",
-    "\\d+\\s+conferences\\b",
-    "\\blist of\\b",
-    "\\bround[\\s-]?up\\b",
-    "\\bconferences?\\s+to\\s+attend\\b",
-    "\\bupcoming conferences\\b",
-    "\\bconferences\\s+in\\b",
-    "\\bconferences\\s+20\\d{2}\\s*[\\/\\-]\\s*20\\d{2}\\b",
-  ].join("|"),
-  "i"
-);
+// Drops any page that reads as a directory/roundup of multiple conferences rather than a
+// single real event's own page. Plural "conferences" is the tell: a real event names itself
+// "... Conference" (singular) when talking about itself — nobody's own event page refers to
+// itself in the plural. Any occurrence of "conferences" anywhere in the title or snippet is
+// treated as a listing page and dropped outright, whatever the surrounding wording ("Top 10
+// Conferences", "Best IT/Tech Conferences & Events", "Conferences in the United States", etc.)
+// — this is intentionally blanket rather than pattern-specific, so new listicle phrasings don't
+// require a new regex each time.
+const LISTICLE_RE = /\bconferences\b|\blist of\b|\bround[\s-]?up\b/i;
 
 // Domains that are themselves conference directories/aggregators rather than a single event's
 // own site — every result from these hosts is a listing page, regardless of title wording.
