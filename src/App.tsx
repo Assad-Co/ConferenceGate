@@ -11,7 +11,7 @@ import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
 import { ConferenceDetail } from './components/ConferenceDetail';
-import { ExternalConferenceDetail } from './components/ExternalConferenceDetail';
+import { ExternalConferenceDetail, ExternalDetailTab } from './components/ExternalConferenceDetail';
 import { AbstractSubmissionModal } from './components/AbstractSubmissionModal';
 import { AbstractTrackerView } from './components/AbstractTrackerView';
 import { ReviewerPortal } from './components/ReviewerPortal';
@@ -163,6 +163,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
   const [selectedExternalResult, setSelectedExternalResult] = useState<LiveSearchResult | null>(null);
+  const [selectedExternalTab, setSelectedExternalTab] = useState<ExternalDetailTab>('overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
   const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
@@ -973,8 +974,9 @@ export function App() {
     setActiveTab('detail');
   };
 
-  const handleOpenExternalResult = (result: LiveSearchResult) => {
+  const handleOpenExternalResult = (result: LiveSearchResult, tab: ExternalDetailTab = 'overview') => {
     setSelectedExternalResult(result);
+    setSelectedExternalTab(tab);
     setActiveTab('external-detail');
   };
 
@@ -1310,6 +1312,7 @@ export function App() {
           <ExternalConferenceDetail
             result={selectedExternalResult}
             onBack={() => setActiveTab('discover')}
+            initialTab={selectedExternalTab}
           />
         )}
 

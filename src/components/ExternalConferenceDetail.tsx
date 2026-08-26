@@ -16,9 +16,20 @@ import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails 
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 
+export type ExternalDetailTab =
+  | 'overview'
+  | 'cfp'
+  | 'agenda'
+  | 'speakers'
+  | 'committee'
+  | 'sponsors'
+  | 'venue'
+  | 'community';
+
 interface ExternalConferenceDetailProps {
   result: LiveSearchResult;
   onBack: () => void;
+  initialTab?: ExternalDetailTab;
 }
 
 const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message, sourceUrl }) => (
@@ -70,10 +81,8 @@ const PersonCard: React.FC<{ name: string; title: string | null; org: string | n
   </div>
 );
 
-export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> = ({ result, onBack }) => {
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'cfp' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
-  >('overview');
+export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> = ({ result, onBack, initialTab }) => {
+  const [activeTab, setActiveTab] = useState<ExternalDetailTab>(initialTab || 'overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExtractedConferenceDetails | null>(null);
 
@@ -180,19 +189,21 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
 
         {/* Navigation Tabs */}
         <div className="px-6 border-t border-slate-200 flex gap-6 overflow-x-auto text-xs font-semibold text-slate-600">
-          {[
-            { id: 'overview', label: 'Overview' },
-            { id: 'cfp', label: 'Call for Papers' },
-            { id: 'agenda', label: 'Program & Agenda' },
-            { id: 'speakers', label: loading ? 'Keynote Speakers' : `Keynote Speakers (${data?.speakers.length || 0})` },
-            { id: 'committee', label: 'Technical Committee' },
-            { id: 'sponsors', label: loading ? 'Sponsors & Exhibitors' : `Sponsors & Exhibitors (${data?.sponsors.length || 0})` },
-            { id: 'venue', label: 'Venue & Accommodation' },
-            { id: 'community', label: 'Community' },
-          ].map((tab) => (
+          {(
+            [
+              { id: 'overview', label: 'Overview' },
+              { id: 'cfp', label: 'Call for Papers' },
+              { id: 'agenda', label: 'Program & Agenda' },
+              { id: 'speakers', label: loading ? 'Keynote Speakers' : `Keynote Speakers (${data?.speakers.length || 0})` },
+              { id: 'committee', label: 'Technical Committee' },
+              { id: 'sponsors', label: loading ? 'Sponsors & Exhibitors' : `Sponsors & Exhibitors (${data?.sponsors.length || 0})` },
+              { id: 'venue', label: 'Venue & Accommodation' },
+              { id: 'community', label: 'Community' },
+            ] as { id: ExternalDetailTab; label: string }[]
+          ).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`py-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 font-bold'
@@ -275,6 +286,27 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     message="No call-for-papers status or deadline was found on this page."
                     sourceUrl={result.link}
                   />
+                )}
+
+                {(data?.submissionRequirements || data?.submissionTemplateUrl) && (
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-900">Format & Requirements</h4>
+                    {data?.submissionRequirements && (
+                      <p className="text-xs text-slate-600 leading-relaxed">{data.submissionRequirements}</p>
+                    )}
+                    {data?.submissionTemplateUrl && (
+                      <a
+                        href={data.submissionTemplateUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Download Submission Template</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             )}

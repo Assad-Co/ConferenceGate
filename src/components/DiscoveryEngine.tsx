@@ -11,16 +11,21 @@ import {
   Loader2,
   ExternalLink,
   AlertCircle,
+  FileText,
+  UserCheck,
+  Briefcase,
+  MapPin,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
 import { searchConferencesOnTheWeb, LiveSearchResult } from '../api/search';
+import { ExternalDetailTab } from './ExternalConferenceDetail';
 
 interface DiscoveryEngineProps {
   conferences: Conference[];
   onSelectConference: (conf: Conference) => void;
   onOpenSubmitAbstract: (confId?: string) => void;
-  onOpenExternalResult: (result: LiveSearchResult) => void;
+  onOpenExternalResult: (result: LiveSearchResult, tab?: ExternalDetailTab) => void;
   initialSearchQuery?: string;
   savedConferenceIds?: string[];
   followedConferenceIds?: string[];
@@ -398,6 +403,32 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
                       {result.snippet}
                     </p>
+
+                    {/* Quick-Tab Shortcuts — jump straight into a specific section of the
+                        detail page instead of always landing on the overview. */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(
+                        [
+                          { tab: 'cfp', label: 'Call for Papers', icon: FileText },
+                          { tab: 'speakers', label: 'Speakers', icon: Users },
+                          { tab: 'committee', label: 'Committee', icon: UserCheck },
+                          { tab: 'sponsors', label: 'Sponsors', icon: Briefcase },
+                          { tab: 'venue', label: 'Venue', icon: MapPin },
+                        ] as { tab: ExternalDetailTab; label: string; icon: typeof FileText }[]
+                      ).map(({ tab, label, icon: Icon }) => (
+                        <button
+                          key={tab}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenExternalResult(result, tab);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                        >
+                          <Icon className="w-3 h-3" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Card Action Row */}

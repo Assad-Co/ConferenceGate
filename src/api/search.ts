@@ -53,6 +53,8 @@ export interface ExtractedConferenceDetails {
   cfpStatus: string | null;
   cfpDeadline: string | null;
   submissionUrl: string | null;
+  submissionRequirements: string | null;
+  submissionTemplateUrl: string | null;
   agendaSessions: AgendaSessionExtract[];
   speakers: PersonExtract[];
   committee: PersonExtract[];
@@ -70,6 +72,8 @@ const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
   cfpStatus: null,
   cfpDeadline: null,
   submissionUrl: null,
+  submissionRequirements: null,
+  submissionTemplateUrl: null,
   agendaSessions: [],
   speakers: [],
   committee: [],
