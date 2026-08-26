@@ -54,10 +54,24 @@ function toConferenceQuery(query: string): string {
 // events isn't itself a single real conference, which is what a search result here is meant
 // to represent. Plural "conferences" is the key tell: a real single event is named
 // "... Conference" (singular) — "Conferences" (plural) almost always means a directory/roundup
-// of many events, e.g. "Upcoming Technology Conferences in USA 2026" or "Top IT Conferences in
-// the United States".
-const LISTICLE_RE =
-  /\b(top\s*\d+|\d+\s*(best|top)|best\s+\d+|list of|round[\s-]?up|conferences?\s+to\s+attend|\d+\s+conferences|upcoming conferences|top\s+\w+\s+conferences|conferences\s+in\b|conferences\s+20\d{2}\s*[\/\-]\s*20\d{2})\b/i;
+// of many events, e.g. "Upcoming Technology Conferences in USA 2026", "Top IT Conferences in
+// the United States", "The Best IT/Tech Conferences & Events of 2026", or "Top Ten Tech
+// Conferences 2026". The "top"/"best" clause allows an arbitrary gap before "conferences" since
+// real titles interpose all sorts of words/punctuation ("Best IT/Tech Conferences", "Top Ten
+// Tech Conferences") rather than a bare number.
+const LISTICLE_RE = new RegExp(
+  [
+    "\\b(top|best)\\b[\\s\\S]{0,40}?\\bconferences\\b",
+    "\\d+\\s+conferences\\b",
+    "\\blist of\\b",
+    "\\bround[\\s-]?up\\b",
+    "\\bconferences?\\s+to\\s+attend\\b",
+    "\\bupcoming conferences\\b",
+    "\\bconferences\\s+in\\b",
+    "\\bconferences\\s+20\\d{2}\\s*[\\/\\-]\\s*20\\d{2}\\b",
+  ].join("|"),
+  "i"
+);
 
 // Domains that are themselves conference directories/aggregators rather than a single event's
 // own site — every result from these hosts is a listing page, regardless of title wording.
