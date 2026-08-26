@@ -366,8 +366,16 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-600">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <h5 className="font-bold text-slate-900">Format & Structure</h5>
-                  <p>Maximum 500 words. Include background, methodology, experimental results, and conclusions.</p>
+                  <h5 className="font-bold text-slate-900">Format & Requirements</h5>
+                  {conference.submissionGuidelines ? (
+                    <p className="whitespace-pre-wrap">{conference.submissionGuidelines}</p>
+                  ) : (
+                    <p className="text-slate-400 italic">
+                      The organizer hasn't set specific formatting requirements yet. As general guidance: aim for a
+                      clear, structured abstract (background, methodology, results, conclusions), typically under
+                      500 words.
+                    </p>
+                  )}
                 </div>
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                   <h5 className="font-bold text-slate-900">Peer Review Policy</h5>

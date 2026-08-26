@@ -186,6 +186,10 @@ export interface Conference {
   earlyBirdDeadline: string;
   abstractDeadline: string;
   cfpStatus: 'Open' | 'Closed' | 'Extended';
+  /** Organizer-set formatting/submission requirements (font, size, length, template, etc.),
+   * shown to authors before they submit through Conference Gate. Null when the organizer hasn't
+   * specified any — never fabricated on their behalf. */
+  submissionGuidelines?: string | null;
   recommendationScore: number;
   attendeeCount: number;
   networkAttendeesCount: number;

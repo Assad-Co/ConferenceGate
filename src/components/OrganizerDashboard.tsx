@@ -267,6 +267,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1600&q=80'
   );
   const [newConfMainThemes, setNewConfMainThemes] = useState('Subsurface AI, Net Zero Solutions');
+  const [newConfSubmissionGuidelines, setNewConfSubmissionGuidelines] = useState('');
   const [wizardPublished, setWizardPublished] = useState(false);
 
   const [committeeDraft, setCommitteeDraft] = useState({
@@ -1004,6 +1005,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       attendeeCount: 150,
       networkAttendeesCount: 12,
       mainThemes: newConfMainThemes.split(',').map((t) => t.trim()).filter(Boolean),
+      submissionGuidelines: newConfSubmissionGuidelines.trim() || null,
       agendaDays: buildAgendaDaysFromProgramItems(),
       speakers: newConfSpeakers.map((sp, idx) => ({
         id: `spk_${Date.now()}_${idx}`,
@@ -1602,6 +1604,30 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Step 8: Call for Papers — Submission Guidelines */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Step 8: Call for Papers — Submission Guidelines
+              </h3>
+              <div className="space-y-1.5">
+                <label className="font-bold uppercase text-[10px] text-slate-500">
+                  Format & Requirements (shown to every author before they submit)
+                </label>
+                <textarea
+                  rows={4}
+                  value={newConfSubmissionGuidelines}
+                  onChange={(e) => setNewConfSubmissionGuidelines(e.target.value)}
+                  placeholder="e.g. Abstracts must be 300-500 words, Times New Roman 12pt, single-spaced, submitted as PDF. Author names and affiliations must be black text only — no color."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                ></textarea>
+                <p className="text-[10px] text-slate-400">
+                  Optional — leave blank if you don't have specific formatting requirements yet. Authors submitting
+                  through Conference Gate will see this exactly as written here.
+                </p>
+              </div>
             </div>
 
             {wizardPublished && (
