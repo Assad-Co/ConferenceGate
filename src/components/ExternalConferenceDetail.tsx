@@ -3,21 +3,18 @@ import {
   Calendar,
   MapPin,
   FileText,
-  Users,
-  Award,
-  Briefcase,
   CheckCircle2,
   Clock,
   Globe,
   Hotel,
   Plane,
   ArrowLeft,
-  UserCheck,
   ExternalLink,
   Loader2,
 } from 'lucide-react';
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
+import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 
 interface ExternalConferenceDetailProps {
   result: LiveSearchResult;
@@ -95,6 +92,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   }, [result.link, result.title]);
 
   const submissionLink = data?.submissionUrl || result.link;
+  const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
+  const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
 
   return (
     <div className="space-y-8">
@@ -148,23 +147,25 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               {result.title}
             </h1>
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-200 font-medium">
-              {data?.datesText && (
+              {displayDate && (
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-blue-400" />
-                  {data.datesText}
+                  {displayDate}
                 </span>
               )}
-              {data?.locationText && (
+              {displayLocation && (
                 <span className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-rose-400" />
-                  {data.locationText}
+                  {displayLocation}
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Primary Action Callouts Bar */}
+        {/* Primary Action Callouts Bar — only the abstract submission itself needs the official
+            site; every other detail (committee, sponsors, speakers, venue) has its own tab below
+            so users aren't sent off-site just to see information we already show in-app. */}
         <div className="p-6 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-3">
           <a
             href={submissionLink}
@@ -175,33 +176,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             <FileText className="w-4 h-4" />
             <span>Submit via Official Site</span>
           </a>
-          <a
-            href={result.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Award className="w-4 h-4" />
-            <span>Reviewer Info on Site</span>
-          </a>
-          <a
-            href={result.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Committee Info on Site</span>
-          </a>
-          <a
-            href={result.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Briefcase className="w-4 h-4" />
-            <span>Sponsorship Info on Site</span>
-          </a>
         </div>
 
         {/* Navigation Tabs */}
@@ -210,9 +184,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             { id: 'overview', label: 'Overview' },
             { id: 'cfp', label: 'Call for Papers' },
             { id: 'agenda', label: 'Program & Agenda' },
-            { id: 'speakers', label: `Keynote Speakers (${data?.speakers.length || 0})` },
+            { id: 'speakers', label: loading ? 'Keynote Speakers' : `Keynote Speakers (${data?.speakers.length || 0})` },
             { id: 'committee', label: 'Technical Committee' },
-            { id: 'sponsors', label: `Sponsors & Exhibitors (${data?.sponsors.length || 0})` },
+            { id: 'sponsors', label: loading ? 'Sponsors & Exhibitors' : `Sponsors & Exhibitors (${data?.sponsors.length || 0})` },
             { id: 'venue', label: 'Venue & Accommodation' },
             { id: 'community', label: 'Community' },
           ].map((tab) => (
@@ -424,11 +398,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'venue' && (
               <div className="space-y-6 text-xs text-slate-600">
                 <h3 className="text-lg font-bold text-slate-900">Venue, Accommodation & Travel</h3>
-                {data?.locationText ? (
+                {displayLocation ? (
                   <div className="rounded-2xl overflow-hidden border border-slate-200">
                     <iframe
                       title="Venue location map"
-                      src={`https://www.google.com/maps?q=${encodeURIComponent(data.locationText)}&output=embed`}
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(displayLocation)}&output=embed`}
                       className="w-full h-64 border-0"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
