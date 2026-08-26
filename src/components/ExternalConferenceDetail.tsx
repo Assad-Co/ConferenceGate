@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   UserCheck,
   ExternalLink,
-  AlertTriangle,
   Loader2,
 } from 'lucide-react';
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
@@ -139,11 +138,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             </div>
           </div>
 
-          <div className="absolute top-6 right-6 bg-amber-500 text-white font-extrabold text-xs px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            AI-Extracted, Unverified
-          </div>
-
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
             {data?.format && (
               <span className="bg-blue-600 text-white font-bold text-[10px] uppercase px-2.5 py-0.5 rounded-md">
@@ -168,20 +162,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               )}
             </div>
           </div>
-        </div>
-
-        {/* Disclaimer Banner */}
-        <div className="p-4 bg-amber-50 border-t border-b border-amber-200 flex items-start gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 leading-relaxed">
-            This page shows information an AI assistant automatically pulled from{' '}
-            <a href={result.link} target="_blank" rel="noopener noreferrer" className="font-bold underline">
-              {result.displayLink}
-            </a>
-            . It hasn't been verified by Conference Gate, some details may be missing or inaccurate, and this isn't
-            part of our curated conference catalog. Always confirm on the official website before registering,
-            submitting, or making decisions based on this content.
-          </p>
         </div>
 
         {/* Primary Action Callouts Bar */}

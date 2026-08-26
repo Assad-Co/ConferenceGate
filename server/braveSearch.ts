@@ -41,10 +41,36 @@ function stripHtml(text: string): string {
 
 // Nudges the underlying web search toward actual conference/event listings rather than
 // generic informational pages about the topic — this panel is "search the web for a
-// conference we haven't added yet", not a general-purpose search box.
+// conference we haven't added yet", not a general-purpose search box. Also nudges toward
+// current/upcoming editions by adding the current year when the query doesn't already name one.
 const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo)\b/i;
+const YEAR_IN_QUERY_RE = /\b20\d{2}\b/;
 function toConferenceQuery(query: string): string {
-  return CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
+  const withKeyword = CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
+  return YEAR_IN_QUERY_RE.test(withKeyword) ? withKeyword : `${withKeyword} ${new Date().getFullYear()}`;
+}
+
+// Drops generic "list of conferences" roundup/directory pages — a page enumerating many
+// events isn't itself a single real conference, which is what a search result here is meant
+// to represent.
+const LISTICLE_RE =
+  /\b(top\s*\d+|\d+\s*(best|top)|best\s+\d+|list of|round[\s-]?up|conferences?\s+to\s+attend|\d+\s+conferences|upcoming conferences)\b/i;
+function looksLikeListicle(title: string, snippet: string): boolean {
+  return LISTICLE_RE.test(title) || LISTICLE_RE.test(snippet);
+}
+
+// Drops results that only mention a past year (e.g. a leftover page for a prior edition) and
+// never mention the current or a future year. Never excludes purely for lacking a year at all —
+// plenty of legitimate current pages just don't put one in the title/snippet.
+const ALL_YEARS_RE = /\b20\d{2}\b/g;
+function looksOutdated(title: string, snippet: string): boolean {
+  const text = `${title} ${snippet}`;
+  const years = Array.from(text.matchAll(ALL_YEARS_RE), (m) => parseInt(m[0], 10));
+  if (years.length === 0) return false;
+  const currentYear = new Date().getFullYear();
+  const hasCurrentOrFuture = years.some((y) => y >= currentYear);
+  const hasPast = years.some((y) => y < currentYear);
+  return hasPast && !hasCurrentOrFuture;
 }
 
 async function searchConferences(query: string): Promise<LiveSearchResult[]> {
@@ -56,7 +82,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
 
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", toConferenceQuery(query));
-  url.searchParams.set("count", "10");
+  url.searchParams.set("count", "20");
 
   const res = await fetch(url.toString(), {
     headers: {
@@ -78,14 +104,16 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   }
 
   const items: any[] = body.web?.results || [];
-  const results: LiveSearchResult[] = items.map((item) => ({
-    title: stripHtml(item.title || ""),
-    link: item.url || "",
-    snippet: stripHtml(item.description || ""),
-    displayLink: item.meta_url?.hostname || item.profile?.name || "",
-    thumbnail: item.thumbnail?.src || null,
-    favicon: item.meta_url?.favicon || item.profile?.img || null,
-  }));
+  const results: LiveSearchResult[] = items
+    .map((item) => ({
+      title: stripHtml(item.title || ""),
+      link: item.url || "",
+      snippet: stripHtml(item.description || ""),
+      displayLink: item.meta_url?.hostname || item.profile?.name || "",
+      thumbnail: item.thumbnail?.src || null,
+      favicon: item.meta_url?.favicon || item.profile?.img || null,
+    }))
+    .filter((r) => !looksLikeListicle(r.title, r.snippet) && !looksOutdated(r.title, r.snippet));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;

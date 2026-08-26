@@ -30,8 +30,9 @@ interface DiscoveryEngineProps {
 
 // A single fixed seed query keeps the default (no-search-term) view populated with real,
 // current results — and since it's the same query for every visitor, the server's hourly
-// cache means it costs at most one live search per hour, not one per page load.
-const DEFAULT_DISCOVER_QUERY = 'upcoming technology and industry conference 2026';
+// cache means it costs at most one live search per hour, not one per page load. The year is
+// computed at load time so this keeps naming the actual current year, not a stale one.
+const DEFAULT_DISCOVER_QUERY = `upcoming technology and industry conference ${new Date().getFullYear()}`;
 
 export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   conferences,
