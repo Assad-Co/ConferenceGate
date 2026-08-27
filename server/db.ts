@@ -153,6 +153,26 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS submission_reviewer_assignments (
+      id TEXT PRIMARY KEY,
+      submission_id TEXT NOT NULL REFERENCES submissions(id),
+      reviewer_id TEXT NOT NULL REFERENCES users(id),
+      reviewer_name TEXT NOT NULL,
+      invited_by_id TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(submission_id, reviewer_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS review_volunteers (
       id TEXT PRIMARY KEY,
       reviewer_id TEXT NOT NULL REFERENCES users(id),
@@ -441,6 +461,25 @@ export interface SubmissionReviewRow {
   comments_to_author: string;
   confidential_comments: string | null;
   recommendation: string;
+  created_at: string;
+}
+
+export interface SubmissionReviewerAssignmentRow {
+  id: string;
+  submission_id: string;
+  reviewer_id: string;
+  reviewer_name: string;
+  invited_by_id: string;
+  created_at: string;
+}
+
+export interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: number;
   created_at: string;
 }
 

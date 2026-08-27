@@ -1,4 +1,4 @@
-import { AbstractSubmission, Conference } from '../types';
+import { AbstractSubmission, Conference, NotificationItem } from '../types';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
@@ -363,5 +363,39 @@ export async function removeCommitteePosition(id: string): Promise<void> {
     method: 'DELETE',
     credentials: 'include',
   });
+  await parseResponse(res);
+}
+
+/** Persists a real reviewer invitation against a submission (the organizer's AI Reviewer Match
+ * "Invite to Review" action) and notifies the invited reviewer for real — previously that action
+ * only sent a DM with no lasting record on the submission itself. */
+export async function assignReviewerToSubmission(
+  submissionId: string,
+  reviewerId: string
+): Promise<AbstractSubmission> {
+  const res = await fetch(`/api/activity/submissions/${submissionId}/assign-reviewer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ reviewerId }),
+  });
+  const data = await parseResponse(res);
+  return data.submission;
+}
+
+export async function fetchMyNotifications(): Promise<NotificationItem[]> {
+  const res = await fetch('/api/activity/notifications/mine', { credentials: 'include' });
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => ({ notifications: [] }));
+  return data.notifications || [];
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const res = await fetch(`/api/activity/notifications/${id}/read`, { method: 'POST', credentials: 'include' });
+  await parseResponse(res);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  const res = await fetch('/api/activity/notifications/read-all', { method: 'POST', credentials: 'include' });
   await parseResponse(res);
 }

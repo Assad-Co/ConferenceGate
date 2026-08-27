@@ -51,7 +51,7 @@ import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 import { resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
-import { sendBroadcast, fetchMyBroadcasts, OrganizerBroadcast } from '../api/activity';
+import { sendBroadcast, fetchMyBroadcasts, OrganizerBroadcast, assignReviewerToSubmission } from '../api/activity';
 import { sendMessage } from '../api/messages';
 import { SponsorApplicant, ReviewableSponsor } from '../api/sponsors';
 
@@ -923,9 +923,17 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }
   };
 
-  const handleInviteReviewerToAbstract = async (candidateId: string, candidateName: string, submissionTitle: string) => {
+  const handleInviteReviewerToAbstract = async (
+    candidateId: string,
+    candidateName: string,
+    submissionId: string,
+    submissionTitle: string
+  ) => {
     setInvitingReviewerId(candidateId);
     try {
+      // Persists the real assignment (so the abstract's own timeline and reviewer list reflect
+      // it, and the reviewer gets a real notification) alongside the existing DM.
+      await assignReviewerToSubmission(submissionId, candidateId);
       await sendMessage(
         candidateId,
         `You've been suggested as a reviewer for the abstract "${submissionTitle}" on Conference Gate. Reply here if you're available to review it.`
@@ -1759,6 +1767,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                                 handleInviteReviewerToAbstract(
                                   candidate.id,
                                   candidate.name,
+                                  selectedSubForAI?.id || '',
                                   selectedSubForAI?.title || 'this abstract'
                                 )
                               }

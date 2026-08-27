@@ -45,6 +45,9 @@ import {
   fetchMyCreatedConferences,
   fetchOrganizerActivityFeed,
   OrganizerActivityItem,
+  fetchMyNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
 } from './api/activity';
 import {
   fetchConversations,
@@ -87,7 +90,6 @@ import {
   currentUserProfile,
   sampleReviewOpportunities,
   sampleSponsorshipOpportunities,
-  sampleNotifications,
 } from './data/mockData';
 import {
   Conference,
@@ -166,7 +168,8 @@ export function App() {
   const [selectedExternalTab, setSelectedExternalTab] = useState<ExternalDetailTab>('overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileInitialTab, setProfileInitialTab] = useState<'conferences' | 'notifications'>('conferences');
-  const [notifications, setNotifications] = useState<NotificationItem[]>(sampleNotifications);
+  // Real notifications only — fetched from the server, never seeded with placeholder content.
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [organizerActivityFeed, setOrganizerActivityFeed] = useState<OrganizerActivityItem[]>([]);
   const [readOrganizerNotificationIds, setReadOrganizerNotificationIds] = useState<Set<string>>(new Set());
   const [readSponsorNotificationIds, setReadSponsorNotificationIds] = useState<Set<string>>(new Set());
@@ -350,10 +353,14 @@ export function App() {
     }
   };
 
-  const handleMarkNotificationRead = (id: string) =>
+  const handleMarkNotificationRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const handleMarkAllNotificationsRead = () =>
+    markNotificationRead(id).catch(() => {});
+  };
+  const handleMarkAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllNotificationsRead().catch(() => {});
+  };
   const handleAddNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) =>
     setNotifications((prev) => [
       { id: `notif_${Date.now()}`, timestamp: 'Just now', read: false, ...notif },
@@ -382,6 +389,7 @@ export function App() {
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
     fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
+    fetchMyNotifications().then(setNotifications).catch(() => {});
     fetchMyConferenceInteractions()
       .then(({ saved, followed }) => {
         setSavedConferenceIds(saved);

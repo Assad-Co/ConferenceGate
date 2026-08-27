@@ -5,7 +5,6 @@ import {
   SponsorshipOpportunity,
   ReviewOpportunity,
   TechnicalCommitteeOpportunity,
-  NotificationItem,
   DigitalCertificate,
   EngagementAnalytics,
 } from '../types';
@@ -999,41 +998,6 @@ export const sampleSponsorshipOpportunities: SponsorshipOpportunity[] = [
     packages: [
       { tier: 'Exclusive Sponsor', price: 3500, slots: 1, benefits: ['Logo on all delegate badges/lanyards', 'Branded item in gift bag'] },
     ],
-  },
-];
-
-export const sampleNotifications: NotificationItem[] = [
-  {
-    id: 'notif_1',
-    title: 'Abstract Status Update',
-    message: 'Your abstract "Deep Residual Neural Networks..." has been assigned to 2 reviewers for Track 1.',
-    timestamp: '1 hour ago',
-    read: false,
-    type: 'abstract',
-  },
-  {
-    id: 'notif_2',
-    title: 'New Reviewer Invitation',
-    message: 'You have been invited by EAGE Scientific Board to review 3 abstracts for Track 2 (Organic Geochemistry).',
-    timestamp: '3 hours ago',
-    read: false,
-    type: 'invitation',
-  },
-  {
-    id: 'notif_3',
-    title: 'Technical Committee Invitation',
-    message: 'You were invited to serve as Session Chair for AAPG Annual Convention and Exhibition (ACE) 2026.',
-    timestamp: '1 day ago',
-    read: true,
-    type: 'invitation',
-  },
-  {
-    id: 'notif_4',
-    title: '+20 Reviewer Kudos Received',
-    message: 'Your completed review for Abstract #108 was verified by the Conference Committee.',
-    timestamp: '2 days ago',
-    read: true,
-    type: 'review',
   },
 ];
 
