@@ -537,6 +537,28 @@ Return JSON with exactly this shape:
 }`;
   }
 
+  // Rejects with a timeout error after `ms` if `promise` hasn't settled yet — used below because
+  // the Gemini SDK call itself has no built-in timeout, so a slow model response could otherwise
+  // hang a page's extraction (and therefore the whole crawl round it's part of) indefinitely.
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        }
+      );
+    });
+  }
+
+  const PAGE_FETCH_TIMEOUT_MS = 6000;
+  const MODEL_CALL_TIMEOUT_MS = 8000;
+
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
@@ -553,7 +575,7 @@ Return JSON with exactly this shape:
         redirect: "follow",
         // A slow or unresponsive conference site would otherwise hang this request (and the
         // client's loading spinner) indefinitely — cap it and treat a timeout as a fetch failure.
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
       });
       html = await pageRes.text();
     } catch (fetchErr) {
@@ -568,11 +590,15 @@ Return JSON with exactly this shape:
 
     let parsed: any = {};
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: buildExtractionPrompt(pageText, title, pageUrl),
-        config: { responseMimeType: "application/json" },
-      });
+      const response = await withTimeout(
+        ai.models.generateContent({
+          model: "gemini-3.6-flash",
+          contents: buildExtractionPrompt(pageText, title, pageUrl),
+          config: { responseMimeType: "application/json" },
+        }),
+        MODEL_CALL_TIMEOUT_MS,
+        "Extraction model call"
+      );
       parsed = JSON.parse(response.text || "{}");
     } catch (e) {
       console.error("Extraction model call failed:", e);
@@ -695,12 +721,23 @@ Return JSON with exactly this shape:
       // or trust a hallucinated URL.
       const MAX_CRAWL_DEPTH = 2; // rounds of expansion beyond the primary page
       const MAX_TOTAL_PAGES = 6; // primary + at most this many more, across all rounds combined
+      // A wall-clock ceiling on the expansion rounds only (the primary page always finishes) —
+      // bounds how long a slow or unresponsive site can keep the user's loading spinner up,
+      // regardless of how many rounds/pages are still nominally left in the budget above. Checked
+      // between rounds rather than pre-empting an in-flight one, so a round already underway still
+      // completes and its real results are kept and returned.
+      const CRAWL_TIME_BUDGET_MS = 12000;
+      const crawlStartedAt = Date.now();
 
       const visited = new Set<string>([cacheKey]);
       let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: cacheKey, ...primary }];
       let pagesFetched = 1;
 
-      for (let depth = 0; depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES; depth++) {
+      for (
+        let depth = 0;
+        depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES && Date.now() - crawlStartedAt < CRAWL_TIME_BUDGET_MS;
+        depth++
+      ) {
         const missingByCategory: Record<RelevantLinkCategory, boolean> = {
           overview: isOverviewMissing(parsed),
           cfp: isCfpMissing(parsed),

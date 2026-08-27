@@ -96,10 +96,10 @@ export async function extractConferenceDetails(url: string, title: string): Prom
       credentials: 'include',
       body: JSON.stringify({ url, title }),
       // Backstops the server's own per-call timeouts — if a request somehow still hangs, the
-      // loading spinner resolves to an honest empty state instead of spinning forever. Generous
-      // because a thorough extraction can now crawl multiple rounds of linked pages looking for
-      // still-missing info, not just a single fetch.
-      signal: AbortSignal.timeout(60000),
+      // loading spinner resolves to an honest empty state instead of spinning forever. The server
+      // now caps its own page fetches, model calls, and crawl rounds internally, so this only
+      // needs to cover that real worst case (~28s) plus a safety margin, not an unbounded wait.
+      signal: AbortSignal.timeout(35000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
