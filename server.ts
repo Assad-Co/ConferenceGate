@@ -287,7 +287,10 @@ Provide constructive feedback in JSON format with fields:
   // Strips a page down to readable text for the LLM, but first swaps every <img> tag for an
   // inline [IMAGE: absolute-url] marker (resolving relative src/data-src against the page's own
   // URL) so the model can associate a real photo URL with the name it appears next to — instead
-  // of us ever having to guess or fabricate one.
+  // of us ever having to guess or fabricate one. Every <a href> is similarly preserved as
+  // "link text [LINK: absolute-url]" — without this, raw hrefs get discarded along with every
+  // other tag, so the model would have no way to ever report a real submission/template URL, and
+  // no way to locate a separate Call-for-Papers or Committee page linked from this one.
   function prepareHtmlForExtraction(html: string, baseUrl: string): string {
     let cleaned = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -305,6 +308,16 @@ Provide constructive feedback in JSON format with fields:
       }
     });
 
+    cleaned = cleaned.replace(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_match, href, inner) => {
+      const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      try {
+        const abs = new URL(href, baseUrl).href;
+        return ` ${text} [LINK: ${abs}] `;
+      } catch {
+        return ` ${text} `;
+      }
+    });
+
     return cleaned
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;/gi, " ")
@@ -314,6 +327,29 @@ Provide constructive feedback in JSON format with fields:
       .replace(/\s+/g, " ")
       .trim();
   }
+
+  // Scans the page's raw HTML (before tag-stripping) for the first <a> whose visible text
+  // matches a topic pattern, returning its resolved absolute URL — a deterministic, cheap way to
+  // find a same-site "Call for Papers" or "Committee" page linked from this one, since a real
+  // conference site commonly splits these across separate pages the model would otherwise have
+  // no way to discover from a single-page fetch.
+  function findLinkByText(html: string, baseUrl: string, pattern: RegExp): string | null {
+    const anchorRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = anchorRe.exec(html))) {
+      const text = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (pattern.test(text)) {
+        try {
+          return new URL(m[1], baseUrl).href;
+        } catch {
+          continue;
+        }
+      }
+    }
+    return null;
+  }
+  const CFP_LINK_TEXT_RE = /\b(call for papers|cfp|submission|submit\s+(a\s+)?paper|author guidelines)\b/i;
+  const COMMITTEE_LINK_TEXT_RE = /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs)\b/i;
 
   // The model sometimes copies a relative href straight out of the page's HTML (e.g. "/submit")
   // instead of resolving it — a bare relative path is meaningless once served from Conference
@@ -328,54 +364,17 @@ Provide constructive feedback in JSON format with fields:
     }
   }
 
-  app.post("/api/ai/extract-conference", async (req, res) => {
-    try {
-      const { url, title } = req.body;
-      if (typeof url !== "string" || !url.trim()) {
-        return res.status(400).json({ error: "url is required" });
-      }
-
-      const cacheKey = url.trim();
-      const cached = extractionCache.get(cacheKey);
-      if (cached && cached.expiresAt > Date.now()) {
-        return res.json(cached.data);
-      }
-
-      const ai = getAIClient();
-      if (!ai) {
-        return res.json({ extracted: false, isFallback: true });
-      }
-
-      if (!(await isSafeExternalUrl(cacheKey))) {
-        return res.status(400).json({ error: "That URL cannot be fetched." });
-      }
-
-      let pageText = "";
-      try {
-        const pageRes = await fetch(cacheKey, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; ConferenceGateBot/1.0)" },
-          redirect: "follow",
-        });
-        const html = await pageRes.text();
-        pageText = prepareHtmlForExtraction(html, cacheKey).slice(0, 24000);
-      } catch (fetchErr) {
-        console.error("Failed to fetch page for extraction:", fetchErr);
-      }
-
-      if (!pageText) {
-        const fallback = { extracted: false, isFallback: false, fetchFailed: true };
-        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
-        return res.json(fallback);
-      }
-
-      const prompt = `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
+  function buildExtractionPrompt(pageText: string, title: string, pageUrl: string): string {
+    return `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
 
 The text below has every <img> tag replaced with an inline marker like "[IMAGE: https://example.com/photo.jpg]" positioned where that image appeared in the page. When a marker appears right next to a person's name or a sponsor's name, that is very likely their real photo or logo — copy that exact URL into the matching imageUrl/logoUrl field. If no marker appears near a name, use null. Never invent or guess an image URL, and never reuse an unrelated image for a different person.
 
-For submissionRequirements, look specifically for what authors are told about how to prepare their submission — format (PDF, Word), page or word limits, citation style, blind-review requirements, or template to use — and summarize only what's explicitly stated in a sentence or two. For submissionTemplateUrl, only use a URL that literally appears in the page text (e.g. a link to a template document or formatting guidelines); never guess a URL from context.
+Every <a> link has similarly been replaced with "link text [LINK: https://example.com/page]" positioned right after that link's visible text. Use these markers to find real URLs: if you see link text like "Submit Now", "Submission Portal", or "Author Guidelines", copy the [LINK: ...] URL that follows it into submissionUrl or submissionTemplateUrl as appropriate. Never invent a URL that isn't backed by an actual [LINK: ...] marker in the text.
 
-Page title: "${typeof title === "string" ? title : ""}"
-Page URL: "${cacheKey}"
+For submissionRequirements, look specifically for what authors are told about how to prepare their submission — format (PDF, Word), page or word limits, citation style, blind-review requirements, or template to use — and summarize only what's explicitly stated in a sentence or two. For submissionTemplateUrl, only use a URL that literally appears via a [LINK: ...] marker in the page text; never guess a URL from context.
+
+Page title: "${title}"
+Page URL: "${pageUrl}"
 
 Page text:
 """
@@ -400,18 +399,134 @@ Return JSON with exactly this shape:
   "accommodationText": string | null,
   "travelText": string | null
 }`;
+  }
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: prompt,
-        config: { responseMimeType: "application/json" },
+  // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
+  // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
+  // "just skip it" without losing the primary page's already-good result.
+  async function extractPage(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    pageUrl: string,
+    title: string
+  ): Promise<{ parsed: any; html: string } | null> {
+    if (!(await isSafeExternalUrl(pageUrl))) return null;
+    let html = "";
+    try {
+      const pageRes = await fetch(pageUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; ConferenceGateBot/1.0)" },
+        redirect: "follow",
       });
+      html = await pageRes.text();
+    } catch (fetchErr) {
+      console.error("Failed to fetch page for extraction:", fetchErr);
+      return null;
+    }
+    const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 24000);
+    if (!pageText) return null;
 
-      let parsed: any = {};
-      try {
-        parsed = JSON.parse(response.text || "{}");
-      } catch (e) {
-        console.error("Failed to parse extraction JSON", e);
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: buildExtractionPrompt(pageText, title, pageUrl),
+      config: { responseMimeType: "application/json" },
+    });
+
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(response.text || "{}");
+    } catch (e) {
+      console.error("Failed to parse extraction JSON", e);
+    }
+    return { parsed, html };
+  }
+
+  function isCfpMissing(parsed: any): boolean {
+    return !parsed.cfpStatus && !parsed.cfpDeadline && !parsed.submissionRequirements && !parsed.submissionUrl;
+  }
+  function isCommitteeMissing(parsed: any): boolean {
+    return !Array.isArray(parsed.committee) || parsed.committee.length === 0;
+  }
+
+  // Fills in only the fields the primary page's extraction came up empty for — real data already
+  // found on the primary page always wins, so a secondary page can only ever add, never overwrite.
+  function mergeExtractionResults(primary: any, secondary: any, secondaryUrl: string): any {
+    const merged = { ...primary };
+    for (const field of ["cfpStatus", "cfpDeadline", "submissionRequirements"]) {
+      if (!merged[field] && secondary[field]) merged[field] = secondary[field];
+    }
+    if (!merged.submissionUrl && secondary.submissionUrl) {
+      merged.submissionUrl = resolveAbsoluteUrl(secondary.submissionUrl, secondaryUrl);
+    }
+    if (!merged.submissionTemplateUrl && secondary.submissionTemplateUrl) {
+      merged.submissionTemplateUrl = resolveAbsoluteUrl(secondary.submissionTemplateUrl, secondaryUrl);
+    }
+    for (const field of ["committee", "speakers", "sponsors", "agendaSessions"]) {
+      const current = merged[field];
+      const incoming = secondary[field];
+      if ((!Array.isArray(current) || current.length === 0) && Array.isArray(incoming) && incoming.length > 0) {
+        merged[field] = incoming;
+      }
+    }
+    return merged;
+  }
+
+  app.post("/api/ai/extract-conference", async (req, res) => {
+    try {
+      const { url, title } = req.body;
+      if (typeof url !== "string" || !url.trim()) {
+        return res.status(400).json({ error: "url is required" });
+      }
+
+      const cacheKey = url.trim();
+      const titleHint = typeof title === "string" ? title : "";
+      const cached = extractionCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return res.json(cached.data);
+      }
+
+      const ai = getAIClient();
+      if (!ai) {
+        return res.json({ extracted: false, isFallback: true });
+      }
+
+      if (!(await isSafeExternalUrl(cacheKey))) {
+        return res.status(400).json({ error: "That URL cannot be fetched." });
+      }
+
+      const primary = await extractPage(ai, cacheKey, titleHint);
+      if (!primary) {
+        const fallback = { extracted: false, isFallback: false, fetchFailed: true };
+        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+        return res.json(fallback);
+      }
+
+      let parsed = primary.parsed;
+
+      // A real conference site commonly splits its Call-for-Papers and Committee info onto their
+      // own subpages linked from the main page. When the primary page's extraction came up empty
+      // for either, look for a same-site link whose visible text names that topic and, if found,
+      // fetch and extract that page too — merging in only what the primary page was missing.
+      const needsCfp = isCfpMissing(parsed);
+      const needsCommittee = isCommitteeMissing(parsed);
+      if (needsCfp || needsCommittee) {
+        const secondaryUrls = new Set<string>();
+        if (needsCfp) {
+          const cfpUrl = findLinkByText(primary.html, cacheKey, CFP_LINK_TEXT_RE);
+          if (cfpUrl && cfpUrl !== cacheKey) secondaryUrls.add(cfpUrl);
+        }
+        if (needsCommittee) {
+          const committeeUrl = findLinkByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE);
+          if (committeeUrl && committeeUrl !== cacheKey) secondaryUrls.add(committeeUrl);
+        }
+        for (const secondaryUrl of Array.from(secondaryUrls).slice(0, 2)) {
+          try {
+            const secondary = await extractPage(ai, secondaryUrl, titleHint);
+            if (secondary) {
+              parsed = mergeExtractionResults(parsed, secondary.parsed, secondaryUrl);
+            }
+          } catch (secondaryErr) {
+            console.error("Secondary page extraction failed:", secondaryErr);
+          }
+        }
       }
 
       const result = {
@@ -435,7 +550,21 @@ Return JSON with exactly this shape:
         travelText: parsed.travelText || null,
       };
 
-      extractionCache.set(cacheKey, { data: result, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      // A result with no CFP/committee/speaker/sponsor content found anywhere (primary or
+      // secondary pages) gets a much shorter cache lifetime than a genuinely populated one — a
+      // transient fetch/parse miss shouldn't stick around for a full 6 hours and keep showing an
+      // empty state to every visitor in the meantime.
+      const looksEmpty =
+        !result.cfpStatus &&
+        !result.cfpDeadline &&
+        !result.submissionRequirements &&
+        !result.submissionUrl &&
+        result.committee.length === 0 &&
+        result.speakers.length === 0 &&
+        result.sponsors.length === 0;
+      const ttl = looksEmpty ? 15 * 60 * 1000 : EXTRACTION_CACHE_TTL_MS;
+
+      extractionCache.set(cacheKey, { data: result, expiresAt: Date.now() + ttl });
       res.json(result);
     } catch (error: any) {
       console.error("Conference extraction error:", error);

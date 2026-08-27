@@ -82,15 +82,44 @@ function looksLikeListicle(title: string, snippet: string, displayLink: string):
   return LISTICLE_DOMAINS.has(host);
 }
 
-// Drops results that only mention a past year (e.g. a leftover page for a prior edition) and
-// never mention the current or a future year. Never excludes purely for lacking a year at all —
-// plenty of legitimate current pages just don't put one in the title/snippet.
+// Drops results that only mention a past date and never mention the current-or-future date.
+// A bare year alone is ambiguous within the current year (e.g. "2026" gives no signal about
+// whether that's before or after today), so a specific month is checked first whenever the text
+// states one — "April 2026" is genuinely outdated once today is August 2026, even though the
+// bare year alone would look current. Never excludes purely for lacking a date at all.
+const MONTH_NAMES = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+const MONTH_YEAR_RE = new RegExp(`\\b(${MONTH_NAMES.join("|")})\\b[^.]{0,20}?\\b(20\\d{2})\\b`, "gi");
 const ALL_YEARS_RE = /\b20\d{2}\b/g;
+
+function extractMonthYearDates(text: string): Array<{ year: number; monthIndex: number }> {
+  return Array.from(text.toLowerCase().matchAll(MONTH_YEAR_RE), (m) => ({
+    monthIndex: MONTH_NAMES.indexOf(m[1]),
+    year: parseInt(m[2], 10),
+  }));
+}
+
 function looksOutdated(title: string, snippet: string): boolean {
   const text = `${title} ${snippet}`;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  const monthYearDates = extractMonthYearDates(text);
+  if (monthYearDates.length > 0) {
+    const hasCurrentOrFuture = monthYearDates.some(
+      ({ year, monthIndex }) => year > currentYear || (year === currentYear && monthIndex >= currentMonth)
+    );
+    const hasPast = monthYearDates.some(
+      ({ year, monthIndex }) => year < currentYear || (year === currentYear && monthIndex < currentMonth)
+    );
+    return hasPast && !hasCurrentOrFuture;
+  }
+
   const years = Array.from(text.matchAll(ALL_YEARS_RE), (m) => parseInt(m[0], 10));
   if (years.length === 0) return false;
-  const currentYear = new Date().getFullYear();
   const hasCurrentOrFuture = years.some((y) => y >= currentYear);
   const hasPast = years.some((y) => y < currentYear);
   return hasPast && !hasCurrentOrFuture;
