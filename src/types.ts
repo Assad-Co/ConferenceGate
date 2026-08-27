@@ -275,6 +275,9 @@ export interface AbstractSubmission {
     status: 'completed' | 'current' | 'upcoming';
     date?: string;
   }>;
+  /** Reviewers actually invited to this submission via the organizer's Invite to Review action —
+   * empty when nobody has been invited yet. Never implies an invitation that didn't happen. */
+  reviewerAssignments?: Array<{ reviewerId: string; reviewerName: string }>;
   reviews: AbstractReview[];
 }
 

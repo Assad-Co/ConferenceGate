@@ -236,7 +236,13 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                 {(!currentSub.reviews || currentSub.reviews.length === 0) ? (
                   <div className="p-4 bg-blue-50/60 border border-blue-200/80 rounded-xl text-xs text-blue-800 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>Your abstract is currently assigned to peer reviewers. Feedback will appear here upon review completion.</span>
+                    <span>
+                      {currentSub.reviewerAssignments && currentSub.reviewerAssignments.length > 0
+                        ? `Assigned to ${currentSub.reviewerAssignments.length} reviewer${
+                            currentSub.reviewerAssignments.length === 1 ? '' : 's'
+                          } (${currentSub.reviewerAssignments.map((a) => a.reviewerName).join(', ')}). Feedback will appear here upon review completion.`
+                        : 'Awaiting reviewer assignment — no reviewers have been assigned to this abstract yet.'}
+                    </span>
                   </div>
                 ) : (
                   (currentSub.reviews || []).map((rev) => (

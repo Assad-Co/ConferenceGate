@@ -6,6 +6,8 @@ import {
   dbRun,
   SubmissionRow,
   SubmissionReviewRow,
+  SubmissionReviewerAssignmentRow,
+  NotificationRow,
   ReviewVolunteerRow,
   ConferenceRegistrationRow,
   ConferenceInteractionRow,
@@ -39,15 +41,28 @@ const RECOMMENDATION_TO_STATUS: Record<string, string> = {
 const TIMELINE_LABELS = ["Submitted", "Initial Screening", "Reviewer Assignment", "Under Review", "Final Decision"];
 const FINAL_STATUSES = ["Accepted", "Accepted for Oral", "Accepted for Poster", "Rejected", "Withdrawn"];
 
-function deriveVisualTimeline(status: string, hasReviews: boolean) {
-  const currentIndex = FINAL_STATUSES.includes(status) ? 4 : hasReviews ? 3 : 1;
+// "Reviewer Assignment" only becomes reachable once a real assignment row exists — never assumed
+// just because a submission is sitting unreviewed, since organizers may not have invited anyone yet.
+function deriveVisualTimeline(status: string, hasReviews: boolean, hasAssignment: boolean) {
+  const currentIndex = FINAL_STATUSES.includes(status) ? 4 : hasReviews ? 3 : hasAssignment ? 2 : 1;
   return TIMELINE_LABELS.map((label, idx) => ({
     label,
     status: idx < currentIndex || (idx === currentIndex && currentIndex === 4) ? "completed" : idx === currentIndex ? "current" : "upcoming",
   }));
 }
 
-function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
+async function createNotification(userId: string, type: string, title: string, message: string) {
+  await dbRun(
+    "INSERT INTO notifications (id, user_id, type, title, message) VALUES (?, ?, ?, ?, ?)",
+    [`ntf_${crypto.randomUUID()}`, userId, type, title, message]
+  );
+}
+
+function toSubmissionDTO(
+  row: SubmissionRow,
+  reviews: SubmissionReviewRow[],
+  assignments: SubmissionReviewerAssignmentRow[]
+) {
   const rowReviews = reviews
     .filter((r) => r.submission_id === row.id)
     .map((r) => ({
@@ -63,6 +78,10 @@ function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
       recommendation: r.recommendation,
       date: r.created_at.split(" ")[0],
     }));
+
+  const rowAssignments = assignments
+    .filter((a) => a.submission_id === row.id)
+    .map((a) => ({ reviewerId: a.reviewer_id, reviewerName: a.reviewer_name }));
 
   return {
     id: row.id,
@@ -86,7 +105,8 @@ function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
     status: row.status,
     submissionDate: row.submission_date.split(" ")[0],
     revisionsCount: row.revisions_count,
-    visualTimeline: deriveVisualTimeline(row.status, rowReviews.length > 0),
+    visualTimeline: deriveVisualTimeline(row.status, rowReviews.length > 0, rowAssignments.length > 0),
+    reviewerAssignments: rowAssignments,
     reviews: rowReviews,
   };
 }
@@ -94,8 +114,89 @@ function toSubmissionDTO(row: SubmissionRow, reviews: SubmissionReviewRow[]) {
 activityRouter.get("/submissions", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<SubmissionRow>("SELECT * FROM submissions ORDER BY submission_date DESC");
   const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews");
-  res.json({ submissions: rows.map((row) => toSubmissionDTO(row, reviewRows)) });
+  const assignmentRows = await dbAll<SubmissionReviewerAssignmentRow>("SELECT * FROM submission_reviewer_assignments");
+  res.json({ submissions: rows.map((row) => toSubmissionDTO(row, reviewRows, assignmentRows)) });
 }));
+
+// Persists the real reviewer invitation an organizer sends via the AI Reviewer Match panel —
+// previously that flow only sent a DM with no lasting record, so the abstract's own timeline
+// and "assigned reviewers" list never reflected it. Also notifies the invited reviewer for real.
+activityRouter.post(
+  "/submissions/:id/assign-reviewer",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
+    if (!submission) {
+      return res.status(404).json({ error: "Submission not found" });
+    }
+    const { reviewerId } = req.body || {};
+    if (typeof reviewerId !== "string" || !reviewerId) {
+      return res.status(400).json({ error: "reviewerId is required" });
+    }
+    const reviewer = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [reviewerId]);
+    if (!reviewer) {
+      return res.status(404).json({ error: "Reviewer account not found" });
+    }
+
+    try {
+      await dbRun(
+        `INSERT INTO submission_reviewer_assignments (id, submission_id, reviewer_id, reviewer_name, invited_by_id)
+         VALUES (?, ?, ?, ?, ?)`,
+        [`asn_${crypto.randomUUID()}`, submission.id, reviewerId, reviewer.name, req.userId!]
+      );
+      await createNotification(
+        reviewerId,
+        "invitation",
+        "New Reviewer Invitation",
+        `You've been invited to review "${submission.title}" for ${submission.conference_title}.`
+      );
+    } catch {
+      // Already assigned to this reviewer — idempotent, not an error.
+    }
+
+    const updatedRow = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [submission.id]))!;
+    const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews WHERE submission_id = ?", [
+      submission.id,
+    ]);
+    const assignmentRows = await dbAll<SubmissionReviewerAssignmentRow>(
+      "SELECT * FROM submission_reviewer_assignments WHERE submission_id = ?",
+      [submission.id]
+    );
+    res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows, assignmentRows) });
+  })
+);
+
+activityRouter.get("/notifications/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<NotificationRow>(
+    "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
+    [req.userId!]
+  );
+  res.json({
+    notifications: rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      title: r.title,
+      message: r.message,
+      read: !!r.read,
+      timestamp: r.created_at,
+    })),
+  });
+}));
+
+activityRouter.post(
+  "/notifications/:id/read",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    await dbRun("UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?", [req.params.id, req.userId!]);
+    res.json({ ok: true });
+  })
+);
+
+activityRouter.post(
+  "/notifications/read-all",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    await dbRun("UPDATE notifications SET read = 1 WHERE user_id = ?", [req.userId!]);
+    res.json({ ok: true });
+  })
+);
 
 activityRouter.post("/submissions", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
@@ -137,7 +238,7 @@ activityRouter.post("/submissions", asyncHandler(async (req: AuthedRequest, res:
   );
 
   const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
-  res.status(201).json({ submission: toSubmissionDTO(row, []) });
+  res.status(201).json({ submission: toSubmissionDTO(row, [], []) });
 }));
 
 activityRouter.post("/submissions/:id/reviews", asyncHandler(async (req: AuthedRequest, res: Response) => {
@@ -187,11 +288,26 @@ activityRouter.post("/submissions/:id/reviews", asyncHandler(async (req: AuthedR
   const newStatus = RECOMMENDATION_TO_STATUS[body.recommendation] || submission.status;
   await dbRun("UPDATE submissions SET status = ? WHERE id = ?", [newStatus, submission.id]);
 
+  // The reviewer-facing UI claims "the author notified" the moment a review is submitted — make
+  // that literally true instead of an empty promise.
+  await createNotification(
+    submission.submitter_id,
+    "review",
+    FINAL_STATUSES.includes(newStatus) ? "Abstract Decision" : "New Peer Review Received",
+    `Your abstract "${submission.title}" for ${submission.conference_title} ${
+      FINAL_STATUSES.includes(newStatus) ? `has a decision: ${newStatus}.` : "has received a new peer review."
+    }`
+  );
+
   const updatedRow = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [submission.id]))!;
   const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews WHERE submission_id = ?", [
     submission.id,
   ]);
-  res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
+  const assignmentRows = await dbAll<SubmissionReviewerAssignmentRow>(
+    "SELECT * FROM submission_reviewer_assignments WHERE submission_id = ?",
+    [submission.id]
+  );
+  res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows, assignmentRows) });
 }));
 
 activityRouter.post("/submissions/:id/revisions", asyncHandler(async (req: AuthedRequest, res: Response) => {
@@ -224,7 +340,11 @@ activityRouter.post("/submissions/:id/revisions", asyncHandler(async (req: Authe
   const reviewRows = await dbAll<SubmissionReviewRow>("SELECT * FROM submission_reviews WHERE submission_id = ?", [
     submission.id,
   ]);
-  res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows) });
+  const assignmentRows = await dbAll<SubmissionReviewerAssignmentRow>(
+    "SELECT * FROM submission_reviewer_assignments WHERE submission_id = ?",
+    [submission.id]
+  );
+  res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows, assignmentRows) });
 }));
 
 activityRouter.post("/reviews/volunteer", asyncHandler(async (req: AuthedRequest, res: Response) => {
