@@ -10,6 +10,8 @@ import {
   Edit3,
   Plus,
   Send,
+  ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { AbstractSubmission, Conference } from '../types';
 import { submitRevision } from '../api/activity';
@@ -104,17 +106,24 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
                     {sub.preferredType} Presentation
                   </span>
-                  <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                      sub.status.includes('Accepted')
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : sub.status === 'Under Review'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}
-                  >
-                    {sub.status}
-                  </span>
+                  {sub.isExternal ? (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 flex items-center gap-1">
+                      <Globe className="w-3 h-3" />
+                      External
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                        sub.status.includes('Accepted')
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : sub.status === 'Under Review'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      {sub.status}
+                    </span>
+                  )}
                 </div>
                 <h4 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
                   {sub.title}
@@ -169,7 +178,36 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                 </div>
               </div>
 
-              {/* Real-time Status Visual Timeline */}
+              {/* Real-time Status Visual Timeline — external submissions skip this entirely in
+                  favor of an honest single-fact card, since ConferenceGate has no visibility into
+                  another conference's own review pipeline to show a multi-stage timeline for. */}
+              {currentSub.isExternal ? (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 text-xs text-slate-700">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                      <Globe className="w-4 h-4 text-slate-600" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900">Submitted on the official site</div>
+                      <div className="text-[11px] text-slate-500">
+                        Self-reported on {currentSub.submissionDate}. ConferenceGate can't see this conference's
+                        own review status — check your email or their portal for updates.
+                      </div>
+                    </div>
+                  </div>
+                  {currentSub.externalUrl && (
+                    <a
+                      href={currentSub.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5"
+                    >
+                      <span>Open Submission Page</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              ) : (
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   Real-time Peer Review Timeline
@@ -207,6 +245,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Abstract Text */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
@@ -228,7 +267,9 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                 </div>
               </div>
 
-              {/* Reviewer Comments & Evaluation Feedback */}
+              {/* Reviewer Comments & Evaluation Feedback — not applicable to external submissions,
+                  since ConferenceGate never assigns reviewers to a conference it doesn't run. */}
+              {!currentSub.isExternal && (
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   Reviewer Evaluation Feedback ({(currentSub.reviews || []).length})
@@ -275,8 +316,11 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   ))
                 )}
               </div>
+              )}
 
-              {/* Author Revision Responses */}
+              {/* Author Revision Responses — likewise not applicable to a self-reported external
+                  submission, since there's no ConferenceGate reviewer/committee to send it to. */}
+              {!currentSub.isExternal && (
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   Respond to Revision Request
@@ -309,6 +353,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
                   </div>
                 </form>
               </div>
+              )}
             </div>
           </div>
         )}

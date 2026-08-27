@@ -83,6 +83,8 @@ function toSubmissionDTO(
     .filter((a) => a.submission_id === row.id)
     .map((a) => ({ reviewerId: a.reviewer_id, reviewerName: a.reviewer_name }));
 
+  const isExternal = !!row.is_external;
+
   return {
     id: row.id,
     submitterId: row.submitter_id,
@@ -105,7 +107,14 @@ function toSubmissionDTO(
     status: row.status,
     submissionDate: row.submission_date.split(" ")[0],
     revisionsCount: row.revisions_count,
-    visualTimeline: deriveVisualTimeline(row.status, rowReviews.length > 0, rowAssignments.length > 0),
+    // A self-reported record of submitting directly on an external conference's own site — there's
+    // no real ConferenceGate reviewer pipeline behind it, so the timeline is honestly just the one
+    // real fact we know (the author says they submitted it), never a fabricated multi-stage flow.
+    isExternal,
+    externalUrl: row.external_url || null,
+    visualTimeline: isExternal
+      ? [{ label: "Submitted Externally", status: "completed" as const, date: row.submission_date.split(" ")[0] }]
+      : deriveVisualTimeline(row.status, rowReviews.length > 0, rowAssignments.length > 0),
     reviewerAssignments: rowAssignments,
     reviews: rowReviews,
   };
@@ -240,6 +249,50 @@ activityRouter.post("/submissions", asyncHandler(async (req: AuthedRequest, res:
   const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
   res.status(201).json({ submission: toSubmissionDTO(row, [], []) });
 }));
+
+// Records that the author submitted this abstract directly on an external conference's own site
+// (EasyChair, a form, an email address, etc.) — ConferenceGate has no way to see into that
+// system's real review pipeline, so this is honestly a self-reported bookmark of what and where
+// they submitted, kept in My Abstracts for their own records, never a tracked review workflow.
+activityRouter.post(
+  "/submissions/external",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const body = req.body || {};
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return res.status(400).json({ error: "Abstract title is required" });
+    }
+    if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
+      return res.status(400).json({ error: "conferenceTitle is required" });
+    }
+    if (typeof body.externalUrl !== "string" || !body.externalUrl.trim()) {
+      return res.status(400).json({ error: "externalUrl is required" });
+    }
+
+    const id = `sub_${crypto.randomUUID()}`;
+    await dbRun(
+      `INSERT INTO submissions (
+        id, submitter_id, conference_id, conference_title, title, track, topic, keywords,
+        abstract_text, preferred_type, primary_author_name, primary_author_email,
+        primary_author_affiliation, primary_author_bio, co_authors, conflict_of_interest, status,
+        is_external, external_url
+      ) VALUES (?, ?, ?, ?, ?, NULL, NULL, '[]', ?, 'Oral', ?, ?, NULL, NULL, '[]', NULL, 'Submitted', 1, ?)`,
+      [
+        id,
+        req.userId!,
+        `external_${id}`,
+        body.conferenceTitle.trim(),
+        body.title.trim(),
+        typeof body.abstractText === "string" ? body.abstractText.trim() : "",
+        typeof body.authorName === "string" ? body.authorName : "",
+        typeof body.authorEmail === "string" ? body.authorEmail : "",
+        body.externalUrl.trim(),
+      ]
+    );
+
+    const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
+    res.status(201).json({ submission: toSubmissionDTO(row, [], []) });
+  })
+);
 
 activityRouter.post("/submissions/:id/reviews", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);

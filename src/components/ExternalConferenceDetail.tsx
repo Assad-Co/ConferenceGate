@@ -13,11 +13,52 @@ import {
   Loader2,
   Sparkles,
   Download,
+  Copy,
+  Mail,
+  ClipboardList,
 } from 'lucide-react';
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 import { downloadAbstractDraftPDF } from '../utils/abstractDraftPdf';
+import { createExternalSubmission } from '../api/activity';
+import { AbstractSubmission } from '../types';
+
+// Recognized form-building tools whose CFP link means "fill out a form on their site" rather
+// than "upload to a portal" — used only to pick the right explanatory copy, since we can't
+// reliably generate a real prefilled link without knowing that specific form's own field IDs.
+const FORMS_TOOL_DOMAINS = ['docs.google.com/forms', 'forms.gle', 'typeform.com', 'jotform.com', 'forms.office.com'];
+
+type SubmissionChannel = 'email' | 'form' | 'portal';
+
+function detectSubmissionChannel(submissionEmail: string | null, submissionLink: string): SubmissionChannel {
+  if (submissionEmail) return 'email';
+  const lower = submissionLink.toLowerCase();
+  if (FORMS_TOOL_DOMAINS.some((domain) => lower.includes(domain))) return 'form';
+  return 'portal';
+}
+
+function buildSubmissionPackageText(opts: {
+  conferenceTitle: string;
+  title: string;
+  authors: string;
+  abstractText: string;
+  requirementsNote?: string | null;
+}): string {
+  const lines = [
+    `Submission for: ${opts.conferenceTitle}`,
+    '',
+    `Title: ${opts.title || '(untitled)'}`,
+  ];
+  if (opts.authors.trim()) {
+    lines.push(`Authors: ${opts.authors}`);
+  }
+  lines.push('', 'Abstract:', opts.abstractText || '(no abstract text yet)');
+  if (opts.requirementsNote) {
+    lines.push('', `Requirements to check before submitting: ${opts.requirementsNote}`);
+  }
+  return lines.join('\n');
+}
 
 export type ExternalDetailTab =
   | 'overview'
@@ -33,6 +74,10 @@ interface ExternalConferenceDetailProps {
   result: LiveSearchResult;
   onBack: () => void;
   initialTab?: ExternalDetailTab;
+  /** The signed-in author's identity, used only to pre-fill the "Mark as Submitted Externally"
+   * record — omitted (and that action hidden) when nobody's signed in. */
+  author?: { name: string; email: string } | null;
+  onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
 }
 
 const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message, sourceUrl }) => (
@@ -84,7 +129,13 @@ const PersonCard: React.FC<{ name: string; title: string | null; org: string | n
   </div>
 );
 
-export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> = ({ result, onBack, initialTab }) => {
+export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> = ({
+  result,
+  onBack,
+  initialTab,
+  author,
+  onExternalSubmissionRecorded,
+}) => {
   const [activeTab, setActiveTab] = useState<ExternalDetailTab>(initialTab || 'overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExtractedConferenceDetails | null>(null);
@@ -94,6 +145,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const [draftAbstractText, setDraftAbstractText] = useState('');
   const [aiChecking, setAiChecking] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  const [markingSubmitted, setMarkingSubmitted] = useState(false);
+  const [markedSubmitted, setMarkedSubmitted] = useState(false);
+  const [markError, setMarkError] = useState<string | null>(null);
 
   const handleAICheck = async () => {
     if (!draftAbstractText.trim()) return;
@@ -144,6 +199,45 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     });
   };
 
+  const handleCopyPackage = async () => {
+    const text = buildSubmissionPackageText({
+      conferenceTitle: result.title,
+      title: draftTitle,
+      authors: draftAuthors,
+      abstractText: draftAbstractText,
+      requirementsNote: data?.submissionRequirements || null,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard permission denied or unavailable — the Download button still works as a fallback.
+    }
+  };
+
+  const handleMarkSubmitted = async () => {
+    if (!author || markingSubmitted) return;
+    setMarkingSubmitted(true);
+    setMarkError(null);
+    try {
+      const submission = await createExternalSubmission({
+        conferenceTitle: result.title,
+        externalUrl: submissionLink,
+        title: draftTitle || result.title,
+        abstractText: draftAbstractText,
+        authorName: author.name,
+        authorEmail: author.email,
+      });
+      onExternalSubmissionRecorded?.(submission);
+      setMarkedSubmitted(true);
+    } catch (err: any) {
+      setMarkError(err.message || 'Could not save this record. Please try again.');
+    } finally {
+      setMarkingSubmitted(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -161,6 +255,20 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const submissionLink = data?.submissionUrl || result.link;
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
+
+  const submissionChannel = detectSubmissionChannel(data?.submissionEmail || null, submissionLink);
+  const mailtoLink =
+    submissionChannel === 'email' && data?.submissionEmail
+      ? `mailto:${data.submissionEmail}?subject=${encodeURIComponent(`Abstract Submission: ${draftTitle || result.title}`)}&body=${encodeURIComponent(
+          buildSubmissionPackageText({
+            conferenceTitle: result.title,
+            title: draftTitle,
+            authors: draftAuthors,
+            abstractText: draftAbstractText,
+            requirementsNote: data?.submissionRequirements || null,
+          })
+        )}`
+      : null;
 
   return (
     <div className="space-y-8">
@@ -234,15 +342,25 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             site; every other detail (committee, sponsors, speakers, venue) has its own tab below
             so users aren't sent off-site just to see information we already show in-app. */}
         <div className="p-6 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-3">
-          <a
-            href={submissionLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Submit via Official Site</span>
-          </a>
+          {submissionChannel === 'email' && mailtoLink ? (
+            <a
+              href={mailtoLink}
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Mail className="w-4 h-4" />
+              <span>Email My Submission</span>
+            </a>
+          ) : (
+            <a
+              href={submissionLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{submissionChannel === 'form' ? 'Open Submission Form' : 'Submit via Official Site'}</span>
+            </a>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -330,20 +448,48 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         </p>
                       )}
                     </div>
-                    <a
-                      href={submissionLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
-                    >
-                      Submit via Official Site
-                    </a>
+                    {submissionChannel === 'email' && mailtoLink ? (
+                      <a
+                        href={mailtoLink}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
+                      >
+                        Email My Submission
+                      </a>
+                    ) : (
+                      <a
+                        href={submissionLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
+                      >
+                        {submissionChannel === 'form' ? 'Open Submission Form' : 'Submit via Official Site'}
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <EmptyExtractState
                     message="No call-for-papers status or deadline was found on this page."
                     sourceUrl={result.link}
                   />
+                )}
+
+                {submissionChannel === 'email' && data?.submissionEmail && (
+                  <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>
+                      This conference takes submissions by email, to <strong>{data.submissionEmail}</strong> — the
+                      button above opens your email client with your draft already filled in.
+                    </span>
+                  </div>
+                )}
+                {submissionChannel === 'form' && (
+                  <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>
+                      This conference collects submissions through a form, not a portal — use{' '}
+                      <strong>Copy Package</strong> below, then paste each field into the form.
+                    </span>
+                  </div>
                 )}
 
                 <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
@@ -496,6 +642,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
                     <button
                       type="button"
+                      onClick={handleCopyPackage}
+                      disabled={!draftTitle.trim() || !draftAbstractText.trim()}
+                      className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      <span>{copied ? 'Copied!' : 'Copy Package'}</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleDownloadDraft}
                       disabled={!draftTitle.trim() || !draftAbstractText.trim()}
                       className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
@@ -503,16 +658,52 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       <Download className="w-4 h-4" />
                       <span>Download Formatted Draft (PDF)</span>
                     </button>
-                    <a
-                      href={submissionLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Then Upload on Official Site</span>
-                    </a>
+                    {submissionChannel === 'email' && mailtoLink ? (
+                      <a
+                        href={mailtoLink}
+                        className="px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Then Email It In</span>
+                      </a>
+                    ) : (
+                      <a
+                        href={submissionLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>{submissionChannel === 'form' ? 'Then Paste It Into the Form' : 'Then Upload on Official Site'}</span>
+                      </a>
+                    )}
                   </div>
+
+                  {/* Mark as Submitted Externally — a self-reported bookmark for My Abstracts,
+                      since ConferenceGate has no way to know a submission on another site actually
+                      went through; it only knows what the author tells it. */}
+                  {author && (
+                    <div className="pt-3 border-t border-slate-100">
+                      {markedSubmitted ? (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 font-medium">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Saved to My Abstracts as submitted externally.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleMarkSubmitted}
+                            disabled={markingSubmitted || !draftTitle.trim()}
+                            className="text-xs font-bold text-slate-600 hover:text-slate-900 underline decoration-dotted underline-offset-4 cursor-pointer disabled:opacity-50"
+                          >
+                            {markingSubmitted ? 'Saving…' : "I've submitted this — save it to My Abstracts"}
+                          </button>
+                          {markError && <p className="text-[11px] text-rose-600 mt-1">{markError}</p>}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

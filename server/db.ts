@@ -128,7 +128,9 @@ export async function initDb(): Promise<void> {
       conflict_of_interest TEXT,
       status TEXT NOT NULL DEFAULT 'Submitted',
       submission_date TEXT NOT NULL DEFAULT (datetime('now')),
-      revisions_count INTEGER NOT NULL DEFAULT 0
+      revisions_count INTEGER NOT NULL DEFAULT 0,
+      is_external INTEGER NOT NULL DEFAULT 0,
+      external_url TEXT
     );
 
     CREATE TABLE IF NOT EXISTS submission_revisions (
@@ -398,6 +400,12 @@ export async function initDb(): Promise<void> {
   if (!submissionColumns.some((c) => c.name === "revisions_count")) {
     await db.executeMultiple("ALTER TABLE submissions ADD COLUMN revisions_count INTEGER NOT NULL DEFAULT 0;");
   }
+  if (!submissionColumns.some((c) => c.name === "is_external")) {
+    await db.executeMultiple("ALTER TABLE submissions ADD COLUMN is_external INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!submissionColumns.some((c) => c.name === "external_url")) {
+    await db.executeMultiple("ALTER TABLE submissions ADD COLUMN external_url TEXT;");
+  }
 }
 
 export interface UserRow {
@@ -440,6 +448,8 @@ export interface SubmissionRow {
   status: string;
   submission_date: string;
   revisions_count: number;
+  is_external: number;
+  external_url: string | null;
 }
 
 export interface SubmissionRevisionRow {

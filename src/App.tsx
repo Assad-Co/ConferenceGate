@@ -1327,6 +1327,8 @@ export function App() {
             result={selectedExternalResult}
             onBack={() => setActiveTab('discover')}
             initialTab={selectedExternalTab}
+            author={authUser ? { name: userProfile.name, email: authUser.email } : null}
+            onExternalSubmissionRecorded={(submission) => setSubmissions((prev) => [submission, ...prev])}
           />
         )}
 

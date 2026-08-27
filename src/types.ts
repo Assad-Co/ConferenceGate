@@ -279,6 +279,11 @@ export interface AbstractSubmission {
    * empty when nobody has been invited yet. Never implies an invitation that didn't happen. */
   reviewerAssignments?: Array<{ reviewerId: string; reviewerName: string }>;
   reviews: AbstractReview[];
+  /** True for a self-reported record of submitting directly on an external conference's own site
+   * (EasyChair, a form, an email, etc.) — ConferenceGate has no visibility into that conference's
+   * real review pipeline for these, so they never carry reviewer assignments or review feedback. */
+  isExternal?: boolean;
+  externalUrl?: string | null;
 }
 
 // A real, organizer-published sponsorship package for one of their own conferences (see
