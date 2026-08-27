@@ -38,13 +38,6 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
 
   const selectedConf = conferences.find((c) => c.id === selectedConfId) || conferences[0];
 
-  const MATCH_THRESHOLD = 70;
-  const sortedConferences = [...conferences].sort(
-    (a, b) => (b.recommendationScore || 0) - (a.recommendationScore || 0)
-  );
-  const recommendedConferences = sortedConferences.filter((c) => (c.recommendationScore || 0) >= MATCH_THRESHOLD);
-  const otherConferences = sortedConferences.filter((c) => (c.recommendationScore || 0) < MATCH_THRESHOLD);
-
   const handleAddCoAuthor = () => {
     setCoAuthors([...coAuthors, { name: '', affiliation: '', email: '' }]);
   };
@@ -157,28 +150,12 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
               }}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
             >
-              {recommendedConferences.length > 0 && (
-                <optgroup label={`Recommended For You (${MATCH_THRESHOLD}%+ Match to Your Profile & History)`}>
-                  {recommendedConferences.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title} — {c.recommendationScore}% Match ({formatDate(c.dates.start)})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {otherConferences.length > 0 && (
-                <optgroup label="Other Conferences & Workshops">
-                  {otherConferences.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title} — {c.recommendationScore ?? 0}% Match ({formatDate(c.dates.start)})
-                    </option>
-                  ))}
-                </optgroup>
-              )}
+              {conferences.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title} ({formatDate(c.dates.start)})
+                </option>
+              ))}
             </select>
-            <p className="text-[10px] text-slate-400 font-medium">
-              Match % is based on your research interests, professional profile, and past conference attendance.
-            </p>
           </div>
 
           {/* Abstract Title */}

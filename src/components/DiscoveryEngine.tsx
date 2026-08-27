@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Search,
-  Star,
   Bookmark,
   Users,
   Globe,
@@ -166,11 +165,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     {conf.format}
                   </div>
 
-                  <div className="absolute top-3 right-3 bg-emerald-500 text-white font-extrabold text-xs px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-white" />
-                    <span>{conf.recommendationScore}% Match</span>
-                  </div>
-
                   <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
                     <img
                       src={conf.logo}
@@ -268,18 +262,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     </p>
 
                     {/* Key Attributes */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                    <div className="grid grid-cols-1 gap-2 text-xs pt-1">
                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Call for Papers:</span>
                         <span className="font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md text-[11px]">
                           {conf.cfpStatus}
-                        </span>
-                      </div>
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">Network Attendance:</span>
-                        <span className="font-bold text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {conf.networkAttendeesCount} Connections Attending
                         </span>
                       </div>
                     </div>
@@ -292,7 +279,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       <span className="text-xs font-bold text-slate-900">{conf.priceRange}</span>
                       <span className="text-slate-300">•</span>
                       <span className="text-[11px] text-slate-500">
-                        {conf.attendeeCount}+ Registered Attendees
+                        {conf.attendeeCount} Registered Attendee{conf.attendeeCount === 1 ? '' : 's'}
                       </span>
                     </div>
 

@@ -371,6 +371,9 @@ export function App() {
   const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
   const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
   const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
+  // Real, non-organizer-scoped registration totals per conference — used to show a genuine
+  // attendee count to every viewer, not just organizers looking at their own dashboard.
+  const [registrationCountsByConference, setRegistrationCountsByConference] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!authUser) return;
@@ -378,6 +381,7 @@ export function App() {
     fetchFeed().then(setPosts).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
+    fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
     fetchMyConferenceInteractions()
       .then(({ saved, followed }) => {
         setSavedConferenceIds(saved);
@@ -436,7 +440,6 @@ export function App() {
     }
   }, [activeTab, authUser?.id]);
 
-  const [registrationCountsByConference, setRegistrationCountsByConference] = useState<Record<string, number>>({});
   const [feedbackSummary, setFeedbackSummary] = useState<{ averageScore: number; responseCount: number }>({
     averageScore: 0,
     responseCount: 0,
@@ -444,7 +447,6 @@ export function App() {
   useEffect(() => {
     if (!authUser) return;
     if (activeTab === 'organizer') {
-      fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
       fetchFeedbackSummary().then(setFeedbackSummary).catch(() => {});
     }
   }, [activeTab, authUser?.id]);
@@ -496,11 +498,16 @@ export function App() {
 
   // Discover shows only real, organizer-created conferences (submitted through the app) plus
   // live web results — never the static seed catalog, which was only ever meant as starter
-  // demo data, not something to present as if it were live/current.
+  // demo data, not something to present as if it were live/current. attendeeCount is overridden
+  // here with the real registration count for every conference — never the stored value, which
+  // is only ever a stale snapshot from creation time (0 for new ones).
   const sampleConferenceIds = React.useMemo(() => new Set(sampleConferences.map((c) => c.id)), []);
   const discoverConferences = React.useMemo(
-    () => conferences.filter((c) => !sampleConferenceIds.has(c.id)),
-    [conferences, sampleConferenceIds]
+    () =>
+      conferences
+        .filter((c) => !sampleConferenceIds.has(c.id))
+        .map((c) => ({ ...c, attendeeCount: registrationCountsByConference[c.id] ?? 0 })),
+    [conferences, sampleConferenceIds, registrationCountsByConference]
   );
 
   useEffect(() => {
@@ -1120,9 +1127,7 @@ export function App() {
       earlyBirdDeadline: '2026-09-01',
       abstractDeadline: '2026-08-01',
       cfpStatus: 'Open',
-      recommendationScore: 92,
-      attendeeCount: 100,
-      networkAttendeesCount: 10,
+      attendeeCount: 0,
       mainThemes: newConfData.mainThemes || ['Innovation'],
       submissionGuidelines: newConfData.submissionGuidelines ?? null,
       agendaDays: newConfData.agendaDays || [],
@@ -1279,7 +1284,7 @@ export function App() {
       >
         {activeTab === 'home' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <HomeLanding
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onNavigateTab={setActiveTab}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
@@ -1491,7 +1496,7 @@ export function App() {
       <AbstractSubmissionModal
         isOpen={isSubmitAbstractOpen}
         onClose={() => setIsSubmitAbstractOpen(false)}
-        conferences={conferences}
+        conferences={discoverConferences}
         defaultConferenceId={submitAbstractConfId}
         onSubmit={handleAddSubmission}
         author={{
