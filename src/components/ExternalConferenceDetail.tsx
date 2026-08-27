@@ -130,7 +130,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       title: draftTitle,
       authors: draftAuthors,
       abstractText: draftAbstractText,
-      requirementsNote: data?.submissionRequirements || null,
+      requirementsNote:
+        data?.submissionRequirements ||
+        `No specific font, size, or formatting requirements were found stated on ${result.displayLink}. Double-check the official site before uploading.`,
     });
   };
 
@@ -336,26 +338,33 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   />
                 )}
 
-                {(data?.submissionRequirements || data?.submissionTemplateUrl) && (
-                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                    <h4 className="text-sm font-bold text-slate-900">Format & Requirements</h4>
-                    {data?.submissionRequirements && (
-                      <p className="text-xs text-slate-600 leading-relaxed">{data.submissionRequirements}</p>
-                    )}
-                    {data?.submissionTemplateUrl && (
-                      <a
-                        href={data.submissionTemplateUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Download Submission Template</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="text-sm font-bold text-slate-900">Format & Requirements</h4>
+                  {data?.submissionRequirements || data?.submissionTemplateUrl ? (
+                    <>
+                      {data?.submissionRequirements && (
+                        <p className="text-xs text-slate-600 leading-relaxed">{data.submissionRequirements}</p>
+                      )}
+                      {data?.submissionTemplateUrl && (
+                        <a
+                          href={data.submissionTemplateUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Download Submission Template</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <EmptyExtractState
+                      message="No specific font, size, or formatting requirements were found stated on this page."
+                      sourceUrl={result.link}
+                    />
+                  )}
+                </div>
 
                 {/* Draft Your Submission — prepares a properly-formatted document on Conference
                     Gate using the real extracted requirements above; the final upload still has
