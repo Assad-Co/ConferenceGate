@@ -363,6 +363,37 @@ Provide constructive feedback in JSON format with fields:
   const COMMITTEE_LINK_TEXT_RE =
     /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs|advisory board|editorial board|review(ers)?\s*panel)\b/i;
 
+  // Real conference sites often route through a neutral hub page — "About", "Info", "Event
+  // Details" — that doesn't itself name any one category but links onward to the pages that do
+  // (About -> Committee, About -> Program). Neither the model's per-page relevantLinks nor the
+  // CFP/Committee regexes can flag a hub page for a category it doesn't actually mention, so a
+  // round that finds zero category-specific candidates falls back to a few of that page's other
+  // same-site nav links as blind exploratory hops — skipping the obvious non-content ones — so the
+  // crawl can still push one layer deeper instead of stopping cold in front of a hub page.
+  const SKIP_NAV_TEXT_RE = /\b(privacy|terms|cookie|login|log in|sign in|sign up|home|contact|sitemap|accessibility)\b/i;
+  function findExploratoryLinks(html: string, baseUrl: string, limit: number): string[] {
+    const anchorRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const found: string[] = [];
+    let m: RegExpExecArray | null;
+    let baseHost: string;
+    try {
+      baseHost = new URL(baseUrl).hostname;
+    } catch {
+      return found;
+    }
+    while ((m = anchorRe.exec(html)) && found.length < limit) {
+      const text = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (!text || SKIP_NAV_TEXT_RE.test(text)) continue;
+      try {
+        const abs = new URL(m[1], baseUrl).href;
+        if (abs !== baseUrl && new URL(abs).hostname === baseHost && !found.includes(abs)) found.push(abs);
+      } catch {
+        continue;
+      }
+    }
+    return found;
+  }
+
   // Every real <a href> target on the page, resolved to absolute URLs — used to verify a URL the
   // model claims to have found in a [LINK: ...] marker actually exists on the page, rather than
   // trusting model output that could otherwise hallucinate a plausible-looking but fake URL.
@@ -639,58 +670,96 @@ Return JSON with exactly this shape:
 
       let parsed = primary.parsed;
 
-      // A real conference site commonly splits its content across more than one page — Call for
-      // Papers, Committee, Speakers, Sponsors, Agenda, and Venue/Travel each just as likely to
-      // live on their own subpage as on the one we started from. Rather than only recognizing a
-      // fixed list of link-text keywords, the model itself already read every [LINK: ...] marker
-      // on this page and reported which ones it genuinely believes lead to more detail on each
-      // topic (relevantLinks, sanitized against the page's real anchors above). The keyword regexes
-      // stay on as a free, deterministic backstop for the two categories they were tuned for, since
-      // a fixed list can miss real-world phrasing the model would still recognize correctly.
-      const realLinks = extractAllLinks(primary.html, cacheKey);
-      const modelLinks = sanitizeRelevantLinks(parsed, realLinks, cacheKey);
+      // A real conference site commonly splits its content across more than one page — and
+      // sometimes the page with the actual Committee roster or Program schedule isn't linked
+      // directly from the page we started on, but from a page THAT page links to (e.g. the
+      // homepage links to "About", and "About" links to "Committee"). So this isn't a single
+      // one-hop lookup: it's a bounded breadth-first crawl of the same site, expanding outward
+      // one more layer of links each round for as long as something is still missing and the
+      // page budget allows, rather than only ever checking the primary page's own links.
+      //
+      // At each round, every newly-fetched page's own [LINK: ...] markers get the same treatment
+      // the primary page got: the model reports which ones it genuinely believes lead to more
+      // detail on each still-missing topic (relevantLinks — real language understanding, not
+      // keyword matching), and the CFP/Committee keyword regexes run alongside as a free
+      // deterministic backstop. Every candidate is validated against that page's own real anchors
+      // and kept only if it's on the same site, so the crawl can't wander onto an unrelated domain
+      // or trust a hallucinated URL.
+      const MAX_CRAWL_DEPTH = 2; // rounds of expansion beyond the primary page
+      const MAX_TOTAL_PAGES = 6; // primary + at most this many more, across all rounds combined
 
-      const missingByCategory: Record<RelevantLinkCategory, boolean> = {
-        cfp: isCfpMissing(parsed),
-        committee: isCommitteeMissing(parsed),
-        speakers: isSpeakersMissing(parsed),
-        sponsors: isSponsorsMissing(parsed),
-        agenda: isAgendaMissing(parsed),
-        venue: isVenueMissing(parsed),
-      };
+      const visited = new Set<string>([cacheKey]);
+      let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: cacheKey, ...primary }];
+      let pagesFetched = 1;
 
-      const secondaryUrls = new Set<string>();
-      for (const category of RELEVANT_LINK_CATEGORIES) {
-        if (!missingByCategory[category]) continue;
-        if (modelLinks[category]) secondaryUrls.add(modelLinks[category]!);
-      }
-      if (missingByCategory.cfp) {
-        // Up to 2 distinct CFP-ish links — a real nav bar sometimes has BOTH a "Call for Papers"
-        // link and a separate "Submission Guidelines" link pointing to different pages, and only
-        // fetching the first would still miss whichever one actually has the details.
-        for (const url of findLinksByText(primary.html, cacheKey, CFP_LINK_TEXT_RE, 2)) {
-          secondaryUrls.add(url);
+      for (let depth = 0; depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES; depth++) {
+        const missingByCategory: Record<RelevantLinkCategory, boolean> = {
+          cfp: isCfpMissing(parsed),
+          committee: isCommitteeMissing(parsed),
+          speakers: isSpeakersMissing(parsed),
+          sponsors: isSponsorsMissing(parsed),
+          agenda: isAgendaMissing(parsed),
+          venue: isVenueMissing(parsed),
+        };
+        if (!Object.values(missingByCategory).some(Boolean)) break; // nothing left to look for
+
+        const candidateUrls = new Set<string>();
+        for (const page of frontier) {
+          const realLinks = extractAllLinks(page.html, page.url);
+          const modelLinks = sanitizeRelevantLinks(page.parsed, realLinks, page.url);
+          for (const category of RELEVANT_LINK_CATEGORIES) {
+            if (!missingByCategory[category]) continue;
+            const link = modelLinks[category];
+            if (link && !visited.has(link)) candidateUrls.add(link);
+          }
+          if (missingByCategory.cfp) {
+            // Up to 2 distinct CFP-ish links per page — a real nav bar sometimes has BOTH a
+            // "Call for Papers" link and a separate "Submission Guidelines" link, and only
+            // fetching the first would still miss whichever one actually has the details.
+            for (const url of findLinksByText(page.html, page.url, CFP_LINK_TEXT_RE, 2)) {
+              if (!visited.has(url)) candidateUrls.add(url);
+            }
+          }
+          if (missingByCategory.committee) {
+            for (const url of findLinksByText(page.html, page.url, COMMITTEE_LINK_TEXT_RE, 1)) {
+              if (!visited.has(url)) candidateUrls.add(url);
+            }
+          }
         }
-      }
-      if (missingByCategory.committee) {
-        for (const url of findLinksByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE, 1)) {
-          secondaryUrls.add(url);
-        }
-      }
 
-      if (secondaryUrls.size > 0) {
+        if (candidateUrls.size === 0) {
+          // Nothing on this round's pages pointed at a specific missing category — try a couple
+          // of blind exploratory hops per page in case the real content sits behind a neutral hub
+          // page like "About" that these pages didn't themselves flag for any category.
+          for (const page of frontier) {
+            for (const url of findExploratoryLinks(page.html, page.url, 2)) {
+              if (!visited.has(url)) candidateUrls.add(url);
+            }
+          }
+        }
+        if (candidateUrls.size === 0) break;
+
         // Fetched in parallel rather than one after another — each is an independent page-plus-
-        // model-call round trip, and running them concurrently keeps a multi-secondary-page
-        // lookup roughly as fast as a single one instead of multiplying the wait.
-        const urlsToFetch = Array.from(secondaryUrls).slice(0, 5);
-        const secondaryResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
-        secondaryResults.forEach((outcome, i) => {
+        // model-call round trip, and running them concurrently keeps a multi-page round roughly
+        // as fast as a single fetch instead of multiplying the wait.
+        const remainingBudget = MAX_TOTAL_PAGES - pagesFetched;
+        const urlsToFetch = Array.from(candidateUrls).slice(0, remainingBudget);
+        urlsToFetch.forEach((url) => visited.add(url));
+        pagesFetched += urlsToFetch.length;
+
+        const roundResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
+        const nextFrontier: typeof frontier = [];
+        roundResults.forEach((outcome, i) => {
           if (outcome.status === "fulfilled" && outcome.value) {
             parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i]);
+            nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
           } else if (outcome.status === "rejected") {
-            console.error("Secondary page extraction failed:", outcome.reason);
+            console.error("Crawl page extraction failed:", outcome.reason);
           }
         });
+
+        if (nextFrontier.length === 0) break;
+        frontier = nextFrontier;
       }
 
       const result = {
