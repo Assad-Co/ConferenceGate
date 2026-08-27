@@ -286,6 +286,7 @@ Provide constructive feedback in JSON format with fields:
   }
   const extractionCache = new Map<string, ExtractionCacheEntry>();
   const EXTRACTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+  const FAILED_FETCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — failures are usually transient
 
   // Strips a page down to readable text for the LLM, but first swaps every <img> tag for an
   // inline [IMAGE: absolute-url] marker (resolving relative src/data-src against the page's own
@@ -559,6 +560,19 @@ Return JSON with exactly this shape:
   const PAGE_FETCH_TIMEOUT_MS = 6000;
   const MODEL_CALL_TIMEOUT_MS = 8000;
 
+  // A user-initiated read of a public conference page, so these are the headers an ordinary
+  // browser visiting that same page would send. The previous "ConferenceGateBot/1.0" user agent
+  // self-identified as a bot, which Cloudflare and the WAFs/security plugins in front of a great
+  // many real conference sites reject outright with a 403 — the page then extracted as empty and
+  // every tab showed "(0)" for a site that plainly had speakers and an agenda on it. Accept and
+  // Accept-Language are sent for the same reason: their absence is a common bot signal.
+  const EXTRACTION_FETCH_HEADERS: Record<string, string> = {
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
@@ -571,12 +585,29 @@ Return JSON with exactly this shape:
     let html = "";
     try {
       const pageRes = await fetch(pageUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; ConferenceGateBot/1.0)" },
+        headers: EXTRACTION_FETCH_HEADERS,
         redirect: "follow",
         // A slow or unresponsive conference site would otherwise hang this request (and the
         // client's loading spinner) indefinitely — cap it and treat a timeout as a fetch failure.
         signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
       });
+      // An error response still has a body, and without this check that body (a WAF block page,
+      // a 404, a proxy's "denied" text) was handed to the model as if it were the conference's
+      // own page. The model would dutifully report nulls for everything, and the endpoint would
+      // return extracted:true — so a page we never actually read was indistinguishable from a
+      // real page that genuinely had no speakers, committee, or agenda on it.
+      if (!pageRes.ok) {
+        console.error(`Page fetch for extraction returned HTTP ${pageRes.status} for ${pageUrl}`);
+        return null;
+      }
+      // Guards the same confusion for a non-HTML body (a PDF, an image, a JSON API response):
+      // tag-stripping binary or JSON produces text-shaped noise the model can only extract nulls
+      // from, which would again be reported as a successful read of an empty page.
+      const contentType = pageRes.headers.get("content-type") || "";
+      if (contentType && !/text\/html|application\/xhtml|text\/plain/i.test(contentType)) {
+        console.error(`Page fetch for extraction returned non-HTML content-type "${contentType}" for ${pageUrl}`);
+        return null;
+      }
       html = await pageRes.text();
     } catch (fetchErr) {
       console.error("Failed to fetch page for extraction:", fetchErr);
@@ -697,8 +728,11 @@ Return JSON with exactly this shape:
 
       const primary = await extractPage(ai, cacheKey, titleHint);
       if (!primary) {
+        // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
+        // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
+        // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
         const fallback = { extracted: false, isFallback: false, fetchFailed: true };
-        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
         return res.json(fallback);
       }
 

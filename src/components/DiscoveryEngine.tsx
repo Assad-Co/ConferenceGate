@@ -13,6 +13,8 @@ import {
   UserCheck,
   Briefcase,
   MapPin,
+  CalendarRange,
+  X,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
@@ -37,6 +39,15 @@ interface DiscoveryEngineProps {
 // computed at load time so this keeps naming the actual current year, not a stale one.
 const DEFAULT_DISCOVER_QUERY = `upcoming technology and industry conference ${new Date().getFullYear()}`;
 
+// "YYYY-MM" for next calendar month from today, e.g. "2026-09" when today is any day in
+// August 2026 — computed at load time (never hardcoded) so the default start-date filter
+// always means "next month onward" and never goes stale.
+const nextMonthValue = (): string => {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   conferences,
   onSelectConference,
@@ -49,6 +60,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleFollow,
 }) => {
   const [searchTerm, setSearchInput] = useState(initialSearchQuery);
+  // "YYYY-MM" — only conferences whose real start date falls in this month or later are shown.
+  // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
+  const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
   const savedIds = savedConferenceIds;
   const followedIds = followedConferenceIds;
 
@@ -63,16 +77,20 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   };
 
   // Real conferences created by organizers through Conference Gate itself — the only ones that
-  // support the app's own Submit Abstract / Registration workflows.
-  const filtered = (conferences || []).filter((conf) => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return true;
-    return (
-      (conf.title || '').toLowerCase().includes(term) ||
-      (conf.description || '').toLowerCase().includes(term) ||
-      (conf.topics || []).some((t) => t.toLowerCase().includes(term))
-    );
-  });
+  // support the app's own Submit Abstract / Registration workflows. Only applies to this catalog
+  // (not the live web results below), since only these have a real, structured start date to
+  // filter on — a web search snippet's date, if any, is free text we'd have to guess-parse.
+  const filtered = (conferences || [])
+    .filter((conf) => {
+      const term = searchTerm.trim().toLowerCase();
+      if (!term) return true;
+      return (
+        (conf.title || '').toLowerCase().includes(term) ||
+        (conf.description || '').toLowerCase().includes(term) ||
+        (conf.topics || []).some((t) => t.toLowerCase().includes(term))
+      );
+    })
+    .filter((conf) => !startFromMonth || conf.dates.start >= `${startFromMonth}-01`);
 
   // Live web results always populate the page — the typed search term if there is one,
   // otherwise a fixed default query so Discover is never empty.
@@ -83,7 +101,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   useEffect(() => {
     const trimmed = searchTerm.trim();
-    const effectiveQuery = trimmed || DEFAULT_DISCOVER_QUERY;
+    // Live web results have no structured dates to filter on, so the date preference is applied
+    // the only honest way available: biasing the real search query itself toward the chosen
+    // month onward. It steers what the search engine returns rather than guaranteeing a cutoff.
+    let dateBias = '';
+    if (startFromMonth) {
+      const [y, m] = startFromMonth.split('-').map(Number);
+      const monthName = new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long' });
+      dateBias = ` ${monthName} ${y} onwards`;
+    }
+    const effectiveQuery = (trimmed || DEFAULT_DISCOVER_QUERY) + dateBias;
 
     const handle = setTimeout(
       () => {
@@ -103,7 +130,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm]);
+  }, [searchTerm, startFromMonth]);
 
   return (
     <div className="space-y-8">
@@ -123,9 +150,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         </div>
 
-        {/* Keyword Search */}
-        <div className="mt-6 pt-6 border-t border-slate-100">
-          <div className="relative max-w-xl">
+        {/* Keyword Search + Start Date Filter */}
+        <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative max-w-xl flex-1">
             <input
               type="text"
               value={searchTerm}
@@ -135,8 +162,53 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           </div>
+
+          <div className="relative shrink-0">
+            <label className="sr-only" htmlFor="discover-start-from">
+              Show conferences starting from
+            </label>
+            <div className="flex items-center gap-1.5 pl-3 pr-2 py-2 bg-slate-50 focus-within:bg-white rounded-xl border border-slate-200 focus-within:border-blue-500 transition-all">
+              <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">From:</span>
+              <input
+                id="discover-start-from"
+                type="month"
+                value={startFromMonth}
+                onChange={(e) => setStartFromMonth(e.target.value)}
+                className="text-xs text-slate-800 bg-transparent focus:outline-hidden w-[112px]"
+              />
+              {startFromMonth && (
+                <button
+                  type="button"
+                  onClick={() => setStartFromMonth('')}
+                  title="Show all dates"
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Honest empty state when the date filter (not the keyword search) hides the whole
+          catalog — silently dropping the section would look like the catalog doesn't exist. */}
+      {filtered.length === 0 && (conferences || []).length > 0 && startFromMonth && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
+          <p className="text-xs text-slate-500">
+            No Conference Gate conferences start in {startFromMonth} or later
+            {searchTerm.trim() ? ` matching "${searchTerm.trim()}"` : ''}.{' '}
+            <button
+              type="button"
+              onClick={() => setStartFromMonth('')}
+              className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+            >
+              Show all dates
+            </button>
+          </p>
+        </div>
+      )}
 
       {/* Real Conference Gate conferences */}
       {filtered.length > 0 && (

@@ -16,6 +16,7 @@ import {
   Copy,
   Mail,
   ClipboardList,
+  AlertCircle,
 } from 'lucide-react';
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
@@ -412,6 +413,36 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
           </div>
         ) : (
           <>
+            {/* Without this, a page we were never able to read looks identical to a page we read
+                fine that simply had no speakers or agenda on it — every tab would say "none found
+                on this page" about a page nobody actually managed to open. */}
+            {data && !data.extracted && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-amber-900">
+                    {data.isFallback
+                      ? 'AI extraction is unavailable right now'
+                      : "We couldn't read this conference's website"}
+                  </p>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    {data.isFallback
+                      ? 'Details below are limited to the search result snippet. Try again shortly.'
+                      : 'The site blocked our request or was unreachable, so the empty sections below mean "not retrieved" — not "not offered by this conference." Check the official website directly.'}
+                  </p>
+                  <a
+                    href={result.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-900 hover:text-amber-950 underline underline-offset-2"
+                  >
+                    Open the official website
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 <div className="space-y-3">
