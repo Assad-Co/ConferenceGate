@@ -63,6 +63,9 @@ async function startServer() {
         headers: {
           "User-Agent": "aistudio-build",
         },
+        // Without a cap, a slow model response can hang a request indefinitely — worst felt on
+        // conference extraction, which can make up to three of these calls in one request.
+        timeout: 15000,
       },
     });
   };
@@ -348,7 +351,7 @@ Provide constructive feedback in JSON format with fields:
     }
     return null;
   }
-  const CFP_LINK_TEXT_RE = /\b(call for papers|cfp|submission|submit\s+(a\s+)?paper|author guidelines)\b/i;
+  const CFP_LINK_TEXT_RE = /\b(call for papers|cfp|submission|submit\s+(a\s+)?paper|abstract|author guidelines)\b/i;
   const COMMITTEE_LINK_TEXT_RE = /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs)\b/i;
 
   // The model sometimes copies a relative href straight out of the page's HTML (e.g. "/submit")
@@ -429,6 +432,9 @@ Return JSON with exactly this shape:
       const pageRes = await fetch(pageUrl, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; ConferenceGateBot/1.0)" },
         redirect: "follow",
+        // A slow or unresponsive conference site would otherwise hang this request (and the
+        // client's loading spinner) indefinitely — cap it and treat a timeout as a fetch failure.
+        signal: AbortSignal.timeout(10000),
       });
       html = await pageRes.text();
     } catch (fetchErr) {
@@ -438,29 +444,29 @@ Return JSON with exactly this shape:
     const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 24000);
     if (!pageText) return null;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: buildExtractionPrompt(pageText, title, pageUrl),
-      config: { responseMimeType: "application/json" },
-    });
-
     let parsed: any = {};
     try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: buildExtractionPrompt(pageText, title, pageUrl),
+        config: { responseMimeType: "application/json" },
+      });
       parsed = JSON.parse(response.text || "{}");
     } catch (e) {
-      console.error("Failed to parse extraction JSON", e);
+      console.error("Extraction model call failed:", e);
+      return null;
     }
     return { parsed, html };
   }
 
+  // Triggers a secondary-page lookup whenever submissionRequirements specifically wasn't found —
+  // not only when every CFP field came up empty. A conference's overview page commonly links to
+  // (and even names the deadline for) a separate submission page without repeating the actual
+  // formatting/length requirements there, so requiring every field to be missing was letting a
+  // partial primary-page result (e.g. just a submissionUrl) block the deeper fetch that would
+  // have found the requirements text the user actually needs.
   function isCfpMissing(parsed: any): boolean {
-    return (
-      !parsed.cfpStatus &&
-      !parsed.cfpDeadline &&
-      !parsed.submissionRequirements &&
-      !parsed.submissionUrl &&
-      !parsed.submissionEmail
-    );
+    return !parsed.submissionRequirements;
   }
   function isCommitteeMissing(parsed: any): boolean {
     return !Array.isArray(parsed.committee) || parsed.committee.length === 0;
@@ -537,16 +543,18 @@ Return JSON with exactly this shape:
           const committeeUrl = findLinkByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE);
           if (committeeUrl && committeeUrl !== cacheKey) secondaryUrls.add(committeeUrl);
         }
-        for (const secondaryUrl of Array.from(secondaryUrls).slice(0, 2)) {
-          try {
-            const secondary = await extractPage(ai, secondaryUrl, titleHint);
-            if (secondary) {
-              parsed = mergeExtractionResults(parsed, secondary.parsed, secondaryUrl);
-            }
-          } catch (secondaryErr) {
-            console.error("Secondary page extraction failed:", secondaryErr);
+        // Fetched in parallel rather than one after another — each is an independent page-plus-
+        // model-call round trip, and running them concurrently keeps a two-secondary-page lookup
+        // roughly as fast as a single one instead of doubling the wait.
+        const urlsToFetch = Array.from(secondaryUrls).slice(0, 2);
+        const secondaryResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
+        secondaryResults.forEach((outcome, i) => {
+          if (outcome.status === "fulfilled" && outcome.value) {
+            parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i]);
+          } else if (outcome.status === "rejected") {
+            console.error("Secondary page extraction failed:", outcome.reason);
           }
-        }
+        });
       }
 
       const result = {

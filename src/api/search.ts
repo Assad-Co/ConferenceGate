@@ -95,6 +95,9 @@ export async function extractConferenceDetails(url: string, title: string): Prom
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ url, title }),
+      // Backstops the server's own per-call timeouts — if a request somehow still hangs, the
+      // loading spinner resolves to an honest empty state instead of spinning forever.
+      signal: AbortSignal.timeout(30000),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
