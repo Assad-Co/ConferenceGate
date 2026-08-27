@@ -8,7 +8,6 @@ import {
   BookOpen,
   Map,
   Loader2,
-  ExternalLink,
   AlertCircle,
   FileText,
   UserCheck,
@@ -364,10 +363,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   ) : (
                     <Globe className="w-10 h-10 text-slate-600" />
                   )}
-                  <div className="absolute top-3 left-3 bg-white/90 text-slate-800 font-bold text-[10px] uppercase px-2.5 py-1 rounded-full backdrop-blur-md flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    Web Result
-                  </div>
                 </div>
 
                 {/* Info Block */}
@@ -378,12 +373,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                         <h2 className="text-lg font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">
                           {result.title}
                         </h2>
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 mt-1.5">
-                          {result.favicon && (
-                            <img src={result.favicon} alt="" className="w-3.5 h-3.5 rounded-sm shrink-0" />
-                          )}
-                          <span className="truncate">{result.displayLink}</span>
-                        </div>
                       </div>
                     </div>
 
@@ -419,17 +408,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   </div>
 
                   {/* Card Action Row */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <a
-                      href={result.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[11px] text-slate-400 hover:text-indigo-600 font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      Visit site directly
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
                     <span className="px-4 py-1.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors">
                       View Details
                     </span>
