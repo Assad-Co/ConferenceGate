@@ -315,6 +315,19 @@ Provide constructive feedback in JSON format with fields:
       .trim();
   }
 
+  // The model sometimes copies a relative href straight out of the page's HTML (e.g. "/submit")
+  // instead of resolving it — a bare relative path is meaningless once served from Conference
+  // Gate's own origin, so every extracted URL is resolved against the source page's real URL
+  // before being sent to the client, exactly like the inline image markers above.
+  function resolveAbsoluteUrl(url: unknown, baseUrl: string): string | null {
+    if (typeof url !== "string" || !url.trim()) return null;
+    try {
+      return new URL(url.trim(), baseUrl).href;
+    } catch {
+      return null;
+    }
+  }
+
   app.post("/api/ai/extract-conference", async (req, res) => {
     try {
       const { url, title } = req.body;
@@ -411,9 +424,9 @@ Return JSON with exactly this shape:
         format: parsed.format || null,
         cfpStatus: parsed.cfpStatus || null,
         cfpDeadline: parsed.cfpDeadline || null,
-        submissionUrl: parsed.submissionUrl || null,
+        submissionUrl: resolveAbsoluteUrl(parsed.submissionUrl, cacheKey),
         submissionRequirements: parsed.submissionRequirements || null,
-        submissionTemplateUrl: parsed.submissionTemplateUrl || null,
+        submissionTemplateUrl: resolveAbsoluteUrl(parsed.submissionTemplateUrl, cacheKey),
         agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
         speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
         committee: Array.isArray(parsed.committee) ? parsed.committee : [],
