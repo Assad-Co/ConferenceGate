@@ -138,10 +138,6 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
             </div>
           </div>
 
-          <div className="absolute top-6 right-6 bg-emerald-500 text-white font-extrabold text-xs px-3 py-1.5 rounded-full shadow-md">
-            {conference.recommendationScore}% Match For Your Profile
-          </div>
-
           {/* Title & Key Specs */}
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -168,7 +164,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               </span>
               <span className="flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-emerald-400" />
-                {conference.attendeeCount}+ Attendees ({conference.networkAttendeesCount} Network Connections)
+                {conference.attendeeCount} Registered Attendee{conference.attendeeCount === 1 ? '' : 's'}
               </span>
             </div>
           </div>

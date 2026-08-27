@@ -118,7 +118,7 @@ const PromotedConferenceCard: React.FC<{
   <div className="bg-white rounded-lg border border-slate-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group">
     <div className="px-4 pt-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
       <Star className="w-3 h-3 fill-blue-600" />
-      <span>Promoted Conference · {conf.recommendationScore}% Match</span>
+      <span>Featured Conference</span>
     </div>
     <button onClick={() => onSelect(conf)} className="relative h-36 mt-2 w-full cursor-pointer block">
       <img
@@ -189,10 +189,12 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
     .filter((c) => c.cfpStatus === 'Open')
     .sort((a, b) => new Date(a.abstractDeadline).getTime() - new Date(b.abstractDeadline).getTime())
     .slice(0, 4);
-  const recommended = [...safeConferences]
-    .sort((a, b) => b.recommendationScore - a.recommendationScore)
+  const upcomingConferences = [...safeConferences]
+    .sort((a, b) => new Date(a.dates.start).getTime() - new Date(b.dates.start).getTime())
     .slice(0, 4);
-  const promotedPool = [...safeConferences].sort((a, b) => b.recommendationScore - a.recommendationScore);
+  const featuredPool = [...safeConferences].sort(
+    (a, b) => new Date(a.dates.start).getTime() - new Date(b.dates.start).getTime()
+  );
 
   const quickLinks = [
     { label: 'Discover Conferences', icon: Layers, tab: 'discover' },
@@ -360,9 +362,9 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
                     onReact={onReact}
                   />
                 )}
-                {i === 0 && promotedPool.length > 0 && (
+                {i === 0 && featuredPool.length > 0 && (
                   <PromotedConferenceCard
-                    conf={promotedPool[0]}
+                    conf={featuredPool[0]}
                     onSelect={onSelectConference}
                     onSubmitAbstract={onOpenSubmitAbstract}
                   />
@@ -413,10 +415,10 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
 
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs">
           <div className="px-4 py-3 border-b border-slate-100 font-bold text-sm text-slate-900">
-            Recommended Conferences
+            Upcoming Conferences
           </div>
           <div className="divide-y divide-slate-100">
-            {recommended.map((conf) => (
+            {upcomingConferences.map((conf) => (
               <div key={conf.id} className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors group">
                 {conf.logo && !logoErrorIds[conf.id] ? (
                   <img

@@ -190,9 +190,10 @@ export interface Conference {
    * shown to authors before they submit through Conference Gate. Null when the organizer hasn't
    * specified any — never fabricated on their behalf. */
   submissionGuidelines?: string | null;
-  recommendationScore: number;
+  /** Real registered-attendee count, derived from actual registrations — never a static/fabricated
+   * number. Starts at 0 for a newly created conference and is overridden at render time with the
+   * live count wherever conferences are surfaced to users (see App.tsx's discoverConferences). */
   attendeeCount: number;
-  networkAttendeesCount: number;
   mainThemes: string[];
   agendaDays: AgendaDay[];
   speakers: Speaker[];
