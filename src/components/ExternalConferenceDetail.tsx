@@ -20,7 +20,7 @@ import {
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
-import { downloadAbstractDraftPDF } from '../utils/abstractDraftPdf';
+import { downloadAbstractDraftDocx } from '../utils/abstractDraftDocx';
 import { createExternalSubmission } from '../api/activity';
 import { AbstractSubmission } from '../types';
 
@@ -149,6 +149,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const [markingSubmitted, setMarkingSubmitted] = useState(false);
   const [markedSubmitted, setMarkedSubmitted] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
+  const [downloadingDraft, setDownloadingDraft] = useState(false);
 
   const handleAICheck = async () => {
     if (!draftAbstractText.trim()) return;
@@ -187,16 +188,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     }
   };
 
-  const handleDownloadDraft = () => {
-    downloadAbstractDraftPDF({
-      conferenceTitle: result.title,
-      title: draftTitle,
-      authors: draftAuthors,
-      abstractText: draftAbstractText,
-      requirementsNote:
-        data?.submissionRequirements ||
-        `No specific font, size, or formatting requirements were found stated on ${result.displayLink}. Double-check the official site before uploading.`,
-    });
+  const handleDownloadDraft = async () => {
+    setDownloadingDraft(true);
+    try {
+      await downloadAbstractDraftDocx({
+        conferenceTitle: result.title,
+        title: draftTitle,
+        authors: draftAuthors,
+        abstractText: draftAbstractText,
+        requirementsNote: data?.submissionRequirements || null,
+      });
+    } finally {
+      setDownloadingDraft(false);
+    }
   };
 
   const handleCopyPackage = async () => {
@@ -677,11 +681,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     <button
                       type="button"
                       onClick={handleDownloadDraft}
-                      disabled={!draftTitle.trim() || !draftAbstractText.trim()}
+                      disabled={!draftTitle.trim() || !draftAbstractText.trim() || downloadingDraft}
                       className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <Download className="w-4 h-4" />
-                      <span>Download Formatted Draft (PDF)</span>
+                      <span>{downloadingDraft ? 'Preparing...' : 'Download Formatted Draft (Word)'}</span>
                     </button>
                     {submissionChannel === 'email' && mailtoLink ? (
                       <a
