@@ -13,6 +13,7 @@ import { sponsorsRouter } from "./server/sponsors";
 import { postsRouter } from "./server/posts";
 import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
+import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -208,28 +209,48 @@ Return a JSON array of objects with fields: reviewerId (string), matchPercentage
     }
   });
 
-  // AI Abstract Quality Check
+  // AI Abstract Quality Check — grounded against the conference's real stated requirements
+  // (when known) rather than a generic pass. Word-count compliance is computed in code, not
+  // guessed by the model, since LLMs are unreliable at exact arithmetic over long text; that real
+  // fact is handed to the model so its score and feedback reflect actual compliance.
   app.post("/api/ai/abstract-check", async (req, res) => {
     try {
-      const { title, abstractText, topic } = req.body;
+      const { title, abstractText, topic, requirements } = req.body;
       const ai = getAIClient();
+
+      const wordCompliance = checkWordCompliance(
+        typeof abstractText === "string" ? abstractText : "",
+        typeof requirements === "string" ? requirements : null
+      );
 
       if (!ai) {
         // GEMINI_API_KEY is not configured — flagged so the client shows generic
         // guidance rather than presenting a fabricated per-abstract score as real.
-        return res.json({ isFallback: true });
+        return res.json({ isFallback: true, wordCount: wordCompliance.wordCount, wordLimitNote: wordCompliance.note });
       }
+
+      const requirementsBlock =
+        typeof requirements === "string" && requirements.trim()
+          ? `\n\nThis conference's real, stated submission requirements are:\n"""\n${requirements}\n"""\n\nA code-computed fact you must treat as ground truth (do not recount words yourself): the abstract is ${wordCompliance.wordCount} words long.${
+              wordCompliance.note ? ` ${wordCompliance.note}` : ""
+            } Score and feedback must reflect this fact — if it violates a stated limit, say so explicitly in improvements and reduce the score accordingly; never claim compliance that contradicts this word count.`
+          : "";
+
+      const rewriteInstruction = wordCompliance.note && /exceeds|below/i.test(wordCompliance.note)
+        ? `\n\nBecause the abstract violates the stated word requirement, also provide "suggestedRewrite": a revised version of the abstract text that fits the requirement while preserving the author's actual research content and meaning — never invent findings or methodology that weren't in the original. If you cannot fix it without fabricating content, set suggestedRewrite to null.`
+        : `\n\n"suggestedRewrite" should be null — the word count doesn't need fixing.`;
 
       const prompt = `Perform a scientific/technical quality pre-screening check for this abstract submission:
 Title: ${title}
 Topic: ${topic}
-Text: ${abstractText}
+Text: ${abstractText}${requirementsBlock}${rewriteInstruction}
 
 Provide constructive feedback in JSON format with fields:
 - score (number 0-100)
 - clarity (string assessment)
 - suggestedTracks (array of string track names)
-- improvements (array of 2 short actionable suggestions)`;
+- improvements (array of 2-3 short actionable suggestions)
+- suggestedRewrite (string or null, as instructed above)`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.6-flash",
@@ -239,14 +260,14 @@ Provide constructive feedback in JSON format with fields:
         },
       });
 
-      let result = {};
+      let result: any = {};
       try {
         result = JSON.parse(response.text || "{}");
       } catch (e) {
         console.error("Failed to parse abstract check JSON", e);
       }
 
-      res.json(result);
+      res.json({ ...result, wordCount: wordCompliance.wordCount, wordLimitNote: wordCompliance.note });
     } catch (error: any) {
       console.error("AI Abstract Check error:", error);
       res.status(500).json({ error: error.message });

@@ -49,14 +49,16 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   const handleAICheck = async () => {
     if (!abstractText.trim()) return;
     setAiChecking(true);
+    let realWordInfo: { wordCount?: number; wordLimitNote?: string | null } = {};
     try {
       const res = await fetch('/api/ai/abstract-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, abstractText, topic }),
+        body: JSON.stringify({ title, abstractText, topic, requirements: selectedConf?.submissionGuidelines || null }),
       });
       if (!res.ok) throw new Error('AI abstract check failed');
       const data = await res.json();
+      realWordInfo = { wordCount: data.wordCount, wordLimitNote: data.wordLimitNote };
       if (data.isFallback || typeof data.score !== 'number') throw new Error('AI abstract check unavailable');
       setAiFeedback({ ...data, isFallback: false });
     } catch (e) {
@@ -70,6 +72,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
           'Define all acronyms on first use.',
         ],
         isFallback: true,
+        ...realWordInfo,
       });
     } finally {
       setAiChecking(false);
@@ -354,12 +357,40 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-700">{aiFeedback.clarity}</p>
+                {typeof aiFeedback.wordCount === 'number' && (
+                  <p
+                    className={`text-[11px] font-semibold ${
+                      aiFeedback.wordLimitNote?.startsWith('Exceeds') || aiFeedback.wordLimitNote?.startsWith('Below')
+                        ? 'text-rose-700'
+                        : 'text-slate-600'
+                    }`}
+                  >
+                    {aiFeedback.wordLimitNote || `${aiFeedback.wordCount} words.`}
+                  </p>
+                )}
                 {aiFeedback.improvements && (
                   <ul className="text-[11px] text-slate-600 list-disc list-inside space-y-0.5">
                     {aiFeedback.improvements.map((imp: string, i: number) => (
                       <li key={i}>{imp}</li>
                     ))}
                   </ul>
+                )}
+                {aiFeedback.suggestedRewrite && (
+                  <div className="pt-2 border-t border-blue-200/60 space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-800">
+                      AI-Suggested Rewrite (fits the requirement)
+                    </p>
+                    <p className="text-[11px] text-slate-700 leading-relaxed bg-white/70 p-2.5 rounded-lg border border-blue-100">
+                      {aiFeedback.suggestedRewrite}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setAbstractText(aiFeedback.suggestedRewrite)}
+                      className="text-[11px] font-bold text-blue-700 hover:text-blue-900 cursor-pointer"
+                    >
+                      Use This Version
+                    </button>
+                  </div>
                 )}
               </div>
             )}
