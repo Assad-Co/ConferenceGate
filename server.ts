@@ -411,7 +411,7 @@ Provide constructive feedback in JSON format with fields:
     return links;
   }
 
-  const RELEVANT_LINK_CATEGORIES = ["cfp", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
+  const RELEVANT_LINK_CATEGORIES = ["overview", "cfp", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
   type RelevantLinkCategory = (typeof RELEVANT_LINK_CATEGORIES)[number];
 
   // Reads the model's own relevantLinks guesses (real language understanding of what a link is
@@ -497,7 +497,7 @@ For sponsors, include every organization named as sponsoring, funding, or suppor
 
 For accommodationText and travelText, summarize whatever the page actually says about lodging (hotel names, room blocks, rates) or getting to the venue (transit directions, airport info, parking) in a sentence or two each — these are commonly written as plain paragraphs rather than under a clearly-labeled section, so don't require an explicit "Accommodation" or "Travel" heading to use them.
 
-Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
+Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information, (g) a general "About"/"Overview"/"About the Conference" page describing what the conference itself is about, if this page doesn't already describe that well. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
 
 Page title: "${title}"
 Page URL: "${pageUrl}"
@@ -526,6 +526,7 @@ Return JSON with exactly this shape:
   "accommodationText": string | null,
   "travelText": string | null,
   "relevantLinks": {
+    "overview": string | null,
     "cfp": string | null,
     "committee": string | null,
     "speakers": string | null,
@@ -589,6 +590,9 @@ Return JSON with exactly this shape:
   function isCfpMissing(parsed: any): boolean {
     return !parsed.submissionRequirements;
   }
+  function isOverviewMissing(parsed: any): boolean {
+    return !parsed.overviewSummary;
+  }
   function isCommitteeMissing(parsed: any): boolean {
     return !Array.isArray(parsed.committee) || parsed.committee.length === 0;
   }
@@ -606,7 +610,7 @@ Return JSON with exactly this shape:
   // looking for the other half elsewhere on the site, same as CFP keeps looking specifically for
   // submissionRequirements even once a deadline or URL was already found.
   function isVenueMissing(parsed: any): boolean {
-    return !parsed.accommodationText || !parsed.travelText;
+    return !parsed.accommodationText || !parsed.travelText || !parsed.locationText;
   }
 
   // Fills in only the fields the primary page's extraction came up empty for — real data already
@@ -698,6 +702,7 @@ Return JSON with exactly this shape:
 
       for (let depth = 0; depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES; depth++) {
         const missingByCategory: Record<RelevantLinkCategory, boolean> = {
+          overview: isOverviewMissing(parsed),
           cfp: isCfpMissing(parsed),
           committee: isCommitteeMissing(parsed),
           speakers: isSpeakersMissing(parsed),
