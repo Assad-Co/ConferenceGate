@@ -260,6 +260,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
 
+  // A real, live search for hotels near the real extracted venue — never a list of specific
+  // hotel names we can't actually verify. Only ever built from the venue location that was
+  // genuinely found; no location means no fabricated "nearby" claim either.
+  const nearbyHotelsUrl = displayLocation
+    ? `https://www.google.com/maps/search/hotels+near+${encodeURIComponent(displayLocation)}`
+    : null;
+
   const submissionChannel = detectSubmissionChannel(data?.submissionEmail || null, submissionLink);
   const mailtoLink =
     submissionChannel === 'email' && data?.submissionEmail
@@ -888,6 +895,18 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         </a>
                         .
                       </p>
+                    )}
+                    {nearbyHotelsUrl && (
+                      <a
+                        href={nearbyHotelsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold rounded-lg transition-colors"
+                      >
+                        <Hotel className="w-3.5 h-3.5" />
+                        <span>Find Hotels Near This Venue</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
                     )}
                   </div>
                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
