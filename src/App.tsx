@@ -1515,6 +1515,10 @@ export function App() {
           affiliation: userProfile.organization,
           bio: userProfile.bio,
         }}
+        onBrowseDiscover={() => {
+          setIsSubmitAbstractOpen(false);
+          setActiveTab('discover');
+        }}
       />
 
       <DigitalBadgeModal

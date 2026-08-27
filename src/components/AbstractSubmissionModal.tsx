@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Plus, Trash2, Sparkles, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { X, Plus, Trash2, Sparkles, FileText, CheckCircle2, AlertCircle, Search, Compass } from 'lucide-react';
 import { Conference, AbstractSubmission } from '../types';
 import { formatDate } from '../utils/date';
 
@@ -10,6 +10,9 @@ interface AbstractSubmissionModalProps {
   defaultConferenceId?: string;
   onSubmit: (submission: Partial<AbstractSubmission>) => void;
   author: { name: string; email: string; affiliation: string; bio: string };
+  /** Closes this modal and switches to Discover — offered from the empty state when there's
+   * nothing here to submit to yet, so the author isn't left on a dead end. */
+  onBrowseDiscover?: () => void;
 }
 
 export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = ({
@@ -19,11 +22,28 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   defaultConferenceId,
   onSubmit,
   author,
+  onBrowseDiscover,
 }) => {
   if (!isOpen) return null;
 
-  const initialConf = conferences.find((c) => c.id === defaultConferenceId) || conferences[0];
+  // Only a conference with an open (or extended, i.e. still-open-but-later-deadline) Call for
+  // Papers can actually accept a submission — offering a closed one here would let someone submit
+  // into a pipeline the organizer already stopped accepting into. The one exception is a
+  // conference explicitly targeted via defaultConferenceId (the author clicked "Submit Abstract"
+  // on that conference's own page) — it stays selectable rather than silently vanishing, since
+  // that entry point already committed the author to it.
+  const selectableConferences = useMemo(() => {
+    const open = conferences.filter((c) => c.cfpStatus === 'Open' || c.cfpStatus === 'Extended');
+    if (defaultConferenceId && !open.some((c) => c.id === defaultConferenceId)) {
+      const targeted = conferences.find((c) => c.id === defaultConferenceId);
+      if (targeted) return [targeted, ...open];
+    }
+    return open;
+  }, [conferences, defaultConferenceId]);
 
+  const initialConf = selectableConferences.find((c) => c.id === defaultConferenceId) || selectableConferences[0];
+
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedConfId, setSelectedConfId] = useState(initialConf?.id || '');
   const [title, setTitle] = useState('');
   const [track, setTrack] = useState(initialConf?.tracks[0] || '');
@@ -36,7 +56,14 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   const [aiChecking, setAiChecking] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<any>(null);
 
-  const selectedConf = conferences.find((c) => c.id === selectedConfId) || conferences[0];
+  const filteredConferences = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return selectableConferences;
+    return selectableConferences.filter((c) => c.title.toLowerCase().includes(q));
+  }, [selectableConferences, searchQuery]);
+
+  const selectedConf =
+    selectableConferences.find((c) => c.id === selectedConfId) || selectableConferences[0];
 
   const handleAddCoAuthor = () => {
     setCoAuthors([...coAuthors, { name: '', affiliation: '', email: '' }]);
@@ -81,7 +108,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !abstractText.trim()) return;
+    if (!title.trim() || !abstractText.trim() || !selectedConf) return;
 
     onSubmit({
       conferenceId: selectedConf.id,
@@ -136,29 +163,71 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 text-xs text-slate-800">
+          {selectableConferences.length === 0 ? (
+            <div className="py-10 text-center space-y-4">
+              <FileText className="w-10 h-10 text-slate-300 mx-auto" />
+              <div className="space-y-1.5 max-w-sm mx-auto">
+                <p className="text-sm font-bold text-slate-800">
+                  No conferences with an open Call for Papers on ConferenceGate yet.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Search Discover for external CFPs and submit directly on the official site — or
+                  check back once an organizer's conference here opens for submissions.
+                </p>
+              </div>
+              {onBrowseDiscover && (
+                <button
+                  type="button"
+                  onClick={onBrowseDiscover}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  <Compass className="w-4 h-4" />
+                  <span>Browse Discover</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
           {/* Target Conference */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
               Select Target Conference
             </label>
-            <select
-              value={selectedConfId}
-              onChange={(e) => {
-                setSelectedConfId(e.target.value);
-                const conf = conferences.find((c) => c.id === e.target.value);
-                if (conf) {
-                  setTrack(conf.tracks[0] || '');
-                  setTopic(conf.topics[0] || '');
-                }
-              }}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
-            >
-              {conferences.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title} ({formatDate(c.dates.start)})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search conferences by name..."
+                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs mb-1.5"
+              />
+            </div>
+            {filteredConferences.length === 0 ? (
+              <p className="text-[11px] text-slate-500 px-1 py-2">
+                No open-CFP conferences match "{searchQuery}".
+              </p>
+            ) : (
+              <select
+                value={selectedConfId}
+                onChange={(e) => {
+                  setSelectedConfId(e.target.value);
+                  const conf = selectableConferences.find((c) => c.id === e.target.value);
+                  if (conf) {
+                    setTrack(conf.tracks[0] || '');
+                    setTopic(conf.topics[0] || '');
+                  }
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
+              >
+                {filteredConferences.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} ({formatDate(c.dates.start)})
+                    {c.cfpStatus !== 'Open' && c.cfpStatus !== 'Extended' ? ' — CFP Closed' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Abstract Title */}
@@ -452,12 +521,15 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+                disabled={!selectedConf}
+                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
               >
                 Submit Abstract for Review
               </button>
             </div>
           </div>
+            </>
+          )}
         </form>
       </div>
     </div>
