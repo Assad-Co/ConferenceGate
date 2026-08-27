@@ -54,6 +54,31 @@ export async function createSubmission(payload: CreateSubmissionPayload): Promis
   return data.submission;
 }
 
+export interface CreateExternalSubmissionPayload {
+  conferenceTitle: string;
+  externalUrl: string;
+  title: string;
+  abstractText?: string;
+  authorName?: string;
+  authorEmail?: string;
+}
+
+/** Records that the author submitted this abstract directly on an external conference's own
+ * site — a self-reported bookmark for their own My Abstracts records, not a tracked review
+ * workflow, since ConferenceGate has no visibility into that conference's real pipeline. */
+export async function createExternalSubmission(
+  payload: CreateExternalSubmissionPayload
+): Promise<AbstractSubmission> {
+  const res = await fetch('/api/activity/submissions/external', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.submission;
+}
+
 export async function submitRevision(submissionId: string, note: string): Promise<AbstractSubmission> {
   const res = await fetch(`/api/activity/submissions/${submissionId}/revisions`, {
     method: 'POST',

@@ -364,6 +364,17 @@ Provide constructive feedback in JSON format with fields:
     }
   }
 
+  // The model is instructed to only report a submission email when the page explicitly ties one
+  // to sending in a paper, but its output is still untrusted text — reject anything that isn't
+  // shaped like a real email address rather than passing arbitrary model output through as if it
+  // were a verified fact.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function sanitizeEmail(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return EMAIL_RE.test(trimmed) ? trimmed : null;
+  }
+
   function buildExtractionPrompt(pageText: string, title: string, pageUrl: string): string {
     return `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
 
@@ -372,6 +383,8 @@ The text below has every <img> tag replaced with an inline marker like "[IMAGE: 
 Every <a> link has similarly been replaced with "link text [LINK: https://example.com/page]" positioned right after that link's visible text. Use these markers to find real URLs: if you see link text like "Submit Now", "Submission Portal", or "Author Guidelines", copy the [LINK: ...] URL that follows it into submissionUrl or submissionTemplateUrl as appropriate. Never invent a URL that isn't backed by an actual [LINK: ...] marker in the text.
 
 For submissionRequirements, look specifically for what authors are told about how to prepare their submission — format (PDF, Word), page or word limits, citation style, blind-review requirements, or template to use — and summarize only what's explicitly stated in a sentence or two. For submissionTemplateUrl, only use a URL that literally appears via a [LINK: ...] marker in the page text; never guess a URL from context.
+
+For submissionEmail, only fill this in if the page explicitly names an email address as where to SEND a submission/abstract/paper to (e.g. "email your abstract to chair@conference.org"). Never use a generic contact/info email for this — leave it null unless the text specifically ties that address to submitting a paper.
 
 Page title: "${title}"
 Page URL: "${pageUrl}"
@@ -392,6 +405,7 @@ Return JSON with exactly this shape:
   "submissionUrl": string | null,
   "submissionRequirements": string | null,
   "submissionTemplateUrl": string | null,
+  "submissionEmail": string | null,
   "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null }],
   "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
   "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
@@ -440,7 +454,13 @@ Return JSON with exactly this shape:
   }
 
   function isCfpMissing(parsed: any): boolean {
-    return !parsed.cfpStatus && !parsed.cfpDeadline && !parsed.submissionRequirements && !parsed.submissionUrl;
+    return (
+      !parsed.cfpStatus &&
+      !parsed.cfpDeadline &&
+      !parsed.submissionRequirements &&
+      !parsed.submissionUrl &&
+      !parsed.submissionEmail
+    );
   }
   function isCommitteeMissing(parsed: any): boolean {
     return !Array.isArray(parsed.committee) || parsed.committee.length === 0;
@@ -450,7 +470,7 @@ Return JSON with exactly this shape:
   // found on the primary page always wins, so a secondary page can only ever add, never overwrite.
   function mergeExtractionResults(primary: any, secondary: any, secondaryUrl: string): any {
     const merged = { ...primary };
-    for (const field of ["cfpStatus", "cfpDeadline", "submissionRequirements"]) {
+    for (const field of ["cfpStatus", "cfpDeadline", "submissionRequirements", "submissionEmail"]) {
       if (!merged[field] && secondary[field]) merged[field] = secondary[field];
     }
     if (!merged.submissionUrl && secondary.submissionUrl) {
@@ -542,6 +562,7 @@ Return JSON with exactly this shape:
         submissionUrl: resolveAbsoluteUrl(parsed.submissionUrl, cacheKey),
         submissionRequirements: parsed.submissionRequirements || null,
         submissionTemplateUrl: resolveAbsoluteUrl(parsed.submissionTemplateUrl, cacheKey),
+        submissionEmail: sanitizeEmail(parsed.submissionEmail),
         agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
         speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
         committee: Array.isArray(parsed.committee) ? parsed.committee : [],
@@ -559,6 +580,7 @@ Return JSON with exactly this shape:
         !result.cfpDeadline &&
         !result.submissionRequirements &&
         !result.submissionUrl &&
+        !result.submissionEmail &&
         result.committee.length === 0 &&
         result.speakers.length === 0 &&
         result.sponsors.length === 0;

@@ -55,6 +55,7 @@ export interface ExtractedConferenceDetails {
   submissionUrl: string | null;
   submissionRequirements: string | null;
   submissionTemplateUrl: string | null;
+  submissionEmail: string | null;
   agendaSessions: AgendaSessionExtract[];
   speakers: PersonExtract[];
   committee: PersonExtract[];
@@ -74,6 +75,7 @@ const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
   submissionUrl: null,
   submissionRequirements: null,
   submissionTemplateUrl: null,
+  submissionEmail: null,
   agendaSessions: [],
   speakers: [],
   committee: [],
