@@ -11,10 +11,13 @@ import {
   ArrowLeft,
   ExternalLink,
   Loader2,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
+import { downloadAbstractDraftPDF } from '../utils/abstractDraftPdf';
 
 export type ExternalDetailTab =
   | 'overview'
@@ -85,6 +88,51 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const [activeTab, setActiveTab] = useState<ExternalDetailTab>(initialTab || 'overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExtractedConferenceDetails | null>(null);
+
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftAuthors, setDraftAuthors] = useState('');
+  const [draftAbstractText, setDraftAbstractText] = useState('');
+  const [aiChecking, setAiChecking] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<any>(null);
+
+  const handleAICheck = async () => {
+    if (!draftAbstractText.trim()) return;
+    setAiChecking(true);
+    try {
+      const res = await fetch('/api/ai/abstract-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: draftTitle, abstractText: draftAbstractText, topic: '' }),
+      });
+      if (!res.ok) throw new Error('AI abstract check failed');
+      const checkData = await res.json();
+      if (checkData.isFallback || typeof checkData.score !== 'number') throw new Error('AI abstract check unavailable');
+      setAiFeedback({ ...checkData, isFallback: false });
+    } catch {
+      setAiFeedback({
+        score: null,
+        clarity:
+          'The AI quality check is unavailable right now, so this is generic guidance rather than an assessment of your specific abstract.',
+        improvements: [
+          'State your research problem, methodology, and key findings clearly in the first two sentences.',
+          'Define all acronyms on first use.',
+        ],
+        isFallback: true,
+      });
+    } finally {
+      setAiChecking(false);
+    }
+  };
+
+  const handleDownloadDraft = () => {
+    downloadAbstractDraftPDF({
+      conferenceTitle: result.title,
+      title: draftTitle,
+      authors: draftAuthors,
+      abstractText: draftAbstractText,
+      requirementsNote: data?.submissionRequirements || null,
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -308,6 +356,119 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     )}
                   </div>
                 )}
+
+                {/* Draft Your Submission — prepares a properly-formatted document on Conference
+                    Gate using the real extracted requirements above; the final upload still has
+                    to happen on the official site, since that's the only way it actually reaches
+                    this conference's real reviewers. */}
+                <div className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Draft Your Submission</h4>
+                    <p className="text-[11px] text-slate-500">
+                      Write and format your abstract here, then download it ready to upload on the official site.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                      Abstract Title
+                    </label>
+                    <input
+                      type="text"
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      placeholder="e.g. Deep Neural Network Architectures in Subsurface Source Rock Analytics"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                      Authors & Affiliations
+                    </label>
+                    <input
+                      type="text"
+                      value={draftAuthors}
+                      onChange={(e) => setDraftAuthors(e.target.value)}
+                      placeholder="Jane Doe (MIT), John Smith (Stanford University)"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                        Abstract Text
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAICheck}
+                        disabled={aiChecking || !draftAbstractText.trim()}
+                        className="px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-[11px] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                        <span>{aiChecking ? 'Evaluating...' : 'AI Quality Pre-Check'}</span>
+                      </button>
+                    </div>
+                    <textarea
+                      rows={6}
+                      value={draftAbstractText}
+                      onChange={(e) => setDraftAbstractText(e.target.value)}
+                      placeholder="Paste your abstract body text here (background, methodology, experimental results, and conclusions)..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs leading-relaxed"
+                    ></textarea>
+
+                    {aiFeedback && (
+                      <div
+                        className={`p-4 rounded-2xl space-y-2 border ${
+                          aiFeedback.isFallback ? 'bg-amber-50 border-amber-200' : 'bg-blue-50/70 border-blue-200'
+                        }`}
+                      >
+                        <div
+                          className={`flex items-center justify-between text-xs font-bold ${
+                            aiFeedback.isFallback ? 'text-amber-900' : 'text-blue-900'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Sparkles className={`w-4 h-4 ${aiFeedback.isFallback ? 'text-amber-600' : 'text-blue-600'}`} />
+                            <span>
+                              {aiFeedback.isFallback ? 'AI Quality Check Unavailable' : `AI Quality Score: ${aiFeedback.score}/100`}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-700">{aiFeedback.clarity}</p>
+                        {aiFeedback.improvements && (
+                          <ul className="text-[11px] text-slate-600 list-disc list-inside space-y-0.5">
+                            {aiFeedback.improvements.map((imp: string, i: number) => (
+                              <li key={i}>{imp}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleDownloadDraft}
+                      disabled={!draftTitle.trim() || !draftAbstractText.trim()}
+                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Formatted Draft (PDF)</span>
+                    </button>
+                    <a
+                      href={submissionLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Then Upload on Official Site</span>
+                    </a>
+                  </div>
+                </div>
               </div>
             )}
 
