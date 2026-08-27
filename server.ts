@@ -355,11 +355,65 @@ Provide constructive feedback in JSON format with fields:
     return found;
   }
   // Broad on purpose: a false-positive match just costs one wasted (parallel, cheap) fetch, while
-  // a false negative means the author's real submission requirements never get found at all.
+  // a false negative means the author's real submission requirements never get found at all. Kept
+  // as a fast, free backstop alongside the model's own link understanding below — a fixed keyword
+  // list can never cover every real site's wording, but it costs nothing to also check.
   const CFP_LINK_TEXT_RE =
     /\b(call for (papers|abstracts)|cfp|submission|submit|abstract|author guidelines|author information|guidelines|instructions for authors|presenters)\b/i;
   const COMMITTEE_LINK_TEXT_RE =
     /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs|advisory board|editorial board|review(ers)?\s*panel)\b/i;
+
+  // Every real <a href> target on the page, resolved to absolute URLs — used to verify a URL the
+  // model claims to have found in a [LINK: ...] marker actually exists on the page, rather than
+  // trusting model output that could otherwise hallucinate a plausible-looking but fake URL.
+  function extractAllLinks(html: string, baseUrl: string): Set<string> {
+    const anchorRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi;
+    const links = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = anchorRe.exec(html))) {
+      try {
+        links.add(new URL(m[1], baseUrl).href);
+      } catch {
+        continue;
+      }
+    }
+    return links;
+  }
+
+  const RELEVANT_LINK_CATEGORIES = ["cfp", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
+  type RelevantLinkCategory = (typeof RELEVANT_LINK_CATEGORIES)[number];
+
+  // Reads the model's own relevantLinks guesses (real language understanding of what a link is
+  // about, not keyword matching) and keeps only ones that are real URLs found on this exact page,
+  // different from the page itself, and on the same site — never trusting model output blindly,
+  // and never following it off onto an unrelated external domain (a sponsor's own homepage, a
+  // speaker's personal page) that isn't actually this conference's own content.
+  function sanitizeRelevantLinks(
+    parsed: any,
+    realLinks: Set<string>,
+    baseUrl: string
+  ): Partial<Record<RelevantLinkCategory, string>> {
+    const out: Partial<Record<RelevantLinkCategory, string>> = {};
+    const raw = parsed?.relevantLinks;
+    if (!raw || typeof raw !== "object") return out;
+    let baseHost: string;
+    try {
+      baseHost = new URL(baseUrl).hostname;
+    } catch {
+      return out;
+    }
+    for (const category of RELEVANT_LINK_CATEGORIES) {
+      const resolved = resolveAbsoluteUrl(raw[category], baseUrl);
+      if (!resolved || resolved === baseUrl || !realLinks.has(resolved)) continue;
+      try {
+        if (new URL(resolved).hostname !== baseHost) continue;
+      } catch {
+        continue;
+      }
+      out[category] = resolved;
+    }
+    return out;
+  }
 
   // The model sometimes copies a relative href straight out of the page's HTML (e.g. "/submit")
   // instead of resolving it — a bare relative path is meaningless once served from Conference
@@ -402,6 +456,8 @@ For sponsors, include every organization named as sponsoring, funding, or suppor
 
 For accommodationText and travelText, summarize whatever the page actually says about lodging (hotel names, room blocks, rates) or getting to the venue (transit directions, airport info, parking) in a sentence or two each — these are commonly written as plain paragraphs rather than under a clearly-labeled section, so don't require an explicit "Accommodation" or "Travel" heading to use them.
 
+Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speaker or keynote bios, (d) sponsors or exhibitors, (e) the agenda or schedule, (f) venue, accommodation, or travel information. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
+
 Page title: "${title}"
 Page URL: "${pageUrl}"
 
@@ -427,7 +483,15 @@ Return JSON with exactly this shape:
   "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
   "sponsors": [{ "name": string, "tier": string | null, "logoUrl": string | null }],
   "accommodationText": string | null,
-  "travelText": string | null
+  "travelText": string | null,
+  "relevantLinks": {
+    "cfp": string | null,
+    "committee": string | null,
+    "speakers": string | null,
+    "sponsors": string | null,
+    "agenda": string | null,
+    "venue": string | null
+  }
 }`;
   }
 
@@ -487,12 +551,34 @@ Return JSON with exactly this shape:
   function isCommitteeMissing(parsed: any): boolean {
     return !Array.isArray(parsed.committee) || parsed.committee.length === 0;
   }
+  function isSpeakersMissing(parsed: any): boolean {
+    return !Array.isArray(parsed.speakers) || parsed.speakers.length === 0;
+  }
+  function isSponsorsMissing(parsed: any): boolean {
+    return !Array.isArray(parsed.sponsors) || parsed.sponsors.length === 0;
+  }
+  function isAgendaMissing(parsed: any): boolean {
+    return !Array.isArray(parsed.agendaSessions) || parsed.agendaSessions.length === 0;
+  }
+  function isVenueMissing(parsed: any): boolean {
+    return !parsed.accommodationText && !parsed.travelText;
+  }
 
   // Fills in only the fields the primary page's extraction came up empty for — real data already
   // found on the primary page always wins, so a secondary page can only ever add, never overwrite.
   function mergeExtractionResults(primary: any, secondary: any, secondaryUrl: string): any {
     const merged = { ...primary };
-    for (const field of ["cfpStatus", "cfpDeadline", "submissionRequirements", "submissionEmail"]) {
+    for (const field of [
+      "cfpStatus",
+      "cfpDeadline",
+      "submissionRequirements",
+      "submissionEmail",
+      "accommodationText",
+      "travelText",
+      "locationText",
+      "datesText",
+      "overviewSummary",
+    ]) {
       if (!merged[field] && secondary[field]) merged[field] = secondary[field];
     }
     if (!merged.submissionUrl && secondary.submissionUrl) {
@@ -543,31 +629,50 @@ Return JSON with exactly this shape:
 
       let parsed = primary.parsed;
 
-      // A real conference site commonly splits its Call-for-Papers and Committee info onto their
-      // own subpages linked from the main page. When the primary page's extraction came up empty
-      // for either, look for a same-site link whose visible text names that topic and, if found,
-      // fetch and extract that page too — merging in only what the primary page was missing.
-      const needsCfp = isCfpMissing(parsed);
-      const needsCommittee = isCommitteeMissing(parsed);
-      if (needsCfp || needsCommittee) {
-        const secondaryUrls = new Set<string>();
-        if (needsCfp) {
-          // Up to 2 distinct CFP-ish links — a real nav bar sometimes has BOTH a "Call for
-          // Papers" link and a separate "Submission Guidelines" link pointing to different pages,
-          // and only fetching the first would still miss whichever one actually has the details.
-          for (const url of findLinksByText(primary.html, cacheKey, CFP_LINK_TEXT_RE, 2)) {
-            secondaryUrls.add(url);
-          }
+      // A real conference site commonly splits its content across more than one page — Call for
+      // Papers, Committee, Speakers, Sponsors, Agenda, and Venue/Travel each just as likely to
+      // live on their own subpage as on the one we started from. Rather than only recognizing a
+      // fixed list of link-text keywords, the model itself already read every [LINK: ...] marker
+      // on this page and reported which ones it genuinely believes lead to more detail on each
+      // topic (relevantLinks, sanitized against the page's real anchors above). The keyword regexes
+      // stay on as a free, deterministic backstop for the two categories they were tuned for, since
+      // a fixed list can miss real-world phrasing the model would still recognize correctly.
+      const realLinks = extractAllLinks(primary.html, cacheKey);
+      const modelLinks = sanitizeRelevantLinks(parsed, realLinks, cacheKey);
+
+      const missingByCategory: Record<RelevantLinkCategory, boolean> = {
+        cfp: isCfpMissing(parsed),
+        committee: isCommitteeMissing(parsed),
+        speakers: isSpeakersMissing(parsed),
+        sponsors: isSponsorsMissing(parsed),
+        agenda: isAgendaMissing(parsed),
+        venue: isVenueMissing(parsed),
+      };
+
+      const secondaryUrls = new Set<string>();
+      for (const category of RELEVANT_LINK_CATEGORIES) {
+        if (!missingByCategory[category]) continue;
+        if (modelLinks[category]) secondaryUrls.add(modelLinks[category]!);
+      }
+      if (missingByCategory.cfp) {
+        // Up to 2 distinct CFP-ish links — a real nav bar sometimes has BOTH a "Call for Papers"
+        // link and a separate "Submission Guidelines" link pointing to different pages, and only
+        // fetching the first would still miss whichever one actually has the details.
+        for (const url of findLinksByText(primary.html, cacheKey, CFP_LINK_TEXT_RE, 2)) {
+          secondaryUrls.add(url);
         }
-        if (needsCommittee) {
-          for (const url of findLinksByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE, 1)) {
-            secondaryUrls.add(url);
-          }
+      }
+      if (missingByCategory.committee) {
+        for (const url of findLinksByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE, 1)) {
+          secondaryUrls.add(url);
         }
+      }
+
+      if (secondaryUrls.size > 0) {
         // Fetched in parallel rather than one after another — each is an independent page-plus-
         // model-call round trip, and running them concurrently keeps a multi-secondary-page
         // lookup roughly as fast as a single one instead of multiplying the wait.
-        const urlsToFetch = Array.from(secondaryUrls).slice(0, 3);
+        const urlsToFetch = Array.from(secondaryUrls).slice(0, 5);
         const secondaryResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
         secondaryResults.forEach((outcome, i) => {
           if (outcome.status === "fulfilled" && outcome.value) {
