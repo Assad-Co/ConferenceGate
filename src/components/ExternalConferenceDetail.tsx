@@ -486,8 +486,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
                     <ClipboardList className="w-4 h-4 text-indigo-600 shrink-0" />
                     <span>
-                      This conference collects submissions through a form, not a portal — use{' '}
-                      <strong>Copy Package</strong> below, then paste each field into the form.
+                      This conference collects submissions through a form, not a portal — use the{' '}
+                      <strong>submission package preview</strong> below to copy your info in, field by field.
                     </span>
                   </div>
                 )}
@@ -639,16 +639,41 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     )}
                   </div>
 
+                  {/* Live Submission Package Preview — shows exactly what the Copy/Download
+                      actions below will produce, instead of asking the user to click a button
+                      whose output they can't see first. Updates as the fields above change. */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                          Submission Package Preview
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          This is exactly what "Copy" and "Download" below produce — formatted for {result.title}.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyPackage}
+                        disabled={!draftTitle.trim() || !draftAbstractText.trim()}
+                        className="shrink-0 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-[11px] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copied ? 'Copied!' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <pre className="whitespace-pre-wrap font-sans text-[11px] text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-56 overflow-y-auto">
+                      {buildSubmissionPackageText({
+                        conferenceTitle: result.title,
+                        title: draftTitle,
+                        authors: draftAuthors,
+                        abstractText: draftAbstractText,
+                        requirementsNote: data?.submissionRequirements || null,
+                      })}
+                    </pre>
+                  </div>
+
                   <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={handleCopyPackage}
-                      disabled={!draftTitle.trim() || !draftAbstractText.trim()}
-                      className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                      <span>{copied ? 'Copied!' : 'Copy Package'}</span>
-                    </button>
                     <button
                       type="button"
                       onClick={handleDownloadDraft}
