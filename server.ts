@@ -601,8 +601,12 @@ Return JSON with exactly this shape:
   function isAgendaMissing(parsed: any): boolean {
     return !Array.isArray(parsed.agendaSessions) || parsed.agendaSessions.length === 0;
   }
+  // Either half missing keeps the venue category "in progress" — a page that states where to
+  // stay but never mentions how to get there (or vice versa) shouldn't stop the crawl from still
+  // looking for the other half elsewhere on the site, same as CFP keeps looking specifically for
+  // submissionRequirements even once a deadline or URL was already found.
   function isVenueMissing(parsed: any): boolean {
-    return !parsed.accommodationText && !parsed.travelText;
+    return !parsed.accommodationText || !parsed.travelText;
   }
 
   // Fills in only the fields the primary page's extraction came up empty for — real data already
