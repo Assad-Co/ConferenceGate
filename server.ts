@@ -331,28 +331,35 @@ Provide constructive feedback in JSON format with fields:
       .trim();
   }
 
-  // Scans the page's raw HTML (before tag-stripping) for the first <a> whose visible text
-  // matches a topic pattern, returning its resolved absolute URL — a deterministic, cheap way to
-  // find a same-site "Call for Papers" or "Committee" page linked from this one, since a real
-  // conference site commonly splits these across separate pages the model would otherwise have
-  // no way to discover from a single-page fetch.
-  function findLinkByText(html: string, baseUrl: string, pattern: RegExp): string | null {
+  // Scans the page's raw HTML (before tag-stripping) for every <a> whose visible text matches a
+  // topic pattern, returning up to `limit` distinct resolved absolute URLs — a deterministic,
+  // cheap way to find same-site "Call for Papers"/"Submission Guidelines"/"Committee" pages
+  // linked from this one, since a real conference site commonly splits these across more than
+  // one page (sometimes even two distinct CFP-ish pages, e.g. "Call for Papers" AND a separate
+  // "Submission Guidelines") that the model would otherwise have no way to discover from a
+  // single-page fetch.
+  function findLinksByText(html: string, baseUrl: string, pattern: RegExp, limit: number): string[] {
     const anchorRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const found: string[] = [];
     let m: RegExpExecArray | null;
-    while ((m = anchorRe.exec(html))) {
+    while ((m = anchorRe.exec(html)) && found.length < limit) {
       const text = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      if (pattern.test(text)) {
-        try {
-          return new URL(m[1], baseUrl).href;
-        } catch {
-          continue;
-        }
+      if (!pattern.test(text)) continue;
+      try {
+        const abs = new URL(m[1], baseUrl).href;
+        if (abs !== baseUrl && !found.includes(abs)) found.push(abs);
+      } catch {
+        continue;
       }
     }
-    return null;
+    return found;
   }
-  const CFP_LINK_TEXT_RE = /\b(call for papers|cfp|submission|submit\s+(a\s+)?paper|abstract|author guidelines)\b/i;
-  const COMMITTEE_LINK_TEXT_RE = /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs)\b/i;
+  // Broad on purpose: a false-positive match just costs one wasted (parallel, cheap) fetch, while
+  // a false negative means the author's real submission requirements never get found at all.
+  const CFP_LINK_TEXT_RE =
+    /\b(call for (papers|abstracts)|cfp|submission|submit|abstract|author guidelines|author information|guidelines|instructions for authors|presenters)\b/i;
+  const COMMITTEE_LINK_TEXT_RE =
+    /\b(committee|organi[sz]ing|scientific (board|committee)|program committee|chairs|advisory board|editorial board|review(ers)?\s*panel)\b/i;
 
   // The model sometimes copies a relative href straight out of the page's HTML (e.g. "/submit")
   // instead of resolving it — a bare relative path is meaningless once served from Conference
@@ -441,7 +448,10 @@ Return JSON with exactly this shape:
       console.error("Failed to fetch page for extraction:", fetchErr);
       return null;
     }
-    const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 24000);
+    // 40,000 characters of actual visible text (not raw HTML) comfortably covers even a long
+    // single page with CFP details near the bottom — a tighter cutoff risked truncating the
+    // requirements section clean off before the model ever saw it.
+    const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 40000);
     if (!pageText) return null;
 
     let parsed: any = {};
@@ -536,17 +546,22 @@ Return JSON with exactly this shape:
       if (needsCfp || needsCommittee) {
         const secondaryUrls = new Set<string>();
         if (needsCfp) {
-          const cfpUrl = findLinkByText(primary.html, cacheKey, CFP_LINK_TEXT_RE);
-          if (cfpUrl && cfpUrl !== cacheKey) secondaryUrls.add(cfpUrl);
+          // Up to 2 distinct CFP-ish links — a real nav bar sometimes has BOTH a "Call for
+          // Papers" link and a separate "Submission Guidelines" link pointing to different pages,
+          // and only fetching the first would still miss whichever one actually has the details.
+          for (const url of findLinksByText(primary.html, cacheKey, CFP_LINK_TEXT_RE, 2)) {
+            secondaryUrls.add(url);
+          }
         }
         if (needsCommittee) {
-          const committeeUrl = findLinkByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE);
-          if (committeeUrl && committeeUrl !== cacheKey) secondaryUrls.add(committeeUrl);
+          for (const url of findLinksByText(primary.html, cacheKey, COMMITTEE_LINK_TEXT_RE, 1)) {
+            secondaryUrls.add(url);
+          }
         }
         // Fetched in parallel rather than one after another — each is an independent page-plus-
-        // model-call round trip, and running them concurrently keeps a two-secondary-page lookup
-        // roughly as fast as a single one instead of doubling the wait.
-        const urlsToFetch = Array.from(secondaryUrls).slice(0, 2);
+        // model-call round trip, and running them concurrently keeps a multi-secondary-page
+        // lookup roughly as fast as a single one instead of multiplying the wait.
+        const urlsToFetch = Array.from(secondaryUrls).slice(0, 3);
         const secondaryResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
         secondaryResults.forEach((outcome, i) => {
           if (outcome.status === "fulfilled" && outcome.value) {
