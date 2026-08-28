@@ -1786,6 +1786,8 @@ Return JSON with exactly this shape:
         // weaker than the organiser's own word, and the reader is told so.
         result.sourcedFromOpenWeb = true;
         result.officialSiteUnreadable = true;
+        result.extraction_metadata.status = "website_unreachable";
+        result.extraction_metadata.official_site_unreachable = true;
         job.result = result;
         job.complete = true;
         extractionCache.set(startUrl, { data: result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
@@ -1795,15 +1797,27 @@ Return JSON with exactly this shape:
 
       const diagnosis = await diagnoseReadFailure(startUrl);
       job.result = {
+        overview: {},
+        call_for_papers: {},
+        program_agenda: {},
+        keynote_speakers: [],
+        technical_committee: [],
+        sponsors_exhibitors: [],
+        venue_accommodation: {},
+        community: {},
+        extraction_metadata: {
+          status: "website_unreachable",
+          pages_crawled: 0,
+          source_urls: [],
+          conflicts: [],
+          missing_sections: COVERAGE_CATEGORIES.map((c) => c.name),
+          failure_reason: diagnosis.reason,
+        },
         extracted: false,
         isFallback: false,
         fetchFailed: true,
         crawlComplete: true,
         browserRenderingUnavailable: isBrowserRenderingUnavailable(),
-        // What actually went wrong, established by re-probing rather than inferred. "Blocked us
-        // even in a real browser", "returned a page with no content in it" and "no browser is
-        // installed to retry with" are three different problems with three different fixes, and
-        // a reader who is told the wrong one has no way to act on it.
         readFailureReason: diagnosis.reason,
       };
       job.complete = true;
