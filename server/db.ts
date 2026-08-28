@@ -243,6 +243,22 @@ export async function initDb(): Promise<void> {
       value TEXT NOT NULL
     );
 
+    -- Canonical imported conference record, stored by tab section exactly as the extraction API
+    -- returns it. One row per official URL; a completed recrawl atomically replaces the snapshot.
+    CREATE TABLE IF NOT EXISTS extracted_conferences (
+      source_url TEXT PRIMARY KEY,
+      overview TEXT NOT NULL DEFAULT '{}',
+      call_for_papers TEXT NOT NULL DEFAULT '{}',
+      program_agenda TEXT NOT NULL DEFAULT '{}',
+      keynote_speakers TEXT NOT NULL DEFAULT '[]',
+      technical_committee TEXT NOT NULL DEFAULT '[]',
+      sponsors_exhibitors TEXT NOT NULL DEFAULT '[]',
+      venue_accommodation TEXT NOT NULL DEFAULT '{}',
+      community TEXT NOT NULL DEFAULT '{}',
+      extraction_metadata TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS conference_interest_actions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
