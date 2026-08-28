@@ -11,7 +11,7 @@ import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { postsRouter } from "./server/posts";
-import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
+import { initDb, dbGet, dbAll, dbRun, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
@@ -1554,6 +1554,39 @@ Return JSON with exactly this shape:
     return result;
   }
 
+  async function persistExtractedConference(sourceUrl: string, result: any): Promise<void> {
+    await dbRun(
+      `INSERT INTO extracted_conferences (
+         source_url, overview, call_for_papers, program_agenda, keynote_speakers,
+         technical_committee, sponsors_exhibitors, venue_accommodation, community,
+         extraction_metadata, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(source_url) DO UPDATE SET
+         overview = excluded.overview,
+         call_for_papers = excluded.call_for_papers,
+         program_agenda = excluded.program_agenda,
+         keynote_speakers = excluded.keynote_speakers,
+         technical_committee = excluded.technical_committee,
+         sponsors_exhibitors = excluded.sponsors_exhibitors,
+         venue_accommodation = excluded.venue_accommodation,
+         community = excluded.community,
+         extraction_metadata = excluded.extraction_metadata,
+         updated_at = datetime('now')`,
+      [
+        sourceUrl,
+        JSON.stringify(result.overview || {}),
+        JSON.stringify(result.call_for_papers || {}),
+        JSON.stringify(result.program_agenda || {}),
+        JSON.stringify(result.keynote_speakers || []),
+        JSON.stringify(result.technical_committee || []),
+        JSON.stringify(result.sponsors_exhibitors || []),
+        JSON.stringify(result.venue_accommodation || {}),
+        JSON.stringify(result.community || {}),
+        JSON.stringify(result.extraction_metadata || {}),
+      ]
+    );
+  }
+
   // The crawl walks the whole conference site, so it routinely outlives the request that started
   // it. A job holds the latest snapshot; the POST answers from the first snapshot and the client
   // polls the status route for the rest as more pages are read.
@@ -1790,6 +1823,7 @@ Return JSON with exactly this shape:
         result.extraction_metadata.official_site_unreachable = true;
         job.result = result;
         job.complete = true;
+        await persistExtractedConference(startUrl, result);
         extractionCache.set(startUrl, { data: result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
         job.signalFirstSnapshot();
         return;
@@ -2001,6 +2035,7 @@ Return JSON with exactly this shape:
 
     const result = buildExtractionResult(parsed, startUrl, coverage.pagesRead.length, true, coverage);
     result.sourcedFromOpenWeb = sourcedFromOpenWeb;
+    await persistExtractedConference(startUrl, result);
     job.result = result;
     job.complete = true;
     job.signalFirstSnapshot();
