@@ -1985,6 +1985,24 @@ Return JSON with exactly this shape:
 
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Conference Gate server running at http://localhost:${PORT}`);
+    // Which optional capabilities are actually active on this host. Every one of these degrades
+    // silently when its key or binary is missing, which is the right behaviour but leaves an
+    // operator with no way to tell a deliberate omission from a setting that didn't take. One
+    // line at boot answers that without having to reproduce a failure first.
+    const capability = (name: string, on: boolean, hint: string) =>
+      `  ${on ? "on " : "OFF"}  ${name}${on ? "" : ` — ${hint}`}`;
+    console.log(
+      [
+        "Extraction capabilities:",
+        capability("AI extraction", Boolean(process.env.GEMINI_API_KEY), "set GEMINI_API_KEY"),
+        capability("Live web search", Boolean(process.env.BRAVE_SEARCH_API_KEY), "set BRAVE_SEARCH_API_KEY"),
+        capability(
+          "Firecrawl (reads blocked / JavaScript-rendered sites)",
+          isFirecrawlConfigured(),
+          "set FIRECRAWL_API_KEY"
+        ),
+      ].join("\n")
+    );
   });
 
   // The extraction fallback keeps one Chromium alive between requests. Without this it would
