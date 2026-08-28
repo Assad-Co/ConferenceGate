@@ -6,7 +6,7 @@ import {
   Globe,
   Hotel,
   BookOpen,
-  Map,
+  Map as MapIcon,
   Loader2,
   AlertCircle,
   FileText,
@@ -505,7 +505,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                             </span>
                           </span>
                           <span className="flex items-center gap-1.5 text-slate-600">
-                            <Map className="w-3.5 h-3.5 text-rose-500" />
+                            <MapIcon className="w-3.5 h-3.5 text-rose-500" />
                             {conf.location.city}, {conf.location.country} ({conf.location.venue})
                           </span>
                         </div>
@@ -525,7 +525,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                             )}
                             {conf.hasCityMap && (
                               <span className="flex items-center gap-1">
-                                <Map className="w-3 h-3 text-blue-500" />
+                                <MapIcon className="w-3 h-3 text-blue-500" />
                                 City Map
                               </span>
                             )}
