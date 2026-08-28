@@ -2200,7 +2200,7 @@ Return JSON with exactly this shape:
         capability("AI extraction", Boolean(process.env.GEMINI_API_KEY), "set GEMINI_API_KEY"),
         capability("Live web search", Boolean(process.env.BRAVE_SEARCH_API_KEY), "set BRAVE_SEARCH_API_KEY"),
         capability(
-          "Firecrawl (reads blocked / JavaScript-rendered sites)",
+          "Advanced site reader (Firecrawl)",
           isFirecrawlConfigured(),
           "set FIRECRAWL_API_KEY"
         ),
