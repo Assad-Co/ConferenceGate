@@ -777,8 +777,12 @@ Return JSON with exactly this shape:
   // full-record schema was enough to push the model past Google's own deadline on real pages;
   // 25,000 still comfortably covers a long conference page including a CFP near the bottom.
   const MAX_PAGE_TEXT_CHARS = 25000;
-  const MODEL_RETRY_ATTEMPTS = 3;
-  const MODEL_RETRY_BASE_DELAY_MS = 1500;
+  // Flash-Lite is Google's low-latency document-parsing model. The former model repeatedly hit
+  // 40-second deadlines when several recovered pages were structured at once.
+  const EXTRACTION_MODEL = process.env.EXTRACTION_MODEL || "gemini-3.5-flash-lite";
+  const MODEL_RETRY_ATTEMPTS = 2;
+  const MODEL_RETRY_BASE_DELAY_MS = 1000;
+  const SECONDARY_MODEL_TIMEOUT_MS = 18000;
   // Google's own server-side deadline, rate limiting, and transient unavailability. These say
   // "ask again", not "this page is unreadable" — and treating them as the latter meant a page
   // that had already been fetched (sometimes at Firecrawl's expense) was thrown away over a
@@ -797,10 +801,12 @@ Return JSON with exactly this shape:
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     pageText: string,
     title: string,
-    pageUrl: string
+    pageUrl: string,
+    maxAttempts = MODEL_RETRY_ATTEMPTS,
+    timeoutMs = MODEL_CALL_TIMEOUT_MS
   ): Promise<string> {
     let lastError: any = null;
-    for (let attempt = 1; attempt <= MODEL_RETRY_ATTEMPTS; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         // A content-rich Wix/event page can exceed the model provider's deadline even though the
         // page itself was fetched successfully. Retrying the identical 25k payload repeats the
@@ -810,7 +816,7 @@ Return JSON with exactly this shape:
           attempt === 1 ? pageText : pageText.slice(0, attempt === 2 ? 15000 : 8000);
         const response = await withTimeout(
           ai.models.generateContent({
-            model: "gemini-3.6-flash",
+            model: EXTRACTION_MODEL,
             contents: buildExtractionPrompt(attemptText, title, pageUrl),
             config: {
               responseMimeType: "application/json",
@@ -820,16 +826,16 @@ Return JSON with exactly this shape:
               thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
             },
           }),
-          MODEL_CALL_TIMEOUT_MS,
+          timeoutMs,
           "Extraction model call"
         );
         return response.text || "{}";
       } catch (error) {
         lastError = error;
-        if (!isTransientModelError(error) || attempt === MODEL_RETRY_ATTEMPTS) break;
+        if (!isTransientModelError(error) || attempt === maxAttempts) break;
         const waitMs = MODEL_RETRY_BASE_DELAY_MS * attempt;
         console.warn(
-          `Extraction model call for ${pageUrl} failed transiently (attempt ${attempt}/${MODEL_RETRY_ATTEMPTS}), ` +
+          `Extraction model call for ${pageUrl} failed transiently (attempt ${attempt}/${maxAttempts}), ` +
             `retrying in ${waitMs}ms`
         );
         await new Promise((resolve) => setTimeout(resolve, waitMs));
@@ -850,6 +856,8 @@ Return JSON with exactly this shape:
     options: {
       allowFirecrawl?: boolean;
       prefetched?: Pick<FirecrawlBatchPage, "html" | "markdown">;
+      modelAttempts?: number;
+      modelTimeoutMs?: number;
     } = {}
   ): Promise<ExtractedPage | null> {
     if (!(await isSafeExternalUrl(pageUrl))) return null;
@@ -975,7 +983,14 @@ Return JSON with exactly this shape:
 
     let parsed: any = {};
     try {
-      const response = await callExtractionModel(ai, pageText, title, pageUrl);
+      const response = await callExtractionModel(
+        ai,
+        pageText,
+        title,
+        pageUrl,
+        options.modelAttempts,
+        options.modelTimeoutMs
+      );
       parsed = JSON.parse(response || "{}");
     } catch (e) {
       // The website was read successfully; only the structuring model failed. Never turn that
@@ -1020,7 +1035,11 @@ Return JSON with exactly this shape:
     const pages = await Promise.all(
       urls.map(async (url) => {
         try {
-          return await extractPage(ai, url, title, { allowFirecrawl: false });
+          return await extractPage(ai, url, title, {
+            allowFirecrawl: false,
+            modelAttempts: 1,
+            modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
+          });
         } catch (error) {
           console.error(`Fast page read failed for ${url}:`, error);
           return null;
@@ -1047,8 +1066,16 @@ Return JSON with exactly this shape:
           // A batch may omit one failed item. In that uncommon case keep the original
           // individually queued fallback, so batching improves speed without reducing coverage.
           pages[index] = prefetched
-            ? await extractPage(ai, url, title, { allowFirecrawl: false, prefetched })
-            : await extractPage(ai, url, title);
+            ? await extractPage(ai, url, title, {
+                allowFirecrawl: false,
+                prefetched,
+                modelAttempts: 1,
+                modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
+              })
+            : await extractPage(ai, url, title, {
+                modelAttempts: 1,
+                modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
+              });
         } catch (error) {
           console.error(`Blocked page extraction failed for ${url}:`, error);
           pages[index] = null;
@@ -1712,11 +1739,11 @@ Return JSON with exactly this shape:
   // The ceiling on how much of one site gets read. Generous because this now runs in the
   // background rather than under the user's spinner — the request returns as soon as the first
   // round lands, and everything after that is a progressive improvement to an already-usable page.
-  const MAX_TOTAL_PAGES = 60;
-  const MAX_PAGES_PER_ROUND = 8; // fetched concurrently, so this bounds one round's wall clock
-  // Raised alongside the per-call model timeout: a round is only as fast as its slowest page, so
-  // a budget shorter than a few model calls would cut the crawl off after one or two rounds.
-  const CRAWL_TIME_BUDGET_MS = 180000;
+  const MAX_TOTAL_PAGES = 35;
+  const MAX_PAGES_PER_ROUND = 7; // at most one high-value page per Conference Gate tab
+  // The client polls for two minutes. Finish before that ceiling so "checking" cannot remain
+  // indefinitely, while hub-first ordering still covers the site's useful conference sections.
+  const CRAWL_TIME_BUDGET_MS = 90000;
   // How many sitemap entries to consider. A conference site is rarely bigger than this, and
   // anything past it is almost always blog/news archive rather than event content.
   const MAX_SITEMAP_URLS = 120;
@@ -1736,21 +1763,59 @@ Return JSON with exactly this shape:
     return RELEVANT_LINK_CATEGORIES.filter((c) => CATEGORY_LINK_TEXT_RE[c].test(pathWords));
   }
 
-  // Pull one page for each Conference Gate tab to the front of a round before spending slots on
-  // a second agenda/session/speaker page. The remaining URLs stay queued for later rounds, so this
-  // changes time-to-first-useful-data without reducing whole-site coverage.
+  const HUB_PATH_RE: Record<RelevantLinkCategory, RegExp> = {
+    overview: /^\/(about|overview|event|conference|info(?:rmation)?)\/?$/i,
+    cfp: /^\/(call-for-(papers|abstracts)|cfp|submissions?|author-guidelines?)\/?$/i,
+    committee: /^\/(committee|committees|chairs|organizers?|organising-committee|program-committee)\/?$/i,
+    speakers: /^\/(speaker|speakers|keynote|keynotes|presenters?)\/?$/i,
+    sponsors: /^\/(sponsors?|partners?|exhibitors?)\/?$/i,
+    agenda: /^\/(program|programme|agenda|schedule|sessions?)\/?$/i,
+    venue: /^\/(venue|travel|accommodation|hotels?|location)\/?$/i,
+  };
+
+  function categoryPageScore(url: string, category: RelevantLinkCategory): number {
+    try {
+      const path = decodeURIComponent(new URL(url).pathname).replace(/\/$/, "") || "/";
+      const segments = path.split("/").filter(Boolean);
+      let score = HUB_PATH_RE[category].test(path) ? 200 : 40;
+      // WordPress taxonomy and individual profile pages are useful later, but the listing hubs
+      // contain far more tab data in one read and must win the first round.
+      if (/\/(program-(format|venue|day)|conference-speakers|gcc-partner)\//i.test(path)) score -= 120;
+      score -= segments.length * 8;
+      return score;
+    } catch {
+      return -1000;
+    }
+  }
+
+  // Select one strongest hub for each tab. Do not fill spare slots with several agenda taxonomy
+  // leaves: those delayed Speakers and Partners in production even though /program/, /speaker/
+  // and /partners/ were already mapped.
   function prioritizeTabCoverage(urls: string[], limit: number): string[] {
     const remaining = [...urls];
     const selected: string[] = [];
+
+    const rootIndex = remaining.findIndex((url) => {
+      try { return new URL(url).pathname === "/"; } catch { return false; }
+    });
+    if (rootIndex >= 0) selected.push(...remaining.splice(rootIndex, 1));
+
     for (const category of RELEVANT_LINK_CATEGORIES) {
-      const index = remaining.findIndex((url) => categoriesInUrlPath(url).includes(category));
-      if (index < 0) continue;
-      selected.push(remaining[index]);
-      remaining.splice(index, 1);
+      const candidates = remaining
+        .map((url, index) => ({ url, index, score: categoriesInUrlPath(url).includes(category) ? categoryPageScore(url, category) : -1000 }))
+        .filter((entry) => entry.score > -1000)
+        .sort((a, b) => b.score - a.score);
+      if (candidates.length === 0) continue;
+      const chosen = candidates[0];
+      selected.push(chosen.url);
+      remaining.splice(chosen.index, 1);
       if (selected.length >= limit) return selected;
     }
-    selected.push(...remaining.slice(0, Math.max(0, limit - selected.length)));
-    return selected;
+
+    // Neutral hub exploration is still needed on sites whose paths say nothing about their
+    // content, but two at a time keeps the first useful snapshot fast.
+    if (selected.length === 0) return remaining.slice(0, Math.min(2, limit));
+    return selected.slice(0, limit);
   }
 
   // How many outside pages to read when gathering a conference's details from sources other than
@@ -1804,11 +1869,21 @@ Return JSON with exactly this shape:
         const link = result.link;
         if (!link || candidates.includes(link)) continue;
         let host: string;
+        let pathName: string;
         try {
-          host = new URL(link).hostname.replace(/^www\./, "");
+          const parsedLink = new URL(link);
+          host = parsedLink.hostname.replace(/^www\./, "");
+          pathName = parsedLink.pathname;
         } catch {
           continue;
         }
+        // Search engines sometimes surface cookie/help infrastructure linked by the conference
+        // instead of an article about it. These pages caused the crawler to wander into Flickr
+        // and cookie-policy help while the real program and speakers were still waiting.
+        if (
+          /(^|\.)(cookiedatabase\.org|flickr\.com|flickrhelp\.com)$/i.test(host) ||
+          /\/(help|support|privacy|cookie|terms)(\/|$)/i.test(pathName)
+        ) continue;
         // The official site is what we already failed to read; re-reading it here would just
         // reproduce the same failure and spend the budget doing it.
         if (officialHost && (host === officialHost || host.endsWith(`.${officialHost}`))) continue;
@@ -1823,7 +1898,11 @@ Return JSON with exactly this shape:
     if (candidates.length === 0) return null;
 
     const toRead = candidates.slice(0, MAX_OFFSITE_PAGES);
-    const results = await Promise.allSettled(toRead.map((url) => extractPage(ai, url, name)));
+    const results = await Promise.allSettled(
+      toRead.map((url) =>
+        extractPage(ai, url, name, { modelAttempts: 1, modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS })
+      )
+    );
 
     let parsed: any = {};
     const sources: string[] = [];
@@ -1988,7 +2067,7 @@ Return JSON with exactly this shape:
     // Merged through the same path as every other page rather than used directly, so the page
     // that supplied each value is recorded for the starting page too.
     let parsed = mergeExtractionResults({}, primary.parsed, startUrl, primary.pageTitle);
-    const visited = new Set<string>([startUrl]);
+    const visited = new Set<string>([normalizedUrlKey(startUrl)]);
     let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: startUrl, ...primary }];
     let pagesFetched = 1;
     const crawlStartedAt = Date.now();
@@ -2011,13 +2090,15 @@ Return JSON with exactly this shape:
     // The site's own index of itself, fetched once up front. These seed the queue alongside the
     // links found by crawling, which is what lets the crawl reach pages the front page never
     // linked to at all.
-    let sitemapUrls = (await fetchSitemapUrls(startUrl, MAX_SITEMAP_URLS)).filter((u) => !visited.has(u));
+    let sitemapUrls = (await fetchSitemapUrls(startUrl, MAX_SITEMAP_URLS)).filter(
+      (u) => !visited.has(normalizedUrlKey(u))
+    );
     // Plenty of conference sites publish no sitemap at all, which leaves whole sections reachable
     // only if something happens to link to them. Firecrawl can enumerate a site's URLs directly,
     // so it stands in when there's no sitemap to read — one call, and only when actually needed.
     if (sitemapUrls.length === 0 && isFirecrawlConfigured()) {
       const mapped = await firecrawlMapSite(startUrl, MAX_SITEMAP_URLS);
-      sitemapUrls = mapped.filter((u) => !visited.has(u) && !NON_PAGE_EXT_RE.test(u));
+      sitemapUrls = mapped.filter((u) => !visited.has(normalizedUrlKey(u)) && !NON_PAGE_EXT_RE.test(u));
       if (sitemapUrls.length > 0) {
         console.log(`Firecrawl mapped ${sitemapUrls.length} URLs for ${startUrl} (site publishes no sitemap)`);
       }
@@ -2050,9 +2131,11 @@ Return JSON with exactly this shape:
       const remainder: string[] = [];
       const proposed = new Set<string>();
       const consider = (url: string, tier: string[]) => {
-        if (!url || visited.has(url) || proposed.has(url)) return;
-        proposed.add(url);
-        tier.push(url);
+        if (!url) return;
+        const normalized = normalizedUrlKey(url);
+        if (visited.has(normalized) || proposed.has(normalized)) return;
+        proposed.add(normalized);
+        tier.push(normalized);
       };
 
       // Ahead of everything else: the pages above the one we started on. When a search result
