@@ -14,6 +14,8 @@
 // installed on the host, no sandbox permissions) it disables itself after one attempt and the
 // extraction carries on exactly as it did before.
 
+import { existsSync, readdirSync } from "fs";
+import { join } from "path";
 import type { Browser } from "playwright-core";
 import { isSafeExternalUrl } from "./urlSafety";
 
@@ -30,25 +32,73 @@ const SETTLE_AFTER_LOAD_MS = 1200;
 let browserPromise: Promise<Browser | null> | null = null;
 let unavailableReason: string | null = null;
 
+// Every place a usable Chromium might be, in order of preference. playwright-core pins one exact
+// build and refuses anything else, which is too brittle to rely on alone: a host may have Chromium
+// from its package manager, from a container base image, or from a playwright install of a
+// different version. Any of those renders a page perfectly well, so all of them are tried.
+function chromiumCandidates(): Array<string | undefined> {
+  const candidates: Array<string | undefined> = [];
+  if (process.env.PLAYWRIGHT_CHROMIUM_PATH) candidates.push(process.env.PLAYWRIGHT_CHROMIUM_PATH);
+  // `undefined` means "let playwright-core use the build it manages" — correct whenever the
+  // installed version does match its pin.
+  candidates.push(undefined);
+
+  // Any playwright-managed build under PLAYWRIGHT_BROWSERS_PATH, newest first, including ones
+  // whose version differs from what this playwright-core pins.
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (browsersPath) {
+    try {
+      const builds = readdirSync(browsersPath)
+        .filter((name) => name.startsWith("chromium"))
+        .sort()
+        .reverse();
+      for (const build of builds) {
+        candidates.push(join(browsersPath, build, "chrome-linux", "chrome"));
+        candidates.push(join(browsersPath, build, "chrome-linux", "headless_shell"));
+      }
+    } catch {
+      // No such directory — nothing to add.
+    }
+  }
+
+  // A system-installed browser, which is how most container images provide one.
+  candidates.push(
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable"
+  );
+  return candidates;
+}
+
 async function launchBrowser(): Promise<Browser | null> {
+  let lastError: unknown = null;
   try {
     const { chromium } = await import("playwright-core");
-    // PLAYWRIGHT_BROWSERS_PATH (or an explicit override) tells playwright-core where the binary
-    // lives; without either it throws, which is caught below and disables rendering for good.
-    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
-    return await chromium.launch({
-      executablePath,
-      args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    });
-  } catch (error: any) {
-    unavailableReason = error?.message || String(error);
-    console.error(
-      "Browser rendering unavailable — falling back to plain HTTP fetch only. " +
-        "Install it with `npx playwright install chromium` to read JavaScript-rendered or " +
-        `bot-protected conference sites. Reason: ${unavailableReason}`
-    );
-    return null;
+    for (const executablePath of chromiumCandidates()) {
+      // Skip a path that plainly isn't there rather than paying a launch timeout to find out.
+      if (executablePath && !existsSync(executablePath)) continue;
+      try {
+        return await chromium.launch({
+          executablePath,
+          args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  } catch (error) {
+    lastError = error;
   }
+
+  unavailableReason = (lastError as any)?.message || String(lastError) || "no Chromium found";
+  console.error(
+    "Browser rendering unavailable — falling back to plain HTTP fetch only. " +
+      "Conference sites that are bot-protected or built in JavaScript will not be readable. " +
+      "Install a browser with `npm run install:browser`, or point PLAYWRIGHT_CHROMIUM_PATH at an " +
+      `existing one. Reason: ${unavailableReason}`
+  );
+  return null;
 }
 
 function getBrowser(): Promise<Browser | null> {
