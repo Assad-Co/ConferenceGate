@@ -436,9 +436,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'overview', label: 'Overview' },
               { id: 'cfp', label: 'Call for Papers' },
               { id: 'agenda', label: 'Program & Agenda' },
-              { id: 'speakers', label: loading ? 'Keynote Speakers' : `Keynote Speakers (${data?.speakers.length || 0})` },
+              { id: 'speakers', label: loading || !data?.crawlComplete
+                ? 'Keynote Speakers (checking…)'
+                : data.fetchFailed
+                  ? 'Keynote Speakers (not retrieved)'
+                  : `Keynote Speakers (${data.speakers.length})` },
               { id: 'committee', label: 'Technical Committee' },
-              { id: 'sponsors', label: loading ? 'Sponsors & Exhibitors' : `Sponsors & Exhibitors (${data?.sponsors.length || 0})` },
+              { id: 'sponsors', label: loading || !data?.crawlComplete
+                ? 'Sponsors & Exhibitors (checking…)'
+                : data.fetchFailed
+                  ? 'Sponsors & Exhibitors (not retrieved)'
+                  : `Sponsors & Exhibitors (${data.sponsors.length})` },
               { id: 'venue', label: 'Venue & Accommodation' },
               { id: 'community', label: 'Community' },
             ] as { id: ExternalDetailTab; label: string }[]
