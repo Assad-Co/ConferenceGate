@@ -254,6 +254,7 @@ export async function initDb(): Promise<void> {
       technical_committee TEXT NOT NULL DEFAULT '[]',
       sponsors_exhibitors TEXT NOT NULL DEFAULT '[]',
       venue_accommodation TEXT NOT NULL DEFAULT '{}',
+      fees_pricing TEXT NOT NULL DEFAULT '{}',
       community TEXT NOT NULL DEFAULT '{}',
       extraction_metadata TEXT NOT NULL DEFAULT '{}',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -411,6 +412,11 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  const extractedConferenceColumns = await tableColumns("extracted_conferences");
+  if (!extractedConferenceColumns.some((c) => c.name === "fees_pricing")) {
+    await db.executeMultiple("ALTER TABLE extracted_conferences ADD COLUMN fees_pricing TEXT NOT NULL DEFAULT '{}';");
+  }
 
   const submissionColumns = await tableColumns("submissions");
   if (!submissionColumns.some((c) => c.name === "revisions_count")) {

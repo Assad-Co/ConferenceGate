@@ -72,7 +72,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
   onToggleFollow,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'cfp' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
+    'overview' | 'cfp' | 'fees' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
   >('overview');
   const registeredPackage = registeredPackageId;
   const saved = isSaved;
@@ -214,6 +214,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
           {[
             { id: 'overview', label: 'Overview' },
             { id: 'cfp', label: `Call for Papers (${conference.cfpStatus})` },
+            { id: 'fees', label: `Fees & Pricing (${conference.registrationPackages.length})` },
             { id: 'agenda', label: 'Program & Agenda' },
             { id: 'speakers', label: `Keynote Speakers (${conference.speakers.length})` },
             { id: 'committee', label: 'Technical Committee' },
@@ -292,9 +293,38 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               </div>
             </div>
 
-            {/* Registration Packages Card */}
-            <div className="pt-6 border-t border-slate-100 space-y-4">
-              <h3 className="text-lg font-bold text-slate-900">Registration Packages</h3>
+
+          </div>
+        )}
+
+        {activeTab === 'fees' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Conference registration</p>
+                <h3 className="text-lg font-bold text-slate-900">Fees & Pricing</h3>
+              </div>
+              <div className="sm:text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published price range</div>
+                <div className="text-sm font-bold text-slate-900">${conference.priceRange || 'See registration packages'}</div>
+              </div>
+            </div>
+
+            {conference.earlyBirdDeadline && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+                <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                <p className="text-xs text-amber-900">
+                  Early-bird registration deadline: <strong>${conference.earlyBirdDeadline}</strong>
+                </p>
+              </div>
+            )}
+
+            {(conference.registrationPackages || []).length === 0 ? (
+              <EmptyDetailState
+                message="Registration prices have not been published on Conference Gate yet."
+                officialWebsite={conference.officialWebsite}
+              />
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {(conference.registrationPackages || []).map((pkg) => (
                   <div
@@ -306,14 +336,17 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                     }`}
                   >
                     <div className="space-y-3">
-                      <h4 className="font-bold text-sm text-slate-900">{pkg.name}</h4>
+                      <h4 className="font-bold text-sm text-slate-900">${pkg.name}</h4>
                       <div className="text-2xl font-extrabold text-blue-700">${pkg.price}</div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{pkg.description}</p>
+                      <p className="text-xs text-slate-600 leading-relaxed">${pkg.description}</p>
+                      {pkg.earlyBirdDeadline && (
+                        <p className="text-[11px] font-semibold text-amber-700">Early bird until ${pkg.earlyBirdDeadline}</p>
+                      )}
                       <ul className="space-y-1.5 pt-2 text-xs text-slate-700">
                         {(pkg.features || []).map((feat, idx) => (
                           <li key={idx} className="flex items-center gap-1.5 text-[11px]">
                             <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                            <span>{feat}</span>
+                            <span>${feat}</span>
                           </li>
                         ))}
                       </ul>
@@ -332,7 +365,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         )}
 

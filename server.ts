@@ -517,7 +517,7 @@ Provide constructive feedback in JSON format with fields:
     return links;
   }
 
-  const RELEVANT_LINK_CATEGORIES = ["overview", "cfp", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
+  const RELEVANT_LINK_CATEGORIES = ["overview", "cfp", "fees", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
   type RelevantLinkCategory = (typeof RELEVANT_LINK_CATEGORIES)[number];
 
   // A deterministic link-text backstop for every category, not just CFP and committee. The model's
@@ -528,6 +528,7 @@ Provide constructive feedback in JSON format with fields:
   const CATEGORY_LINK_TEXT_RE: Record<RelevantLinkCategory, RegExp> = {
     overview: /\b(about|overview|event (information|details|info)|the event|why attend|general info(rmation)?)\b/i,
     cfp: CFP_LINK_TEXT_RE,
+    fees: /\b(registration|register|fees?|pricing|prices?|tickets?|rates?|early[ -]?bird)\b/i,
     committee: COMMITTEE_LINK_TEXT_RE,
     speakers: /\b(speakers?|keynotes?|faculty|presenters?|panelists?|lineup|who's speaking)\b/i,
     sponsors: /\b(sponsors?|sponsorship|exhibitors?|exhibit|partners?|supporters?|our partners)\b/i,
@@ -650,7 +651,7 @@ fieldConfidence records how firmly the page supports each value you filled in. I
   "Low"    — the page strongly implies it without saying it outright.
 If something is only a guess, do not fill the field at all — null is always better than a low-confidence invention. Judge each field on this page's own wording, not on how plausible the value seems in general.
 
-Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information, (g) a general "About"/"Overview"/"About the Conference" page describing what the conference itself is about, if this page doesn't already describe that well. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
+Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information, (g) a general "About"/"Overview"/"About the Conference" page describing what the conference itself is about, if this page doesn't already describe that well, (h) registration, fees, ticketing, pricing, or early-bird rates. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
 
 Page title: "${title}"
 Page URL: "${pageUrl}"
@@ -713,6 +714,7 @@ Return JSON with exactly this shape:
   "relevantLinks": {
     "overview": string | null,
     "cfp": string | null,
+    "fees": string | null,
     "committee": string | null,
     "speakers": string | null,
     "sponsors": string | null,
@@ -1667,6 +1669,12 @@ Return JSON with exactly this shape:
       website: x.website || null,
       source_url: recordSource(x, "sponsors"),
     }));
+    result.fees_pricing = {
+      registration_url: result.registrationUrl,
+      registration_fees: result.registrationFees.map((x: any) => ({ ...x, source_url: recordSource(x, "registrationFees") })),
+      early_bird_deadline: result.earlyBirdDeadline,
+      source_url: sourceFor("registrationFees"),
+    };
     result.venue_accommodation = {
       venue_name: result.venueName,
       address: result.venueAddress,
@@ -1693,9 +1701,9 @@ Return JSON with exactly this shape:
     await dbRun(
       `INSERT INTO extracted_conferences (
          source_url, overview, call_for_papers, program_agenda, keynote_speakers,
-         technical_committee, sponsors_exhibitors, venue_accommodation, community,
+         technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing, community,
          extraction_metadata, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(source_url) DO UPDATE SET
          overview = excluded.overview,
          call_for_papers = excluded.call_for_papers,
@@ -1704,6 +1712,7 @@ Return JSON with exactly this shape:
          technical_committee = excluded.technical_committee,
          sponsors_exhibitors = excluded.sponsors_exhibitors,
          venue_accommodation = excluded.venue_accommodation,
+         fees_pricing = excluded.fees_pricing,
          community = excluded.community,
          extraction_metadata = excluded.extraction_metadata,
          updated_at = datetime('now')`,
@@ -1716,6 +1725,7 @@ Return JSON with exactly this shape:
         JSON.stringify(result.technical_committee || []),
         JSON.stringify(result.sponsors_exhibitors || []),
         JSON.stringify(result.venue_accommodation || {}),
+        JSON.stringify(result.fees_pricing || {}),
         JSON.stringify(result.community || {}),
         JSON.stringify(result.extraction_metadata || {}),
       ]
@@ -1740,7 +1750,7 @@ Return JSON with exactly this shape:
   // background rather than under the user's spinner — the request returns as soon as the first
   // round lands, and everything after that is a progressive improvement to an already-usable page.
   const MAX_TOTAL_PAGES = 35;
-  const MAX_PAGES_PER_ROUND = 7; // at most one high-value page per Conference Gate tab
+  const MAX_PAGES_PER_ROUND = 8; // at most one high-value page per Conference Gate tab
   // The client polls for two minutes. Finish before that ceiling so "checking" cannot remain
   // indefinitely, while hub-first ordering still covers the site's useful conference sections.
   const CRAWL_TIME_BUDGET_MS = 90000;
@@ -1766,6 +1776,7 @@ Return JSON with exactly this shape:
   const HUB_PATH_RE: Record<RelevantLinkCategory, RegExp> = {
     overview: /^\/(about|overview|event|conference|info(?:rmation)?)\/?$/i,
     cfp: /^\/(call-for-(papers|abstracts)|cfp|submissions?|author-guidelines?)\/?$/i,
+    fees: /^\/(registration|register|fees?|pricing|tickets?|rates?)\/?$/i,
     committee: /^\/(committee|committees|chairs|organizers?|organising-committee|program-committee)\/?$/i,
     speakers: /^\/(speaker|speakers|keynote|keynotes|presenters?)\/?$/i,
     sponsors: /^\/(sponsors?|partners?|exhibitors?)\/?$/i,
@@ -2042,6 +2053,7 @@ Return JSON with exactly this shape:
         technical_committee: [],
         sponsors_exhibitors: [],
         venue_accommodation: {},
+        fees_pricing: {},
         community: {},
         extraction_metadata: {
           status: "website_unreachable",
@@ -2116,6 +2128,7 @@ Return JSON with exactly this shape:
       const emptyByCategory: Record<RelevantLinkCategory, boolean> = {
         overview: isOverviewMissing(parsed),
         cfp: isCfpMissing(parsed),
+        fees: !(parsed.registrationUrl || parsed.earlyBirdDeadline || asArray(parsed.registrationFees).length > 0),
         committee: isCommitteeMissing(parsed),
         speakers: isSpeakersMissing(parsed),
         sponsors: isSponsorsMissing(parsed),

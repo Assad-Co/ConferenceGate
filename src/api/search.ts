@@ -178,6 +178,11 @@ export interface ExtractedConferenceDetails {
   technical_committee?: any[];
   sponsors_exhibitors?: any[];
   venue_accommodation?: Record<string, any>;
+  fees_pricing?: {
+    registration_url?: string | null;
+    registration_fees?: RegistrationFee[];
+    early_bird_deadline?: string | null;
+  };
   community?: Record<string, any>;
   extraction_metadata?: Record<string, any>;
 }
@@ -245,6 +250,7 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
   const cfp = data?.call_for_papers || {};
   const program = data?.program_agenda || {};
   const venue = data?.venue_accommodation || {};
+  const fees = data?.fees_pricing || {};
   const community = data?.community || {};
   const speakers = Array.isArray(data?.keynote_speakers) ? data.keynote_speakers : data?.speakers;
   const committee = Array.isArray(data?.technical_committee) ? data.technical_committee : data?.committee;
@@ -264,6 +270,9 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
     topics: overview.topics ?? data?.topics ?? [],
     contactEmail: overview.contact_email ?? data?.contactEmail ?? null,
     importantDates: overview.important_dates ?? data?.importantDates ?? [],
+    registrationUrl: fees.registration_url ?? data?.registrationUrl ?? null,
+    registrationFees: fees.registration_fees ?? data?.registrationFees ?? [],
+    earlyBirdDeadline: fees.early_bird_deadline ?? data?.earlyBirdDeadline ?? null,
     cfpStatus: cfp.status ?? data?.cfpStatus ?? null,
     cfpDeadline: cfp.abstract_submission_deadline ?? data?.cfpDeadline ?? null,
     cfpNotificationDate: cfp.notification_date ?? data?.cfpNotificationDate ?? null,
