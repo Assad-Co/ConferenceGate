@@ -22,6 +22,33 @@ function isConfigured() {
   return !!process.env.BRAVE_SEARCH_API_KEY;
 }
 
+// Brave's plan also caps requests per second, separate from (and much stricter than) the monthly
+// quota above — a burst of calls fired together (e.g. Discover's default view searching several
+// subjects at once) hits that ceiling immediately and every one of them comes back as "Request
+// rate limit exceeded for plan", not just the ones past some soft threshold. Every outbound Brave
+// request goes through this queue so a burst is spread out instead of sent all at once, the same
+// pattern already used for Firecrawl's own per-second limit.
+const BRAVE_MIN_START_INTERVAL_MS = 1100;
+let braveQueue: Promise<void> = Promise.resolve();
+let nextBraveStartAt = 0;
+
+async function scheduleBraveRequest<T>(request: () => Promise<T>): Promise<T> {
+  const previous = braveQueue;
+  let release!: () => void;
+  braveQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  const waitMs = Math.max(0, nextBraveStartAt - Date.now());
+  if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+  try {
+    return await request();
+  } finally {
+    nextBraveStartAt = Date.now() + BRAVE_MIN_START_INTERVAL_MS;
+    release();
+  }
+}
+
 // Brave highlights matched keywords with <strong> tags and HTML-escapes entities in the
 // title/description fields — strip that markup so plain text reaches the client.
 function decodeHtmlEntities(text: string): string {
@@ -278,12 +305,14 @@ export async function searchConferences(query: string): Promise<LiveSearchResult
   url.searchParams.set("q", toConferenceQuery(query));
   url.searchParams.set("count", "20");
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Accept: "application/json",
-      "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
-    },
-  });
+  const res = await scheduleBraveRequest(() =>
+    fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
+      },
+    })
+  );
   const rawText = await res.text();
   let body: any = {};
   try {
@@ -334,10 +363,12 @@ export async function searchWebForConferenceFacts(query: string, count = 8): Pro
   url.searchParams.set("count", String(Math.min(Math.max(count, 1), 20)));
 
   try {
-    const res = await fetch(url.toString(), {
-      headers: { Accept: "application/json", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY! },
-      signal: AbortSignal.timeout(10000),
-    });
+    const res = await scheduleBraveRequest(() =>
+      fetch(url.toString(), {
+        headers: { Accept: "application/json", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY! },
+        signal: AbortSignal.timeout(10000),
+      })
+    );
     if (!res.ok) return [];
     const body = await res.json().catch(() => ({}));
     const results: LiveSearchResult[] = (body.web?.results || []).map((item: any) => ({
