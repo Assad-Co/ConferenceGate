@@ -1166,15 +1166,10 @@ export function App() {
     }
   };
 
-  const handleAddPost = (content: string) => {
-    createPostApi({ content, postType: 'announcement' })
-      .then((post) => {
-        setPosts((prev) => [post, ...prev]);
-        showToast({ type: 'success', title: 'Update posted', message: 'Your update is now live on the conference feed.' });
-      })
-      .catch((e) => {
-        showToast({ type: 'info', title: "Couldn't post update", message: e instanceof Error ? e.message : 'Please try again.' });
-      });
+  const handleAddPost = async (content: string) => {
+    const post = await createPostApi({ content, postType: 'announcement' });
+    setPosts((prev) => [post, ...prev]);
+    showToast({ type: 'success', title: 'Update posted', message: 'Your conference update is now live in the feed.' });
   };
 
   const handleReactToPost = (postId: string, reaction: ReactionType) => {

@@ -10,6 +10,48 @@ postsRouter.use(requireAuth);
 const REACTION_TYPES = ["like", "celebrate", "insightful", "kudos"] as const;
 type ReactionType = (typeof REACTION_TYPES)[number];
 
+const STRUCTURED_CONFERENCE_POST_TYPES = new Set([
+  "achievement",
+  "cfp",
+  "speaker",
+  "sponsorship",
+  "review",
+  "celebration",
+]);
+
+const DIRECT_CONFERENCE_TERMS =
+  /\b(conferences?|congress(?:es)?|symposi(?:um|a)|summits?|conventions?|scientific meetings?|academic events?|call[ -]?for[ -]?papers?|cfp|abstracts?|manuscripts?|paper submissions?|submission deadlines?|camera[ -]?ready|proceedings)\b/i;
+const CONFERENCE_ACTIVITY_TERMS =
+  /\b(keynotes?|plenary|invited speakers?|speakers?|sessions?|workshops?|tutorials?|panels?|program(?:me)?|agenda|committees?|chairs?|reviewers?|peer review|venues?|registrations?|sponsors?|exhibitors?|posters?|presentations?|tracks?|acceptance|accepted|deadlines?)\b/i;
+
+function meaningfulWordCount(text: string): number {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.replace(/[^\p{L}\p{N}]/gu, "").length >= 2).length;
+}
+
+function isConferencePostContent(
+  content: string,
+  postType?: string | null,
+  conferenceTitle?: string | null,
+  conferenceId?: string | null
+): boolean {
+  if (meaningfulWordCount(content) < 2) return false;
+  if (DIRECT_CONFERENCE_TERMS.test(content) || CONFERENCE_ACTIVITY_TERMS.test(content)) return true;
+  return Boolean(
+    STRUCTURED_CONFERENCE_POST_TYPES.has(postType || "") &&
+      (conferenceTitle?.trim() || conferenceId?.trim())
+  );
+}
+
+function isConferenceComment(text: string): boolean {
+  return (
+    meaningfulWordCount(text) >= 2 &&
+    (DIRECT_CONFERENCE_TERMS.test(text) || CONFERENCE_ACTIVITY_TERMS.test(text))
+  );
+}
+
 function reactionCountKey(reaction: ReactionType): "likes" | "celebrates" | "insightful" | "kudos" {
   return reaction === "like" ? "likes" : reaction === "celebrate" ? "celebrates" : reaction;
 }
@@ -29,10 +71,11 @@ async function toPostDTO(row: PostRow, viewerId: string) {
     [row.id, viewerId]
   );
 
-  const commentsCountRow = (await dbGet<{ count: number }>(
-    "SELECT COUNT(*) as count FROM post_comments WHERE post_id = ?",
+  const commentRows = await dbAll<{ text: string }>(
+    "SELECT text FROM post_comments WHERE post_id = ?",
     [row.id]
-  ))!;
+  );
+  const commentsCount = commentRows.filter((comment) => isConferenceComment(comment.text)).length;
 
   const repostsCountRow = (await dbGet<{ count: number }>(
     "SELECT COUNT(*) as count FROM post_reposts WHERE post_id = ?",
@@ -64,7 +107,7 @@ async function toPostDTO(row: PostRow, viewerId: string) {
     celebrationHeadline: row.celebration_headline || undefined,
     reactions,
     userReaction: myReactionRow?.reaction,
-    commentsCount: commentsCountRow.count,
+    commentsCount,
     repostsCount: repostsCountRow.count,
     isReposted: !!myRepost,
     isSaved: !!mySave,
@@ -76,8 +119,13 @@ async function toPostDTO(row: PostRow, viewerId: string) {
 postsRouter.get(
   "/",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const rows = await dbAll<PostRow>("SELECT * FROM posts ORDER BY created_at DESC LIMIT 100");
-    const posts = await Promise.all(rows.map((row) => toPostDTO(row, req.userId!)));
+    const rows = await dbAll<PostRow>("SELECT * FROM posts ORDER BY created_at DESC LIMIT 300");
+    const relevantRows = rows
+      .filter((row) =>
+        isConferencePostContent(row.content, row.post_type, row.conference_title, row.conference_id)
+      )
+      .slice(0, 100);
+    const posts = await Promise.all(relevantRows.map((row) => toPostDTO(row, req.userId!)));
     res.json({ posts });
   })
 );
@@ -92,6 +140,15 @@ postsRouter.post(
 
     const me = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]))!;
     const postType = typeof body.postType === "string" ? body.postType : "announcement";
+    const conferenceTitle = typeof body.conferenceTitle === "string" ? body.conferenceTitle : null;
+    const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId : null;
+
+    if (!isConferencePostContent(body.content, postType, conferenceTitle, conferenceId)) {
+      return res.status(422).json({
+        error:
+          "Only conference-related posts are allowed. Mention a conference, call for papers, abstract, submission, program, speaker, committee, venue, or related conference activity.",
+      });
+    }
 
     const id = `post_${crypto.randomUUID()}`;
     await dbRun(
@@ -109,8 +166,8 @@ postsRouter.post(
         typeof body.authorUserId === "string" ? body.authorUserId : body.authorName ? null : req.userId!,
         body.content.trim(),
         postType,
-        typeof body.conferenceId === "string" ? body.conferenceId : null,
-        typeof body.conferenceTitle === "string" ? body.conferenceTitle : null,
+        conferenceId,
+        conferenceTitle,
         typeof body.celebrationKind === "string" ? body.celebrationKind : null,
         typeof body.celebrationHeadline === "string" ? body.celebrationHeadline : null,
       ]
@@ -168,14 +225,16 @@ postsRouter.get(
       [req.params.id]
     );
     res.json({
-      comments: rows.map((r) => ({
-        id: r.id,
-        authorId: r.author_id,
-        authorName: r.name,
-        authorAvatar: r.avatar || "",
-        text: r.text,
-        timestamp: r.created_at,
-      })),
+      comments: rows
+        .filter((r) => isConferenceComment(r.text))
+        .map((r) => ({
+          id: r.id,
+          authorId: r.author_id,
+          authorName: r.name,
+          authorAvatar: r.avatar || "",
+          text: r.text,
+          timestamp: r.created_at,
+        })),
     });
   })
 );
@@ -186,6 +245,12 @@ postsRouter.post(
     const text = req.body?.text;
     if (typeof text !== "string" || !text.trim()) {
       return res.status(400).json({ error: "text is required" });
+    }
+    if (!isConferenceComment(text)) {
+      return res.status(422).json({
+        error:
+          "Comments must be about conferences, calls for papers, abstracts, submissions, programs, speakers, committees, venues, or related conference activity.",
+      });
     }
     const post = await dbGet<PostRow>("SELECT id FROM posts WHERE id = ?", [req.params.id]);
     if (!post) {

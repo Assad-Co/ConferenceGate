@@ -124,12 +124,19 @@ export const CelebrationPostCard: React.FC<CelebrationPostCardProps> = ({
   const handleAddComment = async () => {
     const text = commentDraft.trim();
     if (!text || !onAddComment || !onFetchComments) return;
-    setCommentDraft('');
     try {
       await onAddComment(post.id, text);
+      setCommentDraft('');
       setComments(await onFetchComments(post.id));
-    } catch {
-      showToast({ type: 'info', title: "Couldn't post comment", message: 'Please try again.' });
+    } catch (error) {
+      showToast({
+        type: 'info',
+        title: "Couldn't post comment",
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Comments must be about conferences, calls for papers, or abstracts.',
+      });
     }
   };
 
@@ -370,7 +377,7 @@ export const CelebrationPostCard: React.FC<CelebrationPostCardProps> = ({
                       handleAddComment();
                     }
                   }}
-                  placeholder="Add a comment..."
+                  placeholder="Comment about the conference, CFP, or abstract..."
                   className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-full text-[11px] focus:outline-hidden"
                 />
                 <button

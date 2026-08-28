@@ -26,7 +26,7 @@ import { useToast } from './Toast';
 
 interface CommunityFeedProps {
   posts?: Post[];
-  onAddPost: (postText: string) => void;
+  onAddPost: (postText: string) => Promise<void> | void;
   onReact: (postId: string, reaction: ReactionType) => void;
   onToggleRepost: (postId: string) => void;
   onToggleSave: (postId: string) => void;
@@ -65,6 +65,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 }) => {
   const [newPostText, setNewPostText] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [reactionPickerOpenId, setReactionPickerOpenId] = useState<string | null>(null);
   const [expandedPostIds, setExpandedPostIds] = useState<Record<string, boolean>>({});
   const [commentBoxOpenIds, setCommentBoxOpenIds] = useState<Record<string, boolean>>({});
@@ -78,12 +79,26 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const composerAvatar = userProfile?.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80';
   const composerName = userProfile?.name || 'You';
 
-  const handleSubmitPost = (e: React.FormEvent) => {
+  const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPostText.trim()) return;
-    onAddPost(newPostText);
-    setNewPostText('');
-    setComposerOpen(false);
+    if (!newPostText.trim() || isPosting) return;
+    setIsPosting(true);
+    try {
+      await onAddPost(newPostText);
+      setNewPostText('');
+      setComposerOpen(false);
+    } catch (error) {
+      showToast({
+        type: 'info',
+        title: "Couldn't post update",
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Only conference-related posts, calls for papers, and abstract discussions are allowed.',
+      });
+    } finally {
+      setIsPosting(false);
+    }
   };
 
   const toggleComments = async (postId: string) => {
@@ -126,13 +141,20 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const handleAddComment = async (postId: string) => {
     const text = (commentDrafts[postId] || '').trim();
     if (!text) return;
-    setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
     try {
       await onAddComment(postId, text);
+      setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
       const comments = await onFetchComments(postId);
       setLoadedComments((prev) => ({ ...prev, [postId]: comments }));
-    } catch {
-      showToast({ type: 'info', title: "Couldn't post comment", message: 'Please try again.' });
+    } catch (error) {
+      showToast({
+        type: 'info',
+        title: "Couldn't post comment",
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Comments must be about conferences, calls for papers, or abstracts.',
+      });
     }
   };
 
@@ -148,8 +170,8 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             Conference Community & Discussions
           </h1>
           <p className="text-xs text-slate-500">
-            Announce paper acceptances, share call-for-papers alerts, or celebrate committee milestones with the real
-            Conference Gate community — every post, reaction, and comment here is tied to a registered account.
+            Only conference-related discussions are shown here: conferences, calls for papers, abstracts, submissions,
+            programs, speakers, committees, venues, and related professional activity.
           </p>
         </div>
       </div>
@@ -170,7 +192,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 onClick={() => setComposerOpen(true)}
                 className="flex-1 text-left px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full text-xs text-slate-500 font-medium transition-colors cursor-pointer"
               >
-                Start a post — announce paper acceptance, share slides, or ask a technical question...
+                Start a conference post — share a call for papers, abstract update, deadline, or program news...
               </button>
             )}
           </div>
@@ -182,7 +204,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                 rows={4}
                 value={newPostText}
                 onChange={(e) => setNewPostText(e.target.value)}
-                placeholder="Announce paper acceptance, share session slides, or ask technical questions..."
+                placeholder="Share conference news, a call for papers, abstract update, deadline, speaker, or program..."
                 className="w-full p-3 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs focus:outline-hidden leading-relaxed"
               ></textarea>
 
@@ -214,11 +236,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={!newPostText.trim()}
+                    disabled={!newPostText.trim() || isPosting}
                     className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-full shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Post</span>
+                    <span>{isPosting ? 'Checking…' : 'Post'}</span>
                   </button>
                 </div>
               </div>
@@ -509,7 +531,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                             handleAddComment(post.id);
                           }
                         }}
-                        placeholder="Add a comment..."
+                        placeholder="Comment about the conference, CFP, or abstract..."
                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-full text-[11px] focus:outline-hidden"
                       />
                       <button
