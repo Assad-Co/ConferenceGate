@@ -34,11 +34,29 @@ interface DiscoveryEngineProps {
   onToggleFollow?: (conferenceId: string) => void;
 }
 
-// A single fixed seed query keeps the default (no-search-term) view populated with real,
-// current results — and since it's the same query for every visitor, the server's hourly
-// cache means it costs at most one live search per hour, not one per page load. The year is
-// computed at load time so this keeps naming the actual current year, not a stale one.
-const DEFAULT_DISCOVER_QUERY = `upcoming technology and industry conference ${new Date().getFullYear()}`;
+// The default (no-search-term) view used to run one fixed query biased toward "technology and
+// industry", which is one subject among many, not "all subjects" — a reader who never types
+// anything only ever saw tech conferences. Querying a broad spread of subjects in parallel and
+// merging the results instead surfaces the largest, most varied set Discover can honestly show
+// without the reader having to already know what to search for. Each subject is still the same
+// query for every visitor, so the server's hourly cache means this costs at most one live search
+// per subject per hour, not one per page load. The year is computed at load time so these keep
+// naming the actual current year, not a stale one.
+const DEFAULT_DISCOVER_SUBJECTS = [
+  'technology and industry',
+  'medical and healthcare',
+  'business and finance',
+  'engineering',
+  'science and research',
+  'environmental and sustainability',
+  'education',
+  'law and policy',
+  'arts and humanities',
+  'energy',
+];
+const DEFAULT_DISCOVER_QUERIES = DEFAULT_DISCOVER_SUBJECTS.map(
+  (subject) => `upcoming ${subject} conference ${new Date().getFullYear()}`
+);
 
 const DISCOVERY_SUGGESTIONS = [
   'Artificial Intelligence',
@@ -303,23 +321,50 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // dollar figure, if it even mentions one, is free text we'd have to guess-parse — so a chosen
     // range is biased into the query itself rather than applied as a real filter.
     const priceBias = priceFilterActive ? ` ${formatPrice(priceMin)}-${formatPrice(priceMax)}` : '';
-    const effectiveQuery =
-      (trimmed || DEFAULT_DISCOVER_QUERY) +
-      dateBias +
-      locationBias +
-      countryBias +
-      formatBias +
-      timingBias +
-      priceBias;
+    const biasSuffix = dateBias + locationBias + countryBias + formatBias + timingBias + priceBias;
+    // A typed search term is one specific query; with nothing typed, every default subject is
+    // queried in parallel so the unbiased view is the broadest one Discover can honestly offer.
+    const effectiveQueries = trimmed ? [trimmed + biasSuffix] : DEFAULT_DISCOVER_QUERIES.map((q) => q + biasSuffix);
+    const cacheKey = effectiveQueries.join('|');
 
     const handle = setTimeout(
       () => {
-        if (lastWebQueryRef.current === effectiveQuery) return;
-        lastWebQueryRef.current = effectiveQuery;
+        if (lastWebQueryRef.current === cacheKey) return;
+        lastWebQueryRef.current = cacheKey;
         setWebSearchLoading(true);
         setWebSearchError(null);
-        searchConferencesOnTheWeb(effectiveQuery)
-          .then((data) => setWebResults(data))
+        Promise.allSettled(effectiveQueries.map((q) => searchConferencesOnTheWeb(q)))
+          .then((outcomes) => {
+            const succeeded = outcomes.filter(
+              (o): o is PromiseFulfilledResult<LiveSearchResult[]> => o.status === 'fulfilled'
+            );
+            if (succeeded.length === 0) {
+              const firstError = outcomes.find(
+                (o): o is PromiseRejectedResult => o.status === 'rejected'
+              );
+              throw new Error(firstError?.reason?.message || 'Live search failed. Please try again.');
+            }
+            // The same official page can legitimately answer more than one subject query (an
+            // "AI in healthcare" conference matches both technology and medical), so results are
+            // deduped by host across subjects the same way a single query's own results already
+            // are, keeping the first (best-ranked) occurrence.
+            const seenHosts = new Set<string>();
+            const merged: LiveSearchResult[] = [];
+            for (const { value } of succeeded) {
+              for (const result of value) {
+                let host = result.displayLink || '';
+                try {
+                  host = new URL(result.link).hostname.replace(/^www\./, '');
+                } catch {
+                  // Keep the displayLink fallback already assigned above.
+                }
+                if (seenHosts.has(host)) continue;
+                seenHosts.add(host);
+                merged.push(result);
+              }
+            }
+            setWebResults(merged);
+          })
           .catch((e) => {
             setWebResults(null);
             setWebSearchError(e.message || 'Live search failed. Please try again.');
