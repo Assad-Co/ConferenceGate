@@ -16,6 +16,7 @@ import {
   CalendarRange,
   DollarSign,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
@@ -292,6 +293,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [webSearchLoading, setWebSearchLoading] = useState(false);
   const [webSearchError, setWebSearchError] = useState<string | null>(null);
   const lastWebQueryRef = useRef<string | null>(null);
+  // Bumped by the "Search Again" button to force a genuine retry even when every filter is
+  // unchanged — a failed (or successful) search already marks its own cache key as already
+  // handled via lastWebQueryRef, so without tracking this separately a retry click with identical
+  // filters would be silently skipped by that same-key guard below.
+  const [manualRetryCount, setManualRetryCount] = useState(0);
+  const lastHandledRetryCountRef = useRef(0);
 
   useEffect(() => {
     const trimmed = searchTerm.trim();
@@ -329,14 +336,23 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
     const handle = setTimeout(
       () => {
-        if (lastWebQueryRef.current === cacheKey) return;
+        const sameQueryAsLastTime = lastWebQueryRef.current === cacheKey;
+        // A click on "Search Again" bumps manualRetryCount without changing any filter, so the
+        // cache key comes out identical to last time — this is what tells a genuine retry apart
+        // from an incidental extra effect run, and what asks the server for a truly fresh search
+        // instead of replaying its own hourly-cached answer for that same query text.
+        const isManualRetry = manualRetryCount !== lastHandledRetryCountRef.current;
+        if (sameQueryAsLastTime && !isManualRetry) return;
         lastWebQueryRef.current = cacheKey;
+        lastHandledRetryCountRef.current = manualRetryCount;
         setWebSearchLoading(true);
         setWebSearchError(null);
         // The background subject fan-out is marked low priority so a real, specific search
         // always jumps the server's queue ahead of it, rather than waiting its turn behind ten
         // background requests whose results this exact search would immediately discard anyway.
-        Promise.allSettled(effectiveQueries.map((q) => searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low')))
+        Promise.allSettled(
+          effectiveQueries.map((q) => searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry))
+        )
           .then((outcomes) => {
             const succeeded = outcomes.filter(
               (o): o is PromiseFulfilledResult<LiveSearchResult[]> => o.status === 'fulfilled'
@@ -390,7 +406,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter, priceFilterActive, priceMin, priceMax]);
+  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter, priceFilterActive, priceMin, priceMax, manualRetryCount]);
 
   return (
     <div className="space-y-8">
@@ -783,19 +799,30 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
       {/* Live Web Results */}
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-            <Globe className="w-4.5 h-4.5 text-indigo-600" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+              <Globe className="w-4.5 h-4.5 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                {searchTerm.trim() ? `Live Web Results for "${searchTerm.trim()}"` : 'Live Web Results'}
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Only current and upcoming individual conference websites are shown. Old editions, duplicates,
+                directories, calendars, and multi-conference lists are excluded.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              {searchTerm.trim() ? `Live Web Results for "${searchTerm.trim()}"` : 'Live Web Results'}
-            </h3>
-            <p className="text-[11px] text-slate-500">
-              Only current and upcoming individual conference websites are shown. Old editions, duplicates,
-              directories, calendars, and multi-conference lists are excluded.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => setManualRetryCount((n) => n + 1)}
+            disabled={webSearchLoading}
+            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${webSearchLoading ? 'animate-spin' : ''}`} />
+            {webSearchLoading ? 'Searching...' : 'Search Again'}
+          </button>
         </div>
 
         {webSearchLoading && (

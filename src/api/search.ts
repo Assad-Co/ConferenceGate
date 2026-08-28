@@ -9,10 +9,12 @@ export interface LiveSearchResult {
 
 export async function searchConferencesOnTheWeb(
   query: string,
-  priority: 'high' | 'low' = 'high'
+  priority: 'high' | 'low' = 'high',
+  force = false
 ): Promise<LiveSearchResult[]> {
   const priorityParam = priority === 'low' ? '&priority=low' : '';
-  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}${priorityParam}`, {
+  const forceParam = force ? '&force=true' : '';
+  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}${priorityParam}${forceParam}`, {
     credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));

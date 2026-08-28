@@ -311,11 +311,12 @@ function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearch
 
 export async function searchConferences(
   query: string,
-  priority: "high" | "low" = "high"
+  priority: "high" | "low" = "high",
+  force = false
 ): Promise<LiveSearchResult[]> {
   const cacheKey = `official-v3:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
+  if (!force && cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
 
@@ -417,6 +418,10 @@ braveSearchRouter.get(
     // and marks them low priority so a person's actual typed search always jumps the queue ahead
     // of them, rather than waiting behind background work whose results may already be moot.
     const priority = req.query.priority === "low" ? "low" : "high";
+    // Results are cached per query for an hour to stay well within the monthly quota. A manual
+    // "Search Again" click means the reader specifically wants a fresh look, not the same answer
+    // replayed — bypasses that cache read (a fresh result still gets cached normally afterward).
+    const force = req.query.force === "true";
 
     if (!query || query.length < 2) {
       return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
@@ -429,7 +434,7 @@ braveSearchRouter.get(
     }
 
     try {
-      const results = await searchConferences(query, priority);
+      const results = await searchConferences(query, priority, force);
       res.json({ results });
     } catch (error: any) {
       console.error("Brave Search error:", error);
