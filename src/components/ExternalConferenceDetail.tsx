@@ -515,7 +515,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               </div>
             )}
 
-            {data && !data.extracted && (
+            {data && !data.extracted && data.crawlComplete !== false && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -1176,7 +1176,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Keynote & Invited Speakers</h3>
                 {!data?.speakers.length ? (
-                  <EmptyExtractState message="No named speakers were found on this page." sourceUrl={result.link} />
+                  data?.crawlComplete === true ? (
+                    <EmptyExtractState
+                      message={data.fetchFailed
+                        ? "Speaker information was not retrieved; this does not mean the conference has no speakers."
+                        : "The completed crawl found no named keynote or invited speakers."}
+                      sourceUrl={result.link}
+                    />
+                  ) : (
+                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Checking speaker, keynote, program, committee, and PDF pages…
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {data.speakers.map((spk, idx) => (
@@ -1209,10 +1221,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Sponsors & Exhibitors</h3>
                 {!data?.sponsors.length ? (
-                  <EmptyExtractState
-                    message="No sponsors or exhibitors were found on this page."
-                    sourceUrl={result.link}
-                  />
+                  data?.crawlComplete === true ? (
+                    <EmptyExtractState
+                      message={data.fetchFailed
+                        ? "Sponsor and exhibitor information was not retrieved."
+                        : "The completed crawl found no named sponsors or exhibitors."}
+                      sourceUrl={result.link}
+                    />
+                  ) : (
+                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Checking sponsor, exhibitor, partner, and program pages…
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {data.sponsors.map((sp, idx) => (
