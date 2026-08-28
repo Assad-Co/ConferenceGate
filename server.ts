@@ -3,7 +3,7 @@ import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
 import { braveSearchRouter, searchWebForConferenceFacts } from "./server/braveSearch";
@@ -765,6 +765,66 @@ Return JSON with exactly this shape:
     "Accept-Language": "en-US,en;q=0.9",
   };
 
+  // How many times to re-ask the model after a transient failure, and how long to wait between.
+  // Input size feeds directly into how long generation takes. 40,000 characters alongside the
+  // full-record schema was enough to push the model past Google's own deadline on real pages;
+  // 25,000 still comfortably covers a long conference page including a CFP near the bottom.
+  const MAX_PAGE_TEXT_CHARS = 25000;
+  const MODEL_RETRY_ATTEMPTS = 3;
+  const MODEL_RETRY_BASE_DELAY_MS = 1500;
+  // Google's own server-side deadline, rate limiting, and transient unavailability. These say
+  // "ask again", not "this page is unreadable" — and treating them as the latter meant a page
+  // that had already been fetched (sometimes at Firecrawl's expense) was thrown away over a
+  // momentary hiccup.
+  const TRANSIENT_MODEL_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+  function isTransientModelError(error: any): boolean {
+    const status = error?.status ?? error?.code ?? error?.error?.code;
+    if (typeof status === "number" && TRANSIENT_MODEL_STATUSES.has(status)) return true;
+    const message = String(error?.message || error || "");
+    return /DEADLINE_EXCEEDED|UNAVAILABLE|RESOURCE_EXHAUSTED|timed out|ECONNRESET|socket hang up/i.test(message);
+  }
+
+  // Runs the extraction prompt, retrying the failures that are worth retrying.
+  async function callExtractionModel(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    pageText: string,
+    title: string,
+    pageUrl: string
+  ): Promise<string> {
+    let lastError: any = null;
+    for (let attempt = 1; attempt <= MODEL_RETRY_ATTEMPTS; attempt++) {
+      try {
+        const response = await withTimeout(
+          ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents: buildExtractionPrompt(pageText, title, pageUrl),
+            config: {
+              responseMimeType: "application/json",
+              // Reading facts off a page and copying them into fields is not a reasoning task.
+              // Left to think at length the model spent long enough that Google's own deadline
+              // expired before it answered — a 504 on a page that had already been fetched.
+              thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+            },
+          }),
+          MODEL_CALL_TIMEOUT_MS,
+          "Extraction model call"
+        );
+        return response.text || "{}";
+      } catch (error) {
+        lastError = error;
+        if (!isTransientModelError(error) || attempt === MODEL_RETRY_ATTEMPTS) break;
+        const waitMs = MODEL_RETRY_BASE_DELAY_MS * attempt;
+        console.warn(
+          `Extraction model call for ${pageUrl} failed transiently (attempt ${attempt}/${MODEL_RETRY_ATTEMPTS}), ` +
+            `retrying in ${waitMs}ms`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+    }
+    throw lastError;
+  }
+
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
@@ -870,7 +930,7 @@ Return JSON with exactly this shape:
     // 40,000 characters of actual visible text (not raw HTML) comfortably covers even a long
     // single page with CFP details near the bottom — a tighter cutoff risked truncating the
     // requirements section clean off before the model ever saw it.
-    const pageText = content.text.slice(0, 40000);
+    const pageText = content.text.slice(0, MAX_PAGE_TEXT_CHARS);
     if (pageText.length < MIN_EXTRACTABLE_TEXT_CHARS) {
       console.error(
         `Page for extraction had only ${pageText.length} chars of visible text (likely client-rendered) for ${pageUrl}`
@@ -881,16 +941,8 @@ Return JSON with exactly this shape:
 
     let parsed: any = {};
     try {
-      const response = await withTimeout(
-        ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: buildExtractionPrompt(pageText, title, pageUrl),
-          config: { responseMimeType: "application/json" },
-        }),
-        MODEL_CALL_TIMEOUT_MS,
-        "Extraction model call"
-      );
-      parsed = JSON.parse(response.text || "{}");
+      const response = await callExtractionModel(ai, pageText, title, pageUrl);
+      parsed = JSON.parse(response || "{}");
     } catch (e) {
       console.error("Extraction model call failed:", e);
       return null;
