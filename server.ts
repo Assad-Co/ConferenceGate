@@ -2473,6 +2473,16 @@ Return JSON with exactly this shape:
         venue: isVenueMissing(parsed),
       };
 
+      // The five tabs that show "(checking…)" while the crawl runs — fees, agenda, speakers,
+      // committee, sponsors — are exactly what a reader is waiting on. Once every one of them has
+      // real content, more rounds only chase lower-value pages (deeper venue detail, an extra
+      // overview paragraph) that no visible tab is still waiting for, so continuing just holds
+      // "(checking…)" up for no reason anyone can see. Stopping here is what actually makes the
+      // page finish quickly instead of a reader watching it burn through its whole time budget on
+      // pages that can't change what's already showing.
+      const TAB_VISIBLE_CATEGORIES: RelevantLinkCategory[] = ["fees", "agenda", "speakers", "committee", "sponsors"];
+      if (TAB_VISIBLE_CATEGORIES.every((category) => !emptyByCategory[category])) break;
+
       // Three tiers, read in this order, so a site too large to finish still spends its budget on
       // the sections a reader currently has nothing for, before pages that merely add to a section
       // that already has something, before the rest of the site.
