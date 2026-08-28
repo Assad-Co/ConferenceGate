@@ -415,6 +415,21 @@ Provide constructive feedback in JSON format with fields:
   const RELEVANT_LINK_CATEGORIES = ["overview", "cfp", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
   type RelevantLinkCategory = (typeof RELEVANT_LINK_CATEGORIES)[number];
 
+  // A deterministic link-text backstop for every category, not just CFP and committee. The model's
+  // own relevantLinks only ever names ONE link per category, but a real conference site routinely
+  // splits one topic across several nav entries — "Sessions" alongside "Agenda" and "Workshops",
+  // "Sponsors" alongside "Exhibitors", "Hotel" alongside "Travel". Matching each category's own
+  // wording finds the siblings the single model-picked link leaves behind.
+  const CATEGORY_LINK_TEXT_RE: Record<RelevantLinkCategory, RegExp> = {
+    overview: /\b(about|overview|event (information|details|info)|the event|why attend|general info(rmation)?)\b/i,
+    cfp: CFP_LINK_TEXT_RE,
+    committee: COMMITTEE_LINK_TEXT_RE,
+    speakers: /\b(speakers?|keynotes?|faculty|presenters?|panelists?|lineup|who's speaking)\b/i,
+    sponsors: /\b(sponsors?|sponsorship|exhibitors?|exhibit|partners?|supporters?|our partners)\b/i,
+    agenda: /\b(agenda|programs?|programme|schedule|sessions?|tracks?|workshops?|at a glance|itinerary)\b/i,
+    venue: /\b(venue|hotels?|accommodations?|lodging|travel|getting (there|here)|location|directions|visit)\b/i,
+  };
+
   // Reads the model's own relevantLinks guesses (real language understanding of what a link is
   // about, not keyword matching) and keeps only ones that are real URLs found on this exact page,
   // different from the page itself, and on the same site — never trusting model output blindly,
@@ -557,8 +572,17 @@ Return JSON with exactly this shape:
     });
   }
 
-  const PAGE_FETCH_TIMEOUT_MS = 6000;
-  const MODEL_CALL_TIMEOUT_MS = 8000;
+  // Conference sites are very often slow, CMS-driven, and hosted on shared event platforms; six
+  // seconds was timing real sites out and surfacing them as unreadable when they would have
+  // answered a moment later. Secondary pages ride the same ceiling but are fetched in parallel,
+  // so raising it costs one round's tail latency rather than multiplying across the crawl.
+  const PAGE_FETCH_TIMEOUT_MS = 12000;
+  const MODEL_CALL_TIMEOUT_MS = 12000;
+  // Below this much visible text a "successful" fetch is not something worth extracting from: it
+  // is a client-rendered shell, an interstitial, or a cookie wall whose real content never arrived
+  // in the HTML. Extracting from it yields nulls for every section, which is indistinguishable
+  // from a page that genuinely lists no speakers — so it is reported as a failed read instead.
+  const MIN_EXTRACTABLE_TEXT_CHARS = 400;
 
   // A user-initiated read of a public conference page, so these are the headers an ordinary
   // browser visiting that same page would send. The previous "ConferenceGateBot/1.0" user agent
@@ -617,7 +641,12 @@ Return JSON with exactly this shape:
     // single page with CFP details near the bottom — a tighter cutoff risked truncating the
     // requirements section clean off before the model ever saw it.
     const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 40000);
-    if (!pageText) return null;
+    if (pageText.length < MIN_EXTRACTABLE_TEXT_CHARS) {
+      console.error(
+        `Page for extraction had only ${pageText.length} chars of visible text (likely client-rendered) for ${pageUrl}`
+      );
+      return null;
+    }
 
     let parsed: any = {};
     try {
@@ -693,14 +722,62 @@ Return JSON with exactly this shape:
     if (!merged.submissionTemplateUrl && secondary.submissionTemplateUrl) {
       merged.submissionTemplateUrl = resolveAbsoluteUrl(secondary.submissionTemplateUrl, secondaryUrl);
     }
-    for (const field of ["committee", "speakers", "sponsors", "agendaSessions"]) {
-      const current = merged[field];
-      const incoming = secondary[field];
-      if ((!Array.isArray(current) || current.length === 0) && Array.isArray(incoming) && incoming.length > 0) {
-        merged[field] = incoming;
-      }
+    // List sections accumulate across pages instead of being all-or-nothing. A homepage almost
+    // always carries a teaser — three "featured speakers", a couple of headline sponsors, one
+    // day's highlights — and the real roster lives on the dedicated page. Treating a non-empty
+    // primary list as "already have it" meant the full page's 40 speakers were fetched, parsed,
+    // and then thrown away in favour of the homepage's 3. Union + de-duplicate instead, so each
+    // page can only ever add rows, and an entry already known keeps its richer version.
+    for (const field of ["committee", "speakers", "sponsors", "agendaSessions"] as const) {
+      const current = Array.isArray(merged[field]) ? merged[field] : [];
+      const incoming = Array.isArray(secondary[field]) ? secondary[field] : [];
+      if (incoming.length === 0) continue;
+      merged[field] = unionEntries(field, current, incoming);
     }
     return merged;
+  }
+
+  // Identity for de-duplication differs by section: people are the same person if their name
+  // matches, a session is the same session if its title matches. Compared on a normalized form so
+  // "Dr. Jane Smith" and "Jane Smith " don't both survive as separate rows.
+  function entryKey(field: string, entry: any): string | null {
+    if (!entry || typeof entry !== "object") return null;
+    const raw =
+      field === "agendaSessions"
+        ? entry.title
+        : entry.name;
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    let key = raw.toLowerCase();
+    if (field !== "agendaSessions") {
+      // Titles and honorifics are written inconsistently across a site's own pages.
+      key = key.replace(/\b(dr|prof|professor|mr|mrs|ms|miss|sir|dame|the hon|hon|phd|md)\b\.?/g, "");
+    }
+    key = key.replace(/[^a-z0-9]/g, "");
+    return key || null;
+  }
+
+  // Counts how many fields of an entry actually carry a value — used to keep the richer of two
+  // duplicates (the speakers page usually has the org, title, and photo the homepage teaser omits).
+  function entryDetailScore(entry: any): number {
+    if (!entry || typeof entry !== "object") return 0;
+    return Object.values(entry).filter((v) => v !== null && v !== undefined && v !== "").length;
+  }
+
+  function unionEntries(field: string, current: any[], incoming: any[]): any[] {
+    const byKey = new Map<string, any>();
+    const unkeyed: any[] = [];
+    for (const entry of [...current, ...incoming]) {
+      const key = entryKey(field, entry);
+      if (!key) {
+        // No usable identity to compare on — kept as-is rather than silently dropped, since a
+        // real session or sponsor with an odd shape is still real content.
+        unkeyed.push(entry);
+        continue;
+      }
+      const existing = byKey.get(key);
+      if (!existing || entryDetailScore(entry) > entryDetailScore(existing)) byKey.set(key, entry);
+    }
+    return [...byKey.values(), ...unkeyed];
   }
 
   app.post("/api/ai/extract-conference", async (req, res) => {
@@ -753,14 +830,20 @@ Return JSON with exactly this shape:
       // deterministic backstop. Every candidate is validated against that page's own real anchors
       // and kept only if it's on the same site, so the crawl can't wander onto an unrelated domain
       // or trust a hallucinated URL.
-      const MAX_CRAWL_DEPTH = 2; // rounds of expansion beyond the primary page
-      const MAX_TOTAL_PAGES = 6; // primary + at most this many more, across all rounds combined
+      const MAX_CRAWL_DEPTH = 3; // rounds of expansion beyond the primary page
+      // A real conference site puts each section behind its own nav entry — Event Information,
+      // Sessions, Speakers, Registration, Hotel and Travel, Sponsorship is already six pages
+      // before any dropdown children. A six-page ceiling (primary + five) could not physically
+      // cover seven categories, so whole sections were guaranteed to come back empty no matter
+      // how well the links were found.
+      const MAX_TOTAL_PAGES = 16;
+      const MAX_PAGES_PER_ROUND = 6; // fetched concurrently, so this bounds one round's wall clock
       // A wall-clock ceiling on the expansion rounds only (the primary page always finishes) —
       // bounds how long a slow or unresponsive site can keep the user's loading spinner up,
       // regardless of how many rounds/pages are still nominally left in the budget above. Checked
       // between rounds rather than pre-empting an in-flight one, so a round already underway still
       // completes and its real results are kept and returned.
-      const CRAWL_TIME_BUDGET_MS = 12000;
+      const CRAWL_TIME_BUDGET_MS = 25000;
       const crawlStartedAt = Date.now();
 
       const visited = new Set<string>([cacheKey]);
@@ -772,7 +855,13 @@ Return JSON with exactly this shape:
         depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES && Date.now() - crawlStartedAt < CRAWL_TIME_BUDGET_MS;
         depth++
       ) {
-        const missingByCategory: Record<RelevantLinkCategory, boolean> = {
+        // Whether a section is *empty* now only sets crawl priority — it no longer decides
+        // whether that section's page gets opened at all. A homepage teaser ("featured
+        // speakers", one headline sponsor, day-one highlights) satisfied the old
+        // is-it-missing test on the very first page, which is precisely why a site's real
+        // Speakers / Agenda / Sponsors pages were never visited and every section stayed as
+        // thin as whatever the front page happened to show.
+        const emptyByCategory: Record<RelevantLinkCategory, boolean> = {
           overview: isOverviewMissing(parsed),
           cfp: isCfpMissing(parsed),
           committee: isCommitteeMissing(parsed),
@@ -781,49 +870,53 @@ Return JSON with exactly this shape:
           agenda: isAgendaMissing(parsed),
           venue: isVenueMissing(parsed),
         };
-        if (!Object.values(missingByCategory).some(Boolean)) break; // nothing left to look for
 
-        const candidateUrls = new Set<string>();
+        // Two tiers, fetched in this order, so a tight page budget always spends itself first on
+        // the sections the reader currently has nothing at all for — a dedicated page for an
+        // already-partially-filled section is still worth reading, just not ahead of an empty one.
+        const urgent: string[] = [];
+        const supplementary: string[] = [];
+        const proposed = new Set<string>();
+        const consider = (url: string, tier: string[]) => {
+          if (!url || visited.has(url) || proposed.has(url)) return;
+          proposed.add(url);
+          tier.push(url);
+        };
+
         for (const page of frontier) {
           const realLinks = extractAllLinks(page.html, page.url);
           const modelLinks = sanitizeRelevantLinks(page.parsed, realLinks, page.url);
           for (const category of RELEVANT_LINK_CATEGORIES) {
-            if (!missingByCategory[category]) continue;
-            const link = modelLinks[category];
-            if (link && !visited.has(link)) candidateUrls.add(link);
-          }
-          if (missingByCategory.cfp) {
-            // Up to 2 distinct CFP-ish links per page — a real nav bar sometimes has BOTH a
-            // "Call for Papers" link and a separate "Submission Guidelines" link, and only
-            // fetching the first would still miss whichever one actually has the details.
-            for (const url of findLinksByText(page.html, page.url, CFP_LINK_TEXT_RE, 2)) {
-              if (!visited.has(url)) candidateUrls.add(url);
-            }
-          }
-          if (missingByCategory.committee) {
-            for (const url of findLinksByText(page.html, page.url, COMMITTEE_LINK_TEXT_RE, 1)) {
-              if (!visited.has(url)) candidateUrls.add(url);
+            const tier = emptyByCategory[category] ? urgent : supplementary;
+            const modelLink = modelLinks[category];
+            if (modelLink) consider(modelLink, tier);
+            // The model names at most one link per category, but a real nav bar routinely spreads
+            // a single topic across several entries — "Sessions" beside "Agenda", "Sponsors"
+            // beside "Exhibitors", "Hotel" beside "Travel". Take up to two per category per page
+            // so the siblings the model's single pick leaves behind still get read.
+            for (const url of findLinksByText(page.html, page.url, CATEGORY_LINK_TEXT_RE[category], 2)) {
+              consider(url, tier);
             }
           }
         }
 
-        if (candidateUrls.size === 0) {
-          // Nothing on this round's pages pointed at a specific missing category — try a couple
-          // of blind exploratory hops per page in case the real content sits behind a neutral hub
-          // page like "About" that these pages didn't themselves flag for any category.
+        const candidateUrls = [...urgent, ...supplementary];
+        if (candidateUrls.length === 0) {
+          // Nothing on this round's pages named any category — try a couple of blind exploratory
+          // hops per page in case the real content sits behind a neutral hub page like "About"
+          // that these pages didn't themselves flag for anything.
           for (const page of frontier) {
-            for (const url of findExploratoryLinks(page.html, page.url, 2)) {
-              if (!visited.has(url)) candidateUrls.add(url);
-            }
+            for (const url of findExploratoryLinks(page.html, page.url, 2)) consider(url, candidateUrls);
           }
         }
-        if (candidateUrls.size === 0) break;
+        if (candidateUrls.length === 0) break;
 
         // Fetched in parallel rather than one after another — each is an independent page-plus-
         // model-call round trip, and running them concurrently keeps a multi-page round roughly
-        // as fast as a single fetch instead of multiplying the wait.
-        const remainingBudget = MAX_TOTAL_PAGES - pagesFetched;
-        const urlsToFetch = Array.from(candidateUrls).slice(0, remainingBudget);
+        // as fast as a single fetch instead of multiplying the wait. Capped per round as well as
+        // in total, so a link-dense nav can't fire a dozen simultaneous requests at one site.
+        const remainingBudget = Math.min(MAX_TOTAL_PAGES - pagesFetched, MAX_PAGES_PER_ROUND);
+        const urlsToFetch = candidateUrls.slice(0, remainingBudget);
         urlsToFetch.forEach((url) => visited.add(url));
         pagesFetched += urlsToFetch.length;
 
