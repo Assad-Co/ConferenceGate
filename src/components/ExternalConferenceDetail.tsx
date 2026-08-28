@@ -258,8 +258,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     setLoading(true);
     setData(null);
 
-    const POLL_INTERVAL_MS = 3000;
-    const POLL_CEILING_MS = 120000;
+    const POLL_INTERVAL_MS = 1500;
+    const POLL_CEILING_MS = 80000;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const pollUntilComplete = (startedAt: number) => {

@@ -849,7 +849,8 @@ Return JSON with exactly this shape:
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
-  type ExtractedPage = { parsed: any; html: string; pageTitle: string | null; isPdf: boolean };
+  type PageReader = "plain" | "browser" | "firecrawl" | "prefetched" | "pdf";
+  type ExtractedPage = { parsed: any; html: string; pageTitle: string | null; isPdf: boolean; reader: PageReader };
 
   async function extractPage(
     ai: NonNullable<ReturnType<typeof getAIClient>>,
@@ -869,7 +870,7 @@ Return JSON with exactly this shape:
     // usable, which is the case for bot-protected sites and ones that build themselves in
     // JavaScript. A PDF takes a third path entirely — conference sites routinely publish the call
     // for papers, the programme and the fee table as documents rather than pages.
-    async function readPageContent(): Promise<{ html: string; text: string; kind: "html" | "pdf" } | null> {
+    async function readPageContent(): Promise<{ html: string; text: string; kind: "html" | "pdf"; reader: PageReader } | null> {
       // A crawl round may have already recovered this blocked page through one coordinated
       // Firecrawl batch. Use that body directly instead of fetching/rendering/scraping it again.
       if (options.prefetched) {
@@ -877,11 +878,11 @@ Return JSON with exactly this shape:
           ? prepareHtmlForExtraction(options.prefetched.html, pageUrl)
           : "";
         if (fromHtml.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
-          return { html: options.prefetched.html, text: fromHtml, kind: "html" };
+          return { html: options.prefetched.html, text: fromHtml, kind: "html", reader: "prefetched" };
         }
         const markdown = options.prefetched.markdown.trim();
         if (markdown.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
-          return { html: "", text: markdown, kind: "html" };
+          return { html: "", text: markdown, kind: "html", reader: "prefetched" };
         }
       }
 
@@ -900,7 +901,7 @@ Return JSON with exactly this shape:
           const text = await extractPdfText(await pageRes.arrayBuffer());
           // No `html` for a PDF: it has no anchors for the crawl to follow, and the extraction
           // prompt's [LINK:]/[IMAGE:] markers have no meaning here.
-          return text ? { html: "", text, kind: "pdf" } : null;
+          return text ? { html: "", text, kind: "pdf", reader: "pdf" } : null;
         }
 
         // Any other non-HTML body (an image, a JSON API response, a zip) is worth abandoning:
@@ -927,7 +928,7 @@ Return JSON with exactly this shape:
       // Good enough as it stands — no need to spend a browser launch on it.
       if (plain) {
         const text = prepareHtmlForExtraction(plain, pageUrl);
-        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) return { html: plain, text, kind: "html" };
+        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) return { html: plain, text, kind: "html", reader: "plain" };
       }
 
       // Either the request was refused, or it succeeded and returned a shell with nothing in it.
@@ -937,7 +938,7 @@ Return JSON with exactly this shape:
         const text = prepareHtmlForExtraction(rendered, pageUrl);
         if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
           console.log(`Read ${pageUrl} by rendering it in a browser (plain fetch returned nothing usable)`);
-          return { html: rendered, text, kind: "html" };
+          return { html: rendered, text, kind: "html", reader: "browser" };
         }
       }
 
@@ -953,18 +954,18 @@ Return JSON with exactly this shape:
         const fromHtml = scraped.html ? prepareHtmlForExtraction(scraped.html, pageUrl) : "";
         if (fromHtml.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
           console.log(`Read ${pageUrl} via Firecrawl (plain fetch and local browser both failed)`);
-          return { html: scraped.html, text: fromHtml, kind: "html" };
+          return { html: scraped.html, text: fromHtml, kind: "html", reader: "firecrawl" };
         }
         if (scraped.markdown.trim().length >= MIN_EXTRACTABLE_TEXT_CHARS) {
           console.log(`Read ${pageUrl} via Firecrawl as markdown (no usable HTML returned)`);
           // Markdown, not a PDF: no anchors to follow, but it is still a web page.
-          return { html: "", text: scraped.markdown.trim(), kind: "html" };
+          return { html: "", text: scraped.markdown.trim(), kind: "html", reader: "firecrawl" };
         }
       }
 
       // Nothing worked. Report what the plain body amounted to, so the caller logs the same
       // "too little text" reason it always has.
-      return plain ? { html: plain, text: prepareHtmlForExtraction(plain, pageUrl), kind: "html" } : null;
+      return plain ? { html: plain, text: prepareHtmlForExtraction(plain, pageUrl), kind: "html", reader: "plain" } : null;
     }
 
     const content = await readPageContent();
@@ -1006,7 +1007,7 @@ Return JSON with exactly this shape:
         contactEmail: exactEmail,
       };
     }
-    return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf };
+    return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf, reader: content.reader };
   }
 
   function normalizedUrlKey(value: string): string {
@@ -1032,27 +1033,61 @@ Return JSON with exactly this shape:
   async function extractPageRound(
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     urls: string[],
-    title: string
+    title: string,
+    preferFirecrawl = false
   ): Promise<Array<ExtractedPage | null>> {
-    const pages = await Promise.all(
-      urls.map(async (url) => {
-        try {
-          return await extractPage(ai, url, title, {
-            allowFirecrawl: false,
-            modelAttempts: 1,
-            modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
-          });
-        } catch (error) {
-          console.error(`Fast page read failed for ${url}:`, error);
-          return null;
-        }
-      })
-    );
+    // Once the homepage has already required Firecrawl, the same site's internal pages almost
+    // always share the same protection. Batch them immediately instead of repeating a plain
+    // request and browser render that are already known to fail on this host.
+    let pages: Array<ExtractedPage | null>;
+    let usedDirectBatch = false;
+    if (preferFirecrawl && isFirecrawlConfigured()) {
+      usedDirectBatch = true;
+      const prefetchedPages = await firecrawlBatchScrape(urls);
+      const prefetchedByUrl = new Map(
+        prefetchedPages.map((page) => [normalizedUrlKey(page.url), page] as const)
+      );
+      pages = await Promise.all(
+        urls.map(async (url) => {
+          const prefetched = prefetchedByUrl.get(normalizedUrlKey(url));
+          if (!prefetched) return null;
+          try {
+            return await extractPage(ai, url, title, {
+              allowFirecrawl: false,
+              prefetched,
+              modelAttempts: 1,
+              modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
+            });
+          } catch (error) {
+            console.error(`Fast Firecrawl page extraction failed for ${url}:`, error);
+            return null;
+          }
+        })
+      );
+    } else {
+      pages = await Promise.all(
+        urls.map(async (url) => {
+          try {
+            return await extractPage(ai, url, title, {
+              allowFirecrawl: false,
+              modelAttempts: 1,
+              modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
+            });
+          } catch (error) {
+            console.error(`Fast page read failed for ${url}:`, error);
+            return null;
+          }
+        })
+      );
+    }
 
     const failedIndexes = pages
       .map((page, index) => (page ? -1 : index))
       .filter((index) => index >= 0);
-    if (failedIndexes.length === 0 || !isFirecrawlConfigured()) return pages;
+    // Do not repeat an entire fallback chain after a direct batch. A missing batch item remains a
+    // failed page in crawl coverage and can be retried on a future visit without holding every tab
+    // in "checking" for another round of known-failing reads.
+    if (failedIndexes.length === 0 || !isFirecrawlConfigured() || usedDirectBatch) return pages;
 
     const blockedUrls = failedIndexes.map((index) => urls[index]);
     const recovered = await firecrawlBatchScrape(blockedUrls);
@@ -1065,8 +1100,6 @@ Return JSON with exactly this shape:
         const url = urls[index];
         const prefetched = recoveredByUrl.get(normalizedUrlKey(url));
         try {
-          // A batch may omit one failed item. In that uncommon case keep the original
-          // individually queued fallback, so batching improves speed without reducing coverage.
           pages[index] = prefetched
             ? await extractPage(ai, url, title, {
                 allowFirecrawl: false,
@@ -1074,10 +1107,7 @@ Return JSON with exactly this shape:
                 modelAttempts: 1,
                 modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
               })
-            : await extractPage(ai, url, title, {
-                modelAttempts: 1,
-                modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
-              });
+            : null;
         } catch (error) {
           console.error(`Blocked page extraction failed for ${url}:`, error);
           pages[index] = null;
@@ -1753,12 +1783,12 @@ Return JSON with exactly this shape:
   const MAX_PAGES_PER_ROUND = 8; // at most one high-value page per Conference Gate tab
   // The client polls for two minutes. Finish before that ceiling so "checking" cannot remain
   // indefinitely, while hub-first ordering still covers the site's useful conference sections.
-  const CRAWL_TIME_BUDGET_MS = 90000;
+  const CRAWL_TIME_BUDGET_MS = 70000;
   // How many sitemap entries to consider. A conference site is rarely bigger than this, and
   // anything past it is almost always blog/news archive rather than event content.
   const MAX_SITEMAP_URLS = 120;
   // How long the POST waits for something worth rendering before answering with what it has.
-  const FIRST_RESPONSE_DEADLINE_MS = 15000;
+  const FIRST_RESPONSE_DEADLINE_MS = 10000;
 
   // Scores a URL's own path against the category patterns — the only signal available for a
   // sitemap entry, which arrives with no anchor text attached to it. "/hotel-and-travel" and
@@ -2202,7 +2232,7 @@ Return JSON with exactly this shape:
       urlsToFetch.forEach((url) => visited.add(url));
       pagesFetched += urlsToFetch.length;
 
-      const roundResults = await extractPageRound(ai, urlsToFetch, titleHint);
+      const roundResults = await extractPageRound(ai, urlsToFetch, titleHint, primary.reader === "firecrawl");
       const nextFrontier: typeof frontier = [];
       roundResults.forEach((page, i) => {
         if (page) {

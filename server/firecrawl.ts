@@ -112,7 +112,7 @@ export async function firecrawlScrape(url: string): Promise<{ html: string; mark
 }
 
 const FIRECRAWL_BATCH_JOB_TIMEOUT_MS = 90000;
-const FIRECRAWL_BATCH_POLL_INTERVAL_MS = 1500;
+const FIRECRAWL_BATCH_POLL_INTERVAL_MS = 1000;
 
 export interface FirecrawlBatchPage {
   url: string;
