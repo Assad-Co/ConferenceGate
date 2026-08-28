@@ -47,39 +47,70 @@ const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|
 const YEAR_IN_QUERY_RE = /\b20\d{2}\b/;
 function toConferenceQuery(query: string): string {
   const withKeyword = CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
-  return YEAR_IN_QUERY_RE.test(withKeyword) ? withKeyword : `${withKeyword} ${new Date().getFullYear()}`;
+  const withYear = YEAR_IN_QUERY_RE.test(withKeyword)
+    ? withKeyword
+    : `${withKeyword} ${new Date().getFullYear()}`;
+
+  // Ask for the event's own information pages and explicitly down-rank roundup vocabulary.
+  // This improves the candidate pool before the strict server-side filter below is applied.
+  return `${withYear} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
 }
 
-// Drops any page that reads as a directory/roundup of multiple conferences rather than a
-// single real event's own page. Plural "conferences" is the tell: a real event names itself
-// "... Conference" (singular) when talking about itself — nobody's own event page refers to
-// itself in the plural. Any occurrence of "conferences" anywhere in the title or snippet is
-// treated as a listing page and dropped outright, whatever the surrounding wording ("Top 10
-// Conferences", "Best IT/Tech Conferences & Events", "Conferences in the United States", etc.)
-// — this is intentionally blanket rather than pattern-specific, so new listicle phrasings don't
-// require a new regex each time.
-const LISTICLE_RE = /\bconferences\b|\blist of\b|\bround[\s-]?up\b/i;
+// Discovery must link to one conference's own page, never a directory, calendar, roundup,
+// ticket marketplace, or article that happens to list conferences. Titles are checked separately
+// from snippets because roundup pages often use a singular phrase such as "Every Tech Conference"
+// while describing dozens of events in the body.
+const LISTING_TITLE_RE =
+  /\b(?:top|best|every|all|upcoming|popular|must[-\s]?attend|biggest|leading)\b.{0,60}\b(?:conferences?|events?|summits?|symposia|conventions?|congress(?:es)?|expos?|trade shows?)\b|\b\d+\s+(?:top\s+|best\s+)?(?:conferences?|events?|summits?|trade shows?)\b|\b(?:conference|event|trade show)\s+(?:calendar|directory|list|roundup|round-up)\b|\b(?:conferences?|events?)\s+(?:near me|around the world|in the|by country|by month)\b|\b(?:find|search|browse|discover)\s+(?:a\s+)?(?:conference|event)\b/i;
+const LISTING_SNIPPET_RE =
+  /\b(?:browse|search|discover|compare|find)\s+(?:hundreds?|thousands?|upcoming|all)\s+(?:of\s+)?(?:conferences?|events?)\b|\b(?:calendar|directory|database|listing)\s+of\s+(?:conferences?|events?)\b|\b(?:conferences?|events?)\s+across\s+(?:the\s+)?(?:world|country|industries)\b/i;
+const PLURAL_CONFERENCES_RE = /\bconferences\b/i;
 
-// Domains that are themselves conference directories/aggregators rather than a single event's
-// own site — every result from these hosts is a listing page, regardless of title wording.
-const LISTICLE_DOMAINS = new Set([
+const DIRECTORY_DOMAINS = new Set([
   "10times.com",
+  "allevents.in",
   "allconferencealert.com",
   "allconferences.com",
   "conferencealerts.com",
+  "internationalconferencealerts.com",
   "clocate.com",
   "conferenceindex.org",
+  "conference-next.com",
   "dev.events",
+  "eventbrite.com",
+  "eventsget.com",
   "eventseye.com",
+  "meetup.com",
   "conferenceseries.com",
   "myconferencetimes.com",
   "techconferences.co",
 ]);
 
-function looksLikeListicle(title: string, snippet: string, displayLink: string): boolean {
-  if (LISTICLE_RE.test(title) || LISTICLE_RE.test(snippet)) return true;
-  const host = displayLink.toLowerCase().replace(/^www\./, "");
-  return LISTICLE_DOMAINS.has(host);
+function normalizedHost(link: string, displayLink: string): string {
+  try {
+    return new URL(link).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return displayLink.toLowerCase().replace(/^www\./, "").split("/")[0];
+  }
+}
+
+function isDirectoryHost(host: string): boolean {
+  return [...DIRECTORY_DOMAINS].some((domain) => host === domain || host.endsWith(`.${domain}`));
+}
+
+function isLikelyOfficialConferencePage(result: LiveSearchResult): boolean {
+  const title = result.title.trim();
+  const snippet = result.snippet.trim();
+  const host = normalizedHost(result.link, result.displayLink);
+  if (!result.link || !title || isDirectoryHost(host)) return false;
+  if (PLURAL_CONFERENCES_RE.test(title) || PLURAL_CONFERENCES_RE.test(snippet)) return false;
+  if (LISTING_TITLE_RE.test(title) || LISTING_SNIPPET_RE.test(snippet)) return false;
+
+  const combined = `${title} ${snippet}`;
+  const namesAnEvent = /\b(conference|summit|symposium|convention|congress|workshop|expo|forum|annual meeting)\b/i.test(combined);
+  const hasEventDetail =
+    /\b20\d{2}\b|\b(?:register|registration|program|programme|agenda|speakers?|venue|call for papers|submit)\b/i.test(combined);
+  return namesAnEvent && hasEventDetail;
 }
 
 // Drops results that only mention a past date and never mention the current-or-future date.
@@ -126,7 +157,7 @@ function looksOutdated(title: string, snippet: string): boolean {
 }
 
 async function searchConferences(query: string): Promise<LiveSearchResult[]> {
-  const cacheKey = query.trim().toLowerCase();
+  const cacheKey = `official-v2:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
@@ -165,7 +196,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
       thumbnail: item.thumbnail?.src || null,
       favicon: item.meta_url?.favicon || item.profile?.img || null,
     }))
-    .filter((r) => !looksLikeListicle(r.title, r.snippet, r.displayLink) && !looksOutdated(r.title, r.snippet));
+    .filter((r) => isLikelyOfficialConferencePage(r) && !looksOutdated(r.title, r.snippet));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -174,8 +205,8 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
 /** A plain web search, used when a conference's own site can't be read and its details have to be
  *  gathered from whatever else on the web covers it.
  *
- *  Deliberately skips the two filters the Discover search applies. `toConferenceQuery` is not
- *  applied because callers pass their own precise query, and the listicle filter is not applied
+ *  Deliberately skips the Discover search's official-site and date filters. `toConferenceQuery`
+ *  is not applied because callers pass their own precise query, and the directory filter is not applied
  *  because a directory or listing page is exactly what's wanted here — those aggregators are
  *  usually readable when the official site isn't, and they carry the dates, venue and programme. */
 export async function searchWebForConferenceFacts(query: string, count = 8): Promise<LiveSearchResult[]> {

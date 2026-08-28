@@ -205,7 +205,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               Explore Academic & Technical Conferences
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Real conferences created through Conference Gate, plus live results pulled from across the web.
+              Real conferences created through Conference Gate, plus individual official conference websites found live.
             </p>
           </div>
         </div>
@@ -525,8 +525,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               {searchTerm.trim() ? `Live Web Results for "${searchTerm.trim()}"` : 'Live Web Results'}
             </h3>
             <p className="text-[11px] text-slate-500">
-              Pulled from a live web search, not our own catalog — always confirm details on the organizer's
-              official site before registering or submitting.
+              Only individual conference websites are shown here — directories, calendars, and pages listing
+              multiple conferences are excluded.
             </p>
           </div>
         </div>
@@ -547,7 +547,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
         {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <p className="text-xs text-slate-400">No web results found. Try different keywords.</p>
+            <p className="text-xs text-slate-400">No individual conference websites found. Try different keywords or broader filters.</p>
           </div>
         )}
 
