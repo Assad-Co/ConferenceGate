@@ -13,6 +13,7 @@ import { sponsorsRouter } from "./server/sponsors";
 import { postsRouter } from "./server/posts";
 import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
+import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
@@ -796,6 +797,10 @@ Return JSON with exactly this shape:
           address: typeof h.address === "string" && h.address.trim() ? h.address.trim() : null,
           distanceText: typeof h.distanceText === "string" && h.distanceText.trim() ? h.distanceText.trim() : null,
           distanceMeters: meters,
+          // Where the distance came from, so the two are never conflated: "published" is the
+          // conference's own stated figure, "estimated" is a straight-line calculation from
+          // geocoded coordinates that this site never actually claimed.
+          distanceSource: h.distanceSource === "estimated" ? "estimated" : meters !== null ? "published" : null,
           rateText: typeof h.rateText === "string" && h.rateText.trim() ? h.rateText.trim() : null,
           bookingUrl: resolveAbsoluteUrl(h.bookingUrl, baseUrl),
           isOfficialBlock: h.isOfficialBlock === true,
@@ -814,6 +819,64 @@ Return JSON with exactly this shape:
       if (a.isOfficialBlock !== b.isOfficialBlock) return a.isOfficialBlock ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
+  }
+
+  // How many hotels are worth a geocode. Each one costs a rate-limited second, and a conference
+  // listing more than this many is listing a city's hotel market rather than its own room blocks.
+  const MAX_HOTELS_TO_GEOCODE = 12;
+  // Past this, the geocoder almost certainly matched the wrong place — a bare hotel name like
+  // "The Ned" or "Hilton Garden Inn" exists in dozens of cities. A wrong number is worse than no
+  // number, so an implausible result is discarded rather than shown.
+  const MAX_PLAUSIBLE_HOTEL_DISTANCE_M = 50000;
+
+  // Works out roughly how far each hotel is from the venue for the hotels the conference listed
+  // but never gave a distance for. Runs once, after the crawl, because each lookup is rate-limited
+  // to one per second by the geocoding service's usage policy.
+  //
+  // Anything produced here is explicitly marked `estimated` and never overwrites a distance the
+  // conference itself published — a straight-line calculation between two geocoded points is a
+  // weaker claim than the organiser saying "a 5-minute walk", and the two stay distinguishable all
+  // the way to the screen.
+  async function enrichHotelDistances(parsed: any): Promise<void> {
+    const hotels = Array.isArray(parsed.hotels) ? parsed.hotels : [];
+    const needsDistance = hotels.filter(
+      (h: any) =>
+        h &&
+        typeof h.name === "string" &&
+        h.name.trim() &&
+        (typeof h.distanceMeters !== "number" || !Number.isFinite(h.distanceMeters))
+    );
+    if (needsDistance.length === 0) return;
+
+    // The venue is what everything is measured from, so without one there is nothing to compute —
+    // and a city on its own won't do, since a distance from a city's centroid isn't a distance
+    // from the conference. A named venue together with its address is the most precise query
+    // available; the city is only appended when there's no address to make it unambiguous.
+    const cityContext = typeof parsed.locationText === "string" ? parsed.locationText.trim() : "";
+    const venueQuery = (
+      parsed.venueAddress ? [parsed.venueName, parsed.venueAddress] : [parsed.venueName, cityContext]
+    )
+      .filter((part: unknown) => typeof part === "string" && part.trim())
+      .join(", ");
+    if (!venueQuery) return;
+
+    const venuePoint = await geocodePlace(venueQuery);
+    if (!venuePoint) return;
+
+    for (const hotel of needsDistance.slice(0, MAX_HOTELS_TO_GEOCODE)) {
+      // A bare hotel name is ambiguous across cities, so the conference's own city is appended
+      // when the site didn't give the hotel a full address of its own.
+      const hotelQuery = hotel.address ? `${hotel.name}, ${hotel.address}` : [hotel.name, cityContext].filter(Boolean).join(", ");
+      const point = await geocodePlace(hotelQuery);
+      if (!point) continue;
+      const meters = haversineMeters(venuePoint, point);
+      if (meters > MAX_PLAUSIBLE_HOTEL_DISTANCE_M) continue;
+      hotel.distanceMeters = meters;
+      hotel.distanceSource = "estimated";
+      // Only filled when the site gave no wording of its own, so a real published phrase is never
+      // replaced by a generated one.
+      if (!hotel.distanceText) hotel.distanceText = formatEstimatedDistance(meters);
+    }
   }
 
   // Fills in only the fields the primary page's extraction came up empty for — real data already
@@ -1124,6 +1187,16 @@ Return JSON with exactly this shape:
 
       if (nextFrontier.length === 0) break;
       frontier = nextFrontier;
+    }
+
+    // Done last, once every page that might mention a hotel has been read, and deliberately after
+    // the final crawl snapshot has already been published — a rate-limited geocode per hotel is
+    // slow, and none of it should hold up content that's already available to show.
+    try {
+      await enrichHotelDistances(parsed);
+    } catch (error) {
+      // Estimated distances are an enhancement; losing them must never lose the crawl's real work.
+      console.error("Hotel distance estimation failed:", error);
     }
 
     const result = buildExtractionResult(parsed, startUrl, pagesFetched, true);

@@ -1074,7 +1074,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         Where to Stay ({(data?.hotels || []).length})
                       </h4>
                       <span className="text-[10px] text-slate-400 font-semibold">
-                        Nearest to the venue first, by the distances this conference published
+                        Nearest to the venue first
+                        {(data?.hotels || []).some((h) => h.distanceSource === 'estimated')
+                          ? ' — greyed distances are map estimates, not published by this conference'
+                          : ''}
                       </span>
                     </div>
                     <div className="space-y-2">
@@ -1095,7 +1098,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                             {hotel.address && <p className="text-slate-500 text-[11px]">{hotel.address}</p>}
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                               {hotel.distanceText && (
-                                <span className="flex items-center gap-1 text-blue-700 font-semibold">
+                                <span
+                                  className={`flex items-center gap-1 font-semibold ${
+                                    hotel.distanceSource === 'estimated' ? 'text-slate-500' : 'text-blue-700'
+                                  }`}
+                                  title={
+                                    hotel.distanceSource === 'estimated'
+                                      ? 'Straight-line estimate from map coordinates — this conference did not publish a distance for this hotel.'
+                                      : 'Distance as published by the conference.'
+                                  }
+                                >
                                   <MapPin className="w-3 h-3" />
                                   {hotel.distanceText}
                                 </span>

@@ -41,14 +41,17 @@ export interface SponsorExtract {
   logoUrl: string | null;
 }
 
-/** One place to stay that the conference's own site named. `distanceMeters` is only ever set from
- *  a distance the site actually stated (converted), never estimated from an address — so hotels
- *  with a real published distance sort ahead of ones the site left unquantified. */
+/** One place to stay that the conference's own site named.
+ *
+ *  `distanceSource` says where the distance came from and must be kept visible to the reader:
+ *  'published' is the conference's own stated figure, 'estimated' is a straight-line calculation
+ *  between geocoded coordinates that nobody actually published. */
 export interface HotelExtract {
   name: string;
   address: string | null;
   distanceText: string | null;
   distanceMeters: number | null;
+  distanceSource: 'published' | 'estimated' | null;
   rateText: string | null;
   bookingUrl: string | null;
   isOfficialBlock: boolean;
