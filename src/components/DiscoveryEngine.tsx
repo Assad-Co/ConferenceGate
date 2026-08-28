@@ -363,15 +363,27 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 merged.push(result);
               }
             }
+            // A newer request (typed text, a dragged slider, any filter) may have started and
+            // already resolved while this one was still in flight — parallel per-subject calls
+            // don't all take the same time, so responses can land out of order. Applying a stale
+            // one now would flash the page back to an older, already-superseded result set.
+            if (lastWebQueryRef.current !== cacheKey) return;
             setWebResults(merged);
           })
           .catch((e) => {
+            if (lastWebQueryRef.current !== cacheKey) return;
             setWebResults(null);
             setWebSearchError(e.message || 'Live search failed. Please try again.');
           })
-          .finally(() => setWebSearchLoading(false));
+          .finally(() => {
+            if (lastWebQueryRef.current === cacheKey) setWebSearchLoading(false);
+          });
       },
-      trimmed ? 500 : 0
+      // Every trigger is debounced the same way, not just typed text — a dragged price-range
+      // handle or a rapid sequence of filter changes fires this effect just as fast as typing, and
+      // an immediate (0ms) search on each intermediate value was firing a full parallel ten-query
+      // search per pixel of drag, racing itself and frequently landing on an empty result.
+      500
     );
 
     return () => clearTimeout(handle);
