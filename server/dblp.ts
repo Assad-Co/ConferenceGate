@@ -5,6 +5,20 @@
 //
 // Names collide here too — results are candidates, never auto-attached.
 
+// DBLP's records are also sourced from XML bibliography data and can carry escaped entities
+// straight through (a title or venue literally containing "&amp;" instead of "&").
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
 export interface DblpCandidate {
   id: string;
   title: string;
@@ -49,8 +63,8 @@ export async function searchDblpConferencePapers(fullName: string): Promise<Dblp
 
       candidates.push({
         id: `dblp:${key}`,
-        title: rawTitle.trim().replace(/\.$/, ""),
-        venue: typeof info.venue === "string" && info.venue ? info.venue : null,
+        title: decodeHtmlEntities(rawTitle.trim().replace(/\.$/, "")),
+        venue: typeof info.venue === "string" && info.venue ? decodeHtmlEntities(info.venue) : null,
         year: typeof info.year === "string" ? info.year : null,
         url: typeof info.doi === "string" && info.doi ? `https://doi.org/${info.doi}` : typeof info.url === "string" ? info.url : null,
       });

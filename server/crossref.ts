@@ -8,6 +8,21 @@
 
 const CROSSREF_CONTACT_EMAIL = process.env.CROSSREF_CONTACT_EMAIL || null;
 
+// CrossRef's metadata is sourced from publishers' original XML records, which sometimes carry
+// escaped entities straight through into the JSON API (a title or journal name literally
+// containing "&amp;" instead of "&"). Decoded here so it never reaches the screen unescaped.
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
 export interface CrossRefCandidate {
   doi: string;
   title: string;
@@ -92,8 +107,8 @@ export async function searchCrossRefConferencePapers(fullName: string): Promise<
 
       candidates.push({
         doi,
-        title: title.trim(),
-        venue: typeof venue === "string" ? venue : null,
+        title: decodeHtmlEntities(title.trim()),
+        venue: typeof venue === "string" ? decodeHtmlEntities(venue) : null,
         year,
         url,
       });
