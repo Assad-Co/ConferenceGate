@@ -34,13 +34,13 @@ const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * query syntax to constrain to that specific author). Never fabricates a value — any field DBLP
  * doesn't provide comes back as null. Returns [] (never throws) if the lookup fails or nothing
  * is found. */
-export async function searchDblpConferencePapers(fullName: string): Promise<DblpCandidate[]> {
+export async function searchDblpConferencePapers(fullName: string, force = false): Promise<DblpCandidate[]> {
   const name = fullName.trim();
   if (!name) return [];
 
   const cacheKey = name.toLowerCase();
   const cached = searchCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
 
   try {
     const authorQuery = `author:${name.replace(/\s+/g, "_")}:`;

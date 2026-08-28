@@ -55,13 +55,13 @@ const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * Never fabricates a value — any field CrossRef doesn't provide comes back as null. Returns []
  * (never throws) if the lookup fails or nothing plausible is found, so the UI can always render
  * the same honest-empty-state pattern used elsewhere. */
-export async function searchCrossRefConferencePapers(fullName: string): Promise<CrossRefCandidate[]> {
+export async function searchCrossRefConferencePapers(fullName: string, force = false): Promise<CrossRefCandidate[]> {
   const name = fullName.trim();
   if (!name) return [];
 
   const cacheKey = name.toLowerCase();
   const cached = searchCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
 
   try {
     const params = new URLSearchParams({

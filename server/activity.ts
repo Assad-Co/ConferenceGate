@@ -667,6 +667,11 @@ function toExternalPaperDTO(row: ExternalPaperMatchRow) {
 // entries (confirmed or dismissed) are excluded from future candidate lists, and the same paper
 // indexed by more than one source is de-duplicated by normalized title.
 activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  // Each source caches its own results per name for 24 hours to avoid hammering a free public
+  // API on every profile visit. That means an unconditional re-search (after correcting a name,
+  // or just wanting to check for something newly published) would otherwise silently hand back
+  // yesterday's cached answer under the same name. `force` is how "search again" means it.
+  const force = req.query.force === "true";
   const user = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
   const decided = await dbAll<ExternalPaperMatchRow>("SELECT * FROM external_paper_matches WHERE user_id = ?", [
     req.userId!,
@@ -675,9 +680,9 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
 
   const [crossRef, semanticScholar, dblp] = user?.name
     ? await Promise.all([
-        searchCrossRefConferencePapers(user.name),
-        searchSemanticScholarConferencePapers(user.name),
-        searchDblpConferencePapers(user.name),
+        searchCrossRefConferencePapers(user.name, force),
+        searchSemanticScholarConferencePapers(user.name, force),
+        searchDblpConferencePapers(user.name, force),
       ])
     : [[], [], []];
 

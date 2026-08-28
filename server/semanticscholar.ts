@@ -53,13 +53,16 @@ const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * conference papers (publicationTypes includes "Conference"). Never fabricates a value — any
  * field Semantic Scholar doesn't provide comes back as null. Returns [] (never throws) if the
  * lookup fails or nothing plausible is found. */
-export async function searchSemanticScholarConferencePapers(fullName: string): Promise<SemanticScholarCandidate[]> {
+export async function searchSemanticScholarConferencePapers(
+  fullName: string,
+  force = false
+): Promise<SemanticScholarCandidate[]> {
   const name = fullName.trim();
   if (!name) return [];
 
   const cacheKey = name.toLowerCase();
   const cached = searchCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.data;
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
 
   try {
     const searchRes = await fetch(

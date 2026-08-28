@@ -25,6 +25,7 @@ import {
   Search,
   Plus,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
@@ -198,6 +199,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [externalConfirmed, setExternalConfirmed] = useState<ExternalPaper[]>([]);
   const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
   const [externalLoading, setExternalLoading] = useState(false);
+  const [externalRefreshing, setExternalRefreshing] = useState(false);
   const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
 
   useEffect(() => {
@@ -223,6 +225,24 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       cancelled = true;
     };
   }, [currentUserId]);
+
+  // A person can land here right after fixing a name that was too short to match well, or just
+  // want to check whether something new has been indexed since the last visit — but each source
+  // caches its own results for 24 hours, so simply revisiting this tab would silently keep
+  // serving that cached answer. This bypasses it and searches CrossRef, Semantic Scholar, and
+  // DBLP fresh, right now, for whatever name is on the account currently.
+  const handleSearchAgain = async () => {
+    setExternalRefreshing(true);
+    try {
+      const res = await fetchMyExternalPapers(true);
+      setExternalConfirmed(res.confirmed);
+      setExternalCandidates(res.candidates);
+    } catch {
+      // Non-critical — whatever was already showing just stays as-is.
+    } finally {
+      setExternalRefreshing(false);
+    }
+  };
 
   const handleDecideExternalPaper = async (paper: ExternalPaper, decision: 'confirmed' | 'dismissed') => {
     setDecidingDoi(paper.doi);
@@ -710,10 +730,21 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             </div>
 
             <div className="space-y-4 pt-4 border-t border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Search className="w-4 h-4 text-indigo-600" />
-                Possible Conference Papers (matched by name)
-              </h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Search className="w-4 h-4 text-indigo-600" />
+                  Possible Conference Papers (matched by name)
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleSearchAgain}
+                  disabled={externalLoading || externalRefreshing}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${externalRefreshing ? 'animate-spin' : ''}`} />
+                  {externalRefreshing ? 'Searching...' : 'Search Again'}
+                </button>
+              </div>
               {onEditProfile && userProfile.name.trim().split(/\s+/).filter(Boolean).length < 3 && (
                 <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   Your profile has only {userProfile.name.trim().split(/\s+/).filter(Boolean).length || 0} name
