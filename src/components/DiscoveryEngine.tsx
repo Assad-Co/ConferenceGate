@@ -79,6 +79,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [locationFilter, setLocationFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('');
+  const [timingFilter, setTimingFilter] = useState('');
   const savedIds = savedConferenceIds;
   const followedIds = followedConferenceIds;
 
@@ -109,6 +110,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     ].filter(Boolean).join(' ').toLowerCase();
     const confCountry = (conf.location?.country || '').toLowerCase();
     const confFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
+    const duration = conferenceDurationDays(conf.dates.start, conf.dates.end);
+    const startDay = new Date(`${conf.dates.start}T12:00:00`).getDay();
+    const endDay = new Date(`${conf.dates.end}T12:00:00`).getDay();
+    const touchesWeekend = [startDay, endDay].some((day) => day === 0 || day === 6);
 
     if (
       term &&
@@ -121,6 +126,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
     if (formatTerm && confFormat !== formatTerm) return false;
+    if (timingFilter === 'one-day' && duration !== 1) return false;
+    if (timingFilter === 'multi-day' && duration < 2) return false;
+    if (timingFilter === 'weekend' && !touchesWeekend) return false;
+    if (timingFilter === 'weekday' && touchesWeekend) return false;
     return true;
   });
 
@@ -150,8 +159,18 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     const locationBias = locationFilter.trim() ? ` in ${locationFilter.trim()}` : '';
     const countryBias = countryFilter.trim() ? ` ${countryFilter.trim()}` : '';
     const formatBias = formatFilter ? ` ${formatFilter} conference` : '';
+    const timingBias =
+      timingFilter === 'one-day' ? ' one day' :
+      timingFilter === 'multi-day' ? ' multi day' :
+      timingFilter === 'weekend' ? ' weekend' :
+      timingFilter === 'weekday' ? ' weekday' : '';
     const effectiveQuery =
-      (trimmed || DEFAULT_DISCOVER_QUERY) + dateBias + locationBias + countryBias + formatBias;
+      (trimmed || DEFAULT_DISCOVER_QUERY) +
+      dateBias +
+      locationBias +
+      countryBias +
+      formatBias +
+      timingBias;
 
     const handle = setTimeout(
       () => {
@@ -171,7 +190,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter]);
+  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter]);
 
   return (
     <div className="space-y-8">
@@ -204,7 +223,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2.5">
             <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
               <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="text-[10px] font-semibold text-slate-500">From</span>
@@ -261,6 +280,19 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               <option value="Virtual">Virtual</option>
               <option value="Hybrid">Hybrid</option>
             </select>
+
+            <select
+              value={timingFilter}
+              onChange={(e) => setTimingFilter(e.target.value)}
+              aria-label="Conference timing"
+              className="px-3 py-2 bg-slate-50 text-xs text-slate-700 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+            >
+              <option value="">Any timing</option>
+              <option value="one-day">One-day event</option>
+              <option value="multi-day">Multi-day event</option>
+              <option value="weekend">Weekend</option>
+              <option value="weekday">Weekday</option>
+            </select>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -279,7 +311,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 {suggestion}
               </button>
             ))}
-            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter) && (
+            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter) && (
               <button
                 type="button"
                 onClick={() => {
@@ -289,6 +321,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   setLocationFilter('');
                   setCountryFilter('');
                   setFormatFilter('');
+                  setTimingFilter('');
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
               >
@@ -303,7 +336,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       {/* Honest empty state when the selected filters hide the Conference Gate catalog. */}
       {filtered.length === 0 &&
         (conferences || []).length > 0 &&
-        (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter) && (
+        (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
             <p className="text-xs text-slate-500">
               No Conference Gate conferences match the selected filters. Live Web Search below is still checking
