@@ -15,6 +15,7 @@ import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, Spo
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
+import { extractPdfText } from "./server/pdfText";
 import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
@@ -428,9 +429,10 @@ Provide constructive feedback in JSON format with fields:
     return found;
   }
 
-  // File extensions that are never an HTML page worth extracting from. Filtered out of sitemap
-  // results up front so the page budget isn't spent fetching a PDF or a logo only to reject it.
-  const NON_PAGE_EXT_RE = /\.(pdf|jpe?g|png|gif|svg|webp|ico|css|js|zip|docx?|pptx?|xlsx?|mp4|mp3|xml)(\?|#|$)/i;
+  // Extensions with nothing extractable in them. PDFs are deliberately absent: a conference's
+  // call for papers, programme and fee table are very often published only as documents, and
+  // those are now read rather than skipped.
+  const NON_PAGE_EXT_RE = /\.(jpe?g|png|gif|svg|webp|ico|css|js|zip|pptx?|xlsx?|mp4|mp3|xml)(\?|#|$)/i;
 
   // Asks the site for its own index of itself before falling back to guessing from nav links. A
   // sitemap is the only way to reach pages a conference never linked from its front page — a
@@ -616,6 +618,30 @@ For hotels, list every individual place to stay the page actually names — conf
 
 distanceText is how far that hotel is from the VENUE, copied as the page states it and only when the page states it for that hotel — "0.2 miles from the convention center", "adjacent to the venue", "a 5-minute walk", "across the street". Leave it null when the page gives no distance; do not compute, estimate, or infer a distance from an address, and do not describe a hotel as close just because it is listed as a conference hotel. Additionally set distanceMeters to that same stated distance converted to a whole number of metres when — and only when — the page states an actual measurable distance or walking time (1 mile = 1609 metres; treat a stated walking time as 80 metres per minute; treat "adjacent"/"attached"/"on-site"/"across the street" as 0). If the page gives no distance for that hotel, or gives something too vague to measure ("close by", "in the downtown area"), set distanceMeters to null rather than guessing a number.
 
+For the identity fields: acronym is the conference's own short name when it uses one ("APHA", "NeurIPS", "ICSE 2026" -> "ICSE"); edition is its own ordinal for this instance ("17th Annual", "2026 edition") exactly as written; year is the calendar year of the event itself, not of a past edition mentioned in passing; organizingInstitution is the society, university or company that runs it, when the page names one.
+
+For importantDates, list every dated milestone the page states as its own entry — abstract deadline, full paper deadline, notification, camera-ready, early-bird registration close, registration deadline, the event dates themselves. Use the page's own label and its own date wording; set isDeadline true only for dates that are something an author or attendee must act by. This is the place for dates, not a free-text summary — one entry per milestone, and nothing that isn't explicitly dated on the page.
+
+For registrationUrl, give the page where someone actually registers or pays — the target of a "Register Now" / "Register here" / "Sign up" call to action, which is very often on a different host (a ticketing or event-management provider). Prefer that over a link to the conference's own general registration *information* page, and use null rather than falling back to a nav entry that merely describes fees.
+
+For registrationFees, one entry per price the page states, with the category exactly as written ("IEEE Member", "Student", "Non-member early bird"), the amount as a number, and the currency as its three-letter code when determinable from the symbol or text. Attach the deadline only when the page ties that specific price to a date. Never convert between currencies and never compute a price the page didn't print. earlyBirdDeadline is the date the reduced rate ends, when stated.
+
+For publicationInfo, capture only what the page actually claims about where the work will appear: the proceedings publisher, the journals a special issue or extended version is offered in, the indexing services named (Scopus, Web of Science, EI Compendex, DBLP), and any DOI, ISBN or ISSN literally printed. These are frequently promised in vague terms — record only concrete named claims, never "will be indexed in major databases".
+
+For contact, use the address the page gives for reaching the organisers. socialLinks must come from real [LINK: ...] markers pointing at a social platform, with platform set to the platform's name.
+
+For committee entries, set committeeType to which body the page places that person in — "Organizing", "Scientific", "Technical", "Advisory", "Steering", "Chair", or "Reviewer" — using the page's own grouping. When a page lists people under a single unlabelled "Committee" heading, use "Organizing". Never sort people into a body the page didn't put them in.
+
+For agendaSessions, set sessionType to "Keynote", "Workshop", "Tutorial", "Special Session", "Panel" or "Session" according to how the page itself labels that slot, and null when it doesn't say.
+
+For sponsors, set partnerType to "Sponsor", "Exhibitor", "Partner" or "Supporter" following the page's own heading for that organisation, and null if it simply names them without a category.
+
+fieldConfidence records how firmly the page supports each value you filled in. Include an entry ONLY for fields you actually populated, keyed by the field name, and use exactly one of:
+  "High"   — the page states this directly and unambiguously; a careful reader would extract the same value.
+  "Medium" — the page states it, but the wording is partial, or spread across sentences, or one of several plausible readings.
+  "Low"    — the page strongly implies it without saying it outright.
+If something is only a guess, do not fill the field at all — null is always better than a low-confidence invention. Judge each field on this page's own wording, not on how plausible the value seems in general.
+
 Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information, (g) a general "About"/"Overview"/"About the Conference" page describing what the conference itself is about, if this page doesn't already describe that well. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
 
 Page title: "${title}"
@@ -628,10 +654,34 @@ ${pageText}
 
 Return JSON with exactly this shape:
 {
+  "conferenceTitle": string | null,
+  "acronym": string | null,
+  "edition": string | null,
+  "year": string | null,
+  "organizingInstitution": string | null,
   "overviewSummary": string | null,
+  "topics": string[],
   "datesText": string | null,
   "locationText": string | null,
+  "city": string | null,
+  "country": string | null,
   "format": string | null,
+  "importantDates": [{ "label": string, "date": string, "isDeadline": boolean }],
+  "registrationUrl": string | null,
+  "registrationFees": [{ "category": string, "amount": number | null, "currency": string | null, "deadline": string | null, "notes": string | null }],
+  "earlyBirdDeadline": string | null,
+  "publicationInfo": {
+    "proceedingsPublisher": string | null,
+    "journals": string[],
+    "indexing": string[],
+    "doi": string | null,
+    "isbn": string | null,
+    "issn": string | null
+  },
+  "contactEmail": string | null,
+  "contactPhone": string | null,
+  "socialLinks": [{ "platform": string, "url": string }],
+  "awards": [{ "name": string, "description": string | null }],
   "cfpStatus": string | null,
   "cfpDeadline": string | null,
   "submissionUrl": string | null,
@@ -643,10 +693,10 @@ Return JSON with exactly this shape:
   "cfpReviewProcess": string | null,
   "cfpNotificationDate": string | null,
   "cfpTopics": string[],
-  "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null }],
+  "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null, "sessionType": string | null }],
   "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
-  "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
-  "sponsors": [{ "name": string, "tier": string | null, "logoUrl": string | null }],
+  "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "committeeType": string | null, "imageUrl": string | null }],
+  "sponsors": [{ "name": string, "tier": string | null, "partnerType": string | null, "logoUrl": string | null }],
   "accommodationText": string | null,
   "travelText": string | null,
   "venueName": string | null,
@@ -660,7 +710,8 @@ Return JSON with exactly this shape:
     "sponsors": string | null,
     "agenda": string | null,
     "venue": string | null
-  }
+  },
+  "fieldConfidence": { "<fieldName>": "High" | "Medium" | "Low" }
 }`;
   }
 
@@ -715,14 +766,15 @@ Return JSON with exactly this shape:
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     pageUrl: string,
     title: string
-  ): Promise<{ parsed: any; html: string } | null> {
+  ): Promise<{ parsed: any; html: string; pageTitle: string | null; isPdf: boolean } | null> {
     if (!(await isSafeExternalUrl(pageUrl))) return null;
 
-    // Two ways to read a page. The plain fetch is tried first because it's fast and works for
-    // most conference sites; a real browser is tried only when that produces nothing usable,
-    // which is the case for sites behind bot protection and sites that build themselves in
-    // JavaScript. `null` from the first stage means "try the browser", not "give up".
-    async function readPageHtml(): Promise<string | null> {
+    // Reads the URL by whichever means works. A plain fetch is tried first because it's fast and
+    // handles most conference sites; a real browser is tried only when that produces nothing
+    // usable, which is the case for bot-protected sites and ones that build themselves in
+    // JavaScript. A PDF takes a third path entirely — conference sites routinely publish the call
+    // for papers, the programme and the fee table as documents rather than pages.
+    async function readPageContent(): Promise<{ html: string; text: string } | null> {
       let plain: string | null = null;
       try {
         const pageRes = await fetch(pageUrl, {
@@ -732,12 +784,20 @@ Return JSON with exactly this shape:
           // client's loading spinner) indefinitely — cap it and treat a timeout as a failure.
           signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
         });
-        // A non-HTML body (a PDF, an image, a JSON API response) is worth abandoning outright:
+        const contentType = pageRes.headers.get("content-type") || "";
+
+        if (pageRes.ok && /application\/pdf/i.test(contentType)) {
+          const text = await extractPdfText(await pageRes.arrayBuffer());
+          // No `html` for a PDF: it has no anchors for the crawl to follow, and the extraction
+          // prompt's [LINK:]/[IMAGE:] markers have no meaning here.
+          return text ? { html: "", text } : null;
+        }
+
+        // Any other non-HTML body (an image, a JSON API response, a zip) is worth abandoning:
         // tag-stripping it produces text-shaped noise the model can only extract nulls from, and
         // rendering it in a browser wouldn't help either.
-        const contentType = pageRes.headers.get("content-type") || "";
         if (contentType && !/text\/html|application\/xhtml|text\/plain/i.test(contentType)) {
-          console.error(`Page fetch for extraction returned non-HTML content-type "${contentType}" for ${pageUrl}`);
+          console.error(`Page fetch for extraction returned unusable content-type "${contentType}" for ${pageUrl}`);
           return null;
         }
         // An error response still has a body, and without this check that body (a WAF block page,
@@ -755,33 +815,41 @@ Return JSON with exactly this shape:
       }
 
       // Good enough as it stands — no need to spend a browser launch on it.
-      if (plain && prepareHtmlForExtraction(plain, pageUrl).length >= MIN_EXTRACTABLE_TEXT_CHARS) return plain;
+      if (plain) {
+        const text = prepareHtmlForExtraction(plain, pageUrl);
+        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) return { html: plain, text };
+      }
 
       // Either the request was refused, or it succeeded and returned a shell with nothing in it.
       // Both are exactly what a real browser exists to get past, so try one.
       const rendered = await fetchRenderedHtml(pageUrl);
-      if (rendered && prepareHtmlForExtraction(rendered, pageUrl).length >= MIN_EXTRACTABLE_TEXT_CHARS) {
-        console.log(`Read ${pageUrl} by rendering it in a browser (plain fetch returned nothing usable)`);
-        return rendered;
+      if (rendered) {
+        const text = prepareHtmlForExtraction(rendered, pageUrl);
+        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+          console.log(`Read ${pageUrl} by rendering it in a browser (plain fetch returned nothing usable)`);
+          return { html: rendered, text };
+        }
       }
-      // The browser didn't help either. Return the plain body if there was one, so the
-      // minimum-text check below reports it the same way it always has.
-      return plain;
+      // Neither worked. Report what the plain body amounted to, so the caller logs the same
+      // "too little text" reason it always has.
+      return plain ? { html: plain, text: prepareHtmlForExtraction(plain, pageUrl) } : null;
     }
 
-    const html = await readPageHtml();
-    if (html === null) return null;
+    const content = await readPageContent();
+    if (content === null) return null;
+    const isPdf = content.html === "";
 
     // 40,000 characters of actual visible text (not raw HTML) comfortably covers even a long
     // single page with CFP details near the bottom — a tighter cutoff risked truncating the
     // requirements section clean off before the model ever saw it.
-    const pageText = prepareHtmlForExtraction(html, pageUrl).slice(0, 40000);
+    const pageText = content.text.slice(0, 40000);
     if (pageText.length < MIN_EXTRACTABLE_TEXT_CHARS) {
       console.error(
         `Page for extraction had only ${pageText.length} chars of visible text (likely client-rendered) for ${pageUrl}`
       );
       return null;
     }
+    const html = content.html;
 
     let parsed: any = {};
     try {
@@ -799,7 +867,36 @@ Return JSON with exactly this shape:
       console.error("Extraction model call failed:", e);
       return null;
     }
-    return { parsed, html };
+    return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf };
+  }
+
+  // The page's own <title>, which is what a person would call this page when asked where a value
+  // came from. A PDF has no title tag, so its filename stands in.
+  function pageTitleOf(html: string, pageUrl: string): string | null {
+    const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+    if (match) {
+      const text = decodeEntitiesAndTags(match[1]);
+      if (text) return text.slice(0, 200);
+    }
+    try {
+      const name = decodeURIComponent(new URL(pageUrl).pathname.split("/").filter(Boolean).pop() || "");
+      return name || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function decodeEntitiesAndTags(raw: string): string {
+    return raw
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   // Triggers a secondary-page lookup whenever submissionRequirements specifically wasn't found —
@@ -937,31 +1034,122 @@ Return JSON with exactly this shape:
 
   // Fills in only the fields the primary page's extraction came up empty for — real data already
   // found on the primary page always wins, so a secondary page can only ever add, never overwrite.
-  function mergeExtractionResults(primary: any, secondary: any, secondaryUrl: string): any {
-    const merged = { ...primary };
-    for (const field of [
-      "cfpStatus",
-      "cfpDeadline",
-      "submissionRequirements",
-      "submissionEmail",
-      "accommodationText",
-      "travelText",
-      "locationText",
-      "datesText",
-      "overviewSummary",
-      "cfpSubmissionFormat",
-      "cfpLengthLimit",
-      "cfpReviewProcess",
-      "cfpNotificationDate",
-      "venueName",
-      "venueAddress",
-    ]) {
-      if (!merged[field] && secondary[field]) merged[field] = secondary[field];
+  // Plain values, each held by whichever page stated it first.
+  const SCALAR_FIELDS = [
+    "conferenceTitle", "acronym", "edition", "year", "organizingInstitution",
+    "overviewSummary", "datesText", "locationText", "city", "country", "format",
+    "cfpStatus", "cfpDeadline", "submissionRequirements", "submissionEmail",
+    "cfpSubmissionFormat", "cfpLengthLimit", "cfpReviewProcess", "cfpNotificationDate",
+    "earlyBirdDeadline", "contactEmail", "contactPhone",
+    "accommodationText", "travelText", "venueName", "venueAddress",
+  ] as const;
+  // Same, but resolved against the page they were found on before being kept.
+  const URL_FIELDS = ["submissionUrl", "submissionTemplateUrl", "registrationUrl"] as const;
+  // Arrays of objects, unioned across pages and de-duplicated on their identity field.
+  const LIST_FIELDS = [
+    "committee", "speakers", "sponsors", "agendaSessions", "hotels",
+    "importantDates", "registrationFees", "awards", "socialLinks",
+  ] as const;
+  // Arrays of plain strings, unioned on their own normalized text.
+  const STRING_LIST_FIELDS = ["cfpTopics", "topics"] as const;
+
+  // Fields where two different values mean the site genuinely contradicts itself, and a reader
+  // needs to know which to trust. Free-prose fields are deliberately excluded: two pages
+  // describing the same conference in different words, or naming its city with and without the
+  // country, is normal writing rather than a disagreement, and reporting those as conflicts
+  // buries the one that matters — a venue that actually changed — in noise.
+  const CONFLICT_FIELDS = new Set([
+    "datesText", "cfpDeadline", "cfpNotificationDate", "earlyBirdDeadline",
+    "venueName", "venueAddress", "city", "country", "format", "year", "edition",
+    "contactEmail", "acronym",
+  ]);
+
+  // Two values count as a real disagreement only if they aren't each other in different words.
+  // Connector words are dropped so "14-17 October 2026" and "14 to 17 October 2026" match, and
+  // one value containing the other counts as agreement so "London" doesn't fight
+  // "London, United Kingdom".
+  function sameValue(a: unknown, b: unknown): boolean {
+    const norm = (v: unknown) =>
+      String(v)
+        .toLowerCase()
+        .replace(/\b(to|through|until|till|and|the|at|on|in|of)\b/g, " ")
+        .replace(/[^a-z0-9]/g, "");
+    const na = norm(a);
+    const nb = norm(b);
+    if (!na || !nb) return na === nb;
+    if (na === nb) return true;
+    const [shorter, longer] = na.length <= nb.length ? [na, nb] : [nb, na];
+    return shorter.length >= 4 && longer.includes(shorter);
+  }
+
+  function noteProvenance(merged: any, field: string, url: string, pageTitle: string | null, secondary: any): void {
+    if (!merged._provenance) merged._provenance = {};
+    const stated = secondary?.fieldConfidence?.[field];
+    merged._provenance[field] = {
+      sourceUrl: url,
+      sourcePageTitle: pageTitle,
+      confidence: stated === "High" || stated === "Medium" || stated === "Low" ? stated : "Medium",
+    };
+  }
+
+  // Records that two pages of the same site stated different things, rather than quietly keeping
+  // whichever was read first. Conference sites contradict themselves more often than one would
+  // hope — a date changed on the CFP page but not the homepage, a venue updated in one place
+  // only — and silently picking one produces a confidently wrong answer.
+  function noteConflict(merged: any, field: string, incoming: unknown, url: string, pageTitle: string | null): void {
+    if (!merged._conflicts) merged._conflicts = [];
+    const held = merged._provenance?.[field];
+    let entry = merged._conflicts.find((c: any) => c.field === field);
+    if (!entry) {
+      entry = {
+        field,
+        values: [
+          {
+            value: String(merged[field]),
+            sourceUrl: held?.sourceUrl || null,
+            sourcePageTitle: held?.sourcePageTitle || null,
+          },
+        ],
+      };
+      merged._conflicts.push(entry);
     }
-    // Topics are plain strings rather than objects, so they union on their own normalized text.
-    if (Array.isArray(secondary.cfpTopics) && secondary.cfpTopics.length > 0) {
+    if (entry.values.some((v: any) => sameValue(v.value, incoming))) return;
+    entry.values.push({ value: String(incoming), sourceUrl: url, sourcePageTitle: pageTitle });
+  }
+
+  function mergeExtractionResults(
+    primary: any,
+    secondary: any,
+    secondaryUrl: string,
+    secondaryTitle: string | null = null
+  ): any {
+    const merged = { ...primary };
+
+    for (const field of SCALAR_FIELDS) {
+      const incoming = secondary[field];
+      if (incoming === null || incoming === undefined || incoming === "") continue;
+      if (!merged[field]) {
+        merged[field] = incoming;
+        noteProvenance(merged, field, secondaryUrl, secondaryTitle, secondary);
+      } else if (CONFLICT_FIELDS.has(field) && !sameValue(merged[field], incoming)) {
+        noteConflict(merged, field, incoming, secondaryUrl, secondaryTitle);
+      }
+    }
+
+    for (const field of URL_FIELDS) {
+      if (merged[field] || !secondary[field]) continue;
+      const resolved = resolveAbsoluteUrl(secondary[field], secondaryUrl);
+      if (!resolved) continue;
+      merged[field] = resolved;
+      noteProvenance(merged, field, secondaryUrl, secondaryTitle, secondary);
+    }
+
+    for (const field of STRING_LIST_FIELDS) {
+      const incoming = Array.isArray(secondary[field]) ? secondary[field] : [];
+      if (incoming.length === 0) continue;
       const seen = new Set<string>();
-      merged.cfpTopics = [...(Array.isArray(merged.cfpTopics) ? merged.cfpTopics : []), ...secondary.cfpTopics]
+      const before = Array.isArray(merged[field]) ? merged[field].length : 0;
+      merged[field] = [...(Array.isArray(merged[field]) ? merged[field] : []), ...incoming]
         .filter((t: any) => typeof t === "string" && t.trim())
         .filter((t: string) => {
           const key = t.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -969,25 +1157,55 @@ Return JSON with exactly this shape:
           seen.add(key);
           return true;
         });
+      if (before === 0 && merged[field].length > 0) {
+        noteProvenance(merged, field, secondaryUrl, secondaryTitle, secondary);
+      }
     }
-    if (!merged.submissionUrl && secondary.submissionUrl) {
-      merged.submissionUrl = resolveAbsoluteUrl(secondary.submissionUrl, secondaryUrl);
-    }
-    if (!merged.submissionTemplateUrl && secondary.submissionTemplateUrl) {
-      merged.submissionTemplateUrl = resolveAbsoluteUrl(secondary.submissionTemplateUrl, secondaryUrl);
-    }
+
     // List sections accumulate across pages instead of being all-or-nothing. A homepage almost
     // always carries a teaser — three "featured speakers", a couple of headline sponsors, one
     // day's highlights — and the real roster lives on the dedicated page. Treating a non-empty
     // primary list as "already have it" meant the full page's 40 speakers were fetched, parsed,
     // and then thrown away in favour of the homepage's 3. Union + de-duplicate instead, so each
     // page can only ever add rows, and an entry already known keeps its richer version.
-    for (const field of ["committee", "speakers", "sponsors", "agendaSessions", "hotels"] as const) {
+    for (const field of LIST_FIELDS) {
       const current = Array.isArray(merged[field]) ? merged[field] : [];
       const incoming = Array.isArray(secondary[field]) ? secondary[field] : [];
       if (incoming.length === 0) continue;
       merged[field] = unionEntries(field, current, incoming);
+      if (current.length === 0) noteProvenance(merged, field, secondaryUrl, secondaryTitle, secondary);
     }
+
+    // publicationInfo is a nested object whose own fields fill independently — a page may name the
+    // proceedings publisher while another names the indexing services.
+    const incomingPub = secondary.publicationInfo;
+    if (incomingPub && typeof incomingPub === "object") {
+      const current = merged.publicationInfo && typeof merged.publicationInfo === "object" ? { ...merged.publicationInfo } : {};
+      let filledSomething = false;
+      for (const key of ["proceedingsPublisher", "doi", "isbn", "issn"]) {
+        if (!current[key] && incomingPub[key]) {
+          current[key] = incomingPub[key];
+          filledSomething = true;
+        }
+      }
+      for (const key of ["journals", "indexing"]) {
+        const add = Array.isArray(incomingPub[key]) ? incomingPub[key].filter((v: any) => typeof v === "string" && v.trim()) : [];
+        if (add.length === 0) continue;
+        const seen = new Set<string>();
+        current[key] = [...(Array.isArray(current[key]) ? current[key] : []), ...add].filter((v: string) => {
+          const k = v.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (!k || seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+        filledSomething = true;
+      }
+      merged.publicationInfo = current;
+      if (filledSomething && !merged._provenance?.publicationInfo) {
+        noteProvenance(merged, "publicationInfo", secondaryUrl, secondaryTitle, secondary);
+      }
+    }
+
     return merged;
   }
 
@@ -999,7 +1217,15 @@ Return JSON with exactly this shape:
     const raw =
       field === "agendaSessions"
         ? entry.title
-        : entry.name;
+        : field === "importantDates"
+          ? entry.label
+          : field === "registrationFees"
+            ? // Two fee rows are the same row only if they are the same category at the same
+              // price — an early-bird and a regular rate share a category name but are distinct.
+              `${entry.category} ${entry.amount ?? ""} ${entry.deadline ?? ""}`
+            : field === "socialLinks"
+              ? entry.url
+              : entry.name;
     if (typeof raw !== "string" || !raw.trim()) return null;
     let key = raw.toLowerCase();
     if (field !== "agendaSessions") {
@@ -1044,13 +1270,77 @@ Return JSON with exactly this shape:
   // Shapes the accumulated crawl state into the response the client renders. Called after every
   // round, not only at the end, so the tabs can fill in progressively while the rest of the site
   // is still being read.
-  function buildExtractionResult(parsed: any, sourceUrl: string, pagesRead: number, crawlComplete: boolean) {
-    return {
+  // The categories the crawl is trying to fill, and how to tell whether each one actually got
+  // anything. Reported at the end so a reader knows which empty sections were genuinely absent
+  // from everything that was read, rather than merely unreached.
+  const COVERAGE_CATEGORIES: Array<{ name: string; filled: (r: any) => boolean }> = [
+    { name: "Identity (title/acronym/edition)", filled: (r) => Boolean(r.conferenceTitle || r.acronym || r.edition) },
+    { name: "Dates", filled: (r) => Boolean(r.datesText) },
+    { name: "Important dates & deadlines", filled: (r) => r.importantDates.length > 0 },
+    { name: "Location & venue", filled: (r) => Boolean(r.locationText || r.venueName || r.venueAddress) },
+    { name: "Format", filled: (r) => Boolean(r.format) },
+    { name: "Description", filled: (r) => Boolean(r.overviewSummary) },
+    { name: "Topics & tracks", filled: (r) => r.topics.length > 0 || r.cfpTopics.length > 0 },
+    { name: "Call for papers", filled: (r) => Boolean(r.cfpStatus || r.cfpDeadline || r.submissionRequirements) },
+    { name: "Submission guidelines", filled: (r) => Boolean(r.submissionRequirements || r.cfpSubmissionFormat) },
+    { name: "Registration & fees", filled: (r) => Boolean(r.registrationUrl || r.earlyBirdDeadline) || r.registrationFees.length > 0 },
+    { name: "Speakers", filled: (r) => r.speakers.length > 0 },
+    { name: "Committees", filled: (r) => r.committee.length > 0 },
+    { name: "Program & agenda", filled: (r) => r.agendaSessions.length > 0 },
+    { name: "Sponsors, exhibitors & partners", filled: (r) => r.sponsors.length > 0 },
+    { name: "Organizing institution", filled: (r) => Boolean(r.organizingInstitution) },
+    { name: "Contact & social", filled: (r) => Boolean(r.contactEmail || r.contactPhone) || r.socialLinks.length > 0 },
+    { name: "Accommodation", filled: (r) => Boolean(r.accommodationText) || r.hotels.length > 0 },
+    { name: "Travel", filled: (r) => Boolean(r.travelText) },
+    { name: "Awards", filled: (r) => r.awards.length > 0 },
+    { name: "Publication & proceedings", filled: (r) => Boolean(r.publicationInfo.proceedingsPublisher || r.publicationInfo.doi || r.publicationInfo.isbn || r.publicationInfo.issn) || r.publicationInfo.journals.length > 0 || r.publicationInfo.indexing.length > 0 },
+  ];
+
+  const asStringArray = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim().length > 0) : [];
+  const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : []);
+
+  function buildExtractionResult(
+    parsed: any,
+    sourceUrl: string,
+    pagesRead: number,
+    crawlComplete: boolean,
+    coverage?: { pagesRead: string[]; pagesFailed: string[]; pdfsRead: string[]; urlsDiscovered: Set<string> }
+  ) {
+    const pub = parsed.publicationInfo && typeof parsed.publicationInfo === "object" ? parsed.publicationInfo : {};
+    const result: any = {
       extracted: true,
       isFallback: false,
       sourceUrl,
       pagesRead,
       crawlComplete,
+      conferenceTitle: parsed.conferenceTitle || null,
+      acronym: parsed.acronym || null,
+      edition: parsed.edition || null,
+      year: parsed.year || null,
+      organizingInstitution: parsed.organizingInstitution || null,
+      topics: asStringArray(parsed.topics),
+      city: parsed.city || null,
+      country: parsed.country || null,
+      importantDates: asArray(parsed.importantDates).filter((d) => d && typeof d.label === "string" && typeof d.date === "string"),
+      registrationUrl: resolveAbsoluteUrl(parsed.registrationUrl, sourceUrl),
+      registrationFees: asArray(parsed.registrationFees).filter((f) => f && typeof f.category === "string"),
+      earlyBirdDeadline: parsed.earlyBirdDeadline || null,
+      publicationInfo: {
+        proceedingsPublisher: pub.proceedingsPublisher || null,
+        journals: asStringArray(pub.journals),
+        indexing: asStringArray(pub.indexing),
+        doi: pub.doi || null,
+        isbn: pub.isbn || null,
+        issn: pub.issn || null,
+      },
+      contactEmail: sanitizeEmail(parsed.contactEmail),
+      contactPhone: parsed.contactPhone || null,
+      socialLinks: asArray(parsed.socialLinks)
+        .filter((s) => s && typeof s.platform === "string" && typeof s.url === "string")
+        .map((s) => ({ platform: s.platform, url: resolveAbsoluteUrl(s.url, sourceUrl) }))
+        .filter((s) => s.url),
+      awards: asArray(parsed.awards).filter((a) => a && typeof a.name === "string"),
       overviewSummary: parsed.overviewSummary || null,
       datesText: parsed.datesText || null,
       locationText: parsed.locationText || null,
@@ -1075,7 +1365,25 @@ Return JSON with exactly this shape:
       venueName: parsed.venueName || null,
       venueAddress: parsed.venueAddress || null,
       hotels: normalizeHotels(parsed.hotels, sourceUrl),
+      // Where each value came from and how firmly its page supported it, so nothing here is an
+      // unattributable assertion.
+      provenance: parsed._provenance || {},
+      // Pages of the same site that disagreed. Reported rather than resolved: picking one would
+      // turn a visible contradiction into a confident, possibly wrong, answer.
+      conflicts: parsed._conflicts || [],
     };
+
+    // The completeness check: what was read, what failed, and which categories are still empty
+    // after all of it.
+    result.crawlCoverage = {
+      pagesRead: coverage ? coverage.pagesRead : [],
+      pagesFailed: coverage ? coverage.pagesFailed : [],
+      pdfsRead: coverage ? coverage.pdfsRead : [],
+      urlsDiscovered: coverage ? coverage.urlsDiscovered.size : 0,
+      categoriesFound: COVERAGE_CATEGORIES.filter((c) => c.filled(result)).map((c) => c.name),
+      categoriesMissing: COVERAGE_CATEGORIES.filter((c) => !c.filled(result)).map((c) => c.name),
+    };
+    return result;
   }
 
   // The crawl walks the whole conference site, so it routinely outlives the request that started
@@ -1148,11 +1456,23 @@ Return JSON with exactly this shape:
       return;
     }
 
-    let parsed = primary.parsed;
+    // Merged through the same path as every other page rather than used directly, so the page
+    // that supplied each value is recorded for the starting page too.
+    let parsed = mergeExtractionResults({}, primary.parsed, startUrl, primary.pageTitle);
     const visited = new Set<string>([startUrl]);
     let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: startUrl, ...primary }];
     let pagesFetched = 1;
     const crawlStartedAt = Date.now();
+
+    // What the crawl actually managed to look at, reported alongside the data so a reader can
+    // tell an empty section apart from one that was never reached.
+    const coverage = {
+      pagesRead: [startUrl] as string[],
+      pagesFailed: [] as string[],
+      pdfsRead: [] as string[],
+      urlsDiscovered: new Set<string>([startUrl]),
+    };
+    if (primary.isPdf) coverage.pdfsRead.push(startUrl);
 
     // The site's own index of itself, fetched once up front. These seed the queue alongside the
     // links found by crawling, which is what lets the crawl reach pages the front page never
@@ -1230,6 +1550,7 @@ Return JSON with exactly this shape:
       }
 
       const candidateUrls = [...urgent, ...supplementary, ...remainder];
+      candidateUrls.forEach((url) => coverage.urlsDiscovered.add(url));
       if (candidateUrls.length === 0) break;
 
       // Fetched in parallel rather than one after another — each is an independent page-plus-
@@ -1245,14 +1566,18 @@ Return JSON with exactly this shape:
       const nextFrontier: typeof frontier = [];
       roundResults.forEach((outcome, i) => {
         if (outcome.status === "fulfilled" && outcome.value) {
-          parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i]);
-          nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
-        } else if (outcome.status === "rejected") {
-          console.error("Crawl page extraction failed:", outcome.reason);
+          parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i], outcome.value.pageTitle);
+          coverage.pagesRead.push(urlsToFetch[i]);
+          if (outcome.value.isPdf) coverage.pdfsRead.push(urlsToFetch[i]);
+          // A PDF contributes its content but has no links, so it can't extend the frontier.
+          if (outcome.value.html) nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
+        } else {
+          coverage.pagesFailed.push(urlsToFetch[i]);
+          if (outcome.status === "rejected") console.error("Crawl page extraction failed:", outcome.reason);
         }
       });
 
-      job.result = buildExtractionResult(parsed, startUrl, pagesFetched, false);
+      job.result = buildExtractionResult(parsed, startUrl, pagesFetched, false, coverage);
       job.signalFirstSnapshot();
 
       if (nextFrontier.length === 0) break;
@@ -1269,7 +1594,7 @@ Return JSON with exactly this shape:
       console.error("Hotel distance estimation failed:", error);
     }
 
-    const result = buildExtractionResult(parsed, startUrl, pagesFetched, true);
+    const result = buildExtractionResult(parsed, startUrl, pagesFetched, true, coverage);
     job.result = result;
     job.complete = true;
     job.signalFirstSnapshot();

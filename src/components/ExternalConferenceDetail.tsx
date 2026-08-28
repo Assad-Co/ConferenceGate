@@ -286,6 +286,27 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     };
   }, [result.link, result.title]);
 
+  // The whole extraction as structured JSON, for importing elsewhere. Provenance and the coverage
+  // report travel with it, so an importer can weigh each field by where it came from rather than
+  // having to trust the whole document equally.
+  const handleDownloadJson = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const slug = (data.acronym || data.conferenceTitle || result.title || 'conference')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60);
+    link.download = `${slug || 'conference'}-extraction.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const submissionLink = data?.submissionUrl || result.link;
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
@@ -492,28 +513,92 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               </div>
             )}
 
+            {/* Pages of the same site that contradicted each other. Surfaced rather than resolved:
+                choosing one silently would turn a visible disagreement into a confident answer
+                that may be the stale one. */}
+            {(data?.conflicts || []).length > 0 && (
+              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-orange-600 shrink-0" />
+                  <p className="text-xs font-bold text-orange-900">
+                    This site states different values in different places ({data!.conflicts.length})
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {data!.conflicts.map((conflict) => (
+                    <div key={conflict.field} className="text-[11px] text-orange-900">
+                      <span className="font-semibold">{conflict.field}:</span>
+                      <ul className="mt-0.5 space-y-0.5">
+                        {conflict.values.map((v, i) => (
+                          <li key={i} className="flex flex-wrap items-baseline gap-1.5">
+                            <span className="text-orange-950">"{v.value}"</span>
+                            {v.sourceUrl && (
+                              <a
+                                href={v.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-orange-700 hover:underline"
+                              >
+                                — {v.sourcePageTitle || v.sourceUrl}
+                              </a>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-orange-800">
+                  We've kept the first value found for each. Check the official site to see which is current.
+                </p>
+              </div>
+            )}
+
             {/* Once the crawl is done, say how much of the site was actually read. Without this,
                 a site that yielded nothing looks identical to one that was barely opened, and
                 there's no way to tell "this conference doesn't list speakers" from "we only got
                 one page of it". */}
             {data?.extracted && data.crawlComplete === true && typeof data.pagesRead === 'number' && (
-              <div className="mb-6 flex items-start gap-2 text-[11px] text-slate-500">
-                <Globe className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
-                <p>
-                  Read {data.pagesRead} {data.pagesRead === 1 ? 'page' : 'pages'} of this conference's website.
-                  {data.pagesRead === 1 &&
-                    ' Only the linked page could be read, so anything the rest of the site covers is missing here.'}{' '}
-                  Anything shown empty was not stated on the pages we could read —{' '}
-                  <a
-                    href={result.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline font-semibold"
+              <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 text-[11px] text-slate-600">
+                    <Globe className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
+                    <p>
+                      Read {data.pagesRead} {data.pagesRead === 1 ? 'page' : 'pages'} of this conference's website
+                      {(data.crawlCoverage?.pdfsRead || []).length > 0 &&
+                        `, including ${data.crawlCoverage.pdfsRead.length} PDF${
+                          data.crawlCoverage.pdfsRead.length === 1 ? '' : 's'
+                        }`}
+                      .{' '}
+                      {data.pagesRead === 1 &&
+                        'Only the linked page could be read, so anything the rest of the site covers is missing here. '}
+                      Anything shown empty was not stated on what we could read —{' '}
+                      <a
+                        href={result.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline font-semibold"
+                      >
+                        check the official website
+                      </a>
+                      .
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadJson}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
                   >
-                    check the official website
-                  </a>
-                  .
-                </p>
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Export JSON</span>
+                  </button>
+                </div>
+                {(data.crawlCoverage?.categoriesMissing || []).length > 0 && (
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    <span className="font-semibold text-slate-600">Not found anywhere on the site: </span>
+                    {data.crawlCoverage.categoriesMissing.join(' · ')}
+                  </p>
+                )}
               </div>
             )}
 
@@ -605,6 +690,100 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       This conference collects submissions through a form, not a portal — use the{' '}
                       <strong>submission package preview</strong> below to copy your info in, field by field.
                     </span>
+                  </div>
+                )}
+
+                {/* Every dated milestone the site stated, not just the submission deadline —
+                    notification, camera-ready and early-bird close all matter to an author
+                    deciding whether to submit. */}
+                {(data?.importantDates || []).length > 0 && (
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Important Dates ({data!.importantDates.length})
+                    </h4>
+                    <ul className="space-y-1.5">
+                      {data!.importantDates.map((entry, i) => (
+                        <li key={`${entry.label}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+                          <span className="text-slate-700 flex items-center gap-1.5">
+                            {entry.isDeadline && (
+                              <span className="text-[9px] font-bold uppercase tracking-wide text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                                Deadline
+                              </span>
+                            )}
+                            {entry.label}
+                          </span>
+                          <span className="font-semibold text-slate-900">{entry.date}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(data?.registrationFees || []).length > 0 && (
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h4 className="text-sm font-bold text-slate-900">Registration Fees</h4>
+                      {data?.earlyBirdDeadline && (
+                        <span className="text-[11px] text-slate-500">Early bird ends {data.earlyBirdDeadline}</span>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {data!.registrationFees.map((fee, i) => (
+                            <tr key={`${fee.category}-${i}`} className="border-b border-slate-200 last:border-0">
+                              <td className="py-1.5 pr-3 text-slate-700">
+                                {fee.category}
+                                {fee.notes && <span className="text-slate-400"> — {fee.notes}</span>}
+                              </td>
+                              <td className="py-1.5 pr-3 text-slate-500 whitespace-nowrap">{fee.deadline || ''}</td>
+                              <td className="py-1.5 text-right font-semibold text-slate-900 whitespace-nowrap">
+                                {fee.amount !== null ? `${fee.currency ? `${fee.currency} ` : ''}${fee.amount}` : ''}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {data?.registrationUrl && (
+                      <a
+                        href={data.registrationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors"
+                      >
+                        <span>Register on the official site</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {(data?.publicationInfo?.proceedingsPublisher ||
+                  (data?.publicationInfo?.journals || []).length > 0 ||
+                  (data?.publicationInfo?.indexing || []).length > 0 ||
+                  data?.publicationInfo?.doi ||
+                  data?.publicationInfo?.isbn ||
+                  data?.publicationInfo?.issn) && (
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <h4 className="text-sm font-bold text-slate-900">Publication & Proceedings</h4>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                      {[
+                        ['Proceedings', data?.publicationInfo?.proceedingsPublisher],
+                        ['Journals', (data?.publicationInfo?.journals || []).join(', ') || null],
+                        ['Indexing', (data?.publicationInfo?.indexing || []).join(', ') || null],
+                        ['DOI', data?.publicationInfo?.doi],
+                        ['ISBN', data?.publicationInfo?.isbn],
+                        ['ISSN', data?.publicationInfo?.issn],
+                      ]
+                        .filter(([, value]) => value)
+                        .map(([label, value]) => (
+                          <div key={label as string}>
+                            <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
+                            <dd className="text-slate-800 mt-0.5">{value}</dd>
+                          </div>
+                        ))}
+                    </dl>
                   </div>
                 )}
 

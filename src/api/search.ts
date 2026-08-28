@@ -57,6 +57,54 @@ export interface HotelExtract {
   isOfficialBlock: boolean;
 }
 
+/** Where a single extracted value came from, and how firmly its page supported it. */
+export interface FieldProvenance {
+  sourceUrl: string;
+  sourcePageTitle: string | null;
+  confidence: 'High' | 'Medium' | 'Low';
+}
+
+/** Two pages of the same site stating different things for one field. Reported rather than
+ *  resolved — picking one silently turns a visible contradiction into a confident wrong answer. */
+export interface ExtractionConflict {
+  field: string;
+  values: Array<{ value: string; sourceUrl: string | null; sourcePageTitle: string | null }>;
+}
+
+export interface ImportantDate {
+  label: string;
+  date: string;
+  isDeadline: boolean;
+}
+
+export interface RegistrationFee {
+  category: string;
+  amount: number | null;
+  currency: string | null;
+  deadline: string | null;
+  notes: string | null;
+}
+
+export interface PublicationInfo {
+  proceedingsPublisher: string | null;
+  journals: string[];
+  indexing: string[];
+  doi: string | null;
+  isbn: string | null;
+  issn: string | null;
+}
+
+/** What the crawl actually managed to look at — the completeness check, so an empty section can
+ *  be told apart from one that was never reached. */
+export interface CrawlCoverage {
+  pagesRead: string[];
+  pagesFailed: string[];
+  pdfsRead: string[];
+  urlsDiscovered: number;
+  categoriesFound: string[];
+  categoriesMissing: string[];
+}
+
 export interface ExtractedConferenceDetails {
   extracted: boolean;
   isFallback?: boolean;
@@ -93,6 +141,26 @@ export interface ExtractedConferenceDetails {
   venueName: string | null;
   venueAddress: string | null;
   hotels: HotelExtract[];
+  conferenceTitle: string | null;
+  acronym: string | null;
+  edition: string | null;
+  year: string | null;
+  organizingInstitution: string | null;
+  topics: string[];
+  city: string | null;
+  country: string | null;
+  importantDates: ImportantDate[];
+  registrationUrl: string | null;
+  registrationFees: RegistrationFee[];
+  earlyBirdDeadline: string | null;
+  publicationInfo: PublicationInfo;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  socialLinks: Array<{ platform: string; url: string }>;
+  awards: Array<{ name: string; description: string | null }>;
+  provenance: Record<string, FieldProvenance>;
+  conflicts: ExtractionConflict[];
+  crawlCoverage: CrawlCoverage;
 }
 
 const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
@@ -121,6 +189,33 @@ const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
   venueName: null,
   venueAddress: null,
   hotels: [],
+  conferenceTitle: null,
+  acronym: null,
+  edition: null,
+  year: null,
+  organizingInstitution: null,
+  topics: [],
+  city: null,
+  country: null,
+  importantDates: [],
+  registrationUrl: null,
+  registrationFees: [],
+  earlyBirdDeadline: null,
+  publicationInfo: { proceedingsPublisher: null, journals: [], indexing: [], doi: null, isbn: null, issn: null },
+  contactEmail: null,
+  contactPhone: null,
+  socialLinks: [],
+  awards: [],
+  provenance: {},
+  conflicts: [],
+  crawlCoverage: {
+    pagesRead: [],
+    pagesFailed: [],
+    pdfsRead: [],
+    urlsDiscovered: 0,
+    categoriesFound: [],
+    categoriesMissing: [],
+  },
 };
 
 // Fetches the live search result's own page and asks the AI assistant to pull out only what's
