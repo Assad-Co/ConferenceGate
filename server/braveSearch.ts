@@ -41,19 +41,21 @@ function stripHtml(text: string): string {
 
 // Nudges the underlying web search toward actual conference/event listings rather than
 // generic informational pages about the topic — this panel is "search the web for a
-// conference we haven't added yet", not a general-purpose search box. Also nudges toward
-// current/upcoming editions by adding the current year when the query doesn't already name one.
+// conference we haven't added yet", not a general-purpose search box.
 const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo|meeting)\b/i;
-const YEAR_IN_QUERY_RE = /\b20\d{2}\b/;
 function toConferenceQuery(query: string): string {
   const withKeyword = CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
-  const withYear = YEAR_IN_QUERY_RE.test(withKeyword)
-    ? withKeyword
-    : `${withKeyword} ${new Date().getFullYear()}`;
 
-  // Ask for the event's own information pages and explicitly down-rank roundup vocabulary.
-  // This improves the candidate pool before the strict server-side filter below is applied.
-  return `${withYear} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
+  // Deliberately does NOT force the current year onto the query. Many conferences run on a
+  // biennial/triennial/irregular cycle — IMOG's next edition is 2027, not this year — so biasing
+  // every search toward "this year" would rank the actual next edition's page below noise that
+  // happens to mention the current year, working against "upcoming" in favor of "now". Recency
+  // (excluding genuinely past editions, keeping any future one regardless of which year) is
+  // already handled correctly downstream by looksOutdated/currentOrUpcomingTime once results
+  // come back, so the query itself only needs to ask for the event's own information pages and
+  // down-rank roundup vocabulary — improving the candidate pool before the strict server-side
+  // filter below is applied.
+  return `${withKeyword} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
 }
 
 // Discovery must link to one conference's own page, never a directory, calendar, roundup,
