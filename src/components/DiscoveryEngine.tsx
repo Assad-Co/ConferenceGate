@@ -39,6 +39,18 @@ interface DiscoveryEngineProps {
 // computed at load time so this keeps naming the actual current year, not a stale one.
 const DEFAULT_DISCOVER_QUERY = `upcoming technology and industry conference ${new Date().getFullYear()}`;
 
+const DISCOVERY_SUGGESTIONS = [
+  'Artificial Intelligence',
+  'Cybersecurity',
+  'Engineering',
+  'Healthcare',
+  'Energy',
+  'Sustainability',
+  'Business',
+  'Virtual conferences',
+  'Open call for papers',
+];
+
 // "YYYY-MM" for next calendar month from today, e.g. "2026-09" when today is any day in
 // August 2026 — computed at load time (never hardcoded) so the default start-date filter
 // always means "next month onward" and never goes stale.
@@ -63,6 +75,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // "YYYY-MM" — only conferences whose real start date falls in this month or later are shown.
   // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
   const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
+  const [endAtMonth, setEndAtMonth] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [formatFilter, setFormatFilter] = useState('');
   const savedIds = savedConferenceIds;
   const followedIds = followedConferenceIds;
 
@@ -80,17 +96,33 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // support the app's own Submit Abstract / Registration workflows. Only applies to this catalog
   // (not the live web results below), since only these have a real, structured start date to
   // filter on — a web search snippet's date, if any, is free text we'd have to guess-parse.
-  const filtered = (conferences || [])
-    .filter((conf) => {
-      const term = searchTerm.trim().toLowerCase();
-      if (!term) return true;
-      return (
-        (conf.title || '').toLowerCase().includes(term) ||
-        (conf.description || '').toLowerCase().includes(term) ||
-        (conf.topics || []).some((t) => t.toLowerCase().includes(term))
-      );
-    })
-    .filter((conf) => !startFromMonth || conf.dates.start >= `${startFromMonth}-01`);
+  const filtered = (conferences || []).filter((conf) => {
+    const term = searchTerm.trim().toLowerCase();
+    const locationTerm = locationFilter.trim().toLowerCase();
+    const countryTerm = countryFilter.trim().toLowerCase();
+    const formatTerm = formatFilter.trim().toLowerCase().replace(/[-\s]+/g, '');
+    const confMonth = (conf.dates.start || '').slice(0, 7);
+    const confLocation = [
+      conf.location?.city,
+      conf.location?.venue,
+      conf.location?.country,
+    ].filter(Boolean).join(' ').toLowerCase();
+    const confCountry = (conf.location?.country || '').toLowerCase();
+    const confFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
+
+    if (
+      term &&
+      !(conf.title || '').toLowerCase().includes(term) &&
+      !(conf.description || '').toLowerCase().includes(term) &&
+      !(conf.topics || []).some((topic) => topic.toLowerCase().includes(term))
+    ) return false;
+    if (startFromMonth && confMonth < startFromMonth) return false;
+    if (endAtMonth && confMonth > endAtMonth) return false;
+    if (locationTerm && !confLocation.includes(locationTerm)) return false;
+    if (countryTerm && !confCountry.includes(countryTerm)) return false;
+    if (formatTerm && confFormat !== formatTerm) return false;
+    return true;
+  });
 
   // Live web results always populate the page — the typed search term if there is one,
   // otherwise a fixed default query so Discover is never empty.
@@ -101,16 +133,25 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   useEffect(() => {
     const trimmed = searchTerm.trim();
-    // Live web results have no structured dates to filter on, so the date preference is applied
-    // the only honest way available: biasing the real search query itself toward the chosen
-    // month onward. It steers what the search engine returns rather than guaranteeing a cutoff.
+    // Live results do not arrive with normalized filter fields, so every selected filter is sent
+    // to the search engine itself. Conference Gate catalog records are filtered exactly above;
+    // live results are strongly biased by the same date, place, country, and format choices.
     let dateBias = '';
     if (startFromMonth) {
-      const [y, m] = startFromMonth.split('-').map(Number);
-      const monthName = new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long' });
-      dateBias = ` ${monthName} ${y} onwards`;
+      const [year, month] = startFromMonth.split('-').map(Number);
+      const name = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+      dateBias += ` from ${name} ${year}`;
     }
-    const effectiveQuery = (trimmed || DEFAULT_DISCOVER_QUERY) + dateBias;
+    if (endAtMonth) {
+      const [year, month] = endAtMonth.split('-').map(Number);
+      const name = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
+      dateBias += ` until ${name} ${year}`;
+    }
+    const locationBias = locationFilter.trim() ? ` in ${locationFilter.trim()}` : '';
+    const countryBias = countryFilter.trim() ? ` ${countryFilter.trim()}` : '';
+    const formatBias = formatFilter ? ` ${formatFilter} conference` : '';
+    const effectiveQuery =
+      (trimmed || DEFAULT_DISCOVER_QUERY) + dateBias + locationBias + countryBias + formatBias;
 
     const handle = setTimeout(
       () => {
@@ -130,7 +171,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm, startFromMonth]);
+  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter]);
 
   return (
     <div className="space-y-8">
@@ -150,65 +191,126 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         </div>
 
-        {/* Keyword Search + Start Date Filter */}
-        <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="relative max-w-xl flex-1">
+        {/* Search and filters shared by Conference Gate records and Live Web Search. */}
+        <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+          <div className="relative">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search title, keywords, topics..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden transition-all"
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden transition-all"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </div>
 
-          <div className="relative shrink-0">
-            <label className="sr-only" htmlFor="discover-start-from">
-              Show conferences starting from
-            </label>
-            <div className="flex items-center gap-1.5 pl-3 pr-2 py-2 bg-slate-50 focus-within:bg-white rounded-xl border border-slate-200 focus-within:border-blue-500 transition-all">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
+            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
               <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">From:</span>
+              <span className="text-[10px] font-semibold text-slate-500">From</span>
               <input
-                id="discover-start-from"
                 type="month"
                 value={startFromMonth}
                 onChange={(e) => setStartFromMonth(e.target.value)}
-                className="text-xs text-slate-800 bg-transparent focus:outline-hidden w-[112px]"
+                className="min-w-0 flex-1 text-xs text-slate-800 bg-transparent focus:outline-hidden"
               />
-              {startFromMonth && (
-                <button
-                  type="button"
-                  onClick={() => setStartFromMonth('')}
-                  title="Show all dates"
-                  className="text-slate-400 hover:text-slate-600 cursor-pointer shrink-0"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            </label>
+
+            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
+              <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-[10px] font-semibold text-slate-500">To</span>
+              <input
+                type="month"
+                value={endAtMonth}
+                min={startFromMonth || undefined}
+                onChange={(e) => setEndAtMonth(e.target.value)}
+                className="min-w-0 flex-1 text-xs text-slate-800 bg-transparent focus:outline-hidden"
+              />
+            </label>
+
+            <label className="relative">
+              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                placeholder="City or venue"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+              />
+            </label>
+
+            <label className="relative">
+              <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                placeholder="Country"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+              />
+            </label>
+
+            <select
+              value={formatFilter}
+              onChange={(e) => setFormatFilter(e.target.value)}
+              aria-label="Conference format"
+              className="px-3 py-2 bg-slate-50 text-xs text-slate-700 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+            >
+              <option value="">Any format</option>
+              <option value="In-person">In-person</option>
+              <option value="Virtual">Virtual</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Popular searches</span>
+            {DISCOVERY_SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setSearchInput(suggestion)}
+                className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold transition-colors cursor-pointer ${
+                  searchTerm === suggestion
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700'
+                }`}
+              >
+                {suggestion}
+              </button>
+            ))}
+            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  setStartFromMonth('');
+                  setEndAtMonth('');
+                  setLocationFilter('');
+                  setCountryFilter('');
+                  setFormatFilter('');
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Honest empty state when the date filter (not the keyword search) hides the whole
-          catalog — silently dropping the section would look like the catalog doesn't exist. */}
-      {filtered.length === 0 && (conferences || []).length > 0 && startFromMonth && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
-          <p className="text-xs text-slate-500">
-            No Conference Gate conferences start in {startFromMonth} or later
-            {searchTerm.trim() ? ` matching "${searchTerm.trim()}"` : ''}.{' '}
-            <button
-              type="button"
-              onClick={() => setStartFromMonth('')}
-              className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
-            >
-              Show all dates
-            </button>
-          </p>
-        </div>
-      )}
+      {/* Honest empty state when the selected filters hide the Conference Gate catalog. */}
+      {filtered.length === 0 &&
+        (conferences || []).length > 0 &&
+        (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter) && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
+            <p className="text-xs text-slate-500">
+              No Conference Gate conferences match the selected filters. Live Web Search below is still checking
+              the wider web with the same choices.
+            </p>
+          </div>
+        )}
 
       {/* Real Conference Gate conferences */}
       {filtered.length > 0 && (
