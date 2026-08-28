@@ -218,26 +218,47 @@ function conferenceIdentity(title: string): string {
     .trim();
 }
 
+// currentOrUpcomingTime returns null for two very different situations — a page with clear proof
+// of being outdated, and a page that simply mentions no date at all (a redesigned homepage, a
+// "coming soon" teaser, a snippet Brave truncated before the date). Treating both as "exclude"
+// meant a real, current official page dropped out of Discovery entirely just because its search
+// snippet happened not to state a year — which is how a specific, real, upcoming conference could
+// return zero results even though it plainly exists. Only the first case is honest grounds for
+// exclusion; the second is unknown timing, not proof of anything, and per the same rule
+// looksOutdated already follows ("never exclude purely for lacking a date"), unknown-timing
+// results are kept — just ranked after ones we could actually confirm are upcoming.
 function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearchResult[] {
-  const dated = results
-    .map((result) => ({ result, time: currentOrUpcomingTime(result.title, result.snippet) }))
-    .filter((entry): entry is { result: LiveSearchResult; time: number } => entry.time !== null)
-    .sort((a, b) => a.time - b.time);
+  const dated: Array<{ result: LiveSearchResult; time: number }> = [];
+  const undated: LiveSearchResult[] = [];
+
+  for (const result of results) {
+    if (looksOutdated(result.title, result.snippet)) continue; // the one real exclusion: proof of being stale
+    const time = currentOrUpcomingTime(result.title, result.snippet);
+    if (time !== null) dated.push({ result, time });
+    else undated.push(result);
+  }
+  dated.sort((a, b) => a.time - b.time);
 
   const seenIdentities = new Set<string>();
   const seenDedicatedHosts = new Set<string>();
   const unique: LiveSearchResult[] = [];
 
-  for (const { result } of dated) {
+  // Confirmed-upcoming results are deduplicated first, so if the same conference also turns up
+  // in the undated batch (e.g. its program page mentions a date but its homepage doesn't), the
+  // dated instance wins the identity/host slot and the undated duplicate is the one dropped.
+  const consider = (result: LiveSearchResult) => {
     const host = normalizedHost(result.link, result.displayLink);
     const identity = conferenceIdentity(result.title);
-    if (identity && seenIdentities.has(identity)) continue;
-    if (host && !isSharedOrganizerHost(host) && seenDedicatedHosts.has(host)) continue;
+    if (identity && seenIdentities.has(identity)) return;
+    if (host && !isSharedOrganizerHost(host) && seenDedicatedHosts.has(host)) return;
 
     if (identity) seenIdentities.add(identity);
     if (host && !isSharedOrganizerHost(host)) seenDedicatedHosts.add(host);
     unique.push(result);
-  }
+  };
+
+  for (const { result } of dated) consider(result);
+  for (const result of undated) consider(result);
   return unique;
 }
 
