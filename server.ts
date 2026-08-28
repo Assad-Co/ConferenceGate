@@ -881,7 +881,7 @@ Return JSON with exactly this shape:
         if (pageRes.ok) {
           plain = await pageRes.text();
         } else {
-          console.error(`Page fetch for extraction returned HTTP ${pageRes.status} for ${pageUrl}`);
+          console.info(`Plain page read returned HTTP ${pageRes.status} for ${pageUrl}; trying browser/Firecrawl fallback`);
         }
       } catch (fetchErr) {
         console.error("Failed to fetch page for extraction:", fetchErr);
