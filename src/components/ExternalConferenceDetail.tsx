@@ -286,27 +286,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     };
   }, [result.link, result.title]);
 
-  // The whole extraction as structured JSON, for importing elsewhere. Provenance and the coverage
-  // report travel with it, so an importer can weigh each field by where it came from rather than
-  // having to trust the whole document equally.
-  const handleDownloadJson = () => {
-    if (!data) return;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const slug = (data.acronym || data.conferenceTitle || result.title || 'conference')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 60);
-    link.download = `${slug || 'conference'}-extraction.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const submissionLink = data?.submissionUrl || result.link;
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
@@ -562,95 +541,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   {typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages so far)` : ''} — these tabs will
                   fill in as more is found.
                 </p>
-              </div>
-            )}
-
-            {/* Pages of the same site that contradicted each other. Surfaced rather than resolved:
-                choosing one silently would turn a visible disagreement into a confident answer
-                that may be the stale one. */}
-            {(data?.conflicts || []).length > 0 && (
-              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-orange-600 shrink-0" />
-                  <p className="text-xs font-bold text-orange-900">
-                    This site states different values in different places ({data!.conflicts.length})
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {data!.conflicts.map((conflict) => (
-                    <div key={conflict.field} className="text-[11px] text-orange-900">
-                      <span className="font-semibold">{conflict.field}:</span>
-                      <ul className="mt-0.5 space-y-0.5">
-                        {conflict.values.map((v, i) => (
-                          <li key={i} className="flex flex-wrap items-baseline gap-1.5">
-                            <span className="text-orange-950">"{v.value}"</span>
-                            {v.sourceUrl && (
-                              <a
-                                href={v.sourceUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-orange-700 hover:underline"
-                              >
-                                — {v.sourcePageTitle || v.sourceUrl}
-                              </a>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-orange-800">
-                  We've kept the first value found for each. Check the official site to see which is current.
-                </p>
-              </div>
-            )}
-
-            {/* Once the crawl is done, say how much of the site was actually read. Without this,
-                a site that yielded nothing looks identical to one that was barely opened, and
-                there's no way to tell "this conference doesn't list speakers" from "we only got
-                one page of it". */}
-            {data?.extracted && data.crawlComplete === true && typeof data.pagesRead === 'number' && (
-              <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2 text-[11px] text-slate-600">
-                    <Globe className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
-                    <p>
-                      Read {data.pagesRead} {data.pagesRead === 1 ? 'page' : 'pages'} of this conference's website
-                      {(data.crawlCoverage?.pdfsRead || []).length > 0 &&
-                        `, including ${data.crawlCoverage.pdfsRead.length} PDF${
-                          data.crawlCoverage.pdfsRead.length === 1 ? '' : 's'
-                        }`}
-                      .{' '}
-                      {data.pagesRead === 1 &&
-                        'Only the linked page could be read, so anything the rest of the site covers is missing here. '}
-                      Anything shown empty was not stated on what we could read —{' '}
-                      <a
-                        href={result.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline font-semibold"
-                      >
-                        check the official website
-                      </a>
-                      .
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDownloadJson}
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Export JSON</span>
-                  </button>
-                </div>
-                {(data.crawlCoverage?.categoriesMissing || []).length > 0 && (
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
-                    <span className="font-semibold text-slate-600">Not found anywhere on the site: </span>
-                    {data.crawlCoverage.categoriesMissing.join(' · ')}
-                  </p>
-                )}
               </div>
             )}
 
