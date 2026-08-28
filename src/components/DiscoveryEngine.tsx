@@ -14,6 +14,7 @@ import {
   Briefcase,
   MapPin,
   CalendarRange,
+  DollarSign,
   X,
 } from 'lucide-react';
 import { Conference } from '../types';
@@ -143,6 +144,36 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [formatFilter, setFormatFilter] = useState('');
   const [timingFilter, setTimingFilter] = useState('');
 
+  // The real lowest published registration price for a conference — the figure a reader actually
+  // compares against when deciding whether an event is in their budget. Only conferences with at
+  // least one priced package have a number here; an empty packages list means pricing was never
+  // entered, not that the event is free, so it stays null rather than being guessed as $0.
+  const startingPriceOf = (conf: Conference): number | null => {
+    const prices = (conf.registrationPackages || [])
+      .map((pkg) => pkg.price)
+      .filter((price): price is number => typeof price === 'number' && Number.isFinite(price) && price >= 0);
+    return prices.length > 0 ? Math.min(...prices) : null;
+  };
+
+  // The slider's own ends are derived from real prices in the current catalog, the same way
+  // locationOptions below is derived from real conference locations — never a guessed ceiling
+  // like a flat $0–$5,000, which would misrepresent both cheap and very expensive catalogs alike.
+  const priceBounds = useMemo(() => {
+    const prices = (conferences || [])
+      .map((conf) => startingPriceOf(conf))
+      .filter((price): price is number => price !== null);
+    if (prices.length === 0) return null;
+    return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
+  }, [conferences]);
+
+  // null = "still tracking the live catalog bounds automatically" (the default, unfiltered
+  // state); becomes a fixed pair the moment the reader drags a handle, so their chosen range
+  // survives even if the catalog's own min/max shifts afterward.
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
+  const priceFilterActive = priceRange !== null;
+  const [priceMin, priceMax] = priceRange ?? (priceBounds ? [priceBounds.min, priceBounds.max] : [0, 0]);
+  const formatPrice = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
+
   const locationOptions = useMemo(() => {
     const byCountry = new Map<string, Set<string>>(
       Object.entries(CONFERENCE_CITIES_BY_COUNTRY).map(([country, cities]) => [country, new Set(cities)])
@@ -214,6 +245,14 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (timingFilter === 'multi-day' && duration < 2) return false;
     if (timingFilter === 'weekend' && !touchesWeekend) return false;
     if (timingFilter === 'weekday' && touchesWeekend) return false;
+    if (priceFilterActive) {
+      const startingPrice = startingPriceOf(conf);
+      // Excluded rather than assumed free or assumed in-range — the reader has deliberately
+      // narrowed the range, and an event Conference Gate has no price for cannot be honestly
+      // confirmed to fit it.
+      if (startingPrice === null) return false;
+      if (startingPrice < priceMin || startingPrice > priceMax) return false;
+    }
     return true;
   });
 
@@ -248,13 +287,18 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       timingFilter === 'multi-day' ? ' multi day' :
       timingFilter === 'weekend' ? ' weekend' :
       timingFilter === 'weekday' ? ' weekday' : '';
+    // Live results carry no structured registration price to filter on — a search snippet's
+    // dollar figure, if it even mentions one, is free text we'd have to guess-parse — so a chosen
+    // range is biased into the query itself rather than applied as a real filter.
+    const priceBias = priceFilterActive ? ` ${formatPrice(priceMin)}-${formatPrice(priceMax)}` : '';
     const effectiveQuery =
       (trimmed || DEFAULT_DISCOVER_QUERY) +
       dateBias +
       locationBias +
       countryBias +
       formatBias +
-      timingBias;
+      timingBias +
+      priceBias;
 
     const handle = setTimeout(
       () => {
@@ -274,7 +318,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter]);
+  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter, priceFilterActive, priceMin, priceMax]);
 
   return (
     <div className="space-y-8">
@@ -391,6 +435,59 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             </select>
           </div>
 
+          {/* Price range — bounds come from the real lowest registration price across the current
+              catalog, never a guessed ceiling, so the meter always spans prices that actually
+              exist. Hidden entirely when nothing in the catalog has a real price yet. */}
+          {priceBounds && priceBounds.max > priceBounds.min && (
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                  <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+                  Price range
+                </span>
+                <span className="text-xs font-bold text-slate-800">
+                  {formatPrice(priceMin)} – {formatPrice(priceMax)}
+                </span>
+              </div>
+              <div className="relative h-4 flex items-center">
+                <div className="absolute inset-x-0 h-1.5 bg-slate-200 rounded-full" />
+                <div
+                  className="absolute h-1.5 bg-blue-500 rounded-full"
+                  style={{
+                    left: `${((priceMin - priceBounds.min) / (priceBounds.max - priceBounds.min)) * 100}%`,
+                    right: `${100 - ((priceMax - priceBounds.min) / (priceBounds.max - priceBounds.min)) * 100}%`,
+                  }}
+                />
+                {/* Two overlapping native range inputs — the standard dependency-free way to get
+                    a dual-handle slider. Each input's own track is pointer-events-none so only
+                    its thumb (re-enabled via the pseudo-element selectors) can be grabbed,
+                    letting both handles coexist on the same track without fighting for clicks. */}
+                <input
+                  type="range"
+                  min={priceBounds.min}
+                  max={priceBounds.max}
+                  value={priceMin}
+                  aria-label="Minimum price"
+                  onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceMax), priceMax])}
+                  className="absolute w-full h-4 appearance-none bg-transparent pointer-events-none cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-sm [&::-moz-range-track]:bg-transparent"
+                />
+                <input
+                  type="range"
+                  min={priceBounds.min}
+                  max={priceBounds.max}
+                  value={priceMax}
+                  aria-label="Maximum price"
+                  onChange={(e) => setPriceRange([priceMin, Math.max(Number(e.target.value), priceMin)])}
+                  className="absolute w-full h-4 appearance-none bg-transparent pointer-events-none cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-sm [&::-moz-range-track]:bg-transparent"
+                />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-[9px] text-slate-400 font-medium">{formatPrice(priceBounds.min)}</span>
+                <span className="text-[9px] text-slate-400 font-medium">{formatPrice(priceBounds.max)}</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Popular searches</span>
             {DISCOVERY_SUGGESTIONS.map((suggestion) => (
@@ -407,7 +504,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 {suggestion}
               </button>
             ))}
-            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter) && (
+            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter || priceFilterActive) && (
               <button
                 type="button"
                 onClick={() => {
@@ -418,6 +515,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   setCountryFilter('');
                   setFormatFilter('');
                   setTimingFilter('');
+                  setPriceRange(null);
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
               >
@@ -432,7 +530,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       {/* Honest empty state when the selected filters hide the Conference Gate catalog. */}
       {filtered.length === 0 &&
         (conferences || []).length > 0 &&
-        (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter) && (
+        (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter || priceFilterActive) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
             <p className="text-xs text-slate-500">
               No Conference Gate conferences match the selected filters. Live Web Search below is still checking
