@@ -796,10 +796,16 @@ Return JSON with exactly this shape:
     let lastError: any = null;
     for (let attempt = 1; attempt <= MODEL_RETRY_ATTEMPTS; attempt++) {
       try {
+        // A content-rich Wix/event page can exceed the model provider's deadline even though the
+        // page itself was fetched successfully. Retrying the identical 25k payload repeats the
+        // same failure, so transient retries progressively narrow the page while retaining the
+        // top-level dates, venue and navigation needed to discover deeper pages.
+        const attemptText =
+          attempt === 1 ? pageText : pageText.slice(0, attempt === 2 ? 15000 : 8000);
         const response = await withTimeout(
           ai.models.generateContent({
             model: "gemini-3.6-flash",
-            contents: buildExtractionPrompt(pageText, title, pageUrl),
+            contents: buildExtractionPrompt(attemptText, title, pageUrl),
             config: {
               responseMimeType: "application/json",
               // Reading facts off a page and copying them into fields is not a reasoning task.
@@ -945,8 +951,16 @@ Return JSON with exactly this shape:
       const response = await callExtractionModel(ai, pageText, title, pageUrl);
       parsed = JSON.parse(response || "{}");
     } catch (e) {
-      console.error("Extraction model call failed:", e);
-      return null;
+      // The website was read successfully; only the structuring model failed. Never turn that
+      // into website_unreachable. Preserve a conservative page snapshot so the crawler can still
+      // follow its real links and later pages can fill the structured tabs.
+      console.error(`Extraction model call failed for ${pageUrl}; continuing with fetched page:`, e);
+      const exactEmail = pageText.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i)?.[0] || null;
+      parsed = {
+        conferenceTitle: title || pageTitleOf(html, pageUrl),
+        overviewSummary: pageText.slice(0, 1200),
+        contactEmail: exactEmail,
+      };
     }
     return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf };
   }
