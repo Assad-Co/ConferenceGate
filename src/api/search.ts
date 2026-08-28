@@ -112,6 +112,9 @@ export interface ExtractedConferenceDetails {
   /** True when the site couldn't be read AND this host has no browser available to retry with —
    *  a fixable deployment gap rather than a site that genuinely defeated us. */
   browserRenderingUnavailable?: boolean;
+  /** Why the read failed, established by re-probing the site rather than inferred from which code
+   *  path gave up. Shown verbatim, since the remedies genuinely differ. */
+  readFailureReason?: string;
   sourceUrl?: string;
   /** How many pages of the conference's site have been read so far. */
   pagesRead?: number;

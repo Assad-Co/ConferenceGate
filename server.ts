@@ -1432,6 +1432,76 @@ Return JSON with exactly this shape:
     return RELEVANT_LINK_CATEGORIES.filter((c) => CATEGORY_LINK_TEXT_RE[c].test(pathWords));
   }
 
+  // Establishes why a page couldn't be read, by re-probing it rather than inferring. Only runs on
+  // the failure path, where the crawl has already given up, so the extra requests cost nothing in
+  // the normal case. The distinctions matter because they have different remedies: a site that
+  // refuses a real browser needs a different answer from one whose content is simply absent from
+  // the HTML, and both differ from a server that has no browser installed to try with.
+  async function diagnoseReadFailure(pageUrl: string): Promise<{ reason: string }> {
+    if (!(await isSafeExternalUrl(pageUrl))) {
+      return { reason: "This address couldn't be resolved, or points somewhere we're not allowed to fetch." };
+    }
+
+    let plainStatus: number | null = null;
+    let plainTextLength: number | null = null;
+    let networkError: string | null = null;
+    try {
+      const res = await fetch(pageUrl, {
+        headers: EXTRACTION_FETCH_HEADERS,
+        redirect: "follow",
+        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
+      });
+      plainStatus = res.status;
+      if (res.ok) plainTextLength = prepareHtmlForExtraction(await res.text(), pageUrl).length;
+    } catch (e: any) {
+      networkError = e?.name === "TimeoutError" ? "timed out" : "couldn't be reached";
+    }
+
+    if (isBrowserRenderingUnavailable()) {
+      return {
+        reason:
+          `A plain request ${networkError ? networkError : `returned HTTP ${plainStatus}`}, and no browser is ` +
+          "installed on this server to retry with — which is what reads sites that block plain requests or build " +
+          "their pages in JavaScript.",
+      };
+    }
+
+    // The browser is available, so find out what it actually gets.
+    const rendered = await fetchRenderedHtml(pageUrl);
+    const renderedLength = rendered ? prepareHtmlForExtraction(rendered, pageUrl).length : 0;
+
+    if (renderedLength >= MIN_EXTRACTABLE_TEXT_CHARS) {
+      return { reason: "The site was readable on retry — this was a temporary failure, so reloading should work." };
+    }
+    // An error status is the headline fact and must be reported before anything about how much
+    // text rendered: a refusal serves a short error page, so judging by rendered length first
+    // described a blocked site as one whose content merely loads awkwardly — a different problem
+    // with a different remedy.
+    if (plainStatus !== null && plainStatus >= 400) {
+      return {
+        reason: `The site answered HTTP ${plainStatus} to both a plain request and a real browser — it is refusing automated access.`,
+      };
+    }
+    if (networkError) {
+      return { reason: `The site ${networkError}, both directly and from a real browser.` };
+    }
+    if (rendered && renderedLength > 0) {
+      return {
+        reason:
+          `Even in a real browser this page renders only ${renderedLength} characters of text, so its content is ` +
+          "loaded in a way we can't read (a login wall, or data fetched after the page settles).",
+      };
+    }
+    if (plainTextLength !== null) {
+      return {
+        reason:
+          `The site returned a page with only ${plainTextLength} characters of text and a real browser couldn't ` +
+          "render more, so there was nothing to extract from it.",
+      };
+    }
+    return { reason: "The site couldn't be read either directly or from a real browser." };
+  }
+
   // Reads a conference site end to end: the page the search result pointed at, everything its own
   // sitemap lists, and everything reachable by following its links — merging each page's real
   // extracted content into one accumulated result. Publishes a snapshot after every round so the
@@ -1447,15 +1517,18 @@ Return JSON with exactly this shape:
       // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
       // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
       // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
+      const diagnosis = await diagnoseReadFailure(startUrl);
       job.result = {
         extracted: false,
         isFallback: false,
         fetchFailed: true,
         crawlComplete: true,
-        // Distinguishes "this site defeated both a plain fetch and a real browser" from "this
-        // host has no browser installed, so the fallback that exists for exactly this case never
-        // ran" — the second is a deployment gap the operator can actually fix.
         browserRenderingUnavailable: isBrowserRenderingUnavailable(),
+        // What actually went wrong, established by re-probing rather than inferred. "Blocked us
+        // even in a real browser", "returned a page with no content in it" and "no browser is
+        // installed to retry with" are three different problems with three different fixes, and
+        // a reader who is told the wrong one has no way to act on it.
+        readFailureReason: diagnosis.reason,
       };
       job.complete = true;
       extractionCache.set(startUrl, { data: job.result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });

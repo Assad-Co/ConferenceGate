@@ -482,9 +482,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <p className="text-[11px] text-amber-800 leading-relaxed">
                     {data.isFallback
                       ? 'Details below are limited to the search result snippet. Try again shortly.'
-                      : data.browserRenderingUnavailable
-                        ? 'The site blocked our request or builds its pages in JavaScript. We normally retry those in a real browser, but none is installed on this server — run "npx playwright install chromium" to enable it. The empty sections below mean "not retrieved", not "not offered by this conference."'
-                        : 'The site refused our request even from a real browser, so the empty sections below mean "not retrieved" — not "not offered by this conference." Check the official website directly.'}
+                      : // What the server established by actually re-probing the site, rather than a
+                        // guess from which code path failed. Falls back to the general wording only
+                        // when an older response carries no diagnosis.
+                        data.readFailureReason ||
+                        'The site blocked our request or was unreachable.'}{' '}
+                    The empty sections below mean "not retrieved" — not "not offered by this conference."
                   </p>
                   <a
                     href={result.link}
