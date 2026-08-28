@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   Bookmark,
@@ -51,6 +51,68 @@ const DISCOVERY_SUGGESTIONS = [
   'Open call for papers',
 ];
 
+// Common global conference destinations. Organizer-created Conference Gate locations are merged
+// into this at runtime, so a newly added country/city automatically appears without a code change.
+const CONFERENCE_CITIES_BY_COUNTRY: Record<string, string[]> = {
+  'Argentina': ['Buenos Aires', 'Córdoba', 'Mendoza'],
+  'Australia': ['Brisbane', 'Melbourne', 'Perth', 'Sydney'],
+  'Austria': ['Graz', 'Salzburg', 'Vienna'],
+  'Bahrain': ['Manama'],
+  'Belgium': ['Antwerp', 'Brussels', 'Ghent'],
+  'Brazil': ['Brasília', 'Rio de Janeiro', 'São Paulo'],
+  'Canada': ['Calgary', 'Montréal', 'Ottawa', 'Toronto', 'Vancouver'],
+  'Chile': ['Santiago'],
+  'China': ['Beijing', 'Guangzhou', 'Hangzhou', 'Shanghai', 'Shenzhen'],
+  'Colombia': ['Bogotá', 'Cartagena', 'Medellín'],
+  'Czechia': ['Brno', 'Prague'],
+  'Denmark': ['Aarhus', 'Copenhagen'],
+  'Egypt': ['Alexandria', 'Cairo', 'Sharm El Sheikh'],
+  'Finland': ['Espoo', 'Helsinki', 'Tampere'],
+  'France': ['Lyon', 'Marseille', 'Nice', 'Paris'],
+  'Germany': ['Berlin', 'Cologne', 'Frankfurt', 'Hamburg', 'Munich'],
+  'Ghana': ['Accra'],
+  'Greece': ['Athens', 'Thessaloniki'],
+  'Hong Kong': ['Hong Kong'],
+  'Hungary': ['Budapest'],
+  'India': ['Bengaluru', 'Chennai', 'Delhi', 'Hyderabad', 'Mumbai', 'Pune'],
+  'Indonesia': ['Bali', 'Jakarta', 'Surabaya'],
+  'Ireland': ['Cork', 'Dublin', 'Galway'],
+  'Italy': ['Florence', 'Milan', 'Rome', 'Turin', 'Venice'],
+  'Japan': ['Kyoto', 'Osaka', 'Tokyo', 'Yokohama'],
+  'Jordan': ['Amman', 'Aqaba'],
+  'Kenya': ['Mombasa', 'Nairobi'],
+  'Kuwait': ['Kuwait City'],
+  'Malaysia': ['Kuala Lumpur', 'Penang'],
+  'Mexico': ['Cancún', 'Guadalajara', 'Mexico City', 'Monterrey'],
+  'Morocco': ['Casablanca', 'Marrakesh', 'Rabat'],
+  'Netherlands': ['Amsterdam', 'Eindhoven', 'Rotterdam', 'The Hague'],
+  'New Zealand': ['Auckland', 'Christchurch', 'Wellington'],
+  'Nigeria': ['Abuja', 'Lagos'],
+  'Norway': ['Bergen', 'Oslo', 'Trondheim'],
+  'Oman': ['Muscat'],
+  'Pakistan': ['Islamabad', 'Karachi', 'Lahore'],
+  'Philippines': ['Cebu', 'Manila'],
+  'Poland': ['Kraków', 'Warsaw', 'Wrocław'],
+  'Portugal': ['Lisbon', 'Porto'],
+  'Qatar': ['Doha'],
+  'Romania': ['Bucharest', 'Cluj-Napoca'],
+  'Saudi Arabia': ['Al Khobar', 'AlUla', 'Dammam', 'Dhahran', 'Jeddah', 'Riyadh'],
+  'Singapore': ['Singapore'],
+  'South Africa': ['Cape Town', 'Durban', 'Johannesburg', 'Pretoria'],
+  'South Korea': ['Busan', 'Seoul'],
+  'Spain': ['Barcelona', 'Madrid', 'Málaga', 'Valencia'],
+  'Sweden': ['Gothenburg', 'Malmö', 'Stockholm'],
+  'Switzerland': ['Basel', 'Geneva', 'Lausanne', 'Zurich'],
+  'Taiwan': ['Kaohsiung', 'Taipei'],
+  'Thailand': ['Bangkok', 'Chiang Mai', 'Phuket'],
+  'Tunisia': ['Hammamet', 'Tunis'],
+  'Turkey': ['Ankara', 'Antalya', 'Istanbul', 'Izmir'],
+  'United Arab Emirates': ['Abu Dhabi', 'Dubai', 'Sharjah'],
+  'United Kingdom': ['Birmingham', 'Edinburgh', 'Glasgow', 'London', 'Manchester'],
+  'United States': ['Atlanta', 'Austin', 'Boston', 'Chicago', 'Dallas', 'Denver', 'Houston', 'Las Vegas', 'Los Angeles', 'Miami', 'New York', 'Orlando', 'Philadelphia', 'San Diego', 'San Francisco', 'Seattle', 'Washington, DC'],
+  'Vietnam': ['Da Nang', 'Hanoi', 'Ho Chi Minh City'],
+};
+
 // "YYYY-MM" for next calendar month from today, e.g. "2026-09" when today is any day in
 // August 2026 — computed at load time (never hardcoded) so the default start-date filter
 // always means "next month onward" and never goes stale.
@@ -80,6 +142,28 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [countryFilter, setCountryFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('');
   const [timingFilter, setTimingFilter] = useState('');
+
+  const locationOptions = useMemo(() => {
+    const byCountry = new Map<string, Set<string>>(
+      Object.entries(CONFERENCE_CITIES_BY_COUNTRY).map(([country, cities]) => [country, new Set(cities)])
+    );
+    (conferences || []).forEach((conference) => {
+      const country = conference.location?.country?.trim();
+      const city = conference.location?.city?.trim();
+      if (!country) return;
+      if (!byCountry.has(country)) byCountry.set(country, new Set());
+      if (city) byCountry.get(country)!.add(city);
+    });
+    return [...byCountry.entries()]
+      .map(([country, cities]) => ({ country, cities: [...cities].sort((a, b) => a.localeCompare(b)) }))
+      .sort((a, b) => a.country.localeCompare(b.country));
+  }, [conferences]);
+
+  const countryOptions = locationOptions.map((option) => option.country);
+  const cityOptions = countryFilter
+    ? locationOptions.find((option) => option.country === countryFilter)?.cities || []
+    : [];
+
   const savedIds = savedConferenceIds;
   const followedIds = followedConferenceIds;
 
@@ -248,25 +332,37 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             </label>
 
             <label className="relative">
-              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                placeholder="City or venue"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
-              />
+              <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              <select
+                value={countryFilter}
+                onChange={(e) => {
+                  setCountryFilter(e.target.value);
+                  setLocationFilter('');
+                }}
+                aria-label="Country"
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 text-xs text-slate-700 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+              >
+                <option value="">Any country</option>
+                {countryOptions.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
             </label>
 
             <label className="relative">
-              <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={countryFilter}
-                onChange={(e) => setCountryFilter(e.target.value)}
-                placeholder="Country"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden"
-              />
+              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                disabled={!countryFilter}
+                aria-label="City"
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 text-xs text-slate-700 rounded-xl border border-slate-200 focus:border-blue-500 focus:bg-white focus:outline-hidden disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                <option value="">{countryFilter ? 'Any city' : 'Select country first'}</option>
+                {cityOptions.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
             </label>
 
             <select
