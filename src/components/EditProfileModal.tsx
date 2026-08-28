@@ -116,7 +116,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className={labelClass}>{variant === 'professional' ? 'Full Name' : 'Your Name'}</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={variant === 'professional' ? 'e.g. Jane Ann Doe' : undefined}
+              className={inputClass}
+            />
+            {variant === 'professional' && (
+              <p className="mt-1 text-[11px] text-slate-400">
+                Include your middle name if you have one — conference papers are matched to your
+                full name, and a middle name (or initial) helps tell you apart from others who
+                share your first and last name.
+              </p>
+            )}
           </div>
           <div>
             <label className={labelClass}>{variant === 'professional' ? 'Title / Position' : 'Your Role'}</label>

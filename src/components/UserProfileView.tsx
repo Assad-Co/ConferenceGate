@@ -714,6 +714,21 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <Search className="w-4 h-4 text-indigo-600" />
                 Possible Conference Papers (matched by name)
               </h3>
+              {onEditProfile && userProfile.name.trim().split(/\s+/).filter(Boolean).length < 3 && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Your profile has only {userProfile.name.trim().split(/\s+/).filter(Boolean).length || 0} name
+                  {userProfile.name.trim().split(/\s+/).filter(Boolean).length === 1 ? '' : 's'} on file. Adding your
+                  middle name (or initial) in{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditProfileOpen(true)}
+                    className="font-bold underline hover:text-amber-900 cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>{' '}
+                  helps match the right papers when your first and last name are common.
+                </p>
+              )}
               {externalLoading ? (
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

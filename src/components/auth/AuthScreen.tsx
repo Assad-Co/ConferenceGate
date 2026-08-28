@@ -424,10 +424,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
+                    placeholder="Jane Ann Doe"
                     autoComplete="name"
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
+                  {selectedRole === 'professional' && (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Include your middle name if you have one — conference papers are matched to
+                      your full name, and a middle name (or initial) helps tell you apart from
+                      others who share your first and last name.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
