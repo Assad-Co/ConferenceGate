@@ -2338,13 +2338,29 @@ Return JSON with exactly this shape:
     crawlJobs.set(cacheKey, job);
 
     runSiteCrawl(ai, cacheKey, titleHint, job)
-      .catch((error) => {
-        console.error("Conference crawl failed:", error);
-        // Whatever was gathered before the failure is still real and still worth showing; only a
-        // crawl that failed before its first page has nothing to report.
+      .catch(async (error) => {
+        console.error(`Conference crawl threw for ${cacheKey}:`, error);
         job.complete = true;
-        if (!job.result) job.result = { extracted: false, isFallback: false, fetchFailed: true, crawlComplete: true };
-        else job.result = { ...job.result, crawlComplete: true };
+        if (job.result) {
+          // Whatever was gathered before the failure is still real and still worth showing.
+          job.result = { ...job.result, crawlComplete: true };
+        } else {
+          // Nothing was gathered. Report why, the same way the ordinary failure path does — this
+          // branch previously produced a result with no diagnosis at all, so an unexpected error
+          // anywhere in the crawl surfaced as a bare "the site blocked our request", which is a
+          // guess and was often simply wrong.
+          const diagnosis = await diagnoseReadFailure(cacheKey).catch(() => ({
+            reason: `The extraction failed unexpectedly: ${error?.message || error}`,
+          }));
+          job.result = {
+            extracted: false,
+            isFallback: false,
+            fetchFailed: true,
+            crawlComplete: true,
+            browserRenderingUnavailable: isBrowserRenderingUnavailable(),
+            readFailureReason: diagnosis.reason,
+          };
+        }
         job.signalFirstSnapshot();
       })
       .finally(() => {
