@@ -20,7 +20,7 @@ import { SponsorPortal } from './components/SponsorPortal';
 import { UserProfileView } from './components/UserProfileView';
 import { CommunityFeed } from './components/CommunityFeed';
 import { ReactionType } from './components/reactionMeta';
-import { AIAssistantModal } from './components/AIAssistantModal';
+import { AIAssistantModal, type AssistantConferenceTab } from './components/AIAssistantModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { CertificatesView } from './components/CertificatesView';
@@ -1496,6 +1496,15 @@ export function App() {
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
         userRole={activeRole}
+        onOpenConference={(result, tab: AssistantConferenceTab) => {
+          setIsAIModalOpen(false);
+          handleOpenExternalResult(result, tab);
+        }}
+        onNavigate={(destination) => {
+          setIsAIModalOpen(false);
+          if (destination === 'profile') setProfileInitialTab('conferences');
+          setActiveTab(destination);
+        }}
       />
 
       <AbstractSubmissionModal

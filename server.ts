@@ -6,12 +6,24 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
-import { braveSearchRouter, searchWebForConferenceFacts } from "./server/braveSearch";
+import { braveSearchRouter, searchConferences, searchWebForConferenceFacts } from "./server/braveSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { postsRouter } from "./server/posts";
-import { initDb, dbGet, dbAll, dbRun, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
+import {
+  initDb,
+  dbGet,
+  dbAll,
+  dbRun,
+  UserRow,
+  SubmissionRow,
+  CreatedConferenceRow,
+  SponsorshipApplicationRow,
+  ConferenceRegistrationRow,
+  ExternalPaperMatchRow,
+  SelfReportedAttendanceRow,
+} from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
@@ -81,10 +93,19 @@ async function startServer() {
     });
   };
 
-  // Looks up the authenticated user's own real activity so the assistant's answers about
-  // "your abstracts", "your conferences", or "your sponsorships" are grounded in fact rather
-  // than hallucinated. Returns null when the request has no valid session — the assistant
-  // then falls back to answering generically, without ever inventing account-specific data.
+  // Builds a factual personalization profile from the member's own stored activity.
+  // Registrations, self-reported attendance, confirmed papers, and abstracts are kept distinct so
+  // the assistant never upgrades a registration into attendance or an unverified paper into fact.
+  function parseStoredStringArray(value: string | null | undefined): string[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+
   async function buildRealUserContext(req: express.Request): Promise<Record<string, unknown> | null> {
     const userId = verifySessionToken(req.cookies?.[COOKIE_NAME]);
     if (!userId) return null;
@@ -92,19 +113,89 @@ async function startServer() {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [userId]);
     if (!user) return null;
 
+    const [submissions, registrations, selfReportedAttendance, confirmedPapers] = await Promise.all([
+      dbAll<SubmissionRow>(
+        "SELECT * FROM submissions WHERE submitter_id = ? ORDER BY submission_date DESC",
+        [userId]
+      ),
+      dbAll<ConferenceRegistrationRow>(
+        "SELECT * FROM conference_registrations WHERE user_id = ? ORDER BY registered_at DESC",
+        [userId]
+      ),
+      dbAll<SelfReportedAttendanceRow>(
+        "SELECT * FROM self_reported_attendance WHERE user_id = ? ORDER BY created_at DESC",
+        [userId]
+      ),
+      dbAll<ExternalPaperMatchRow>(
+        "SELECT * FROM external_paper_matches WHERE user_id = ? AND status = 'confirmed' ORDER BY created_at DESC",
+        [userId]
+      ),
+    ]);
+
+    const sharedContext: Record<string, unknown> = {
+      role: user.role,
+      name: user.name,
+      profile: {
+        title: user.title,
+        organization: user.organization,
+        department: user.department,
+        city: user.city,
+        country: user.country,
+        bio: user.bio,
+      },
+      registeredConferences: registrations.map((registration) => ({
+        conferenceId: registration.conference_id,
+        conference: registration.conference_title,
+        registeredAt: registration.registered_at,
+        status: "registered — attendance is not confirmed",
+      })),
+      attendedConferences: selfReportedAttendance.map((attendance) => ({
+        conference: attendance.conference_name,
+        location: attendance.location,
+        year: attendance.year,
+        role: attendance.role,
+        source: "self-reported by this member",
+      })),
+      confirmedConferencePapers: confirmedPapers.map((paper) => ({
+        title: paper.title,
+        venue: paper.venue,
+        year: paper.year,
+        doi: paper.doi,
+        url: paper.url,
+        source: "confirmed by this member",
+      })),
+      abstractSubmissions: submissions.map((submission) => ({
+        title: submission.title,
+        conferenceId: submission.conference_id,
+        conference: submission.conference_title,
+        topic: submission.topic,
+        track: submission.track,
+        keywords: parseStoredStringArray(submission.keywords),
+        status: submission.status,
+        submittedAt: submission.submission_date,
+        external: Boolean(submission.is_external),
+      })),
+    };
+
     if (user.role === "organizer") {
       const created = await dbAll<CreatedConferenceRow>(
         "SELECT * FROM created_conferences WHERE organizer_id = ? ORDER BY created_at DESC",
         [userId]
       );
-      const conferences = created.map((c) => JSON.parse(c.data)?.title).filter(Boolean);
+      const conferences = created.map((conference) => {
+        try {
+          return JSON.parse(conference.data)?.title;
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
       const pendingApplicants = (await dbGet<{ count: number }>(
         `SELECT COUNT(*) as count FROM sponsorship_applications sa
          JOIN sponsorship_packages sp ON sp.id = sa.package_id
          WHERE sp.organizer_id = ? AND sa.status = 'Pending'`,
         [userId]
       ))!.count;
-      return { role: "organizer", name: user.name, conferencesCreated: conferences, pendingSponsorApplicants: pendingApplicants };
+      return { ...sharedContext, conferencesCreated: conferences, pendingSponsorApplicants: pendingApplicants };
     }
 
     if (user.role === "sponsor") {
@@ -116,60 +207,169 @@ async function startServer() {
         [userId]
       );
       return {
-        role: "sponsor",
-        name: user.name,
+        ...sharedContext,
         companyName: user.organization,
-        sponsorshipApplications: applications.map((a) => ({ conference: a.conference_title, tier: a.tier, status: a.status })),
+        sponsorshipApplications: applications.map((application) => ({
+          conference: application.conference_title,
+          tier: application.tier,
+          status: application.status,
+        })),
       };
     }
 
-    const submissions = await dbAll<SubmissionRow>(
-      "SELECT * FROM submissions WHERE submitter_id = ? ORDER BY submission_date DESC",
-      [userId]
+    return sharedContext;
+  }
+
+  function isConferenceRecommendationRequest(prompt: string): boolean {
+    return (
+      /\b(recommend|recommendation|suggest|find|match|which|best|upcoming|open|show)\b|take me/i.test(prompt) &&
+      /\b(conference|congress|symposium|summit|event|call[ -]?for[ -]?papers?|cfp)\b/i.test(prompt)
     );
-    return {
-      role: "professional",
-      name: user.name,
-      abstractSubmissions: submissions.map((s) => ({ title: s.title, conference: s.conference_title, status: s.status })),
+  }
+
+  function inferConferenceDetailTab(prompt: string):
+    | "overview"
+    | "cfp"
+    | "fees"
+    | "agenda"
+    | "speakers"
+    | "committee"
+    | "sponsors"
+    | "venue"
+    | "community" {
+    if (/\b(call[ -]?for[ -]?papers?|cfp|abstract|paper|submit|deadline)\b/i.test(prompt)) return "cfp";
+    if (/\b(fee|price|pricing|cost|registration)\b/i.test(prompt)) return "fees";
+    if (/\b(program|programme|agenda|session|workshop|tutorial|schedule)\b/i.test(prompt)) return "agenda";
+    if (/\b(keynote|speaker|plenary)\b/i.test(prompt)) return "speakers";
+    if (/\b(committee|chair|reviewer)\b/i.test(prompt)) return "committee";
+    if (/\b(sponsor|exhibitor|partner)\b/i.test(prompt)) return "sponsors";
+    if (/\b(venue|hotel|accommodation|travel|visa|location)\b/i.test(prompt)) return "venue";
+    if (/\b(community|feed|networking|social)\b/i.test(prompt)) return "community";
+    return "overview";
+  }
+
+  function buildAssistantNavigationActions(
+    prompt: string,
+    userRole: string
+  ): Array<{ label: string; destination: string }> {
+    const actions: Array<{ label: string; destination: string }> = [];
+    const add = (label: string, destination: string) => {
+      if (!actions.some((action) => action.destination === destination)) actions.push({ label, destination });
     };
+
+    if (/\b(discover|find|search|recommend|upcoming conference|call[ -]?for[ -]?papers?|cfp|website|navigate|guide)\b|how (?:do|can) i use/i.test(prompt)) {
+      add("Open Conference Discovery", "discover");
+    }
+    if (/\b(my abstract|submit an? abstract|abstract tracker|paper submission|revision)\b/i.test(prompt)) {
+      add("Open My Abstracts", "abstracts");
+    }
+    if (/\b(feed|community|discussion|post|announcement)\b/i.test(prompt)) add("Open Conference Feed", "community");
+    if (/\b(profile|my papers?|attendance|attended|certificate|achievement)\b/i.test(prompt)) {
+      add("Open My Profile", "profile");
+    }
+    if (/\b(review|reviewer)\b/i.test(prompt)) add("Open Reviewer Portal", "reviewer");
+    if (/\b(sponsor|sponsorship)\b/i.test(prompt) && userRole.toLowerCase() === "sponsor") {
+      add("Open Sponsor Marketplace", "sponsor");
+    }
+    if (/\b(organize|organizer|create conference)\b/i.test(prompt) && userRole.toLowerCase() === "organizer") {
+      add("Open Organizer Dashboard", "organizer");
+    }
+    return actions.slice(0, 3);
+  }
+
+  function activitySearchTerms(context: Record<string, unknown> | null): string {
+    if (!context) return "";
+    const data = context as any;
+    const terms = [
+      ...(data.abstractSubmissions || []).flatMap((submission: any) => [
+        submission.topic,
+        submission.track,
+        ...(submission.keywords || []),
+        submission.title,
+      ]),
+      ...(data.confirmedConferencePapers || []).flatMap((paper: any) => [paper.title, paper.venue]),
+      ...(data.attendedConferences || []).map((attendance: any) => attendance.conference),
+    ].filter((value): value is string => typeof value === "string" && value.trim().length > 1);
+    const uniqueTerms = Array.from(new Set(terms.map((value) => value.trim())));
+    return uniqueTerms.slice(0, 12).join(" ").slice(0, 350);
   }
 
   // AI Assistant Route
   app.post("/api/ai/assistant", async (req, res) => {
     try {
-      const { prompt, userRole, context } = req.body;
-      const ai = getAIClient();
-
-      if (!ai) {
-        // GEMINI_API_KEY is not configured — flagged so the client shows this as a
-        // fallback rather than presenting it as a live AI response.
-        return res.json({
-          reply: `[Conference Gate AI Assistant - Standby Mode]\n\nI can help you discover conferences, match abstract reviewers, recommend technical committee candidates, and optimize sponsorship ROI. Key recommendation for ${userRole || 'professional'}: Explore our featured Call for Papers in Energy and AI Innovation!`,
-          isFallback: true,
-        });
-      }
+      const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+      const userRole = typeof req.body?.userRole === "string" ? req.body.userRole : "Professional";
+      const context = req.body?.context || {};
+      if (!prompt) return res.status(400).json({ error: "prompt is required" });
 
       const realUserContext = await buildRealUserContext(req);
+      const recommendationRequest = isConferenceRecommendationRequest(prompt);
+      const defaultTab = inferConferenceDetailTab(prompt);
+      const actions = buildAssistantNavigationActions(prompt, userRole);
 
-      const systemInstruction = `You are the Conference Gate AI Assistant — an intelligent, authoritative advisor embedded in the Conference Gate SaaS platform.
-Conference Gate is the global platform for conference discovery, event management, abstract review, technical committees, sponsorship, and verified conference identity.
-Your goal is to answer queries for Professionals, Reviewers, Organizers, and Sponsors with concise, highly professional insights.
-Current user role context: ${userRole || 'Professional'}.
-Additional Context: ${JSON.stringify(context || {})}
-${realUserContext
-  ? `The user is authenticated. Here is their real, verified activity on the platform — use it when they ask about "my abstracts", "my conferences", "my sponsorships", or similar, and never invent activity beyond what is listed here:\n${JSON.stringify(realUserContext)}`
-  : "The user is not authenticated, or has no activity on file yet — do not claim to know their personal abstracts, conferences, or sponsorships; answer generally instead."}`;
+      let recommendationResults: Awaited<ReturnType<typeof searchConferences>> = [];
+      if (recommendationRequest) {
+        const personalTerms = activitySearchTerms(realUserContext);
+        const searchQuery = [prompt, personalTerms].filter(Boolean).join(" ").slice(0, 1200);
+        recommendationResults = await searchConferences(searchQuery).catch(() => []);
+      }
+
+      const needsCurrentFacts =
+        !recommendationRequest &&
+        /\b(date|deadline|when|where|location|venue|fee|price|speaker|keynote|program|agenda|committee|sponsor|registration)\b/i.test(prompt);
+      const factualSources = needsCurrentFacts
+        ? await searchWebForConferenceFacts(`${prompt} official conference source`, 6)
+        : [];
+
+      const recommendations = recommendationResults.slice(0, 4).map((result) => ({
+        ...result,
+        defaultTab,
+      }));
+
+      const ai = getAIClient();
+      if (!ai) {
+        const reply = recommendations.length
+          ? `I found ${recommendations.length} current or upcoming conference matches on individual official conference websites. They are ordered by the nearest available date. Open a result below in Overview, Call for Papers, Program, Speakers, Committee, Fees, Sponsors, or Venue.`
+          : "The live AI explanation is temporarily unavailable. I can still guide you through Conference Gate using the buttons below; for recommendations, open Discovery and search by your research topic.";
+        return res.json({ reply, isFallback: true, recommendations, actions });
+      }
+
+      const currentDate = new Date().toISOString().slice(0, 10);
+      const systemInstruction = `You are the Conference Gate AI Assistant, embedded in the Conference Gate platform.
+Today is ${currentDate}. You help with conferences, academic papers, abstracts, submissions, peer review, programs, speakers, committees, sponsorship, and how to use Conference Gate.
+
+Rules:
+1. Answer any conference-, paper-, or abstract-related question clearly and practically.
+2. Personalize recommendations from the real member activity below: attended conferences, confirmed papers, abstract topics/tracks/keywords, and registrations. Keep evidence labels exact: a registration is not proof of attendance; self-reported attendance and member-confirmed papers must be described that way.
+3. Recommend only current/upcoming conferences from VERIFIED UPCOMING CANDIDATES below. Never invent a conference, URL, date, speaker, deadline, or fee.
+4. Dates and facts must match the supplied official-page snippets or factual sources. If the evidence does not contain the answer, say it is not yet verified and direct the member to the appropriate Conference Gate tab.
+5. When recommending conferences, keep the prose short because clickable Conference Gate cards are displayed below your answer. Explain how the choices match the member's activity; do not produce fake rankings.
+6. When asked how to use the website, give short step-by-step guidance using these areas: Home, Discover, My Abstracts, Feed, Profile, Reviewer Portal, Organizer Dashboard, Sponsor Marketplace, and each conference's Overview, Call for Papers, Fees & Pricing, Program & Agenda, Keynote Speakers, Technical Committee, Sponsors & Exhibitors, Venue & Accommodation, and Community tabs.
+7. Stay within Conference Gate's domain. For unrelated questions, politely say you specialize in conferences, papers, abstracts, and using Conference Gate.
+
+Current role: ${userRole}
+Client context: ${JSON.stringify(context)}
+REAL MEMBER ACTIVITY:
+${realUserContext ? JSON.stringify(realUserContext) : "No authenticated activity is available. Do not claim personal knowledge."}
+VERIFIED UPCOMING CANDIDATES FROM INDIVIDUAL OFFICIAL CONFERENCE WEBSITES:
+${recommendations.length ? JSON.stringify(recommendations) : "None retrieved for this question. Do not name or recommend an unverified conference."}
+CURRENT FACTUAL WEB SOURCES:
+${factualSources.length ? JSON.stringify(factualSources) : "None retrieved. Do not invent current facts."}`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.6-flash",
         contents: prompt,
         config: {
           systemInstruction,
-          temperature: 0.7,
+          temperature: 0.3,
         },
       });
 
-      res.json({ reply: response.text || "No response generated." });
+      res.json({
+        reply: response.text || "No response generated.",
+        recommendations,
+        actions,
+      });
     } catch (error: any) {
       console.error("AI Assistant error:", error);
       res.status(500).json({

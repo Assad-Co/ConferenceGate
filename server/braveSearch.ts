@@ -241,7 +241,7 @@ function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearch
   return unique;
 }
 
-async function searchConferences(query: string): Promise<LiveSearchResult[]> {
+export async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   const cacheKey = `official-v3:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
