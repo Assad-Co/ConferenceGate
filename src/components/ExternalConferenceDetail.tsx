@@ -470,6 +470,43 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {/* Without this, a page we were never able to read looks identical to a page we read
                 fine that simply had no speakers or agenda on it — every tab would say "none found
                 on this page" about a page nobody actually managed to open. */}
+            {/* Details gathered from sources other than the conference's own site — because it
+                blocked us, or said very little. Deliberately informational rather than an
+                error: there IS data below, and what matters is that the reader knows where it
+                came from. Each field's own source is in `provenance` and in the JSON export. */}
+            {data?.extracted && data.sourcedFromOpenWeb && (
+              <div className="mb-6 p-3 bg-sky-50 border border-sky-200 rounded-xl flex items-start gap-2.5">
+                <Globe className="w-3.5 h-3.5 text-sky-600 shrink-0 mt-px" />
+                <p className="text-[11px] text-sky-900 leading-relaxed">
+                  {data.officialSiteUnreadable
+                    ? "This conference's own website couldn't be read, so the details below were gathered from other sites covering it"
+                    : "The official site gave limited detail, so some fields below were filled from other sites covering this conference"}
+                  {(data.crawlCoverage?.pagesRead || []).length > 0 &&
+                    ` (${new Set(
+                      (data.crawlCoverage.pagesRead || [])
+                        .map((u) => {
+                          try {
+                            return new URL(u).hostname.replace(/^www\./, '');
+                          } catch {
+                            return null;
+                          }
+                        })
+                        .filter(Boolean)
+                    ).size} sources)`}
+                  . Confirm anything important against{' '}
+                  <a
+                    href={result.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline underline-offset-2 hover:text-sky-950"
+                  >
+                    the official website
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+
             {data && !data.extracted && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />

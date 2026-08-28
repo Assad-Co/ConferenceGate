@@ -171,6 +171,46 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   return results;
 }
 
+/** A plain web search, used when a conference's own site can't be read and its details have to be
+ *  gathered from whatever else on the web covers it.
+ *
+ *  Deliberately skips the two filters the Discover search applies. `toConferenceQuery` is not
+ *  applied because callers pass their own precise query, and the listicle filter is not applied
+ *  because a directory or listing page is exactly what's wanted here — those aggregators are
+ *  usually readable when the official site isn't, and they carry the dates, venue and programme. */
+export async function searchWebForConferenceFacts(query: string, count = 8): Promise<LiveSearchResult[]> {
+  if (!isConfigured()) return [];
+  const cacheKey = `raw:${count}:${query.trim().toLowerCase()}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("count", String(Math.min(Math.max(count, 1), 20)));
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY! },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const body = await res.json().catch(() => ({}));
+    const results: LiveSearchResult[] = (body.web?.results || []).map((item: any) => ({
+      title: stripHtml(item.title || ""),
+      link: item.url || "",
+      snippet: stripHtml(item.description || ""),
+      displayLink: item.meta_url?.hostname || item.profile?.name || "",
+      thumbnail: item.thumbnail?.src || null,
+      favicon: item.meta_url?.favicon || item.profile?.img || null,
+    }));
+    cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
+    return results;
+  } catch {
+    // A failed corroboration search must never take down the extraction that asked for it.
+    return [];
+  }
+}
+
 export const braveSearchRouter = Router();
 
 braveSearchRouter.get(

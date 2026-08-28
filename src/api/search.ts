@@ -115,6 +115,13 @@ export interface ExtractedConferenceDetails {
   /** Why the read failed, established by re-probing the site rather than inferred from which code
    *  path gave up. Shown verbatim, since the remedies genuinely differ. */
   readFailureReason?: string;
+  /** Some or all of these details came from sites other than the conference's own — used when the
+   *  official site blocks us or says very little. Weaker than the organiser's own word, so it is
+   *  always disclosed; per-field `provenance` names exactly which source each value came from. */
+  sourcedFromOpenWeb?: boolean;
+  /** The conference's own website could not be read at all, and everything here was gathered
+   *  elsewhere. */
+  officialSiteUnreadable?: boolean;
   sourceUrl?: string;
   /** How many pages of the conference's site have been read so far. */
   pagesRead?: number;

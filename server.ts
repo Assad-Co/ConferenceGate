@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
-import { braveSearchRouter } from "./server/braveSearch";
+import { braveSearchRouter, searchWebForConferenceFacts } from "./server/braveSearch";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
@@ -1432,6 +1432,88 @@ Return JSON with exactly this shape:
     return RELEVANT_LINK_CATEGORIES.filter((c) => CATEGORY_LINK_TEXT_RE[c].test(pathWords));
   }
 
+  // How many outside pages to read when gathering a conference's details from sources other than
+  // its own site. Enough to cover the main topics, bounded so a blocked site doesn't cost more
+  // than reading a readable one would have.
+  const MAX_OFFSITE_PAGES = 10;
+  // Below this many of the twenty tracked categories, a crawl has technically succeeded but has
+  // not told the reader much — the point at which looking elsewhere is worth the extra requests.
+  const THIN_RESULT_CATEGORY_THRESHOLD = 8;
+
+  // When a conference's own website can't be read — it blocks automated requests, or builds its
+  // pages in JavaScript we can't render — the details are still published elsewhere: industry
+  // directories, event listings, association news, sponsor announcements, programme mirrors.
+  // Those are almost always readable, so rather than showing empty sections, the conference is
+  // looked up across the open web and assembled from whatever does answer.
+  //
+  // This is a weaker source than the organiser's own page, and it is never disguised as one:
+  // every field records the third-party URL it came from through the same provenance mechanism,
+  // and the result is flagged so the UI can say where it came from.
+  async function gatherFromOpenWeb(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    conferenceName: string,
+    officialUrl: string
+  ): Promise<{ parsed: any; sources: string[] } | null> {
+    const name = conferenceName.trim();
+    if (!name) return null;
+
+    let officialHost = "";
+    try {
+      officialHost = new URL(officialUrl).hostname.replace(/^www\./, "");
+    } catch {
+      /* an unparseable URL just means nothing to exclude */
+    }
+
+    // Separate searches per topic: one generic query returns one page's worth of facts, whereas
+    // asking specifically for the programme or the fees surfaces the pages that actually carry
+    // them. Quoted so results are about this conference rather than the words in its name.
+    const queries = [
+      `"${name}" conference dates venue location`,
+      `"${name}" speakers keynote program agenda`,
+      `"${name}" call for papers abstract submission deadline`,
+      `"${name}" registration fees exhibitors sponsors`,
+    ];
+
+    const found = await Promise.allSettled(queries.map((q) => searchWebForConferenceFacts(q, 6)));
+    const candidates: string[] = [];
+    const seenHosts = new Map<string, number>();
+    for (const outcome of found) {
+      if (outcome.status !== "fulfilled") continue;
+      for (const result of outcome.value) {
+        const link = result.link;
+        if (!link || candidates.includes(link)) continue;
+        let host: string;
+        try {
+          host = new URL(link).hostname.replace(/^www\./, "");
+        } catch {
+          continue;
+        }
+        // The official site is what we already failed to read; re-reading it here would just
+        // reproduce the same failure and spend the budget doing it.
+        if (officialHost && (host === officialHost || host.endsWith(`.${officialHost}`))) continue;
+        // At most two pages from any one source, so a single directory can't fill the budget and
+        // become the sole voice on this conference.
+        const usedFromHost = seenHosts.get(host) || 0;
+        if (usedFromHost >= 2) continue;
+        seenHosts.set(host, usedFromHost + 1);
+        candidates.push(link);
+      }
+    }
+    if (candidates.length === 0) return null;
+
+    const toRead = candidates.slice(0, MAX_OFFSITE_PAGES);
+    const results = await Promise.allSettled(toRead.map((url) => extractPage(ai, url, name)));
+
+    let parsed: any = {};
+    const sources: string[] = [];
+    results.forEach((outcome, i) => {
+      if (outcome.status !== "fulfilled" || !outcome.value) return;
+      parsed = mergeExtractionResults(parsed, outcome.value.parsed, toRead[i], outcome.value.pageTitle);
+      sources.push(toRead[i]);
+    });
+    return sources.length > 0 ? { parsed, sources } : null;
+  }
+
   // Establishes why a page couldn't be read, by re-probing it rather than inferring. Only runs on
   // the failure path, where the crawl has already given up, so the extra requests cost nothing in
   // the normal case. The distinctions matter because they have different remedies: a site that
@@ -1517,6 +1599,28 @@ Return JSON with exactly this shape:
       // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
       // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
       // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
+      // The conference's own site is unreadable, but the conference is not a secret: its dates,
+      // venue, programme and deadlines are published in directories, listings and industry press.
+      // Reading those is far more use than an empty page with an explanation on it.
+      const offsite = await gatherFromOpenWeb(ai, titleHint, startUrl);
+      if (offsite) {
+        const result = buildExtractionResult(offsite.parsed, startUrl, offsite.sources.length, true, {
+          pagesRead: offsite.sources,
+          pagesFailed: [],
+          pdfsRead: [],
+          urlsDiscovered: new Set(offsite.sources),
+        });
+        // Flagged, never disguised: this is what other sites say about the conference, which is
+        // weaker than the organiser's own word, and the reader is told so.
+        result.sourcedFromOpenWeb = true;
+        result.officialSiteUnreadable = true;
+        job.result = result;
+        job.complete = true;
+        extractionCache.set(startUrl, { data: result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
+        job.signalFirstSnapshot();
+        return;
+      }
+
       const diagnosis = await diagnoseReadFailure(startUrl);
       job.result = {
         extracted: false,
@@ -1664,6 +1768,31 @@ Return JSON with exactly this shape:
       frontier = nextFrontier;
     }
 
+    // A site can be readable and still say almost nothing — a JavaScript programme app that
+    // renders a shell, a one-page holding site, a registration portal with no event details on
+    // it. The crawl succeeded, so the failure path above never runs, yet the reader still gets
+    // empty sections. Where the site itself came up thin, top it up from the open web the same
+    // way, and let the merge keep the official site's own values ahead of anyone else's.
+    let sourcedFromOpenWeb = false;
+    const provisional = buildExtractionResult(parsed, startUrl, pagesFetched, false, coverage);
+    if (provisional.crawlCoverage.categoriesFound.length < THIN_RESULT_CATEGORY_THRESHOLD) {
+      const offsite = await gatherFromOpenWeb(ai, titleHint || provisional.conferenceTitle || "", startUrl);
+      if (offsite) {
+        // `parsed` is the primary argument, so anything the conference itself stated wins and the
+        // outside sources only fill what it left empty.
+        parsed = mergeExtractionResults(parsed, offsite.parsed, startUrl, null);
+        for (const [field, entry] of Object.entries(offsite.parsed._provenance || {})) {
+          if (!parsed._provenance) parsed._provenance = {};
+          if (!parsed._provenance[field]) parsed._provenance[field] = entry;
+        }
+        offsite.sources.forEach((url) => {
+          coverage.pagesRead.push(url);
+          coverage.urlsDiscovered.add(url);
+        });
+        sourcedFromOpenWeb = true;
+      }
+    }
+
     // Done last, once every page that might mention a hotel has been read, and deliberately after
     // the final crawl snapshot has already been published — a rate-limited geocode per hotel is
     // slow, and none of it should hold up content that's already available to show.
@@ -1674,7 +1803,8 @@ Return JSON with exactly this shape:
       console.error("Hotel distance estimation failed:", error);
     }
 
-    const result = buildExtractionResult(parsed, startUrl, pagesFetched, true, coverage);
+    const result = buildExtractionResult(parsed, startUrl, coverage.pagesRead.length, true, coverage);
+    result.sourcedFromOpenWeb = sourcedFromOpenWeb;
     job.result = result;
     job.complete = true;
     job.signalFirstSnapshot();
