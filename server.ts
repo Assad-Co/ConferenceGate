@@ -739,7 +739,12 @@ Return JSON with exactly this shape:
   // answered a moment later. Secondary pages ride the same ceiling but are fetched in parallel,
   // so raising it costs one round's tail latency rather than multiplying across the crawl.
   const PAGE_FETCH_TIMEOUT_MS = 12000;
-  const MODEL_CALL_TIMEOUT_MS = 12000;
+  // The extraction asks for the whole conference record now — identity, important dates, fee
+  // table, publication details, committees, per-field confidence — so a content-rich page takes
+  // far longer to generate than the handful of fields this was originally sized for. At 12s real
+  // pages were timing out in production and being discarded as unreadable. The crawl runs in the
+  // background, so waiting longer costs nothing the reader sees.
+  const MODEL_CALL_TIMEOUT_MS = 40000;
   // Below this much visible text a "successful" fetch is not something worth extracting from: it
   // is a client-rendered shell, an interstitial, or a cookie wall whose real content never arrived
   // in the HTML. Extracting from it yields nulls for every section, which is indistinguishable
@@ -1405,7 +1410,9 @@ Return JSON with exactly this shape:
   // round lands, and everything after that is a progressive improvement to an already-usable page.
   const MAX_TOTAL_PAGES = 60;
   const MAX_PAGES_PER_ROUND = 8; // fetched concurrently, so this bounds one round's wall clock
-  const CRAWL_TIME_BUDGET_MS = 90000;
+  // Raised alongside the per-call model timeout: a round is only as fast as its slowest page, so
+  // a budget shorter than a few model calls would cut the crawl off after one or two rounds.
+  const CRAWL_TIME_BUDGET_MS = 180000;
   // How many sitemap entries to consider. A conference site is rarely bigger than this, and
   // anything past it is almost always blog/news archive rather than event content.
   const MAX_SITEMAP_URLS = 120;

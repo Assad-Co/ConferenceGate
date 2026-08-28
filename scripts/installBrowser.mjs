@@ -6,6 +6,16 @@
 // extraction simply falls back to plain HTTP fetches, and the UI says so rather than pretending
 // the site had nothing on it.
 import { execFileSync } from "child_process";
+import { join } from "path";
+
+// Downloads into the project rather than $HOME/.cache. On hosts like Render the home cache is not
+// carried from the build step into the running container, so a browser installed during
+// `yarn install` was missing by the time the server looked for it. Keeping it beside the app means
+// it survives. Honours an explicit PLAYWRIGHT_BROWSERS_PATH when the host sets one.
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = join(process.cwd(), ".playwright-browsers");
+}
+console.log(`[install-browser] Browser directory: ${process.env.PLAYWRIGHT_BROWSERS_PATH}`);
 
 const SKIP_ENV = process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD;
 if (SKIP_ENV && SKIP_ENV !== "0") {
@@ -38,7 +48,13 @@ const alreadyInstalled = await (async () => {
   if (browsersPath) {
     try {
       for (const build of readdirSync(browsersPath).filter((n) => n.startsWith("chromium"))) {
-        candidates.push(join(browsersPath, build, "chrome-linux", "chrome"));
+        // Same set of layouts server/browserFetch.ts knows how to launch.
+        candidates.push(
+          join(browsersPath, build, "chrome-linux", "chrome"),
+          join(browsersPath, build, "chrome-linux", "headless_shell"),
+          join(browsersPath, build, "chrome-headless-shell-linux64", "chrome-headless-shell"),
+          join(browsersPath, build, "chrome-linux64", "chrome")
+        );
       }
     } catch {
       // No such directory.

@@ -36,6 +36,24 @@ let unavailableReason: string | null = null;
 // build and refuses anything else, which is too brittle to rely on alone: a host may have Chromium
 // from its package manager, from a container base image, or from a playwright install of a
 // different version. Any of those renders a page perfectly well, so all of them are tried.
+// Where a build-time browser download is kept. Deliberately inside the project rather than under
+// $HOME: on hosts like Render the home cache is not carried from the build step into the running
+// container, so a browser downloaded during `yarn install` was simply gone by the time the server
+// looked for it. The project directory survives.
+export const PROJECT_BROWSERS_PATH = join(process.cwd(), ".playwright-browsers");
+
+// The executable's location inside a downloaded build varies by browser flavour and by playwright
+// version — full Chromium, the lighter headless shell, and the Chrome-for-Testing layout all
+// differ. All known shapes are tried rather than assuming one.
+function executablesIn(buildDir: string): string[] {
+  return [
+    join(buildDir, "chrome-linux", "chrome"),
+    join(buildDir, "chrome-linux", "headless_shell"),
+    join(buildDir, "chrome-headless-shell-linux64", "chrome-headless-shell"),
+    join(buildDir, "chrome-linux64", "chrome"),
+  ];
+}
+
 function chromiumCandidates(): Array<string | undefined> {
   const candidates: Array<string | undefined> = [];
   if (process.env.PLAYWRIGHT_CHROMIUM_PATH) candidates.push(process.env.PLAYWRIGHT_CHROMIUM_PATH);
@@ -43,19 +61,16 @@ function chromiumCandidates(): Array<string | undefined> {
   // installed version does match its pin.
   candidates.push(undefined);
 
-  // Any playwright-managed build under PLAYWRIGHT_BROWSERS_PATH, newest first, including ones
-  // whose version differs from what this playwright-core pins.
-  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
-  if (browsersPath) {
+  // Any playwright-managed build, newest first, including ones whose version differs from what
+  // this playwright-core pins.
+  for (const browsersPath of [process.env.PLAYWRIGHT_BROWSERS_PATH, PROJECT_BROWSERS_PATH]) {
+    if (!browsersPath) continue;
     try {
       const builds = readdirSync(browsersPath)
         .filter((name) => name.startsWith("chromium"))
         .sort()
         .reverse();
-      for (const build of builds) {
-        candidates.push(join(browsersPath, build, "chrome-linux", "chrome"));
-        candidates.push(join(browsersPath, build, "chrome-linux", "headless_shell"));
-      }
+      for (const build of builds) candidates.push(...executablesIn(join(browsersPath, build)));
     } catch {
       // No such directory — nothing to add.
     }

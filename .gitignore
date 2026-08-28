@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 /data/
+
+# Browser downloaded at build time for the extraction rendering fallback
+.playwright-browsers/
