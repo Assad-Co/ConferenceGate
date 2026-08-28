@@ -67,9 +67,10 @@ async function startServer() {
         headers: {
           "User-Agent": "aistudio-build",
         },
-        // Without a cap, a slow model response can hang a request indefinitely — worst felt on
-        // conference extraction, which can make up to three of these calls in one request.
-        timeout: 15000,
+        // Keep the SDK deadline at least as long as MODEL_CALL_TIMEOUT_MS below. A shorter
+        // client deadline silently wins and turns every slower extraction into a 504 before the
+        // extraction layer's own timeout and retry policy can do their job.
+        timeout: 45000,
       },
     });
   };
