@@ -16,9 +16,21 @@ export interface CrossRefCandidate {
   url: string | null;
 }
 
-function familyNamesOf(fullName: string): string[] {
+interface NameParts {
+  firstNames: string[];
+  familyName: string;
+  fullNameLower: string;
+}
+
+function parseNameParts(fullName: string): NameParts {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  return parts.length ? [parts[parts.length - 1].toLowerCase()] : [];
+  const familyName = parts.length ? parts[parts.length - 1].toLowerCase() : "";
+  const firstNames = parts.slice(0, -1).map((p) => p.toLowerCase());
+  return {
+    firstNames,
+    familyName,
+    fullNameLower: fullName.toLowerCase(),
+  };
 }
 
 const searchCache = new Map<string, { data: CrossRefCandidate[]; expiresAt: number }>();
@@ -52,7 +64,7 @@ export async function searchCrossRefConferencePapers(fullName: string): Promise<
     const items = body?.message?.items;
     if (!res.ok || !Array.isArray(items)) return [];
 
-    const familyNames = familyNamesOf(name);
+    const userNameParts = parseNameParts(name);
 
     const candidates: CrossRefCandidate[] = [];
     for (const item of items) {
@@ -60,13 +72,18 @@ export async function searchCrossRefConferencePapers(fullName: string): Promise<
       const title = Array.isArray(item?.title) ? item.title[0] : null;
       if (typeof doi !== "string" || typeof title !== "string" || !title.trim()) continue;
 
-      // Light relevance check — CrossRef's own ranking already does the real matching; this
-      // just filters out results with no author whose family name matches at all.
+      // Strict relevance check: require family name match + at least one first name match.
+      // This prevents matching papers by other people who happen to share the last name.
       const authors = Array.isArray(item?.author) ? item.author : [];
-      const hasPlausibleAuthor =
-        familyNames.length === 0 ||
-        authors.some((a: any) => typeof a?.family === "string" && familyNames.includes(a.family.toLowerCase()));
-      if (!hasPlausibleAuthor) continue;
+      const hasExactAuthor = authors.some((a: any) => {
+        const authorFamily = typeof a?.family === "string" ? a.family.toLowerCase() : "";
+        const authorGiven = typeof a?.given === "string" ? a.given.toLowerCase() : "";
+        // Must match: last name AND (first name OR full given names contain user's first names)
+        if (authorFamily !== userNameParts.familyName) return false;
+        if (userNameParts.firstNames.length === 0) return true;
+        return userNameParts.firstNames.some((firstName) => authorGiven.includes(firstName));
+      });
+      if (!hasExactAuthor) continue;
 
       const venue = Array.isArray(item?.["container-title"]) ? item["container-title"][0] : null;
       const dateParts = item?.published?.["date-parts"]?.[0] || item?.["published-print"]?.["date-parts"]?.[0];
