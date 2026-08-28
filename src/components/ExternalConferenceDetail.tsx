@@ -490,6 +490,31 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               </div>
             )}
 
+            {/* Once the crawl is done, say how much of the site was actually read. Without this,
+                a site that yielded nothing looks identical to one that was barely opened, and
+                there's no way to tell "this conference doesn't list speakers" from "we only got
+                one page of it". */}
+            {data?.extracted && data.crawlComplete === true && typeof data.pagesRead === 'number' && (
+              <div className="mb-6 flex items-start gap-2 text-[11px] text-slate-500">
+                <Globe className="w-3.5 h-3.5 shrink-0 mt-px text-slate-400" />
+                <p>
+                  Read {data.pagesRead} {data.pagesRead === 1 ? 'page' : 'pages'} of this conference's website.
+                  {data.pagesRead === 1 &&
+                    ' Only the linked page could be read, so anything the rest of the site covers is missing here.'}{' '}
+                  Anything shown empty was not stated on the pages we could read —{' '}
+                  <a
+                    href={result.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline font-semibold"
+                  >
+                    check the official website
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 <div className="space-y-3">

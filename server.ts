@@ -372,7 +372,38 @@ Provide constructive feedback in JSON format with fields:
   // round that finds zero category-specific candidates falls back to a few of that page's other
   // same-site nav links as blind exploratory hops — skipping the obvious non-content ones — so the
   // crawl can still push one layer deeper instead of stopping cold in front of a hub page.
-  const SKIP_NAV_TEXT_RE = /\b(privacy|terms|cookie|login|log in|sign in|sign up|home|contact|sitemap|accessibility)\b/i;
+  // "home" is deliberately NOT skipped. A search result often points at a deep page — a
+  // registration or submission page — and the conference's dates, venue and description live on
+  // the page that page calls "Home". Skipping it made the single most valuable page on the site
+  // unreachable from exactly the starting points where it mattered most.
+  const SKIP_NAV_TEXT_RE = /\b(privacy|terms|cookie|login|log in|sign in|sign up|contact|sitemap|accessibility)\b/i;
+
+  // The start URL's own parent paths, deepest first: from ".../annual-meeting/register" that's
+  // ".../annual-meeting/" and then the site root.
+  //
+  // A live search result frequently lands on a deep page, and the overview, dates and venue are
+  // almost never repeated there — they sit on the section or site home. Those pages are reachable
+  // by URL alone, without needing a link or a sitemap to point at them, so the crawl always tries
+  // them. Deepest first, so a conference's own section home is read before the parent
+  // organisation's, and describes the conference rather than the body that runs it.
+  function ancestorUrls(startUrl: string): string[] {
+    let parsed: URL;
+    try {
+      parsed = new URL(startUrl);
+    } catch {
+      return [];
+    }
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const out: string[] = [];
+    for (let depth = segments.length - 1; depth >= 0; depth--) {
+      const path = depth === 0 ? "/" : `/${segments.slice(0, depth).join("/")}/`;
+      const candidate = `${parsed.origin}${path}`;
+      if (candidate !== startUrl && !out.includes(candidate)) out.push(candidate);
+    }
+    const root = `${parsed.origin}/`;
+    if (root !== startUrl && !out.includes(root)) out.push(root);
+    return out;
+  }
   function findExploratoryLinks(html: string, baseUrl: string, limit: number): string[] {
     const anchorRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
     const found: string[] = [];
@@ -1125,6 +1156,11 @@ Return JSON with exactly this shape:
         proposed.add(url);
         tier.push(url);
       };
+
+      // Ahead of everything else: the pages above the one we started on. When a search result
+      // points at a deep page, this is what reaches the conference's actual front page, where the
+      // dates, venue and description almost always are.
+      for (const url of ancestorUrls(startUrl)) consider(url, urgent);
 
       for (const page of frontier) {
         const realLinks = extractAllLinks(page.html, page.url);
