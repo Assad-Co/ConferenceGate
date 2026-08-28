@@ -1067,7 +1067,42 @@ Return JSON with exactly this shape:
   type PageReader = "plain" | "browser" | "firecrawl" | "prefetched" | "pdf";
   type ExtractedPage = { parsed: any; html: string; pageTitle: string | null; isPdf: boolean; reader: PageReader };
 
+  // Every individual network call inside a page's read (plain fetch, browser render, one
+  // Firecrawl attempt, one model call) already has its own timeout, but nothing previously capped
+  // their sum — Firecrawl alone retries up to 3 times with rate-limit backoff up to 60s between
+  // attempts, so one genuinely slow or blocked page could legitimately take several minutes start
+  // to finish. Because a crawl round awaits every page in it together (Promise.all), that one
+  // straggler held up the whole round — and every tab, not just the one that page belonged to —
+  // even though the other pages' real results were already sitting there finished. This ceiling
+  // is what makes "skip it" (the behavior extractPage already documents for a failed page) also
+  // apply to a page that's merely taking too long, so the round — and therefore the round's real,
+  // already-found results — can actually complete instead of waiting on the one slowest page.
+  const PAGE_EXTRACTION_TIMEOUT_MS = 55000;
+
   async function extractPage(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    pageUrl: string,
+    title: string,
+    options: {
+      allowFirecrawl?: boolean;
+      prefetched?: Pick<FirecrawlBatchPage, "html" | "markdown">;
+      modelAttempts?: number;
+      modelTimeoutMs?: number;
+    } = {}
+  ): Promise<ExtractedPage | null> {
+    try {
+      return await withTimeout(
+        extractPageWithoutDeadline(ai, pageUrl, title, options),
+        PAGE_EXTRACTION_TIMEOUT_MS,
+        `Reading ${pageUrl}`
+      );
+    } catch (e) {
+      console.error(`Gave up on ${pageUrl} after ${PAGE_EXTRACTION_TIMEOUT_MS}ms: ${(e as any)?.message || e}`);
+      return null;
+    }
+  }
+
+  async function extractPageWithoutDeadline(
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     pageUrl: string,
     title: string,
