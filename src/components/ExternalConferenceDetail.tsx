@@ -435,13 +435,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             [
               { id: 'overview', label: 'Overview' },
               { id: 'cfp', label: 'Call for Papers' },
-              { id: 'agenda', label: 'Program & Agenda' },
+              { id: 'agenda', label: loading || !data?.crawlComplete
+                ? 'Program & Agenda (checking…)'
+                : `Program & Agenda (${data.agendaSessions.length})` },
               { id: 'speakers', label: loading || !data?.crawlComplete
                 ? 'Keynote Speakers (checking…)'
                 : data.fetchFailed
                   ? 'Keynote Speakers (not retrieved)'
                   : `Keynote Speakers (${data.speakers.length})` },
-              { id: 'committee', label: 'Technical Committee' },
+              { id: 'committee', label: loading || !data?.crawlComplete
+                ? 'Technical Committee (checking…)'
+                : `Technical Committee (${data.committee.length})` },
               { id: 'sponsors', label: loading || !data?.crawlComplete
                 ? 'Sponsors & Exhibitors (checking…)'
                 : data.fetchFailed
@@ -1128,10 +1132,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Program & Agenda</h3>
                 {!data?.agendaSessions.length ? (
-                  <EmptyExtractState
-                    message="No session-by-session program was found on this page."
-                    sourceUrl={result.link}
-                  />
+                  data?.crawlComplete === true ? (
+                    <EmptyExtractState
+                      message={data.fetchFailed
+                        ? "Program information was not retrieved; this does not mean the conference has no program."
+                        : "The completed crawl found no session-by-session program."}
+                      sourceUrl={result.link}
+                    />
+                  ) : (
+                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Reading the main program and schedule pages…
+                    </div>
+                  )
                 ) : (
                   <div className="space-y-3">
                     {data.agendaSessions.map((ses, idx) => (
@@ -1203,10 +1216,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Technical Committee & Advisory Board</h3>
                 {!data?.committee.length ? (
-                  <EmptyExtractState
-                    message="No technical committee roster was found on this page."
-                    sourceUrl={result.link}
-                  />
+                  data?.crawlComplete === true ? (
+                    <EmptyExtractState
+                      message={data.fetchFailed
+                        ? "Committee information was not retrieved."
+                        : "The completed crawl found no named technical committee roster."}
+                      sourceUrl={result.link}
+                    />
+                  ) : (
+                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Reading committee, chair, organizer, and advisory pages…
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {data.committee.map((cm, idx) => (
