@@ -395,6 +395,68 @@ Provide constructive feedback in JSON format with fields:
     return found;
   }
 
+  // File extensions that are never an HTML page worth extracting from. Filtered out of sitemap
+  // results up front so the page budget isn't spent fetching a PDF or a logo only to reject it.
+  const NON_PAGE_EXT_RE = /\.(pdf|jpe?g|png|gif|svg|webp|ico|css|js|zip|docx?|pptx?|xlsx?|mp4|mp3|xml)(\?|#|$)/i;
+
+  // Asks the site for its own index of itself before falling back to guessing from nav links. A
+  // sitemap is the only way to reach pages a conference never linked from its front page — a
+  // separate committee page, an archived programme, a hotels list behind a JS-only dropdown —
+  // which is exactly the content a link-following crawl alone can never discover.
+  async function fetchSitemapUrls(startUrl: string, limit: number): Promise<string[]> {
+    let origin: string;
+    let host: string;
+    try {
+      const u = new URL(startUrl);
+      origin = u.origin;
+      host = u.hostname;
+    } catch {
+      return [];
+    }
+    const queue = [`${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`, `${origin}/sitemap-index.xml`];
+    const requested = new Set<string>();
+    const out: string[] = [];
+    // Bounded independently of the page budget: a sitemap index can chain into dozens of child
+    // sitemaps, and this is only meant to seed the crawl, not to become a crawl of its own.
+    const MAX_SITEMAP_FETCHES = 6;
+
+    while (queue.length > 0 && out.length < limit && requested.size < MAX_SITEMAP_FETCHES) {
+      const sitemapUrl = queue.shift()!;
+      if (requested.has(sitemapUrl)) continue;
+      requested.add(sitemapUrl);
+      try {
+        const r = await fetch(sitemapUrl, {
+          headers: EXTRACTION_FETCH_HEADERS,
+          redirect: "follow",
+          signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
+        });
+        if (!r.ok) continue;
+        const xml = await r.text();
+        if (!/<(urlset|sitemapindex)/i.test(xml)) continue; // a 200 HTML "not found" page, not a sitemap
+        const isIndex = /<sitemapindex/i.test(xml);
+        const locRe = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
+        let m: RegExpExecArray | null;
+        while ((m = locRe.exec(xml))) {
+          let abs: string;
+          try {
+            abs = new URL(m[1].replace(/&amp;/gi, "&")).href;
+            if (new URL(abs).hostname !== host) continue; // never wander off this conference's site
+          } catch {
+            continue;
+          }
+          if (isIndex) {
+            if (!requested.has(abs) && queue.length < MAX_SITEMAP_FETCHES) queue.push(abs);
+          } else if (!NON_PAGE_EXT_RE.test(abs) && !out.includes(abs) && out.length < limit) {
+            out.push(abs);
+          }
+        }
+      } catch {
+        continue; // no sitemap, or it timed out — the link-following crawl still runs
+      }
+    }
+    return out;
+  }
+
   // Every real <a href> target on the page, resolved to absolute URLs — used to verify a URL the
   // model claims to have found in a [LINK: ...] marker actually exists on the page, rather than
   // trusting model output that could otherwise hallucinate a plausible-looking but fake URL.
@@ -501,6 +563,8 @@ For cfpDeadline, use only the actual abstract/paper SUBMISSION deadline explicit
 
 For submissionRequirements, look specifically for what authors are told about how to prepare their submission — format (PDF, Word), page or word limits, citation style, blind-review requirements, or template to use — and summarize only what's explicitly stated in a sentence or two. For submissionTemplateUrl, only use a URL that literally appears via a [LINK: ...] marker in the page text; never guess a URL from context.
 
+Alongside that prose summary, break the SAME stated requirements out into the individual cfp* fields so they can be shown as a checklist. Fill each one only from an explicit statement on the page, and leave it null otherwise — never carry a value over from a different field, and never normalize a page's own wording into a requirement it didn't state. cfpSubmissionFormat is the required file format or preparation format ("PDF only", "LaTeX or Word using the IEEE template"). cfpLengthLimit is the stated size limit for a submission ("6 pages excluding references", "300-word abstract", "maximum 4,000 words"). cfpReviewProcess is how submissions are reviewed when the page says ("double-blind peer review", "single-blind, three reviewers per paper"). cfpNotificationDate is the date authors are told they'll hear back — an acceptance/notification date, which is NOT the submission deadline and NOT the conference date. cfpTopics is the list of topics, tracks, or themes the call explicitly invites submissions on, one array entry per topic exactly as written; use an empty array if the page doesn't enumerate any.
+
 For submissionEmail, only fill this in if the page explicitly names an email address as where to SEND a submission/abstract/paper to (e.g. "email your abstract to chair@conference.org"). Never use a generic contact/info email for this — leave it null unless the text specifically ties that address to submitting a paper.
 
 For speakers, include anyone credited with giving a talk, keynote, presentation, or featured appearance at the event — this covers people labeled "Speakers", "Keynotes", "Presenters", "Panelists", "Featured Guests", "Invited Guests", or any similar wording the page uses, not only people under a heading that literally says "Speakers". Use the page's own wording for role (e.g. "Keynote Speaker", "Panelist", "Presenter") when it says one, or null if it doesn't.
@@ -512,6 +576,12 @@ For committee, include anyone credited with organizing, chairing, or running the
 For sponsors, include every organization named as sponsoring, funding, or supporting the conference — this includes a plain sentence like "Sponsored by the XYZ Department" or "with support from ABC Foundation", not only entries with a logo image. Use null for tier and logoUrl when the page doesn't state them; never invent a tier ("Gold", "Platinum", etc.) that isn't explicitly written.
 
 For accommodationText and travelText, summarize whatever the page actually says about lodging (hotel names, room blocks, rates) or getting to the venue (transit directions, airport info, parking) in a sentence or two each — these are commonly written as plain paragraphs rather than under a clearly-labeled section, so don't require an explicit "Accommodation" or "Travel" heading to use them.
+
+For venueName and venueAddress, give the actual place the conference is held — the venue's own name ("Marriott Marquis San Diego Marina", "Walter E. Washington Convention Center") and its street address as written. These are separate from locationText, which is the city/country line; use null for either if the page doesn't state it.
+
+For hotels, list every individual place to stay the page actually names — conference room blocks, partner hotels, recommended or nearby hotels. One entry per hotel, and only hotels this page genuinely names; never fill this array with a general sentence about lodging (that belongs in accommodationText) and never add a hotel from your own knowledge of the area. For each entry: name is the hotel's name as written; address is its street address only if stated; rateText is the stated nightly rate or room-block rate exactly as written ("$289/night", "from £150"); bookingUrl must come from a real [LINK: ...] marker tied to that hotel, else null; isOfficialBlock is true only when the page presents it as the conference's own room block / official or headquarters hotel, and false when it's merely listed as nearby or recommended.
+
+distanceText is how far that hotel is from the VENUE, copied as the page states it and only when the page states it for that hotel — "0.2 miles from the convention center", "adjacent to the venue", "a 5-minute walk", "across the street". Leave it null when the page gives no distance; do not compute, estimate, or infer a distance from an address, and do not describe a hotel as close just because it is listed as a conference hotel. Additionally set distanceMeters to that same stated distance converted to a whole number of metres when — and only when — the page states an actual measurable distance or walking time (1 mile = 1609 metres; treat a stated walking time as 80 metres per minute; treat "adjacent"/"attached"/"on-site"/"across the street" as 0). If the page gives no distance for that hotel, or gives something too vague to measure ("close by", "in the downtown area"), set distanceMeters to null rather than guessing a number.
 
 Finally, look at every [LINK: url] marker in the page text above and, based on genuinely reading and understanding what each link is about (its visible text and the surrounding sentence) rather than matching a fixed keyword, decide whether it likely leads to a page with MORE detail than what's summarized here about: (a) the Call for Papers or submission process, (b) the organizing/technical/program committee or chairs, (c) speakers, keynotes, presenters, or panelist bios (whatever the page itself calls them), (d) sponsors or exhibitors, (e) the program, agenda, schedule, or timetable (whatever the page itself calls it), (f) venue, accommodation, or travel information, (g) a general "About"/"Overview"/"About the Conference" page describing what the conference itself is about, if this page doesn't already describe that well. Put the single most likely such URL for each category into relevantLinks below, or null if none of the links on this page look relevant to that category — every URL you provide there MUST be copied character-for-character from one of the [LINK: ...] markers in the text above; never invent or guess one.
 
@@ -535,12 +605,20 @@ Return JSON with exactly this shape:
   "submissionRequirements": string | null,
   "submissionTemplateUrl": string | null,
   "submissionEmail": string | null,
+  "cfpSubmissionFormat": string | null,
+  "cfpLengthLimit": string | null,
+  "cfpReviewProcess": string | null,
+  "cfpNotificationDate": string | null,
+  "cfpTopics": string[],
   "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null }],
   "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
   "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
   "sponsors": [{ "name": string, "tier": string | null, "logoUrl": string | null }],
   "accommodationText": string | null,
   "travelText": string | null,
+  "venueName": string | null,
+  "venueAddress": string | null,
+  "hotels": [{ "name": string, "address": string | null, "distanceText": string | null, "distanceMeters": number | null, "rateText": string | null, "bookingUrl": string | null, "isOfficialBlock": boolean }],
   "relevantLinks": {
     "overview": string | null,
     "cfp": string | null,
@@ -699,6 +777,45 @@ Return JSON with exactly this shape:
     return !parsed.accommodationText || !parsed.travelText || !parsed.locationText;
   }
 
+  // Orders the extracted hotels closest-to-venue first, which is the order someone booking a room
+  // actually wants to read them in. Only a distance the page itself stated is ever used to rank:
+  // a hotel the site gave no distance for sorts after every hotel that has one rather than being
+  // guessed at, so the ordering can never imply a proximity nobody published.
+  function normalizeHotels(raw: unknown, baseUrl: string): any[] {
+    if (!Array.isArray(raw)) return [];
+    const hotels = raw
+      .filter((h) => h && typeof h === "object" && typeof h.name === "string" && h.name.trim())
+      .slice(0, 40)
+      .map((h: any) => {
+        const meters =
+          typeof h.distanceMeters === "number" && Number.isFinite(h.distanceMeters) && h.distanceMeters >= 0
+            ? Math.round(h.distanceMeters)
+            : null;
+        return {
+          name: h.name.trim(),
+          address: typeof h.address === "string" && h.address.trim() ? h.address.trim() : null,
+          distanceText: typeof h.distanceText === "string" && h.distanceText.trim() ? h.distanceText.trim() : null,
+          distanceMeters: meters,
+          rateText: typeof h.rateText === "string" && h.rateText.trim() ? h.rateText.trim() : null,
+          bookingUrl: resolveAbsoluteUrl(h.bookingUrl, baseUrl),
+          isOfficialBlock: h.isOfficialBlock === true,
+        };
+      });
+
+    // Three tiers: a measured distance, then a stated-but-unmeasurable one ("close to downtown"),
+    // then no distance at all. The conference's own room block wins ties, since that's the booking
+    // most attendees are looking for when two hotels are equally far away.
+    const tier = (h: any) => (h.distanceMeters !== null ? 0 : h.distanceText ? 1 : 2);
+    return hotels.sort((a, b) => {
+      const ta = tier(a);
+      const tb = tier(b);
+      if (ta !== tb) return ta - tb;
+      if (ta === 0 && a.distanceMeters !== b.distanceMeters) return a.distanceMeters - b.distanceMeters;
+      if (a.isOfficialBlock !== b.isOfficialBlock) return a.isOfficialBlock ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
   // Fills in only the fields the primary page's extraction came up empty for — real data already
   // found on the primary page always wins, so a secondary page can only ever add, never overwrite.
   function mergeExtractionResults(primary: any, secondary: any, secondaryUrl: string): any {
@@ -713,8 +830,26 @@ Return JSON with exactly this shape:
       "locationText",
       "datesText",
       "overviewSummary",
+      "cfpSubmissionFormat",
+      "cfpLengthLimit",
+      "cfpReviewProcess",
+      "cfpNotificationDate",
+      "venueName",
+      "venueAddress",
     ]) {
       if (!merged[field] && secondary[field]) merged[field] = secondary[field];
+    }
+    // Topics are plain strings rather than objects, so they union on their own normalized text.
+    if (Array.isArray(secondary.cfpTopics) && secondary.cfpTopics.length > 0) {
+      const seen = new Set<string>();
+      merged.cfpTopics = [...(Array.isArray(merged.cfpTopics) ? merged.cfpTopics : []), ...secondary.cfpTopics]
+        .filter((t: any) => typeof t === "string" && t.trim())
+        .filter((t: string) => {
+          const key = t.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
     }
     if (!merged.submissionUrl && secondary.submissionUrl) {
       merged.submissionUrl = resolveAbsoluteUrl(secondary.submissionUrl, secondaryUrl);
@@ -728,7 +863,7 @@ Return JSON with exactly this shape:
     // primary list as "already have it" meant the full page's 40 speakers were fetched, parsed,
     // and then thrown away in favour of the homepage's 3. Union + de-duplicate instead, so each
     // page can only ever add rows, and an entry already known keeps its richer version.
-    for (const field of ["committee", "speakers", "sponsors", "agendaSessions"] as const) {
+    for (const field of ["committee", "speakers", "sponsors", "agendaSessions", "hotels"] as const) {
       const current = Array.isArray(merged[field]) ? merged[field] : [];
       const incoming = Array.isArray(secondary[field]) ? secondary[field] : [];
       if (incoming.length === 0) continue;
@@ -756,17 +891,11 @@ Return JSON with exactly this shape:
     return key || null;
   }
 
-  // Counts how many fields of an entry actually carry a value — used to keep the richer of two
-  // duplicates (the speakers page usually has the org, title, and photo the homepage teaser omits).
-  function entryDetailScore(entry: any): number {
-    if (!entry || typeof entry !== "object") return 0;
-    return Object.values(entry).filter((v) => v !== null && v !== undefined && v !== "").length;
-  }
-
   function unionEntries(field: string, current: any[], incoming: any[]): any[] {
     const byKey = new Map<string, any>();
     const unkeyed: any[] = [];
     for (const entry of [...current, ...incoming]) {
+      if (!entry || typeof entry !== "object") continue;
       const key = entryKey(field, entry);
       if (!key) {
         // No usable identity to compare on — kept as-is rather than silently dropped, since a
@@ -775,9 +904,292 @@ Return JSON with exactly this shape:
         continue;
       }
       const existing = byKey.get(key);
-      if (!existing || entryDetailScore(entry) > entryDetailScore(existing)) byKey.set(key, entry);
+      if (!existing) {
+        byKey.set(key, { ...entry });
+        continue;
+      }
+      // The same person / session / hotel described on two different pages: combine their fields
+      // rather than picking one copy wholesale. A speaker photographed on the homepage and given
+      // an affiliation on the speakers page should end up with both, and a hotel flagged as the
+      // official room block on one page keeps that flag when another page only lists its rate.
+      for (const [k, v] of Object.entries(entry)) {
+        if (v === null || v === undefined || v === "") continue;
+        const held = existing[k];
+        if (held === null || held === undefined || held === "") existing[k] = v;
+        else if (held === false && v === true) existing[k] = true;
+      }
     }
     return [...byKey.values(), ...unkeyed];
+  }
+
+  // Shapes the accumulated crawl state into the response the client renders. Called after every
+  // round, not only at the end, so the tabs can fill in progressively while the rest of the site
+  // is still being read.
+  function buildExtractionResult(parsed: any, sourceUrl: string, pagesRead: number, crawlComplete: boolean) {
+    return {
+      extracted: true,
+      isFallback: false,
+      sourceUrl,
+      pagesRead,
+      crawlComplete,
+      overviewSummary: parsed.overviewSummary || null,
+      datesText: parsed.datesText || null,
+      locationText: parsed.locationText || null,
+      format: parsed.format || null,
+      cfpStatus: parsed.cfpStatus || null,
+      cfpDeadline: parsed.cfpDeadline || null,
+      submissionUrl: resolveAbsoluteUrl(parsed.submissionUrl, sourceUrl),
+      submissionRequirements: parsed.submissionRequirements || null,
+      submissionTemplateUrl: resolveAbsoluteUrl(parsed.submissionTemplateUrl, sourceUrl),
+      submissionEmail: sanitizeEmail(parsed.submissionEmail),
+      cfpSubmissionFormat: parsed.cfpSubmissionFormat || null,
+      cfpLengthLimit: parsed.cfpLengthLimit || null,
+      cfpReviewProcess: parsed.cfpReviewProcess || null,
+      cfpNotificationDate: parsed.cfpNotificationDate || null,
+      cfpTopics: Array.isArray(parsed.cfpTopics) ? parsed.cfpTopics.filter((t: any) => typeof t === "string") : [],
+      agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
+      speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
+      committee: Array.isArray(parsed.committee) ? parsed.committee : [],
+      sponsors: Array.isArray(parsed.sponsors) ? parsed.sponsors : [],
+      accommodationText: parsed.accommodationText || null,
+      travelText: parsed.travelText || null,
+      venueName: parsed.venueName || null,
+      venueAddress: parsed.venueAddress || null,
+      hotels: normalizeHotels(parsed.hotels, sourceUrl),
+    };
+  }
+
+  // The crawl walks the whole conference site, so it routinely outlives the request that started
+  // it. A job holds the latest snapshot; the POST answers from the first snapshot and the client
+  // polls the status route for the rest as more pages are read.
+  interface CrawlJob {
+    result: any;
+    complete: boolean;
+    startedAt: number;
+    firstSnapshot: Promise<void>;
+    signalFirstSnapshot: () => void;
+  }
+  const crawlJobs = new Map<string, CrawlJob>();
+
+  // Rounds of breadth-first expansion beyond the primary page.
+  const MAX_CRAWL_DEPTH = 5;
+  // The ceiling on how much of one site gets read. Generous because this now runs in the
+  // background rather than under the user's spinner — the request returns as soon as the first
+  // round lands, and everything after that is a progressive improvement to an already-usable page.
+  const MAX_TOTAL_PAGES = 60;
+  const MAX_PAGES_PER_ROUND = 8; // fetched concurrently, so this bounds one round's wall clock
+  const CRAWL_TIME_BUDGET_MS = 90000;
+  // How many sitemap entries to consider. A conference site is rarely bigger than this, and
+  // anything past it is almost always blog/news archive rather than event content.
+  const MAX_SITEMAP_URLS = 120;
+  // How long the POST waits for something worth rendering before answering with what it has.
+  const FIRST_RESPONSE_DEADLINE_MS = 15000;
+
+  // Scores a URL's own path against the category patterns — the only signal available for a
+  // sitemap entry, which arrives with no anchor text attached to it. "/hotel-and-travel" and
+  // "/program/speakers" are read as the words they contain.
+  function categoriesInUrlPath(url: string): RelevantLinkCategory[] {
+    let pathWords: string;
+    try {
+      pathWords = decodeURIComponent(new URL(url).pathname).replace(/[^a-zA-Z0-9]+/g, " ");
+    } catch {
+      return [];
+    }
+    return RELEVANT_LINK_CATEGORIES.filter((c) => CATEGORY_LINK_TEXT_RE[c].test(pathWords));
+  }
+
+  // Reads a conference site end to end: the page the search result pointed at, everything its own
+  // sitemap lists, and everything reachable by following its links — merging each page's real
+  // extracted content into one accumulated result. Publishes a snapshot after every round so the
+  // client can render partial results immediately.
+  async function runSiteCrawl(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    startUrl: string,
+    titleHint: string,
+    job: CrawlJob
+  ): Promise<void> {
+    const primary = await extractPage(ai, startUrl, titleHint);
+    if (!primary) {
+      // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
+      // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
+      // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
+      job.result = { extracted: false, isFallback: false, fetchFailed: true, crawlComplete: true };
+      job.complete = true;
+      extractionCache.set(startUrl, { data: job.result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
+      job.signalFirstSnapshot();
+      return;
+    }
+
+    let parsed = primary.parsed;
+    const visited = new Set<string>([startUrl]);
+    let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: startUrl, ...primary }];
+    let pagesFetched = 1;
+    const crawlStartedAt = Date.now();
+
+    // The site's own index of itself, fetched once up front. These seed the queue alongside the
+    // links found by crawling, which is what lets the crawl reach pages the front page never
+    // linked to at all.
+    const sitemapUrls = (await fetchSitemapUrls(startUrl, MAX_SITEMAP_URLS)).filter((u) => !visited.has(u));
+
+    for (
+      let depth = 0;
+      depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES && Date.now() - crawlStartedAt < CRAWL_TIME_BUDGET_MS;
+      depth++
+    ) {
+      // Whether a section is *empty* only sets crawl priority — it does not decide whether that
+      // section's page gets opened at all. A homepage teaser ("featured speakers", one headline
+      // sponsor, day-one highlights) would otherwise mark every section found on page one, which
+      // is precisely how a site's real Speakers / Agenda / Sponsors pages went unread.
+      const emptyByCategory: Record<RelevantLinkCategory, boolean> = {
+        overview: isOverviewMissing(parsed),
+        cfp: isCfpMissing(parsed),
+        committee: isCommitteeMissing(parsed),
+        speakers: isSpeakersMissing(parsed),
+        sponsors: isSponsorsMissing(parsed),
+        agenda: isAgendaMissing(parsed),
+        venue: isVenueMissing(parsed),
+      };
+
+      // Three tiers, read in this order, so a site too large to finish still spends its budget on
+      // the sections a reader currently has nothing for, before pages that merely add to a section
+      // that already has something, before the rest of the site.
+      const urgent: string[] = [];
+      const supplementary: string[] = [];
+      const remainder: string[] = [];
+      const proposed = new Set<string>();
+      const consider = (url: string, tier: string[]) => {
+        if (!url || visited.has(url) || proposed.has(url)) return;
+        proposed.add(url);
+        tier.push(url);
+      };
+
+      for (const page of frontier) {
+        const realLinks = extractAllLinks(page.html, page.url);
+        const modelLinks = sanitizeRelevantLinks(page.parsed, realLinks, page.url);
+        for (const category of RELEVANT_LINK_CATEGORIES) {
+          const tier = emptyByCategory[category] ? urgent : supplementary;
+          const modelLink = modelLinks[category];
+          if (modelLink) consider(modelLink, tier);
+          // The model names at most one link per category, but a real nav bar routinely spreads a
+          // single topic across several entries — "Sessions" beside "Agenda", "Sponsors" beside
+          // "Exhibitors", "Hotel" beside "Travel". Take a few per category per page so the
+          // siblings the model's single pick leaves behind still get read.
+          for (const url of findLinksByText(page.html, page.url, CATEGORY_LINK_TEXT_RE[category], 3)) {
+            consider(url, tier);
+          }
+        }
+      }
+
+      // Sitemap entries join the same tiers, ranked by what their own path says they are. Ones
+      // that name no category at all still queue up behind everything else rather than being
+      // dropped — that is what makes this a crawl of the whole site rather than of its nav bar.
+      for (const url of sitemapUrls) {
+        const categories = categoriesInUrlPath(url);
+        if (categories.length === 0) consider(url, remainder);
+        else if (categories.some((c) => emptyByCategory[c])) consider(url, urgent);
+        else consider(url, supplementary);
+      }
+
+      // Any remaining same-site link from this round's pages, so link-following also reaches pages
+      // that named no category — the neutral "About"/"Event Details" hubs that lead onward.
+      for (const page of frontier) {
+        for (const url of findExploratoryLinks(page.html, page.url, 8)) consider(url, remainder);
+      }
+
+      const candidateUrls = [...urgent, ...supplementary, ...remainder];
+      if (candidateUrls.length === 0) break;
+
+      // Fetched in parallel rather than one after another — each is an independent page-plus-
+      // model-call round trip, and running them concurrently keeps a multi-page round roughly as
+      // fast as a single fetch instead of multiplying the wait. Capped per round as well as in
+      // total, so a link-dense nav can't fire dozens of simultaneous requests at one site.
+      const remainingBudget = Math.min(MAX_TOTAL_PAGES - pagesFetched, MAX_PAGES_PER_ROUND);
+      const urlsToFetch = candidateUrls.slice(0, remainingBudget);
+      urlsToFetch.forEach((url) => visited.add(url));
+      pagesFetched += urlsToFetch.length;
+
+      const roundResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
+      const nextFrontier: typeof frontier = [];
+      roundResults.forEach((outcome, i) => {
+        if (outcome.status === "fulfilled" && outcome.value) {
+          parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i]);
+          nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
+        } else if (outcome.status === "rejected") {
+          console.error("Crawl page extraction failed:", outcome.reason);
+        }
+      });
+
+      job.result = buildExtractionResult(parsed, startUrl, pagesFetched, false);
+      job.signalFirstSnapshot();
+
+      if (nextFrontier.length === 0) break;
+      frontier = nextFrontier;
+    }
+
+    const result = buildExtractionResult(parsed, startUrl, pagesFetched, true);
+    job.result = result;
+    job.complete = true;
+    job.signalFirstSnapshot();
+
+    // A result with no CFP/committee/speaker/sponsor content found anywhere (primary or secondary
+    // pages) gets a much shorter cache lifetime than a genuinely populated one — a transient
+    // fetch/parse miss shouldn't stick around for a full 6 hours and keep showing an empty state
+    // to every visitor in the meantime.
+    const looksEmpty =
+      !result.cfpStatus &&
+      !result.cfpDeadline &&
+      !result.submissionRequirements &&
+      !result.submissionUrl &&
+      !result.submissionEmail &&
+      result.committee.length === 0 &&
+      result.speakers.length === 0 &&
+      result.sponsors.length === 0;
+    extractionCache.set(startUrl, {
+      data: result,
+      expiresAt: Date.now() + (looksEmpty ? 15 * 60 * 1000 : EXTRACTION_CACHE_TTL_MS),
+    });
+  }
+
+  // Starts the crawl if it isn't already running, and hands back the job so a caller can wait for
+  // its first usable snapshot. One job per URL, so two people opening the same conference at once
+  // share a single crawl rather than each firing their own at the site.
+  async function getOrStartCrawlJob(cacheKey: string, titleHint: string): Promise<CrawlJob | null> {
+    const running = crawlJobs.get(cacheKey);
+    if (running) return running;
+
+    const ai = getAIClient();
+    if (!ai) return null;
+
+    let signalFirstSnapshot = () => {};
+    const firstSnapshot = new Promise<void>((resolve) => {
+      signalFirstSnapshot = resolve;
+    });
+    const job: CrawlJob = {
+      result: null,
+      complete: false,
+      startedAt: Date.now(),
+      firstSnapshot,
+      signalFirstSnapshot,
+    };
+    crawlJobs.set(cacheKey, job);
+
+    runSiteCrawl(ai, cacheKey, titleHint, job)
+      .catch((error) => {
+        console.error("Conference crawl failed:", error);
+        // Whatever was gathered before the failure is still real and still worth showing; only a
+        // crawl that failed before its first page has nothing to report.
+        job.complete = true;
+        if (!job.result) job.result = { extracted: false, isFallback: false, fetchFailed: true, crawlComplete: true };
+        else job.result = { ...job.result, crawlComplete: true };
+        job.signalFirstSnapshot();
+      })
+      .finally(() => {
+        // Held briefly after completion so a status poll arriving right at the end still finds the
+        // finished result, then dropped so the next visitor re-reads from the extraction cache.
+        setTimeout(() => crawlJobs.delete(cacheKey), 60000);
+      });
+
+    return job;
   }
 
   app.post("/api/ai/extract-conference", async (req, res) => {
@@ -794,190 +1206,37 @@ Return JSON with exactly this shape:
         return res.json(cached.data);
       }
 
-      const ai = getAIClient();
-      if (!ai) {
-        return res.json({ extracted: false, isFallback: true });
-      }
-
       if (!(await isSafeExternalUrl(cacheKey))) {
         return res.status(400).json({ error: "That URL cannot be fetched." });
       }
 
-      const primary = await extractPage(ai, cacheKey, titleHint);
-      if (!primary) {
-        // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
-        // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
-        // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
-        const fallback = { extracted: false, isFallback: false, fetchFailed: true };
-        extractionCache.set(cacheKey, { data: fallback, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
-        return res.json(fallback);
-      }
+      const job = await getOrStartCrawlJob(cacheKey, titleHint);
+      if (!job) return res.json({ extracted: false, isFallback: true });
 
-      let parsed = primary.parsed;
-
-      // A real conference site commonly splits its content across more than one page — and
-      // sometimes the page with the actual Committee roster or Program schedule isn't linked
-      // directly from the page we started on, but from a page THAT page links to (e.g. the
-      // homepage links to "About", and "About" links to "Committee"). So this isn't a single
-      // one-hop lookup: it's a bounded breadth-first crawl of the same site, expanding outward
-      // one more layer of links each round for as long as something is still missing and the
-      // page budget allows, rather than only ever checking the primary page's own links.
-      //
-      // At each round, every newly-fetched page's own [LINK: ...] markers get the same treatment
-      // the primary page got: the model reports which ones it genuinely believes lead to more
-      // detail on each still-missing topic (relevantLinks — real language understanding, not
-      // keyword matching), and the CFP/Committee keyword regexes run alongside as a free
-      // deterministic backstop. Every candidate is validated against that page's own real anchors
-      // and kept only if it's on the same site, so the crawl can't wander onto an unrelated domain
-      // or trust a hallucinated URL.
-      const MAX_CRAWL_DEPTH = 3; // rounds of expansion beyond the primary page
-      // A real conference site puts each section behind its own nav entry — Event Information,
-      // Sessions, Speakers, Registration, Hotel and Travel, Sponsorship is already six pages
-      // before any dropdown children. A six-page ceiling (primary + five) could not physically
-      // cover seven categories, so whole sections were guaranteed to come back empty no matter
-      // how well the links were found.
-      const MAX_TOTAL_PAGES = 16;
-      const MAX_PAGES_PER_ROUND = 6; // fetched concurrently, so this bounds one round's wall clock
-      // A wall-clock ceiling on the expansion rounds only (the primary page always finishes) —
-      // bounds how long a slow or unresponsive site can keep the user's loading spinner up,
-      // regardless of how many rounds/pages are still nominally left in the budget above. Checked
-      // between rounds rather than pre-empting an in-flight one, so a round already underway still
-      // completes and its real results are kept and returned.
-      const CRAWL_TIME_BUDGET_MS = 25000;
-      const crawlStartedAt = Date.now();
-
-      const visited = new Set<string>([cacheKey]);
-      let frontier: Array<{ url: string; html: string; parsed: any }> = [{ url: cacheKey, ...primary }];
-      let pagesFetched = 1;
-
-      for (
-        let depth = 0;
-        depth < MAX_CRAWL_DEPTH && pagesFetched < MAX_TOTAL_PAGES && Date.now() - crawlStartedAt < CRAWL_TIME_BUDGET_MS;
-        depth++
-      ) {
-        // Whether a section is *empty* now only sets crawl priority — it no longer decides
-        // whether that section's page gets opened at all. A homepage teaser ("featured
-        // speakers", one headline sponsor, day-one highlights) satisfied the old
-        // is-it-missing test on the very first page, which is precisely why a site's real
-        // Speakers / Agenda / Sponsors pages were never visited and every section stayed as
-        // thin as whatever the front page happened to show.
-        const emptyByCategory: Record<RelevantLinkCategory, boolean> = {
-          overview: isOverviewMissing(parsed),
-          cfp: isCfpMissing(parsed),
-          committee: isCommitteeMissing(parsed),
-          speakers: isSpeakersMissing(parsed),
-          sponsors: isSponsorsMissing(parsed),
-          agenda: isAgendaMissing(parsed),
-          venue: isVenueMissing(parsed),
-        };
-
-        // Two tiers, fetched in this order, so a tight page budget always spends itself first on
-        // the sections the reader currently has nothing at all for — a dedicated page for an
-        // already-partially-filled section is still worth reading, just not ahead of an empty one.
-        const urgent: string[] = [];
-        const supplementary: string[] = [];
-        const proposed = new Set<string>();
-        const consider = (url: string, tier: string[]) => {
-          if (!url || visited.has(url) || proposed.has(url)) return;
-          proposed.add(url);
-          tier.push(url);
-        };
-
-        for (const page of frontier) {
-          const realLinks = extractAllLinks(page.html, page.url);
-          const modelLinks = sanitizeRelevantLinks(page.parsed, realLinks, page.url);
-          for (const category of RELEVANT_LINK_CATEGORIES) {
-            const tier = emptyByCategory[category] ? urgent : supplementary;
-            const modelLink = modelLinks[category];
-            if (modelLink) consider(modelLink, tier);
-            // The model names at most one link per category, but a real nav bar routinely spreads
-            // a single topic across several entries — "Sessions" beside "Agenda", "Sponsors"
-            // beside "Exhibitors", "Hotel" beside "Travel". Take up to two per category per page
-            // so the siblings the model's single pick leaves behind still get read.
-            for (const url of findLinksByText(page.html, page.url, CATEGORY_LINK_TEXT_RE[category], 2)) {
-              consider(url, tier);
-            }
-          }
-        }
-
-        const candidateUrls = [...urgent, ...supplementary];
-        if (candidateUrls.length === 0) {
-          // Nothing on this round's pages named any category — try a couple of blind exploratory
-          // hops per page in case the real content sits behind a neutral hub page like "About"
-          // that these pages didn't themselves flag for anything.
-          for (const page of frontier) {
-            for (const url of findExploratoryLinks(page.html, page.url, 2)) consider(url, candidateUrls);
-          }
-        }
-        if (candidateUrls.length === 0) break;
-
-        // Fetched in parallel rather than one after another — each is an independent page-plus-
-        // model-call round trip, and running them concurrently keeps a multi-page round roughly
-        // as fast as a single fetch instead of multiplying the wait. Capped per round as well as
-        // in total, so a link-dense nav can't fire a dozen simultaneous requests at one site.
-        const remainingBudget = Math.min(MAX_TOTAL_PAGES - pagesFetched, MAX_PAGES_PER_ROUND);
-        const urlsToFetch = candidateUrls.slice(0, remainingBudget);
-        urlsToFetch.forEach((url) => visited.add(url));
-        pagesFetched += urlsToFetch.length;
-
-        const roundResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
-        const nextFrontier: typeof frontier = [];
-        roundResults.forEach((outcome, i) => {
-          if (outcome.status === "fulfilled" && outcome.value) {
-            parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i]);
-            nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
-          } else if (outcome.status === "rejected") {
-            console.error("Crawl page extraction failed:", outcome.reason);
-          }
-        });
-
-        if (nextFrontier.length === 0) break;
-        frontier = nextFrontier;
-      }
-
-      const result = {
-        extracted: true,
-        isFallback: false,
-        sourceUrl: cacheKey,
-        overviewSummary: parsed.overviewSummary || null,
-        datesText: parsed.datesText || null,
-        locationText: parsed.locationText || null,
-        format: parsed.format || null,
-        cfpStatus: parsed.cfpStatus || null,
-        cfpDeadline: parsed.cfpDeadline || null,
-        submissionUrl: resolveAbsoluteUrl(parsed.submissionUrl, cacheKey),
-        submissionRequirements: parsed.submissionRequirements || null,
-        submissionTemplateUrl: resolveAbsoluteUrl(parsed.submissionTemplateUrl, cacheKey),
-        submissionEmail: sanitizeEmail(parsed.submissionEmail),
-        agendaSessions: Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : [],
-        speakers: Array.isArray(parsed.speakers) ? parsed.speakers : [],
-        committee: Array.isArray(parsed.committee) ? parsed.committee : [],
-        sponsors: Array.isArray(parsed.sponsors) ? parsed.sponsors : [],
-        accommodationText: parsed.accommodationText || null,
-        travelText: parsed.travelText || null,
-      };
-
-      // A result with no CFP/committee/speaker/sponsor content found anywhere (primary or
-      // secondary pages) gets a much shorter cache lifetime than a genuinely populated one — a
-      // transient fetch/parse miss shouldn't stick around for a full 6 hours and keep showing an
-      // empty state to every visitor in the meantime.
-      const looksEmpty =
-        !result.cfpStatus &&
-        !result.cfpDeadline &&
-        !result.submissionRequirements &&
-        !result.submissionUrl &&
-        !result.submissionEmail &&
-        result.committee.length === 0 &&
-        result.speakers.length === 0 &&
-        result.sponsors.length === 0;
-      const ttl = looksEmpty ? 15 * 60 * 1000 : EXTRACTION_CACHE_TTL_MS;
-
-      extractionCache.set(cacheKey, { data: result, expiresAt: Date.now() + ttl });
-      res.json(result);
+      // Answer as soon as there's something worth rendering rather than holding the request open
+      // for the whole site. If the first round is slow, the client still gets a response and picks
+      // the rest up by polling.
+      await Promise.race([job.firstSnapshot, new Promise((r) => setTimeout(r, FIRST_RESPONSE_DEADLINE_MS))]);
+      res.json(job.result ?? { extracted: false, isFallback: false, crawlComplete: false, crawlPending: true });
     } catch (error: any) {
       console.error("Conference extraction error:", error);
       res.status(500).json({ error: error.message || "Extraction failed. Please try again." });
     }
+  });
+
+  // Polled by the client while a crawl is still reading the rest of the site, so the tabs fill in
+  // as more pages are read instead of the reader being stuck with whatever the first round found.
+  app.get("/api/ai/extract-conference/status", async (req, res) => {
+    const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
+    if (!url) return res.status(400).json({ error: "url is required" });
+
+    const cached = extractionCache.get(url);
+    if (cached && cached.expiresAt > Date.now()) return res.json(cached.data);
+
+    const job = crawlJobs.get(url);
+    if (!job) return res.json({ crawlComplete: true, crawlUnknown: true });
+    if (!job.result) return res.json({ crawlComplete: false, crawlPending: true });
+    res.json(job.result);
   });
 
   // Vite middleware for dev or static server for production

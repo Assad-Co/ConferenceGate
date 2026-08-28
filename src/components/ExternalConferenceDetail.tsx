@@ -18,7 +18,12 @@ import {
   ClipboardList,
   AlertCircle,
 } from 'lucide-react';
-import { LiveSearchResult, ExtractedConferenceDetails, extractConferenceDetails } from '../api/search';
+import {
+  LiveSearchResult,
+  ExtractedConferenceDetails,
+  extractConferenceDetails,
+  fetchConferenceCrawlStatus,
+} from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 import { downloadAbstractDraftDocx } from '../utils/abstractDraftDocx';
@@ -243,29 +248,57 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     }
   };
 
+  // The server answers with whatever the first round of pages found and keeps reading the rest of
+  // the site in the background, so the first response is a starting point rather than the finished
+  // article. Polling here is what lets a section that was empty a moment ago fill in on its own
+  // instead of the reader having to reload and hope.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setData(null);
+
+    const POLL_INTERVAL_MS = 3000;
+    const POLL_CEILING_MS = 120000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const pollUntilComplete = (startedAt: number) => {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        const update = await fetchConferenceCrawlStatus(result.link);
+        if (cancelled) return;
+        if (update) setData(update);
+        // Stop once the crawl says it's finished, or once we've waited longer than any real crawl
+        // should take — a poll that never terminates would keep hitting the server forever.
+        if (!update?.crawlComplete && Date.now() - startedAt < POLL_CEILING_MS) pollUntilComplete(startedAt);
+      }, POLL_INTERVAL_MS);
+    };
+
     extractConferenceDetails(result.link, result.title).then((extracted) => {
-      if (!cancelled) {
-        setData(extracted);
-        setLoading(false);
-      }
+      if (cancelled) return;
+      setData(extracted);
+      setLoading(false);
+      if (extracted.extracted && !extracted.crawlComplete) pollUntilComplete(Date.now());
     });
+
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [result.link, result.title]);
 
   const submissionLink = data?.submissionUrl || result.link;
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
+  // Anchor "near the venue" to the venue itself when the site named one, falling back to the
+  // city line only when it didn't — searching hotels near a named convention centre is a much
+  // better answer than searching hotels near a whole city.
+  const venueAnchor = data?.venueAddress || data?.venueName || displayLocation;
 
   // A real, live search for hotels near the real extracted venue — never a list of specific
   // hotel names we can't actually verify. Only ever built from the venue location that was
   // genuinely found; no location means no fabricated "nearby" claim either.
-  const nearbyHotelsUrl = displayLocation
-    ? `https://www.google.com/maps/search/hotels+near+${encodeURIComponent(displayLocation)}`
+  const nearbyHotelsUrl = venueAnchor
+    ? `https://www.google.com/maps/search/hotels+near+${encodeURIComponent(venueAnchor)}`
     : null;
 
   const submissionChannel = detectSubmissionChannel(data?.submissionEmail || null, submissionLink);
@@ -443,6 +476,20 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               </div>
             )}
 
+            {/* The first response covers only the pages read so far; the rest of the site is still
+                being crawled and these tabs refill as it lands. Saying so is what stops a section
+                that simply hasn't been reached yet from reading as a section that doesn't exist. */}
+            {data?.extracted && data.crawlComplete === false && (
+              <div className="mb-6 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5">
+                <Loader2 className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-spin" />
+                <p className="text-[11px] text-blue-900">
+                  Still reading the rest of this conference's website
+                  {typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages so far)` : ''} — these tabs will
+                  fill in as more is found.
+                </p>
+              </div>
+            )}
+
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 <div className="space-y-3">
@@ -536,10 +583,58 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
 
                 <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                   <h4 className="text-sm font-bold text-slate-900">Format & Requirements</h4>
-                  {data?.submissionRequirements || data?.submissionTemplateUrl ? (
+                  {data?.submissionRequirements ||
+                  data?.submissionTemplateUrl ||
+                  data?.cfpSubmissionFormat ||
+                  data?.cfpLengthLimit ||
+                  data?.cfpReviewProcess ||
+                  data?.cfpNotificationDate ||
+                  (data?.cfpTopics || []).length > 0 ? (
                     <>
                       {data?.submissionRequirements && (
                         <p className="text-xs text-slate-600 leading-relaxed">{data.submissionRequirements}</p>
+                      )}
+                      {/* The same stated requirements broken out as a checklist, so an author can
+                          see at a glance what they have to meet. Only rows the site actually
+                          stated are rendered — a missing row means unstated, not unrestricted. */}
+                      {(data?.cfpSubmissionFormat ||
+                        data?.cfpLengthLimit ||
+                        data?.cfpReviewProcess ||
+                        data?.cfpNotificationDate) && (
+                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 pt-1">
+                          {[
+                            ['Submission format', data?.cfpSubmissionFormat],
+                            ['Length limit', data?.cfpLengthLimit],
+                            ['Review process', data?.cfpReviewProcess],
+                            ['Author notification', data?.cfpNotificationDate],
+                          ]
+                            .filter(([, value]) => value)
+                            .map(([label, value]) => (
+                              <div key={label as string}>
+                                <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  {label}
+                                </dt>
+                                <dd className="text-xs text-slate-800 font-semibold mt-0.5">{value}</dd>
+                              </div>
+                            ))}
+                        </dl>
+                      )}
+                      {(data?.cfpTopics || []).length > 0 && (
+                        <div className="pt-1 space-y-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Topics this call invites
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(data?.cfpTopics || []).map((topic, i) => (
+                              <span
+                                key={`${topic}-${i}`}
+                                className="text-[11px] text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md"
+                              >
+                                {topic}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {data?.submissionTemplateUrl && (
                         <a
@@ -894,11 +989,21 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'venue' && (
               <div className="space-y-6 text-xs text-slate-600">
                 <h3 className="text-lg font-bold text-slate-900">Venue, Accommodation & Travel</h3>
-                {displayLocation ? (
+                {(data?.venueName || data?.venueAddress) && (
+                  <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100 space-y-1">
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Conference Venue</span>
+                    </div>
+                    {data?.venueName && <p className="text-sm font-bold text-slate-900">{data.venueName}</p>}
+                    {data?.venueAddress && <p className="text-slate-600">{data.venueAddress}</p>}
+                  </div>
+                )}
+                {venueAnchor ? (
                   <div className="rounded-2xl overflow-hidden border border-slate-200">
                     <iframe
                       title="Venue location map"
-                      src={`https://www.google.com/maps?q=${encodeURIComponent(displayLocation)}&output=embed`}
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(venueAnchor)}&output=embed`}
                       className="w-full h-64 border-0"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
@@ -958,6 +1063,79 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     )}
                   </div>
                 </div>
+
+                {/* Hotels the conference itself named, nearest first. Ordering uses only distances
+                    the site actually published, so a hotel listed without one sorts last rather
+                    than being presented as if its position were known. */}
+                {(data?.hotels || []).length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h4 className="text-sm font-bold text-slate-900">
+                        Where to Stay ({(data?.hotels || []).length})
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-semibold">
+                        Nearest to the venue first, by the distances this conference published
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {(data?.hotels || []).map((hotel, i) => (
+                        <div
+                          key={`${hotel.name}-${i}`}
+                          className="p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center gap-3"
+                        >
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-900 text-[13px]">{hotel.name}</span>
+                              {hotel.isOfficialBlock && (
+                                <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                  Conference Rate
+                                </span>
+                              )}
+                            </div>
+                            {hotel.address && <p className="text-slate-500 text-[11px]">{hotel.address}</p>}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                              {hotel.distanceText && (
+                                <span className="flex items-center gap-1 text-blue-700 font-semibold">
+                                  <MapPin className="w-3 h-3" />
+                                  {hotel.distanceText}
+                                </span>
+                              )}
+                              {hotel.rateText && (
+                                <span className="text-slate-700 font-semibold">{hotel.rateText}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {hotel.bookingUrl && (
+                              <a
+                                href={hotel.bookingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition-colors"
+                              >
+                                <span>Book</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {venueAnchor && (
+                              <a
+                                href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+                                  hotel.address || hotel.name
+                                )}&destination=${encodeURIComponent(venueAnchor)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold rounded-lg transition-colors"
+                              >
+                                <span>Route to venue</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
