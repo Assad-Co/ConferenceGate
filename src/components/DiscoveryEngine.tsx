@@ -155,23 +155,35 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     return prices.length > 0 ? Math.min(...prices) : null;
   };
 
-  // The slider's own ends are derived from real prices in the current catalog, the same way
-  // locationOptions below is derived from real conference locations — never a guessed ceiling
-  // like a flat $0–$5,000, which would misrepresent both cheap and very expensive catalogs alike.
-  const priceBounds = useMemo(() => {
+  // Preferred when it exists: the slider's ends derived from real prices in the current catalog,
+  // the same way locationOptions below is derived from real conference locations. Falls back to a
+  // conventional registration-fee range when the catalog has no priced conferences yet — that
+  // default isn't a claim about this catalog's actual prices (it never filters anything out on
+  // its own), it's a starting point the reader can drag from, and it still biases the live web
+  // search below the moment they touch it, which doesn't depend on catalog data existing at all.
+  const DEFAULT_PRICE_BOUNDS = { min: 0, max: 2000 };
+  const catalogPriceBounds = useMemo(() => {
     const prices = (conferences || [])
       .map((conf) => startingPriceOf(conf))
       .filter((price): price is number => price !== null);
     if (prices.length === 0) return null;
     return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
   }, [conferences]);
+  // A catalog with only one priced conference gives min === max — not a draggable range either,
+  // so that's treated the same as "no real bounds yet" rather than rendering a slider with both
+  // handles locked to the same spot. The default's own ceiling still widens to cover a real price
+  // above it, so that one conference's actual price is always reachable on the slider.
+  const priceBounds =
+    catalogPriceBounds && catalogPriceBounds.max > catalogPriceBounds.min
+      ? catalogPriceBounds
+      : { min: DEFAULT_PRICE_BOUNDS.min, max: Math.max(DEFAULT_PRICE_BOUNDS.max, catalogPriceBounds?.max ?? 0) };
 
   // null = "still tracking the live catalog bounds automatically" (the default, unfiltered
   // state); becomes a fixed pair the moment the reader drags a handle, so their chosen range
   // survives even if the catalog's own min/max shifts afterward.
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const priceFilterActive = priceRange !== null;
-  const [priceMin, priceMax] = priceRange ?? (priceBounds ? [priceBounds.min, priceBounds.max] : [0, 0]);
+  const [priceMin, priceMax] = priceRange ?? [priceBounds.min, priceBounds.max];
   const formatPrice = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
 
   const locationOptions = useMemo(() => {
@@ -435,10 +447,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             </select>
           </div>
 
-          {/* Price range — bounds come from the real lowest registration price across the current
-              catalog, never a guessed ceiling, so the meter always spans prices that actually
-              exist. Hidden entirely when nothing in the catalog has a real price yet. */}
-          {priceBounds && priceBounds.max > priceBounds.min && (
+          {/* Price range — bounds prefer the real lowest registration price across the current
+              catalog when there's enough of it to span a real range; otherwise a conventional
+              default range so the control (and the live-search bias it applies) is available
+              from the start rather than waiting on catalog data that may not exist yet. */}
+          {priceBounds.max > priceBounds.min && (
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="flex items-center justify-between mb-2.5">
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
