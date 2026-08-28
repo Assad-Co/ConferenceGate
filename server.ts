@@ -16,7 +16,13 @@ import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { extractPdfText } from "./server/pdfText";
-import { firecrawlScrape, firecrawlMapSite, isFirecrawlConfigured } from "./server/firecrawl";
+import {
+  firecrawlScrape,
+  firecrawlBatchScrape,
+  firecrawlMapSite,
+  isFirecrawlConfigured,
+  type FirecrawlBatchPage,
+} from "./server/firecrawl";
 import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
@@ -835,11 +841,17 @@ Return JSON with exactly this shape:
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
+  type ExtractedPage = { parsed: any; html: string; pageTitle: string | null; isPdf: boolean };
+
   async function extractPage(
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     pageUrl: string,
-    title: string
-  ): Promise<{ parsed: any; html: string; pageTitle: string | null; isPdf: boolean } | null> {
+    title: string,
+    options: {
+      allowFirecrawl?: boolean;
+      prefetched?: Pick<FirecrawlBatchPage, "html" | "markdown">;
+    } = {}
+  ): Promise<ExtractedPage | null> {
     if (!(await isSafeExternalUrl(pageUrl))) return null;
 
     // Reads the URL by whichever means works. A plain fetch is tried first because it's fast and
@@ -848,6 +860,21 @@ Return JSON with exactly this shape:
     // JavaScript. A PDF takes a third path entirely — conference sites routinely publish the call
     // for papers, the programme and the fee table as documents rather than pages.
     async function readPageContent(): Promise<{ html: string; text: string; kind: "html" | "pdf" } | null> {
+      // A crawl round may have already recovered this blocked page through one coordinated
+      // Firecrawl batch. Use that body directly instead of fetching/rendering/scraping it again.
+      if (options.prefetched) {
+        const fromHtml = options.prefetched.html
+          ? prepareHtmlForExtraction(options.prefetched.html, pageUrl)
+          : "";
+        if (fromHtml.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+          return { html: options.prefetched.html, text: fromHtml, kind: "html" };
+        }
+        const markdown = options.prefetched.markdown.trim();
+        if (markdown.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+          return { html: "", text: markdown, kind: "html" };
+        }
+      }
+
       let plain: string | null = null;
       try {
         const pageRes = await fetch(pageUrl, {
@@ -908,7 +935,7 @@ Return JSON with exactly this shape:
       // proxies on its own infrastructure, which reads sites that refuse this server outright and
       // ones whose content never appears in a browser we can run here. Reached only once both
       // free routes have failed on this specific URL.
-      const scraped = await firecrawlScrape(pageUrl);
+      const scraped = options.allowFirecrawl === false ? null : await firecrawlScrape(pageUrl);
       if (scraped) {
         // Prefer the HTML, because the crawl follows its anchors and the prompt reads its image
         // tags. Markdown is the fallback for pages Firecrawl only returns as text — it still
@@ -963,6 +990,73 @@ Return JSON with exactly this shape:
       };
     }
     return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf };
+  }
+
+  function normalizedUrlKey(value: string): string {
+    try {
+      const url = new URL(value);
+      url.hash = "";
+      if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/$/, "");
+      return url.href;
+    } catch {
+      return value;
+    }
+  }
+
+  /**
+   * Fast crawl-round reader:
+   * 1. Try the free plain/browser readers for every page in parallel.
+   * 2. Send only the blocked failures through one Firecrawl batch job.
+   * 3. Fall back to the old individual reader only for pages the batch did not return.
+   *
+   * This preserves the strongest fallback chain while removing the seven-second-per-page queue
+   * from the normal blocked-site path.
+   */
+  async function extractPageRound(
+    ai: NonNullable<ReturnType<typeof getAIClient>>,
+    urls: string[],
+    title: string
+  ): Promise<Array<ExtractedPage | null>> {
+    const pages = await Promise.all(
+      urls.map(async (url) => {
+        try {
+          return await extractPage(ai, url, title, { allowFirecrawl: false });
+        } catch (error) {
+          console.error(`Fast page read failed for ${url}:`, error);
+          return null;
+        }
+      })
+    );
+
+    const failedIndexes = pages
+      .map((page, index) => (page ? -1 : index))
+      .filter((index) => index >= 0);
+    if (failedIndexes.length === 0 || !isFirecrawlConfigured()) return pages;
+
+    const blockedUrls = failedIndexes.map((index) => urls[index]);
+    const recovered = await firecrawlBatchScrape(blockedUrls);
+    const recoveredByUrl = new Map(
+      recovered.map((page) => [normalizedUrlKey(page.url), page] as const)
+    );
+
+    await Promise.all(
+      failedIndexes.map(async (index) => {
+        const url = urls[index];
+        const prefetched = recoveredByUrl.get(normalizedUrlKey(url));
+        try {
+          // A batch may omit one failed item. In that uncommon case keep the original
+          // individually queued fallback, so batching improves speed without reducing coverage.
+          pages[index] = prefetched
+            ? await extractPage(ai, url, title, { allowFirecrawl: false, prefetched })
+            : await extractPage(ai, url, title);
+        } catch (error) {
+          console.error(`Blocked page extraction failed for ${url}:`, error);
+          pages[index] = null;
+        }
+      })
+    );
+
+    return pages;
   }
 
   // The page's own <title>, which is what a person would call this page when asked where a value
@@ -1642,6 +1736,23 @@ Return JSON with exactly this shape:
     return RELEVANT_LINK_CATEGORIES.filter((c) => CATEGORY_LINK_TEXT_RE[c].test(pathWords));
   }
 
+  // Pull one page for each Conference Gate tab to the front of a round before spending slots on
+  // a second agenda/session/speaker page. The remaining URLs stay queued for later rounds, so this
+  // changes time-to-first-useful-data without reducing whole-site coverage.
+  function prioritizeTabCoverage(urls: string[], limit: number): string[] {
+    const remaining = [...urls];
+    const selected: string[] = [];
+    for (const category of RELEVANT_LINK_CATEGORIES) {
+      const index = remaining.findIndex((url) => categoriesInUrlPath(url).includes(category));
+      if (index < 0) continue;
+      selected.push(remaining[index]);
+      remaining.splice(index, 1);
+      if (selected.length >= limit) return selected;
+    }
+    selected.push(...remaining.slice(0, Math.max(0, limit - selected.length)));
+    return selected;
+  }
+
   // How many outside pages to read when gathering a conference's details from sources other than
   // its own site. Enough to cover the main topics, bounded so a blocked site doesn't cost more
   // than reading a readable one would have.
@@ -1892,6 +2003,11 @@ Return JSON with exactly this shape:
     };
     if (primary.isPdf) coverage.pdfsRead.push(startUrl);
 
+    // Publish the homepage immediately. Mapping and deeper pages continue in the background, and
+    // the client replaces this snapshot as soon as tab-specific pages land.
+    job.result = buildExtractionResult(parsed, startUrl, pagesFetched, false, coverage);
+    job.signalFirstSnapshot();
+
     // The site's own index of itself, fetched once up front. These seed the queue alongside the
     // links found by crawling, which is what lets the crawl reach pages the front page never
     // linked to at all.
@@ -1986,22 +2102,21 @@ Return JSON with exactly this shape:
       // fast as a single fetch instead of multiplying the wait. Capped per round as well as in
       // total, so a link-dense nav can't fire dozens of simultaneous requests at one site.
       const remainingBudget = Math.min(MAX_TOTAL_PAGES - pagesFetched, MAX_PAGES_PER_ROUND);
-      const urlsToFetch = candidateUrls.slice(0, remainingBudget);
+      const urlsToFetch = prioritizeTabCoverage(candidateUrls, remainingBudget);
       urlsToFetch.forEach((url) => visited.add(url));
       pagesFetched += urlsToFetch.length;
 
-      const roundResults = await Promise.allSettled(urlsToFetch.map((url) => extractPage(ai, url, titleHint)));
+      const roundResults = await extractPageRound(ai, urlsToFetch, titleHint);
       const nextFrontier: typeof frontier = [];
-      roundResults.forEach((outcome, i) => {
-        if (outcome.status === "fulfilled" && outcome.value) {
-          parsed = mergeExtractionResults(parsed, outcome.value.parsed, urlsToFetch[i], outcome.value.pageTitle);
+      roundResults.forEach((page, i) => {
+        if (page) {
+          parsed = mergeExtractionResults(parsed, page.parsed, urlsToFetch[i], page.pageTitle);
           coverage.pagesRead.push(urlsToFetch[i]);
-          if (outcome.value.isPdf) coverage.pdfsRead.push(urlsToFetch[i]);
+          if (page.isPdf) coverage.pdfsRead.push(urlsToFetch[i]);
           // A PDF contributes its content but has no links, so it can't extend the frontier.
-          if (outcome.value.html) nextFrontier.push({ url: urlsToFetch[i], ...outcome.value });
+          if (page.html) nextFrontier.push({ url: urlsToFetch[i], ...page });
         } else {
           coverage.pagesFailed.push(urlsToFetch[i]);
-          if (outcome.status === "rejected") console.error("Crawl page extraction failed:", outcome.reason);
         }
       });
 
