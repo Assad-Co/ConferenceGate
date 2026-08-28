@@ -461,7 +461,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <p className="text-[11px] text-amber-800 leading-relaxed">
                     {data.isFallback
                       ? 'Details below are limited to the search result snippet. Try again shortly.'
-                      : 'The site blocked our request or was unreachable, so the empty sections below mean "not retrieved" — not "not offered by this conference." Check the official website directly.'}
+                      : data.browserRenderingUnavailable
+                        ? 'The site blocked our request or builds its pages in JavaScript. We normally retry those in a real browser, but none is installed on this server — run "npx playwright install chromium" to enable it. The empty sections below mean "not retrieved", not "not offered by this conference."'
+                        : 'The site refused our request even from a real browser, so the empty sections below mean "not retrieved" — not "not offered by this conference." Check the official website directly.'}
                   </p>
                   <a
                     href={result.link}

@@ -14,6 +14,7 @@ import { postsRouter } from "./server/posts";
 import { initDb, dbGet, dbAll, UserRow, SubmissionRow, CreatedConferenceRow, SponsorshipApplicationRow } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
+import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
@@ -716,37 +717,61 @@ Return JSON with exactly this shape:
     title: string
   ): Promise<{ parsed: any; html: string } | null> {
     if (!(await isSafeExternalUrl(pageUrl))) return null;
-    let html = "";
-    try {
-      const pageRes = await fetch(pageUrl, {
-        headers: EXTRACTION_FETCH_HEADERS,
-        redirect: "follow",
-        // A slow or unresponsive conference site would otherwise hang this request (and the
-        // client's loading spinner) indefinitely — cap it and treat a timeout as a fetch failure.
-        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
-      });
-      // An error response still has a body, and without this check that body (a WAF block page,
-      // a 404, a proxy's "denied" text) was handed to the model as if it were the conference's
-      // own page. The model would dutifully report nulls for everything, and the endpoint would
-      // return extracted:true — so a page we never actually read was indistinguishable from a
-      // real page that genuinely had no speakers, committee, or agenda on it.
-      if (!pageRes.ok) {
-        console.error(`Page fetch for extraction returned HTTP ${pageRes.status} for ${pageUrl}`);
-        return null;
+
+    // Two ways to read a page. The plain fetch is tried first because it's fast and works for
+    // most conference sites; a real browser is tried only when that produces nothing usable,
+    // which is the case for sites behind bot protection and sites that build themselves in
+    // JavaScript. `null` from the first stage means "try the browser", not "give up".
+    async function readPageHtml(): Promise<string | null> {
+      let plain: string | null = null;
+      try {
+        const pageRes = await fetch(pageUrl, {
+          headers: EXTRACTION_FETCH_HEADERS,
+          redirect: "follow",
+          // A slow or unresponsive conference site would otherwise hang this request (and the
+          // client's loading spinner) indefinitely — cap it and treat a timeout as a failure.
+          signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
+        });
+        // A non-HTML body (a PDF, an image, a JSON API response) is worth abandoning outright:
+        // tag-stripping it produces text-shaped noise the model can only extract nulls from, and
+        // rendering it in a browser wouldn't help either.
+        const contentType = pageRes.headers.get("content-type") || "";
+        if (contentType && !/text\/html|application\/xhtml|text\/plain/i.test(contentType)) {
+          console.error(`Page fetch for extraction returned non-HTML content-type "${contentType}" for ${pageUrl}`);
+          return null;
+        }
+        // An error response still has a body, and without this check that body (a WAF block page,
+        // a 404, a proxy's "denied" text) was handed to the model as if it were the conference's
+        // own page. The model would dutifully report nulls for everything, and the endpoint would
+        // return extracted:true — so a page we never actually read was indistinguishable from a
+        // real page that genuinely had no speakers, committee, or agenda on it.
+        if (pageRes.ok) {
+          plain = await pageRes.text();
+        } else {
+          console.error(`Page fetch for extraction returned HTTP ${pageRes.status} for ${pageUrl}`);
+        }
+      } catch (fetchErr) {
+        console.error("Failed to fetch page for extraction:", fetchErr);
       }
-      // Guards the same confusion for a non-HTML body (a PDF, an image, a JSON API response):
-      // tag-stripping binary or JSON produces text-shaped noise the model can only extract nulls
-      // from, which would again be reported as a successful read of an empty page.
-      const contentType = pageRes.headers.get("content-type") || "";
-      if (contentType && !/text\/html|application\/xhtml|text\/plain/i.test(contentType)) {
-        console.error(`Page fetch for extraction returned non-HTML content-type "${contentType}" for ${pageUrl}`);
-        return null;
+
+      // Good enough as it stands — no need to spend a browser launch on it.
+      if (plain && prepareHtmlForExtraction(plain, pageUrl).length >= MIN_EXTRACTABLE_TEXT_CHARS) return plain;
+
+      // Either the request was refused, or it succeeded and returned a shell with nothing in it.
+      // Both are exactly what a real browser exists to get past, so try one.
+      const rendered = await fetchRenderedHtml(pageUrl);
+      if (rendered && prepareHtmlForExtraction(rendered, pageUrl).length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+        console.log(`Read ${pageUrl} by rendering it in a browser (plain fetch returned nothing usable)`);
+        return rendered;
       }
-      html = await pageRes.text();
-    } catch (fetchErr) {
-      console.error("Failed to fetch page for extraction:", fetchErr);
-      return null;
+      // The browser didn't help either. Return the plain body if there was one, so the
+      // minimum-text check below reports it the same way it always has.
+      return plain;
     }
+
+    const html = await readPageHtml();
+    if (html === null) return null;
+
     // 40,000 characters of actual visible text (not raw HTML) comfortably covers even a long
     // single page with CFP details near the bottom — a tighter cutoff risked truncating the
     // requirements section clean off before the model ever saw it.
@@ -1107,7 +1132,16 @@ Return JSON with exactly this shape:
       // Cached only briefly, never for the full 6 hours: a fetch failure is usually transient
       // (a timeout, a rate limit, a momentary block), and pinning that failure in place for a
       // whole afternoon meant one bad moment kept showing an empty page to every later visitor.
-      job.result = { extracted: false, isFallback: false, fetchFailed: true, crawlComplete: true };
+      job.result = {
+        extracted: false,
+        isFallback: false,
+        fetchFailed: true,
+        crawlComplete: true,
+        // Distinguishes "this site defeated both a plain fetch and a real browser" from "this
+        // host has no browser installed, so the fallback that exists for exactly this case never
+        // ran" — the second is a deployment gap the operator can actually fix.
+        browserRenderingUnavailable: isBrowserRenderingUnavailable(),
+      };
       job.complete = true;
       extractionCache.set(startUrl, { data: job.result, expiresAt: Date.now() + FAILED_FETCH_CACHE_TTL_MS });
       job.signalFirstSnapshot();
@@ -1375,6 +1409,14 @@ Return JSON with exactly this shape:
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Conference Gate server running at http://localhost:${PORT}`);
   });
+
+  // The extraction fallback keeps one Chromium alive between requests. Without this it would
+  // outlive the process that started it and leak on every restart.
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      closeBrowser().finally(() => process.exit(0));
+    });
+  }
 
   // Real-time message delivery: authenticate the WebSocket handshake using the
   // same session cookie as the HTTP API, then register the socket for pushes.

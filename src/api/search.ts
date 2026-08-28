@@ -61,6 +61,9 @@ export interface ExtractedConferenceDetails {
   extracted: boolean;
   isFallback?: boolean;
   fetchFailed?: boolean;
+  /** True when the site couldn't be read AND this host has no browser available to retry with —
+   *  a fixable deployment gap rather than a site that genuinely defeated us. */
+  browserRenderingUnavailable?: boolean;
   sourceUrl?: string;
   /** How many pages of the conference's site have been read so far. */
   pagesRead?: number;
