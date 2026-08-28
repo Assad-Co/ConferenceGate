@@ -666,6 +666,21 @@ function toExternalPaperDTO(row: ExternalPaperMatchRow) {
 // "theirs" until they explicitly confirm it via the /decide route below; already-decided
 // entries (confirmed or dismissed) are excluded from future candidate lists, and the same paper
 // indexed by more than one source is de-duplicated by normalized title.
+// A middle name helps a person distinguish themselves from others sharing their first and last
+// name, but it's not something every index actually stores — DBLP in particular resolves
+// `author:X:` against one specific normalized name string per person, not a fuzzy ranking, so a
+// query for "Assad Hadi Ghazwani" finds nothing there if DBLP's own record for that person is
+// just "Assad Ghazwani". Searching only the full name would then silently lose real matches on
+// exactly the source most likely to have them, for anyone whose middle name isn't in every
+// index's own record. Both forms are searched and merged, so a real match surfaces regardless of
+// which name form the index that has it happens to use.
+function buildNameVariants(fullName: string): string[] {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 2) return [fullName.trim()];
+  const firstLastOnly = `${parts[0]} ${parts[parts.length - 1]}`;
+  return [fullName.trim(), firstLastOnly];
+}
+
 activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   // Each source caches its own results per name for 24 hours to avoid hammering a free public
   // API on every profile visit. That means an unconditional re-search (after correcting a name,
@@ -678,19 +693,22 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
   ]);
   const decidedDois = new Set(decided.map((r) => r.doi));
 
-  const [crossRef, semanticScholar, dblp] = user?.name
-    ? await Promise.all([
-        searchCrossRefConferencePapers(user.name, force),
-        searchSemanticScholarConferencePapers(user.name, force),
-        searchDblpConferencePapers(user.name, force),
+  const nameVariants = user?.name ? buildNameVariants(user.name) : [];
+  const perVariantResults = await Promise.all(
+    nameVariants.map((name) =>
+      Promise.all([
+        searchCrossRefConferencePapers(name, force),
+        searchSemanticScholarConferencePapers(name, force),
+        searchDblpConferencePapers(name, force),
       ])
-    : [[], [], []];
+    )
+  );
 
-  const merged = [
+  const merged = perVariantResults.flatMap(([crossRef, semanticScholar, dblp]) => [
     ...crossRef.map((c) => ({ doi: c.doi, title: c.title, venue: c.venue, year: c.year, url: c.url })),
     ...semanticScholar.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
     ...dblp.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
-  ];
+  ]);
 
   const seenTitles = new Set<string>();
   const candidates = merged.filter((c) => {
