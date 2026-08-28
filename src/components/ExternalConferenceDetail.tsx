@@ -147,6 +147,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const activeTabRef = useRef<ExternalDetailTab>(initialTab || 'overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExtractedConferenceDetails | null>(null);
+  // Set only when polling gives up before the crawl reported itself finished — distinguishes
+  // "still genuinely checking" from "we stopped checking and don't actually know the final
+  // state", so a slow site doesn't sit forever under a label that's no longer true.
+  const [pollGaveUp, setPollGaveUp] = useState(false);
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftAuthors, setDraftAuthors] = useState('');
@@ -262,9 +266,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     let cancelled = false;
     setLoading(true);
     setData(null);
+    setPollGaveUp(false);
 
     const POLL_INTERVAL_MS = 800;
-    const POLL_CEILING_MS = 60000;
+    // The server's own crawl budget is 70s of page-fetching (server.ts CRAWL_TIME_BUDGET_MS),
+    // plus real time afterward for AI extraction on whatever it read — a poll ceiling shorter
+    // than that gives up before the crawl the server is actually running could ever finish.
+    // 130s clears that with headroom rather than abandoning a crawl still legitimately in flight.
+    const POLL_CEILING_MS = 130000;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const pollUntilComplete = (startedAt: number) => {
@@ -273,9 +282,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
         const update = await fetchConferenceCrawlStatus(result.link, activeTabRef.current);
         if (cancelled) return;
         if (update) setData(update);
-        // Stop once the crawl says it's finished, or once we've waited longer than any real crawl
-        // should take — a poll that never terminates would keep hitting the server forever.
-        if (!update?.crawlComplete && Date.now() - startedAt < POLL_CEILING_MS) pollUntilComplete(startedAt);
+        if (update?.crawlComplete) return;
+        // Stop once we've waited longer than any real crawl should take — a poll that never
+        // terminates would keep hitting the server forever. This is a genuine give-up, not a
+        // finish, so it's tracked separately rather than left indistinguishable from success.
+        if (Date.now() - startedAt < POLL_CEILING_MS) {
+          pollUntilComplete(startedAt);
+        } else {
+          setPollGaveUp(true);
+        }
       }, POLL_INTERVAL_MS);
     };
 
@@ -291,6 +306,32 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       if (timer) clearTimeout(timer);
     };
   }, [result.link, result.title]);
+
+  // A tab whose crawl hasn't finished has two honest states, not one: genuinely still being
+  // checked, or checking that was abandoned after the poll ceiling without ever hearing back —
+  // the latter must say so rather than sit under "(checking…)" forever once nothing is actually
+  // checking anymore. Partial counts already found are shown either way, since they're real.
+  const incompleteLabel = (name: string, count: number): string => {
+    if (loading) return `${name} (checking…)`;
+    if (pollGaveUp) return count > 0 ? `${name} (${count} so far, taking a while — reload)` : `${name} (taking a while — reload)`;
+    return count > 0 ? `${name} (${count} so far…)` : `${name} (checking…)`;
+  };
+
+  // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
+  // only true while polling is actually still happening. Once it's given up, say so and point at
+  // reloading, rather than spinning forever over a check that has already stopped.
+  const checkingOrGaveUp = (checkingText: string) =>
+    pollGaveUp ? (
+      <EmptyExtractState
+        message="This section is taking longer than expected to read. Reload the page to check again — a slow or unusually large site can take a couple of tries."
+        sourceUrl={result.link}
+      />
+    ) : (
+      <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        {checkingText}
+      </div>
+    );
 
   const submissionLink = data?.submissionUrl || result.link;
   const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
@@ -420,29 +461,29 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             [
               { id: 'overview', label: 'Overview' },
               { id: 'cfp', label: 'Call for Papers' },
-              { id: 'fees', label: loading || !data?.crawlComplete
-                ? 'Fees & Pricing (checking…)'
-                : data.fetchFailed
+              { id: 'fees', label: !loading && data?.crawlComplete
+                ? data.fetchFailed
                   ? 'Fees & Pricing (not retrieved)'
                   : data.registrationFees.length > 0
                     ? `Fees & Pricing (${data.registrationFees.length})`
-                    : 'Fees & Pricing' },
-              { id: 'agenda', label: loading || !data?.crawlComplete
-                ? 'Program & Agenda (checking…)'
-                : `Program & Agenda (${data.agendaSessions.length})` },
-              { id: 'speakers', label: loading || !data?.crawlComplete
-                ? 'Keynote Speakers (checking…)'
-                : data.fetchFailed
+                    : 'Fees & Pricing'
+                : incompleteLabel('Fees & Pricing', data?.registrationFees.length ?? 0) },
+              { id: 'agenda', label: !loading && data?.crawlComplete
+                ? `Program & Agenda (${data.agendaSessions.length})`
+                : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
+              { id: 'speakers', label: !loading && data?.crawlComplete
+                ? data.fetchFailed
                   ? 'Keynote Speakers (not retrieved)'
-                  : `Keynote Speakers (${data.speakers.length})` },
-              { id: 'committee', label: loading || !data?.crawlComplete
-                ? 'Technical Committee (checking…)'
-                : `Technical Committee (${data.committee.length})` },
-              { id: 'sponsors', label: loading || !data?.crawlComplete
-                ? 'Sponsors & Exhibitors (checking…)'
-                : data.fetchFailed
+                  : `Keynote Speakers (${data.speakers.length})`
+                : incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
+              { id: 'committee', label: !loading && data?.crawlComplete
+                ? `Technical Committee (${data.committee.length})`
+                : incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
+              { id: 'sponsors', label: !loading && data?.crawlComplete
+                ? data.fetchFailed
                   ? 'Sponsors & Exhibitors (not retrieved)'
-                  : `Sponsors & Exhibitors (${data.sponsors.length})` },
+                  : `Sponsors & Exhibitors (${data.sponsors.length})`
+                : incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
               { id: 'venue', label: 'Venue & Accommodation' },
               { id: 'community', label: 'Community' },
             ] as { id: ExternalDetailTab; label: string }[]
@@ -547,12 +588,24 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 being crawled and these tabs refill as it lands. Saying so is what stops a section
                 that simply hasn't been reached yet from reading as a section that doesn't exist. */}
             {data?.extracted && data.crawlComplete === false && (
-              <div className="mb-6 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5">
-                <Loader2 className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-spin" />
-                <p className="text-[11px] text-blue-900">
-                  Still reading the rest of this conference's website
-                  {typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages so far)` : ''} — these tabs will
-                  fill in as more is found.
+              <div
+                className={`mb-6 p-3 rounded-xl flex items-center gap-2.5 ${
+                  pollGaveUp ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-100'
+                }`}
+              >
+                {pollGaveUp ? (
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                ) : (
+                  <Loader2 className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-spin" />
+                )}
+                <p className={`text-[11px] ${pollGaveUp ? 'text-amber-900' : 'text-blue-900'}`}>
+                  {pollGaveUp
+                    ? `Reading this site is taking longer than expected${
+                        typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages read so far)` : ''
+                      }. Reload the page to check again.`
+                    : `Still reading the rest of this conference's website${
+                        typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages so far)` : ''
+                      } — these tabs will fill in as more is found.`}
                 </p>
               </div>
             )}
@@ -1052,7 +1105,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     message={
                       data?.crawlComplete
                         ? 'No registration prices were published on the pages we could read.'
-                        : 'Still checking the conference website for registration fees and ticket prices.'
+                        : pollGaveUp
+                          ? 'Reading this section is taking longer than expected. Reload the page to check again.'
+                          : 'Still checking the conference website for registration fees and ticket prices.'
                     }
                     sourceUrl={result.link}
                   />
@@ -1072,10 +1127,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       sourceUrl={result.link}
                     />
                   ) : (
-                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Reading the main program and schedule pages…
-                    </div>
+                    checkingOrGaveUp('Reading the main program and schedule pages…')
                   )
                 ) : (
                   <div className="space-y-3">
@@ -1129,10 +1181,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       sourceUrl={result.link}
                     />
                   ) : (
-                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Checking speaker, keynote, program, committee, and PDF pages…
-                    </div>
+                    checkingOrGaveUp('Checking speaker, keynote, program, committee, and PDF pages…')
                   )
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1156,10 +1205,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       sourceUrl={result.link}
                     />
                   ) : (
-                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Reading committee, chair, organizer, and advisory pages…
-                    </div>
+                    checkingOrGaveUp('Reading committee, chair, organizer, and advisory pages…')
                   )
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1183,10 +1229,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       sourceUrl={result.link}
                     />
                   ) : (
-                    <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Checking sponsor, exhibitor, partner, and program pages…
-                    </div>
+                    checkingOrGaveUp('Checking sponsor, exhibitor, partner, and program pages…')
                   )
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
