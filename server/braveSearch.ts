@@ -156,8 +156,93 @@ function looksOutdated(title: string, snippet: string): boolean {
   return hasPast && !hasCurrentOrFuture;
 }
 
+// A result without a visible current/future year is not allowed into Discovery. This is stricter
+// than merely rejecting known-old pages: if the search snippet gives no date evidence, Conference
+// Gate cannot honestly present it as an upcoming event.
+function currentOrUpcomingTime(title: string, snippet: string): number | null {
+  const text = `${title} ${snippet}`;
+  if (looksOutdated(title, snippet)) return null;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const dated = extractMonthYearDates(text)
+    .filter(({ year, monthIndex }) => year > currentYear || (year === currentYear && monthIndex >= currentMonth))
+    .map(({ year, monthIndex }) => Date.UTC(year, monthIndex, 1));
+  if (dated.length > 0) return Math.min(...dated);
+
+  const futureYears = Array.from(text.matchAll(ALL_YEARS_RE), (m) => parseInt(m[0], 10))
+    .filter((year) => year >= currentYear);
+  if (futureYears.length === 0) return null;
+  const year = Math.min(...futureYears);
+  return Date.UTC(year, year === currentYear ? currentMonth : 0, 1);
+}
+
+// Association, publisher, and university hosts can legitimately operate many different events.
+// Dedicated conference hosts, however, identify a conference reliably enough to collapse its
+// home/program/speaker pages into one Discovery card.
+const SHARED_ORGANIZER_DOMAINS = new Set([
+  "acm.org",
+  "asme.org",
+  "ieee.org",
+  "springer.com",
+  "elsevier.com",
+  "nature.com",
+  "who.int",
+  "un.org",
+]);
+
+function isSharedOrganizerHost(host: string): boolean {
+  if (/\.edu(?:\.[a-z]{2})?$|\.ac\.[a-z]{2}$/i.test(host)) return true;
+  return [...SHARED_ORGANIZER_DOMAINS].some((domain) => host === domain || host.endsWith(`.${domain}`));
+}
+
+// Removes dates, edition labels, and page-section boilerplate so "IMOG 2026", "IMOG 2027",
+// and "Speakers | IMOG 2026" resolve to the same conference identity.
+function conferenceIdentity(title: string): string {
+  const parts = title
+    .split(/\s+[|–—]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const meaningful = parts
+    .filter((part) => !/^(home|program|programme|agenda|speakers?|registration|about|official site)$/i.test(part))
+    .sort((a, b) => b.length - a.length)[0] || title;
+
+  return meaningful
+    .toLowerCase()
+    .replace(/\b20\d{2}\b/g, " ")
+    .replace(/\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b/g, " ")
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/g, " ")
+    .replace(/\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|annual|edition|official|website|home)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearchResult[] {
+  const dated = results
+    .map((result) => ({ result, time: currentOrUpcomingTime(result.title, result.snippet) }))
+    .filter((entry): entry is { result: LiveSearchResult; time: number } => entry.time !== null)
+    .sort((a, b) => a.time - b.time);
+
+  const seenIdentities = new Set<string>();
+  const seenDedicatedHosts = new Set<string>();
+  const unique: LiveSearchResult[] = [];
+
+  for (const { result } of dated) {
+    const host = normalizedHost(result.link, result.displayLink);
+    const identity = conferenceIdentity(result.title);
+    if (identity && seenIdentities.has(identity)) continue;
+    if (host && !isSharedOrganizerHost(host) && seenDedicatedHosts.has(host)) continue;
+
+    if (identity) seenIdentities.add(identity);
+    if (host && !isSharedOrganizerHost(host)) seenDedicatedHosts.add(host);
+    unique.push(result);
+  }
+  return unique;
+}
+
 async function searchConferences(query: string): Promise<LiveSearchResult[]> {
-  const cacheKey = `official-v2:${query.trim().toLowerCase()}`;
+  const cacheKey = `official-v3:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
@@ -187,7 +272,7 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
   }
 
   const items: any[] = body.web?.results || [];
-  const results: LiveSearchResult[] = items
+  const candidates: LiveSearchResult[] = items
     .map((item) => ({
       title: stripHtml(item.title || ""),
       link: item.url || "",
@@ -196,7 +281,10 @@ async function searchConferences(query: string): Promise<LiveSearchResult[]> {
       thumbnail: item.thumbnail?.src || null,
       favicon: item.meta_url?.favicon || item.profile?.img || null,
     }))
-    .filter((r) => isLikelyOfficialConferencePage(r) && !looksOutdated(r.title, r.snippet));
+    .filter((r) => isLikelyOfficialConferencePage(r));
+
+  // Nearest upcoming edition first; duplicate pages and older/future duplicate editions removed.
+  const results = deduplicateUpcomingConferences(candidates);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;

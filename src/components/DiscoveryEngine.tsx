@@ -525,8 +525,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               {searchTerm.trim() ? `Live Web Results for "${searchTerm.trim()}"` : 'Live Web Results'}
             </h3>
             <p className="text-[11px] text-slate-500">
-              Only individual conference websites are shown here — directories, calendars, and pages listing
-              multiple conferences are excluded.
+              Only current and upcoming individual conference websites are shown. Old editions, duplicates,
+              directories, calendars, and multi-conference lists are excluded.
             </p>
           </div>
         </div>
@@ -547,7 +547,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
         {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <p className="text-xs text-slate-400">No individual conference websites found. Try different keywords or broader filters.</p>
+            <p className="text-xs text-slate-400">No current or upcoming conference websites found. Try different keywords or broader filters.</p>
           </div>
         )}
 
