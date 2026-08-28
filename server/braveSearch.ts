@@ -43,7 +43,7 @@ function stripHtml(text: string): string {
 // generic informational pages about the topic — this panel is "search the web for a
 // conference we haven't added yet", not a general-purpose search box. Also nudges toward
 // current/upcoming editions by adding the current year when the query doesn't already name one.
-const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo)\b/i;
+const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo|meeting)\b/i;
 const YEAR_IN_QUERY_RE = /\b20\d{2}\b/;
 function toConferenceQuery(query: string): string {
   const withKeyword = CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
@@ -107,7 +107,10 @@ function isLikelyOfficialConferencePage(result: LiveSearchResult): boolean {
   if (LISTING_TITLE_RE.test(title) || LISTING_SNIPPET_RE.test(snippet)) return false;
 
   const combined = `${title} ${snippet}`;
-  const namesAnEvent = /\b(conference|summit|symposium|convention|congress|workshop|expo|forum|annual meeting)\b/i.test(combined);
+  // Plain "meeting" matters here, not just "annual meeting" — many real academic/scientific
+  // conferences (e.g. IMOG, the International Meeting on Organic Geochemistry) call themselves
+  // a "meeting" and never use the word "conference" anywhere on their own site.
+  const namesAnEvent = /\b(conference|summit|symposium|convention|congress|workshop|expo|forum|meeting)\b/i.test(combined);
   const hasEventDetail =
     /\b20\d{2}\b|\b(?:register|registration|program|programme|agenda|speakers?|venue|call for papers|submit)\b/i.test(combined);
   return namesAnEvent && hasEventDetail;
