@@ -312,13 +312,17 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
 // explicitly stated there — never invents details. Falls back to an honest "nothing extracted"
 // shape (rather than throwing) whenever extraction can't run, so the UI can render the same
 // honest-empty-state pattern used everywhere else instead of a hard error.
-export async function extractConferenceDetails(url: string, title: string): Promise<ExtractedConferenceDetails> {
+export async function extractConferenceDetails(
+  url: string,
+  title: string,
+  focusTab?: string
+): Promise<ExtractedConferenceDetails> {
   try {
     const res = await fetch('/api/ai/extract-conference', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ url, title }),
+      body: JSON.stringify({ url, title, focusTab }),
       // Backstops the server's own deadline for answering with a first snapshot. The server no
       // longer holds this request open for the whole site — it replies as soon as the first round
       // of pages is read and keeps crawling in the background — so this only needs to cover that
@@ -338,9 +342,13 @@ export async function extractConferenceDetails(url: string, title: string): Prom
 /** Asks for the crawl's current state for a URL whose first snapshot has already been rendered.
  *  Returns null when there's nothing newer to show, so a caller can simply keep its existing
  *  data rather than having to reason about a partial response. */
-export async function fetchConferenceCrawlStatus(url: string): Promise<ExtractedConferenceDetails | null> {
+export async function fetchConferenceCrawlStatus(
+  url: string,
+  focusTab?: string
+): Promise<ExtractedConferenceDetails | null> {
   try {
-    const res = await fetch(`/api/ai/extract-conference/status?url=${encodeURIComponent(url)}`, {
+    const focusQuery = focusTab ? `&focusTab=${encodeURIComponent(focusTab)}` : '';
+    const res = await fetch(`/api/ai/extract-conference/status?url=${encodeURIComponent(url)}${focusQuery}`, {
       credentials: 'include',
       signal: AbortSignal.timeout(15000),
     });

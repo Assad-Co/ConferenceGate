@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Calendar,
   MapPin,
@@ -144,6 +144,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   onExternalSubmissionRecorded,
 }) => {
   const [activeTab, setActiveTab] = useState<ExternalDetailTab>(initialTab || 'overview');
+  const activeTabRef = useRef<ExternalDetailTab>(initialTab || 'overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExtractedConferenceDetails | null>(null);
 
@@ -249,6 +250,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     }
   };
 
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
   // The server answers with whatever the first round of pages found and keeps reading the rest of
   // the site in the background, so the first response is a starting point rather than the finished
   // article. Polling here is what lets a section that was empty a moment ago fill in on its own
@@ -258,14 +263,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     setLoading(true);
     setData(null);
 
-    const POLL_INTERVAL_MS = 1500;
-    const POLL_CEILING_MS = 80000;
+    const POLL_INTERVAL_MS = 800;
+    const POLL_CEILING_MS = 60000;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const pollUntilComplete = (startedAt: number) => {
       timer = setTimeout(async () => {
         if (cancelled) return;
-        const update = await fetchConferenceCrawlStatus(result.link);
+        const update = await fetchConferenceCrawlStatus(result.link, activeTabRef.current);
         if (cancelled) return;
         if (update) setData(update);
         // Stop once the crawl says it's finished, or once we've waited longer than any real crawl
@@ -274,7 +279,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       }, POLL_INTERVAL_MS);
     };
 
-    extractConferenceDetails(result.link, result.title).then((extracted) => {
+    extractConferenceDetails(result.link, result.title, activeTabRef.current).then((extracted) => {
       if (cancelled) return;
       setData(extracted);
       setLoading(false);

@@ -720,6 +720,21 @@ Provide constructive feedback in JSON format with fields:
   const RELEVANT_LINK_CATEGORIES = ["overview", "cfp", "fees", "committee", "speakers", "sponsors", "agenda", "venue"] as const;
   type RelevantLinkCategory = (typeof RELEVANT_LINK_CATEGORIES)[number];
 
+  function relevantCategoryFromFocusTab(value: unknown): RelevantLinkCategory | undefined {
+    if (typeof value !== "string") return undefined;
+    const aliases: Record<string, RelevantLinkCategory> = {
+      overview: "overview",
+      cfp: "cfp",
+      fees: "fees",
+      agenda: "agenda",
+      speakers: "speakers",
+      committee: "committee",
+      sponsors: "sponsors",
+      venue: "venue",
+    };
+    return aliases[value.trim().toLowerCase()];
+  }
+
   // A deterministic link-text backstop for every category, not just CFP and committee. The model's
   // own relevantLinks only ever names ONE link per category, but a real conference site routinely
   // splits one topic across several nav entries — "Sessions" alongside "Agenda" and "Workshops",
@@ -954,7 +969,7 @@ Return JSON with exactly this shape:
   // far longer to generate than the handful of fields this was originally sized for. At 12s real
   // pages were timing out in production and being discarded as unreadable. The crawl runs in the
   // background, so waiting longer costs nothing the reader sees.
-  const MODEL_CALL_TIMEOUT_MS = 40000;
+  const MODEL_CALL_TIMEOUT_MS = 26000;
   // Below this much visible text a "successful" fetch is not something worth extracting from: it
   // is a client-rendered shell, an interstitial, or a cookie wall whose real content never arrived
   // in the HTML. Extracting from it yields nulls for every section, which is indistinguishable
@@ -984,7 +999,7 @@ Return JSON with exactly this shape:
   const EXTRACTION_MODEL = process.env.EXTRACTION_MODEL || "gemini-3.5-flash-lite";
   const MODEL_RETRY_ATTEMPTS = 2;
   const MODEL_RETRY_BASE_DELAY_MS = 1000;
-  const SECONDARY_MODEL_TIMEOUT_MS = 18000;
+  const SECONDARY_MODEL_TIMEOUT_MS = 14000;
   // Google's own server-side deadline, rate limiting, and transient unavailability. These say
   // "ask again", not "this page is unreadable" — and treating them as the latter meant a page
   // that had already been fetched (sometimes at Firecrawl's expense) was thrown away over a
@@ -1234,7 +1249,8 @@ Return JSON with exactly this shape:
     ai: NonNullable<ReturnType<typeof getAIClient>>,
     urls: string[],
     title: string,
-    preferFirecrawl = false
+    preferFirecrawl = false,
+    onPage?: (page: ExtractedPage, index: number) => void
   ): Promise<Array<ExtractedPage | null>> {
     // Once the homepage has already required Firecrawl, the same site's internal pages almost
     // always share the same protection. Batch them immediately instead of repeating a plain
@@ -1252,12 +1268,14 @@ Return JSON with exactly this shape:
           const prefetched = prefetchedByUrl.get(normalizedUrlKey(url));
           if (!prefetched) return null;
           try {
-            return await extractPage(ai, url, title, {
+            const page = await extractPage(ai, url, title, {
               allowFirecrawl: false,
               prefetched,
               modelAttempts: 1,
               modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
             });
+            if (page) onPage?.(page, urls.indexOf(url));
+            return page;
           } catch (error) {
             console.error(`Fast Firecrawl page extraction failed for ${url}:`, error);
             return null;
@@ -1268,11 +1286,13 @@ Return JSON with exactly this shape:
       pages = await Promise.all(
         urls.map(async (url) => {
           try {
-            return await extractPage(ai, url, title, {
+            const page = await extractPage(ai, url, title, {
               allowFirecrawl: false,
               modelAttempts: 1,
               modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
             });
+            if (page) onPage?.(page, urls.indexOf(url));
+            return page;
           } catch (error) {
             console.error(`Fast page read failed for ${url}:`, error);
             return null;
@@ -1308,6 +1328,7 @@ Return JSON with exactly this shape:
                 modelTimeoutMs: SECONDARY_MODEL_TIMEOUT_MS,
               })
             : null;
+          if (pages[index]) onPage?.(pages[index]!, index);
         } catch (error) {
           console.error(`Blocked page extraction failed for ${url}:`, error);
           pages[index] = null;
@@ -1962,6 +1983,46 @@ Return JSON with exactly this shape:
     );
   }
 
+  // Completed extractions are already stored in SQLite. Reuse a fresh stored result after a
+  // process restart or deployment instead of making the visitor wait through the same crawl again.
+  async function loadPersistedExtractedConference(sourceUrl: string): Promise<any | null> {
+    const row = await dbGet<any>(
+      `SELECT overview, call_for_papers, program_agenda, keynote_speakers,
+              technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing,
+              community, extraction_metadata, updated_at
+         FROM extracted_conferences
+        WHERE source_url = ?
+          AND updated_at >= datetime('now', '-6 hours')
+        LIMIT 1`,
+      [sourceUrl]
+    );
+    if (!row) return null;
+
+    const parseStored = (value: unknown, fallback: any) => {
+      if (typeof value !== "string") return fallback;
+      try { return JSON.parse(value); } catch { return fallback; }
+    };
+    const metadata = parseStored(row.extraction_metadata, {});
+    return {
+      overview: parseStored(row.overview, {}),
+      call_for_papers: parseStored(row.call_for_papers, {}),
+      program_agenda: parseStored(row.program_agenda, {}),
+      keynote_speakers: parseStored(row.keynote_speakers, []),
+      technical_committee: parseStored(row.technical_committee, []),
+      sponsors_exhibitors: parseStored(row.sponsors_exhibitors, []),
+      venue_accommodation: parseStored(row.venue_accommodation, {}),
+      fees_pricing: parseStored(row.fees_pricing, {}),
+      community: parseStored(row.community, {}),
+      extraction_metadata: metadata,
+      extracted: true,
+      isFallback: false,
+      fetchFailed: false,
+      crawlComplete: true,
+      sourceUrl,
+      pagesRead: Number(metadata.pages_crawled) || 0,
+    };
+  }
+
   // The crawl walks the whole conference site, so it routinely outlives the request that started
   // it. A job holds the latest snapshot; the POST answers from the first snapshot and the client
   // polls the status route for the rest as more pages are read.
@@ -1969,6 +2030,7 @@ Return JSON with exactly this shape:
     result: any;
     complete: boolean;
     startedAt: number;
+    focusCategory?: RelevantLinkCategory;
     firstSnapshot: Promise<void>;
     signalFirstSnapshot: () => void;
   }
@@ -1988,7 +2050,7 @@ Return JSON with exactly this shape:
   // anything past it is almost always blog/news archive rather than event content.
   const MAX_SITEMAP_URLS = 120;
   // How long the POST waits for something worth rendering before answering with what it has.
-  const FIRST_RESPONSE_DEADLINE_MS = 10000;
+  const FIRST_RESPONSE_DEADLINE_MS = 6000;
 
   // Scores a URL's own path against the category patterns — the only signal available for a
   // sitemap entry, which arrives with no anchor text attached to it. "/hotel-and-travel" and
@@ -2032,16 +2094,21 @@ Return JSON with exactly this shape:
   // Select one strongest hub for each tab. Do not fill spare slots with several agenda taxonomy
   // leaves: those delayed Speakers and Partners in production even though /program/, /speaker/
   // and /partners/ were already mapped.
-  function prioritizeTabCoverage(urls: string[], limit: number): string[] {
+  function prioritizeTabCoverage(
+    urls: string[],
+    limit: number,
+    focusCategory?: RelevantLinkCategory
+  ): string[] {
     const remaining = [...urls];
     const selected: string[] = [];
+    const categoryOrder = focusCategory
+      ? [focusCategory, ...RELEVANT_LINK_CATEGORIES.filter((category) => category !== focusCategory)]
+      : [...RELEVANT_LINK_CATEGORIES];
 
-    const rootIndex = remaining.findIndex((url) => {
-      try { return new URL(url).pathname === "/"; } catch { return false; }
-    });
-    if (rootIndex >= 0) selected.push(...remaining.splice(rootIndex, 1));
-
-    for (const category of RELEVANT_LINK_CATEGORIES) {
+    // The tab a visitor is currently looking at wins the first available model slot. This matters
+    // on small instances and rate-limited AI plans where eight parallel requests are effectively
+    // queued even though they were launched together.
+    for (const category of categoryOrder) {
       const candidates = remaining
         .map((url, index) => ({ url, index, score: categoriesInUrlPath(url).includes(category) ? categoryPageScore(url, category) : -1000 }))
         .filter((entry) => entry.score > -1000)
@@ -2052,6 +2119,11 @@ Return JSON with exactly this shape:
       remaining.splice(chosen.index, 1);
       if (selected.length >= limit) return selected;
     }
+
+    const rootIndex = remaining.findIndex((url) => {
+      try { return new URL(url).pathname === "/"; } catch { return false; }
+    });
+    if (rootIndex >= 0 && selected.length < limit) selected.push(...remaining.splice(rootIndex, 1));
 
     // Neutral hub exploration is still needed on sites whose paths say nothing about their
     // content, but two at a time keeps the first useful snapshot fast.
@@ -2428,25 +2500,40 @@ Return JSON with exactly this shape:
       // fast as a single fetch instead of multiplying the wait. Capped per round as well as in
       // total, so a link-dense nav can't fire dozens of simultaneous requests at one site.
       const remainingBudget = Math.min(MAX_TOTAL_PAGES - pagesFetched, MAX_PAGES_PER_ROUND);
-      const urlsToFetch = prioritizeTabCoverage(candidateUrls, remainingBudget);
+      const urlsToFetch = prioritizeTabCoverage(candidateUrls, remainingBudget, job.focusCategory);
       urlsToFetch.forEach((url) => visited.add(url));
       pagesFetched += urlsToFetch.length;
 
-      const roundResults = await extractPageRound(ai, urlsToFetch, titleHint, primary.reader === "firecrawl");
       const nextFrontier: typeof frontier = [];
+      const publishedIndexes = new Set<number>();
+      const publishPage = (page: ExtractedPage, index: number) => {
+        if (publishedIndexes.has(index)) return;
+        publishedIndexes.add(index);
+        parsed = mergeExtractionResults(parsed, page.parsed, urlsToFetch[index], page.pageTitle);
+        coverage.pagesRead.push(urlsToFetch[index]);
+        if (page.isPdf) coverage.pdfsRead.push(urlsToFetch[index]);
+        // A PDF contributes its content but has no links, so it can't extend the frontier.
+        if (page.html) nextFrontier.push({ url: urlsToFetch[index], ...page });
+
+        // Do not hold a useful Sponsors, Speakers, Fees, or Programme page behind the slowest
+        // request in its batch. The polling client can render this snapshot immediately.
+        job.result = buildExtractionResult(parsed, startUrl, coverage.pagesRead.length, false, coverage);
+        job.signalFirstSnapshot();
+      };
+
+      const roundResults = await extractPageRound(
+        ai,
+        urlsToFetch,
+        titleHint,
+        primary.reader === "firecrawl",
+        publishPage
+      );
       roundResults.forEach((page, i) => {
-        if (page) {
-          parsed = mergeExtractionResults(parsed, page.parsed, urlsToFetch[i], page.pageTitle);
-          coverage.pagesRead.push(urlsToFetch[i]);
-          if (page.isPdf) coverage.pdfsRead.push(urlsToFetch[i]);
-          // A PDF contributes its content but has no links, so it can't extend the frontier.
-          if (page.html) nextFrontier.push({ url: urlsToFetch[i], ...page });
-        } else {
-          coverage.pagesFailed.push(urlsToFetch[i]);
-        }
+        if (page && !publishedIndexes.has(i)) publishPage(page, i);
+        if (!page) coverage.pagesFailed.push(urlsToFetch[i]);
       });
 
-      job.result = buildExtractionResult(parsed, startUrl, pagesFetched, false, coverage);
+      job.result = buildExtractionResult(parsed, startUrl, coverage.pagesRead.length, false, coverage);
       job.signalFirstSnapshot();
 
       if (nextFrontier.length === 0) break;
@@ -2517,9 +2604,16 @@ Return JSON with exactly this shape:
   // Starts the crawl if it isn't already running, and hands back the job so a caller can wait for
   // its first usable snapshot. One job per URL, so two people opening the same conference at once
   // share a single crawl rather than each firing their own at the site.
-  async function getOrStartCrawlJob(cacheKey: string, titleHint: string): Promise<CrawlJob | null> {
+  async function getOrStartCrawlJob(
+    cacheKey: string,
+    titleHint: string,
+    focusCategory?: RelevantLinkCategory
+  ): Promise<CrawlJob | null> {
     const running = crawlJobs.get(cacheKey);
-    if (running) return running;
+    if (running) {
+      if (focusCategory) running.focusCategory = focusCategory;
+      return running;
+    }
 
     const ai = getAIClient();
     if (!ai) return null;
@@ -2532,6 +2626,7 @@ Return JSON with exactly this shape:
       result: null,
       complete: false,
       startedAt: Date.now(),
+      focusCategory,
       firstSnapshot,
       signalFirstSnapshot,
     };
@@ -2574,23 +2669,30 @@ Return JSON with exactly this shape:
 
   app.post("/api/ai/extract-conference", async (req, res) => {
     try {
-      const { url, title } = req.body;
+      const { url, title, focusTab } = req.body;
       if (typeof url !== "string" || !url.trim()) {
         return res.status(400).json({ error: "url is required" });
       }
 
       const cacheKey = url.trim();
       const titleHint = typeof title === "string" ? title : "";
+      const focusCategory = relevantCategoryFromFocusTab(focusTab);
       const cached = extractionCache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
         return res.json(cached.data);
+      }
+
+      const persisted = await loadPersistedExtractedConference(cacheKey);
+      if (persisted) {
+        extractionCache.set(cacheKey, { data: persisted, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+        return res.json(persisted);
       }
 
       if (!(await isSafeExternalUrl(cacheKey))) {
         return res.status(400).json({ error: "That URL cannot be fetched." });
       }
 
-      const job = await getOrStartCrawlJob(cacheKey, titleHint);
+      const job = await getOrStartCrawlJob(cacheKey, titleHint, focusCategory);
       if (!job) return res.json({ extracted: false, isFallback: true });
 
       // Answer as soon as there's something worth rendering rather than holding the request open
@@ -2608,6 +2710,7 @@ Return JSON with exactly this shape:
   // as more pages are read instead of the reader being stuck with whatever the first round found.
   app.get("/api/ai/extract-conference/status", async (req, res) => {
     const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
+    const focusCategory = relevantCategoryFromFocusTab(req.query.focusTab);
     if (!url) return res.status(400).json({ error: "url is required" });
 
     const cached = extractionCache.get(url);
@@ -2615,6 +2718,7 @@ Return JSON with exactly this shape:
 
     const job = crawlJobs.get(url);
     if (!job) return res.json({ crawlComplete: true, crawlUnknown: true });
+    if (focusCategory) job.focusCategory = focusCategory;
     if (!job.result) return res.json({ crawlComplete: false, crawlPending: true });
     res.json(job.result);
   });
