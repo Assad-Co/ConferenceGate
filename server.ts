@@ -1464,6 +1464,93 @@ Return JSON with exactly this shape:
       categoriesFound: COVERAGE_CATEGORIES.filter((c) => c.filled(result)).map((c) => c.name),
       categoriesMissing: COVERAGE_CATEGORIES.filter((c) => !c.filled(result)).map((c) => c.name),
     };
+
+    // Canonical Conference Gate tab contract. The legacy flat fields above remain temporarily for
+    // older clients, but all new UI/database consumers read these tab-owned sections. Keeping the
+    // mapping here prevents one renderer from quietly assigning a field to a different tab.
+    const sourceFor = (field: string) => result.provenance?.[field]?.sourceUrl || sourceUrl;
+    const recordSource = (item: any, field: string) =>
+      item?.source_url || item?.sourceUrl || sourceFor(field);
+    result.overview = {
+      conference_name: result.conferenceTitle,
+      acronym: result.acronym,
+      edition: result.edition,
+      description: result.overviewSummary,
+      start_date: asArray(result.importantDates).find((d) => /start|opening/i.test(d.label))?.date || null,
+      end_date: asArray(result.importantDates).find((d) => /end|closing/i.test(d.label))?.date || null,
+      dates_text: result.datesText,
+      city: result.city,
+      country: result.country,
+      format: result.format,
+      organizer: result.organizingInstitution,
+      topics: result.topics,
+      official_website: sourceUrl,
+      contact_email: result.contactEmail,
+      important_dates: result.importantDates,
+    };
+    result.call_for_papers = {
+      status: result.cfpStatus,
+      abstract_submission_deadline: result.cfpDeadline,
+      notification_date: result.cfpNotificationDate,
+      submission_guidelines: result.submissionRequirements,
+      paper_requirements: result.submissionRequirements,
+      abstract_requirements: result.submissionRequirements,
+      submission_url: result.submissionUrl,
+      submission_email: result.submissionEmail,
+      submission_template_url: result.submissionTemplateUrl,
+      submission_format: result.cfpSubmissionFormat,
+      length_limit: result.cfpLengthLimit,
+      review_process: result.cfpReviewProcess,
+      topics_tracks: result.cfpTopics,
+      publication_information: result.publicationInfo,
+    };
+    result.program_agenda = { sessions: result.agendaSessions.map((x: any) => ({ ...x, source_url: recordSource(x, "agendaSessions") })) };
+    result.keynote_speakers = result.speakers.map((x: any) => ({
+      full_name: x.name,
+      title: x.title || null,
+      organization: x.org || null,
+      country: x.country || null,
+      biography: x.bio || null,
+      presentation_title: x.presentationTitle || null,
+      speaker_type: x.role || null,
+      photo_url: x.imageUrl || null,
+      profile_source_url: recordSource(x, "speakers"),
+      source_url: recordSource(x, "speakers"),
+    }));
+    result.technical_committee = result.committee.map((x: any) => ({
+      name: x.name,
+      role: x.role || null,
+      organization: x.org || null,
+      country: x.country || null,
+      source_url: recordSource(x, "committee"),
+    }));
+    result.sponsors_exhibitors = result.sponsors.map((x: any) => ({
+      name: x.name,
+      type_category: x.type || x.category || "Sponsor",
+      sponsorship_level: x.tier || null,
+      logo_url: x.logoUrl || null,
+      website: x.website || null,
+      source_url: recordSource(x, "sponsors"),
+    }));
+    result.venue_accommodation = {
+      venue_name: result.venueName,
+      address: result.venueAddress,
+      city: result.city,
+      country: result.country,
+      hotels: result.hotels.map((x: any) => ({ ...x, source_url: recordSource(x, "hotels") })),
+      accommodation: result.accommodationText,
+      travel_information: result.travelText,
+    };
+    result.community = { social_media: result.socialLinks };
+    result.extraction_metadata = {
+      status: crawlComplete ? "success" : "in_progress",
+      pages_crawled: result.crawlCoverage.pagesRead.length,
+      source_urls: result.crawlCoverage.pagesRead,
+      conflicts: result.conflicts,
+      missing_sections: result.crawlCoverage.categoriesMissing,
+      pages_failed: result.crawlCoverage.pagesFailed,
+      crawl_complete: crawlComplete,
+    };
     return result;
   }
 
