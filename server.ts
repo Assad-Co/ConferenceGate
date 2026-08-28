@@ -16,6 +16,7 @@ import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { extractPdfText } from "./server/pdfText";
+import { firecrawlScrape, firecrawlMapSite, isFirecrawlConfigured } from "./server/firecrawl";
 import { checkWordCompliance } from "./server/wordLimit";
 
 async function startServer() {
@@ -779,7 +780,7 @@ Return JSON with exactly this shape:
     // usable, which is the case for bot-protected sites and ones that build themselves in
     // JavaScript. A PDF takes a third path entirely — conference sites routinely publish the call
     // for papers, the programme and the fee table as documents rather than pages.
-    async function readPageContent(): Promise<{ html: string; text: string } | null> {
+    async function readPageContent(): Promise<{ html: string; text: string; kind: "html" | "pdf" } | null> {
       let plain: string | null = null;
       try {
         const pageRes = await fetch(pageUrl, {
@@ -795,7 +796,7 @@ Return JSON with exactly this shape:
           const text = await extractPdfText(await pageRes.arrayBuffer());
           // No `html` for a PDF: it has no anchors for the crawl to follow, and the extraction
           // prompt's [LINK:]/[IMAGE:] markers have no meaning here.
-          return text ? { html: "", text } : null;
+          return text ? { html: "", text, kind: "pdf" } : null;
         }
 
         // Any other non-HTML body (an image, a JSON API response, a zip) is worth abandoning:
@@ -822,7 +823,7 @@ Return JSON with exactly this shape:
       // Good enough as it stands — no need to spend a browser launch on it.
       if (plain) {
         const text = prepareHtmlForExtraction(plain, pageUrl);
-        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) return { html: plain, text };
+        if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) return { html: plain, text, kind: "html" };
       }
 
       // Either the request was refused, or it succeeded and returned a shell with nothing in it.
@@ -832,17 +833,39 @@ Return JSON with exactly this shape:
         const text = prepareHtmlForExtraction(rendered, pageUrl);
         if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
           console.log(`Read ${pageUrl} by rendering it in a browser (plain fetch returned nothing usable)`);
-          return { html: rendered, text };
+          return { html: rendered, text, kind: "html" };
         }
       }
-      // Neither worked. Report what the plain body amounted to, so the caller logs the same
+
+      // Last resort, and the only step that costs money: Firecrawl renders behind rotating
+      // proxies on its own infrastructure, which reads sites that refuse this server outright and
+      // ones whose content never appears in a browser we can run here. Reached only once both
+      // free routes have failed on this specific URL.
+      const scraped = await firecrawlScrape(pageUrl);
+      if (scraped) {
+        // Prefer the HTML, because the crawl follows its anchors and the prompt reads its image
+        // tags. Markdown is the fallback for pages Firecrawl only returns as text — it still
+        // extracts perfectly well, it just contributes no onward links.
+        const fromHtml = scraped.html ? prepareHtmlForExtraction(scraped.html, pageUrl) : "";
+        if (fromHtml.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+          console.log(`Read ${pageUrl} via Firecrawl (plain fetch and local browser both failed)`);
+          return { html: scraped.html, text: fromHtml, kind: "html" };
+        }
+        if (scraped.markdown.trim().length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+          console.log(`Read ${pageUrl} via Firecrawl as markdown (no usable HTML returned)`);
+          // Markdown, not a PDF: no anchors to follow, but it is still a web page.
+          return { html: "", text: scraped.markdown.trim(), kind: "html" };
+        }
+      }
+
+      // Nothing worked. Report what the plain body amounted to, so the caller logs the same
       // "too little text" reason it always has.
-      return plain ? { html: plain, text: prepareHtmlForExtraction(plain, pageUrl) } : null;
+      return plain ? { html: plain, text: prepareHtmlForExtraction(plain, pageUrl), kind: "html" } : null;
     }
 
     const content = await readPageContent();
     if (content === null) return null;
-    const isPdf = content.html === "";
+    const isPdf = content.kind === "pdf";
 
     // 40,000 characters of actual visible text (not raw HTML) comfortably covers even a long
     // single page with CFP details near the bottom — a tighter cutoff risked truncating the
@@ -1539,18 +1562,27 @@ Return JSON with exactly this shape:
       networkError = e?.name === "TimeoutError" ? "timed out" : "couldn't be reached";
     }
 
-    if (isBrowserRenderingUnavailable()) {
+    if (isBrowserRenderingUnavailable() && !isFirecrawlConfigured()) {
       return {
         reason:
-          `A plain request ${networkError ? networkError : `returned HTTP ${plainStatus}`}, and no browser is ` +
-          "installed on this server to retry with — which is what reads sites that block plain requests or build " +
-          "their pages in JavaScript.",
+          `A plain request ${networkError ? networkError : `returned HTTP ${plainStatus}`}, and this server has ` +
+          "neither a browser nor a Firecrawl key to retry with — either one reads sites that block plain requests " +
+          "or build their pages in JavaScript. Set FIRECRAWL_API_KEY to enable it.",
       };
     }
 
-    // The browser is available, so find out what it actually gets.
+    // Find out what the stronger readers actually get, rather than assuming.
     const rendered = await fetchRenderedHtml(pageUrl);
-    const renderedLength = rendered ? prepareHtmlForExtraction(rendered, pageUrl).length : 0;
+    let renderedLength = rendered ? prepareHtmlForExtraction(rendered, pageUrl).length : 0;
+    if (renderedLength < MIN_EXTRACTABLE_TEXT_CHARS && isFirecrawlConfigured()) {
+      const scraped = await firecrawlScrape(pageUrl);
+      if (scraped) {
+        renderedLength = Math.max(
+          scraped.html ? prepareHtmlForExtraction(scraped.html, pageUrl).length : 0,
+          scraped.markdown.trim().length
+        );
+      }
+    }
 
     if (renderedLength >= MIN_EXTRACTABLE_TEXT_CHARS) {
       return { reason: "The site was readable on retry — this was a temporary failure, so reloading should work." };
@@ -1661,7 +1693,17 @@ Return JSON with exactly this shape:
     // The site's own index of itself, fetched once up front. These seed the queue alongside the
     // links found by crawling, which is what lets the crawl reach pages the front page never
     // linked to at all.
-    const sitemapUrls = (await fetchSitemapUrls(startUrl, MAX_SITEMAP_URLS)).filter((u) => !visited.has(u));
+    let sitemapUrls = (await fetchSitemapUrls(startUrl, MAX_SITEMAP_URLS)).filter((u) => !visited.has(u));
+    // Plenty of conference sites publish no sitemap at all, which leaves whole sections reachable
+    // only if something happens to link to them. Firecrawl can enumerate a site's URLs directly,
+    // so it stands in when there's no sitemap to read — one call, and only when actually needed.
+    if (sitemapUrls.length === 0 && isFirecrawlConfigured()) {
+      const mapped = await firecrawlMapSite(startUrl, MAX_SITEMAP_URLS);
+      sitemapUrls = mapped.filter((u) => !visited.has(u) && !NON_PAGE_EXT_RE.test(u));
+      if (sitemapUrls.length > 0) {
+        console.log(`Firecrawl mapped ${sitemapUrls.length} URLs for ${startUrl} (site publishes no sitemap)`);
+      }
+    }
 
     for (
       let depth = 0;

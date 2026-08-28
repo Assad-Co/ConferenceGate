@@ -34,6 +34,30 @@ The consistent rule across all of it: **never present something the source didn'
 
 When adding to the extraction, keep this property — it's the reason the feature is trustworthy.
 
+## How a page gets read
+
+Four routes, tried in order, stopping at the first that yields enough text:
+
+1. **Plain HTTP fetch** — free, handles most conference sites.
+2. **Local headless Chromium** (`server/browserFetch.ts`) — free, handles JavaScript-rendered
+   pages. Often unavailable on hosts without Chromium's system libraries; disables itself.
+3. **Firecrawl** (`server/firecrawl.ts`) — a paid API that renders behind rotating proxies.
+   Reads sites that refuse this server outright. Needs `FIRECRAWL_API_KEY`.
+4. **The open web** (`gatherFromOpenWeb` in `server.ts`) — when the conference's own site can't
+   be read at all, or reads but says almost nothing, its details are gathered from directories,
+   listings and trade press instead, and flagged as such.
+
+The ordering is a cost decision: Firecrawl bills per page, so it is only reached once both free
+routes have failed on that specific URL. Don't promote it up the chain.
+
+Relevant environment variables, all optional — each one missing degrades a capability rather than
+breaking the app:
+
+- `FIRECRAWL_API_KEY` — enables routes 3 and site mapping.
+- `PLAYWRIGHT_CHROMIUM_PATH` / `PLAYWRIGHT_BROWSERS_PATH` — point at an existing browser.
+- `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` — skip the postinstall browser download.
+- `GEOCODE_CONTACT_EMAIL` — identifies this app to OpenStreetMap for hotel distances.
+
 ## Testing the extraction
 
 The crawl and merge logic lives inside a closure in `server.ts`, so tests extract the shipped
