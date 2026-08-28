@@ -7,8 +7,12 @@ export interface LiveSearchResult {
   favicon: string | null;
 }
 
-export async function searchConferencesOnTheWeb(query: string): Promise<LiveSearchResult[]> {
-  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}`, {
+export async function searchConferencesOnTheWeb(
+  query: string,
+  priority: 'high' | 'low' = 'high'
+): Promise<LiveSearchResult[]> {
+  const priorityParam = priority === 'low' ? '&priority=low' : '';
+  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}${priorityParam}`, {
     credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));

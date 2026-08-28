@@ -28,25 +28,40 @@ function isConfigured() {
 // rate limit exceeded for plan", not just the ones past some soft threshold. Every outbound Brave
 // request goes through this queue so a burst is spread out instead of sent all at once, the same
 // pattern already used for Firecrawl's own per-second limit.
+//
+// Two lanes, not one FIFO line: Discover's default (nothing-typed) view fires ten background
+// subject searches at once, and a person who then actually types a search shouldn't have their
+// one real query sit behind all ten of those — especially since the background batch's own
+// results will just be thrown away the moment a newer search supersedes them. High-priority
+// (a real, specific search) always jumps ahead of whatever background work is still waiting for
+// its turn; only a request already dispatched to Brave can't be preempted.
 const BRAVE_MIN_START_INTERVAL_MS = 1100;
-let braveQueue: Promise<void> = Promise.resolve();
+const highPriorityQueue: Array<() => void> = [];
+const lowPriorityQueue: Array<() => void> = [];
+let dispatcherRunning = false;
 let nextBraveStartAt = 0;
 
-async function scheduleBraveRequest<T>(request: () => Promise<T>): Promise<T> {
-  const previous = braveQueue;
-  let release!: () => void;
-  braveQueue = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await previous;
+function runBraveDispatcher() {
+  if (dispatcherRunning) return;
+  const next = highPriorityQueue.shift() || lowPriorityQueue.shift();
+  if (!next) return;
+  dispatcherRunning = true;
   const waitMs = Math.max(0, nextBraveStartAt - Date.now());
-  if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
-  try {
-    return await request();
-  } finally {
+  setTimeout(() => {
     nextBraveStartAt = Date.now() + BRAVE_MIN_START_INTERVAL_MS;
-    release();
-  }
+    next();
+    dispatcherRunning = false;
+    runBraveDispatcher();
+  }, waitMs);
+}
+
+function scheduleBraveRequest<T>(request: () => Promise<T>, priority: "high" | "low" = "high"): Promise<T> {
+  return new Promise((resolve, reject) => {
+    (priority === "high" ? highPriorityQueue : lowPriorityQueue).push(() => {
+      request().then(resolve, reject);
+    });
+    runBraveDispatcher();
+  });
 }
 
 // Brave highlights matched keywords with <strong> tags and HTML-escapes entities in the
@@ -294,7 +309,10 @@ function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearch
   return unique;
 }
 
-export async function searchConferences(query: string): Promise<LiveSearchResult[]> {
+export async function searchConferences(
+  query: string,
+  priority: "high" | "low" = "high"
+): Promise<LiveSearchResult[]> {
   const cacheKey = `official-v3:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -305,13 +323,15 @@ export async function searchConferences(query: string): Promise<LiveSearchResult
   url.searchParams.set("q", toConferenceQuery(query));
   url.searchParams.set("count", "20");
 
-  const res = await scheduleBraveRequest(() =>
-    fetch(url.toString(), {
-      headers: {
-        Accept: "application/json",
-        "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
-      },
-    })
+  const res = await scheduleBraveRequest(
+    () =>
+      fetch(url.toString(), {
+        headers: {
+          Accept: "application/json",
+          "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
+        },
+      }),
+    priority
   );
   const rawText = await res.text();
   let body: any = {};
@@ -393,6 +413,10 @@ braveSearchRouter.get(
   "/conferences",
   asyncHandler(async (req, res) => {
     const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    // Discover's default (nothing-typed) view fires several background subject searches at once
+    // and marks them low priority so a person's actual typed search always jumps the queue ahead
+    // of them, rather than waiting behind background work whose results may already be moot.
+    const priority = req.query.priority === "low" ? "low" : "high";
 
     if (!query || query.length < 2) {
       return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
@@ -405,7 +429,7 @@ braveSearchRouter.get(
     }
 
     try {
-      const results = await searchConferences(query);
+      const results = await searchConferences(query, priority);
       res.json({ results });
     } catch (error: any) {
       console.error("Brave Search error:", error);

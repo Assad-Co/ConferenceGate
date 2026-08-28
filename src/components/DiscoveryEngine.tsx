@@ -333,7 +333,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         lastWebQueryRef.current = cacheKey;
         setWebSearchLoading(true);
         setWebSearchError(null);
-        Promise.allSettled(effectiveQueries.map((q) => searchConferencesOnTheWeb(q)))
+        // The background subject fan-out is marked low priority so a real, specific search
+        // always jumps the server's queue ahead of it, rather than waiting its turn behind ten
+        // background requests whose results this exact search would immediately discard anyway.
+        Promise.allSettled(effectiveQueries.map((q) => searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low')))
           .then((outcomes) => {
             const succeeded = outcomes.filter(
               (o): o is PromiseFulfilledResult<LiveSearchResult[]> => o.status === 'fulfilled'
