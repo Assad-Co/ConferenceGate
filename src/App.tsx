@@ -482,6 +482,17 @@ export function App() {
     const conferencesReviewedFor = myId
       ? new Set(submissions.filter((s) => s.reviews.some((r) => r.reviewerId === myId)).map((s) => s.conferenceTitle)).size
       : 0;
+    // Real, currently-outstanding work: submissions an organizer actually invited this account to
+    // review (reviewerAssignments — never implies an invitation that didn't happen) where a review
+    // hasn't been submitted yet. This is what the Peer Review Profile's "Current Load" reflects,
+    // so it moves with real assignments and real completed reviews instead of sitting fixed at 0.
+    const currentLoad = myId
+      ? submissions.filter(
+          (s) =>
+            (s.reviewerAssignments || []).some((a) => a.reviewerId === myId) &&
+            !s.reviews.some((r) => r.reviewerId === myId)
+        ).length
+      : 0;
     const certificatesCount = abstractsAccepted + conferencesReviewedFor + registrations.length;
 
     return {
@@ -499,6 +510,7 @@ export function App() {
       abstractsReviewed: myReviews.length,
       conferencesReviewedFor,
       reviewerKudos: myReviews.length * 20,
+      currentLoad,
       awards: 0,
       certificatesCount,
     };
@@ -526,6 +538,7 @@ export function App() {
         ...prev.reviewerInfo,
         totalReviewed: myContributions.abstractsReviewed,
         kudos: myContributions.reviewerKudos,
+        currentLoad: myContributions.currentLoad,
       },
     }));
   }, [myContributions]);

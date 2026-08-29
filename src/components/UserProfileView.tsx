@@ -915,7 +915,10 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Current Load</div>
                 <div className="text-lg font-extrabold text-amber-600 flex items-center justify-center gap-1">
                   <Gauge className="w-3.5 h-3.5" />
-                  {userProfile.reviewerInfo.currentLoad}/{userProfile.reviewerInfo.maxLoad}
+                  {/* No per-reviewer capacity is configured anywhere in the app, so showing a
+                      "/maxLoad" ceiling would be inventing a number with nothing real behind it —
+                      just the real, live count of assignments still awaiting a submitted review. */}
+                  {userProfile.reviewerInfo.currentLoad}
                 </div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
