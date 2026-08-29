@@ -810,6 +810,8 @@ Provide constructive feedback in JSON format with fields:
   function buildExtractionPrompt(pageText: string, title: string, pageUrl: string): string {
     return `You are extracting factual details about a conference/event from the raw text of its own webpage. Only include information EXPLICITLY stated in the text below. Never guess, infer, or invent a value — if something isn't mentioned, use null (or an empty array for list fields).
 
+Conference Gate is currently showing only conferences and edition-specific information from 1 September 2026 onward. Treat any conference edition, deadline, fee period, schedule, speaker roster, committee, sponsor list, venue, or other edition-specific content dated before 1 September 2026 as historical archive material and DO NOT extract it. If this page is clearly for an older edition, leave all edition-specific fields null/empty, but still return its real relevantLinks so the crawler can reach the current or next edition. When a page mentions several years, extract only the newest edition on or after the cutoff; never combine old deadlines, prices, people, or schedules with a newer edition.
+
 The text below has every <img> tag replaced with an inline marker like "[IMAGE: https://example.com/photo.jpg]" positioned where that image appeared in the page. When a marker appears right next to a person's name or a sponsor's name, that is very likely their real photo or logo — copy that exact URL into the matching imageUrl/logoUrl field. If no marker appears near a name, use null. Never invent or guess an image URL, and never reuse an unrelated image for a different person.
 
 Every <a> link has similarly been replaced with "link text [LINK: https://example.com/page]" positioned right after that link's visible text. Use these markers to find real URLs: if you see link text like "Submit Now", "Submission Portal", or "Author Guidelines", copy the [LINK: ...] URL that follows it into submissionUrl or submissionTemplateUrl as appropriate. Never invent a URL that isn't backed by an actual [LINK: ...] marker in the text.
@@ -1061,6 +1063,132 @@ Return JSON with exactly this shape:
     throw lastError;
   }
 
+  // Conference Gate's current discovery window begins here. The extractor often encounters
+  // archive pages through a site's navigation or sitemap; those pages must never refill a current
+  // conference with obsolete fees, deadlines, speakers, or schedules.
+  const UPCOMING_EXTRACTION_SCHEMA_VERSION = "upcoming-2026-09-v1";
+  const UPCOMING_CONTENT_CUTOFF_YEAR = 2026;
+  const UPCOMING_CONTENT_CUTOFF_MONTH = 9;
+  const DATE_MONTH_NUMBERS: Record<string, number> = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+  };
+
+  type ExplicitDateStatus = "past" | "current-or-future" | "unknown";
+
+  function explicitDateStatus(value: unknown): ExplicitDateStatus {
+    if (typeof value !== "string" && typeof value !== "number") return "unknown";
+    const text = String(value);
+    const yearMatches = [...text.matchAll(/\b(20\d{2})\b/g)];
+    if (yearMatches.length === 0) return "unknown";
+
+    let sawPast = false;
+    for (const match of yearMatches) {
+      const year = Number(match[1]);
+      if (year > UPCOMING_CONTENT_CUTOFF_YEAR) return "current-or-future";
+      if (year < UPCOMING_CONTENT_CUTOFF_YEAR) {
+        sawPast = true;
+        continue;
+      }
+
+      // Match a month close to this specific year, so "September 2025; August 2026" does not
+      // borrow September from the old date and accidentally keep the August 2026 record.
+      const index = match.index || 0;
+      const nearby = text.slice(Math.max(0, index - 22), index + match[0].length + 22).toLowerCase();
+      const months = [...nearby.matchAll(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/g)]
+        .map((month) => DATE_MONTH_NUMBERS[month[1]])
+        .filter((month): month is number => Number.isFinite(month));
+      if (months.length === 0 || Math.max(...months) >= UPCOMING_CONTENT_CUTOFF_MONTH) {
+        return "current-or-future";
+      }
+      sawPast = true;
+    }
+    return sawPast ? "past" : "unknown";
+  }
+
+  function sanitizeUpcomingPageExtraction(parsedValue: any, pageTitle: string): any {
+    const parsed = parsedValue && typeof parsedValue === "object" ? { ...parsedValue } : {};
+    const importantDates = Array.isArray(parsed.importantDates) ? parsed.importantDates : [];
+    const eventDateEntries = importantDates.filter(
+      (entry: any) => entry && /\b(conference|event|meeting|symposium|congress|start|opening|end|closing|dates?)\b/i.test(String(entry.label || ""))
+    );
+    const editionSignals = [
+      parsed.datesText,
+      parsed.year,
+      parsed.edition,
+      pageTitle,
+      ...eventDateEntries.map((entry: any) => entry.date),
+    ];
+    const knownEditionStatuses = editionSignals
+      .map(explicitDateStatus)
+      .filter((status) => status !== "unknown");
+    const archivedEdition =
+      knownEditionStatuses.length > 0 &&
+      knownEditionStatuses.every((status) => status === "past");
+
+    parsed.importantDates = importantDates.filter(
+      (entry: any) => entry && explicitDateStatus(entry.date) !== "past"
+    );
+    parsed.registrationFees = (Array.isArray(parsed.registrationFees) ? parsed.registrationFees : []).filter(
+      (fee: any) => fee && (!fee.deadline || explicitDateStatus(fee.deadline) !== "past")
+    );
+    parsed.agendaSessions = (Array.isArray(parsed.agendaSessions) ? parsed.agendaSessions : []).filter(
+      (session: any) => session && (!session.date || explicitDateStatus(session.date) !== "past")
+    );
+
+    for (const field of ["datesText", "cfpDeadline", "cfpNotificationDate", "earlyBirdDeadline"]) {
+      if (explicitDateStatus(parsed[field]) === "past") parsed[field] = null;
+    }
+    if (explicitDateStatus(parsed.year) === "past") parsed.year = null;
+
+    // If an archive page also links or refers to the next edition, prefer the explicit future
+    // conference-date entry as the page's display date instead of retaining the archived header.
+    if (!parsed.datesText) {
+      const nextEventDate = parsed.importantDates.find(
+        (entry: any) =>
+          entry &&
+          /\b(conference|event|meeting|symposium|congress|start|opening|end|closing|dates?)\b/i.test(String(entry.label || "")) &&
+          explicitDateStatus(entry.date) === "current-or-future"
+      );
+      if (nextEventDate) {
+        parsed.datesText = nextEventDate.date;
+        const nextYear = String(nextEventDate.date).match(/\b(20\d{2})\b/)?.[1];
+        if (nextYear) parsed.year = nextYear;
+      }
+    }
+
+    if (archivedEdition) {
+      for (const field of [
+        "conferenceTitle", "edition", "year", "overviewSummary", "datesText", "locationText",
+        "city", "country", "format", "cfpStatus", "cfpDeadline", "submissionUrl",
+        "submissionRequirements", "submissionTemplateUrl", "submissionEmail",
+        "cfpSubmissionFormat", "cfpLengthLimit", "cfpReviewProcess", "cfpNotificationDate",
+        "registrationUrl", "earlyBirdDeadline", "accommodationText", "travelText",
+        "venueName", "venueAddress",
+      ]) {
+        parsed[field] = null;
+      }
+      for (const field of [
+        "importantDates", "registrationFees", "agendaSessions", "speakers", "committee",
+        "sponsors", "hotels", "awards", "cfpTopics",
+      ]) {
+        parsed[field] = [];
+      }
+      parsed.publicationInfo = {
+        proceedingsPublisher: null,
+        journals: [],
+        indexing: [],
+        doi: null,
+        isbn: null,
+        issn: null,
+      };
+    }
+
+    return parsed;
+  }
+
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
@@ -1257,6 +1385,7 @@ Return JSON with exactly this shape:
         contactEmail: exactEmail,
       };
     }
+    parsed = sanitizeUpcomingPageExtraction(parsed, title || pageTitleOf(html, pageUrl) || "");
     return { parsed, html, pageTitle: pageTitleOf(html, pageUrl), isPdf, reader: content.reader };
   }
 
@@ -1972,6 +2101,8 @@ Return JSON with exactly this shape:
     };
     result.community = { social_media: result.socialLinks };
     result.extraction_metadata = {
+      schema_version: UPCOMING_EXTRACTION_SCHEMA_VERSION,
+      cutoff_date: "2026-09-01",
       status: crawlComplete ? "success" : "in_progress",
       pages_crawled: result.crawlCoverage.pagesRead.length,
       source_urls: result.crawlCoverage.pagesRead,
@@ -2038,6 +2169,7 @@ Return JSON with exactly this shape:
       try { return JSON.parse(value); } catch { return fallback; }
     };
     const metadata = parseStored(row.extraction_metadata, {});
+    if (metadata.schema_version !== UPCOMING_EXTRACTION_SCHEMA_VERSION) return null;
     return {
       overview: parseStored(row.overview, {}),
       call_for_papers: parseStored(row.call_for_papers, {}),
