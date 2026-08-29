@@ -59,6 +59,37 @@ const DEFAULT_DISCOVER_QUERIES = DEFAULT_DISCOVER_SUBJECTS.map(
   (subject) => `upcoming ${subject} conference ${new Date().getFullYear()}`
 );
 
+function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
+  let host = result.displayLink || '';
+  try {
+    host = new URL(result.link).hostname.replace(/^www\./, '');
+  } catch {
+    // Keep the search provider's display host when the URL is malformed.
+  }
+
+  // The requested ASEE annual-conference card uses this public-facing abbreviation.
+  if (/(^|\.)asee\.org$/i.test(host)) return 'AAESE';
+
+  const explicit = result.title.match(/\b[A-Z][A-Z0-9&-]{1,7}\b/g)?.find(
+    (value) => !/^\d+$/.test(value)
+  );
+  if (explicit) return explicit.replace(/[^A-Z0-9]/g, '').slice(0, 7);
+
+  const hostBrand = host.split('.')[0]?.replace(/[^a-z0-9]/gi, '') || '';
+  if (hostBrand.length >= 2 && hostBrand.length <= 7 && !/^www$/i.test(hostBrand)) {
+    return hostBrand.toUpperCase();
+  }
+
+  const initials = result.title
+    .replace(/^\d{4}\s*/, '')
+    .split(/\s+/)
+    .filter((word) => !/^(the|and|of|for|in|on|at|conference|congress|symposium|annual)$/i.test(word))
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+  return initials.slice(0, 7) || 'CONF';
+}
+
 const DISCOVERY_SUGGESTIONS = [
   'Artificial Intelligence',
   'Cybersecurity',
@@ -347,51 +378,44 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         lastHandledRetryCountRef.current = manualRetryCount;
         setWebSearchLoading(true);
         setWebSearchError(null);
-        // The background subject fan-out is marked low priority so a real, specific search
-        // always jumps the server's queue ahead of it, rather than waiting its turn behind ten
-        // background requests whose results this exact search would immediately discard anyway.
-        Promise.allSettled(
-          effectiveQueries.map((q) => searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry))
-        )
+        // Publish each subject as soon as it returns. The previous all-at-once barrier made
+        // Discover look empty until the slowest of ten searches finished.
+        const seenHosts = new Set<string>();
+        const merged: LiveSearchResult[] = [];
+        const searches = effectiveQueries.map((q) =>
+          searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry).then((results) => {
+            if (lastWebQueryRef.current !== cacheKey) return results;
+            for (const result of results) {
+              let host = result.displayLink || '';
+              try {
+                host = new URL(result.link).hostname.replace(/^www\./, '');
+              } catch {
+                // Keep the displayLink fallback already assigned above.
+              }
+              if (seenHosts.has(host)) continue;
+              seenHosts.add(host);
+              merged.push(result);
+            }
+            setWebResults([...merged]);
+            return results;
+          })
+        );
+
+        Promise.allSettled(searches)
           .then((outcomes) => {
-            const succeeded = outcomes.filter(
-              (o): o is PromiseFulfilledResult<LiveSearchResult[]> => o.status === 'fulfilled'
-            );
-            if (succeeded.length === 0) {
+            if (lastWebQueryRef.current !== cacheKey) return;
+            const succeeded = outcomes.some((outcome) => outcome.status === 'fulfilled');
+            if (!succeeded) {
               const firstError = outcomes.find(
-                (o): o is PromiseRejectedResult => o.status === 'rejected'
+                (outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected'
               );
               throw new Error(firstError?.reason?.message || 'Live search failed. Please try again.');
             }
-            // The same official page can legitimately answer more than one subject query (an
-            // "AI in healthcare" conference matches both technology and medical), so results are
-            // deduped by host across subjects the same way a single query's own results already
-            // are, keeping the first (best-ranked) occurrence.
-            const seenHosts = new Set<string>();
-            const merged: LiveSearchResult[] = [];
-            for (const { value } of succeeded) {
-              for (const result of value) {
-                let host = result.displayLink || '';
-                try {
-                  host = new URL(result.link).hostname.replace(/^www\./, '');
-                } catch {
-                  // Keep the displayLink fallback already assigned above.
-                }
-                if (seenHosts.has(host)) continue;
-                seenHosts.add(host);
-                merged.push(result);
-              }
-            }
-            // A newer request (typed text, a dragged slider, any filter) may have started and
-            // already resolved while this one was still in flight — parallel per-subject calls
-            // don't all take the same time, so responses can land out of order. Applying a stale
-            // one now would flash the page back to an older, already-superseded result set.
-            if (lastWebQueryRef.current !== cacheKey) return;
-            setWebResults(merged);
+            setWebResults([...merged]);
           })
           .catch((e) => {
             if (lastWebQueryRef.current !== cacheKey) return;
-            setWebResults(null);
+            if (merged.length === 0) setWebResults(null);
             setWebSearchError(e.message || 'Live search failed. Please try again.');
           })
           .finally(() => {
@@ -402,7 +426,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       // handle or a rapid sequence of filter changes fires this effect just as fast as typing, and
       // an immediate (0ms) search on each intermediate value was firing a full parallel ten-query
       // search per pixel of drag, racing itself and frequently landing on an empty result.
-      500
+      250
     );
 
     return () => clearTimeout(handle);
@@ -825,7 +849,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </button>
         </div>
 
-        {webSearchLoading && (
+        {webSearchLoading && (!webResults || webResults.length === 0) && (
           <div className="bg-white rounded-2xl border border-slate-200 flex items-center justify-center gap-2 py-12 text-xs text-slate-400 font-semibold">
             <Loader2 className="w-4 h-4 animate-spin" />
             Searching the web...
@@ -845,7 +869,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         )}
 
-        {!webSearchLoading && !webSearchError && webResults && webResults.length > 0 && (
+        {!webSearchError && webResults && webResults.length > 0 && (
           <div className="space-y-6">
             {webResults.map((result, idx) => (
               <div
@@ -854,15 +878,17 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 cursor-pointer flex flex-col lg:flex-row gap-6 group"
               >
                 {/* Thumbnail / Placeholder */}
-                <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-slate-900 flex items-center justify-center">
-                  {result.thumbnail ? (
+                <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-white border border-slate-200 flex items-center justify-center">
+                  <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">
+                    {fallbackConferenceAbbreviation(result)}
+                  </span>
+                  {result.thumbnail && (
                     <img
                       src={result.thumbnail}
                       alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                  ) : (
-                    <Globe className="w-10 h-10 text-slate-600" />
                   )}
                 </div>
 
