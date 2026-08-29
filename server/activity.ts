@@ -25,6 +25,7 @@ import { asyncHandler } from "./asyncHandler";
 import { searchCrossRefConferencePapers } from "./crossref";
 import { searchSemanticScholarConferencePapers } from "./semanticscholar";
 import { searchDblpConferencePapers } from "./dblp";
+import { searchWebForConferenceFacts } from "./braveSearch";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -681,6 +682,50 @@ function buildNameVariants(fullName: string): string[] {
   return [fullName.trim(), firstLastOnly];
 }
 
+async function searchPublicWebResearch(fullName: string) {
+  const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (nameParts.length < 2) return [];
+
+  const results = await searchWebForConferenceFacts(
+    `"${fullName}" (paper OR abstract OR research OR publication OR proceedings OR DOI)`,
+    15
+  );
+  const lastName = nameParts[nameParts.length - 1].toLowerCase();
+  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia)\./i;
+  const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis)\b/i;
+
+  return results
+    .filter((result) => {
+      const haystack = `${result.title} ${result.snippet}`.toLowerCase();
+      let host = result.displayLink || "";
+      try { host = new URL(result.link).hostname; } catch { /* keep display host */ }
+      return haystack.includes(lastName) && (researchTextRe.test(haystack) || researchHostRe.test(host));
+    })
+    .map((result) => {
+      let host = result.displayLink || "Web search";
+      try { host = new URL(result.link).hostname.replace(/^www\./, ""); } catch { /* keep display host */ }
+      const combined = `${result.title} ${result.snippet}`;
+      const year = combined.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
+      const recordType = /\babstract\b/i.test(combined)
+        ? "Abstract"
+        : /\b(paper|proceedings|doi)\b/i.test(combined)
+          ? "Paper"
+          : "Research";
+      const title = result.title
+        .replace(/\s+[|–—-]\s+(ResearchGate|Google Scholar|Semantic Scholar|DBLP).*$/i, "")
+        .trim();
+      return {
+        doi: `web:${crypto.createHash("sha256").update(result.link || title).digest("hex").slice(0, 24)}`,
+        title,
+        venue: host,
+        year,
+        url: result.link || null,
+        source: "Web search",
+        recordType,
+      };
+    });
+}
+
 activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   // Each source caches its own results per name for 24 hours to avoid hammering a free public
   // API on every profile visit. That means an unconditional re-search (after correcting a name,
@@ -688,27 +733,35 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
   // yesterday's cached answer under the same name. `force` is how "search again" means it.
   const force = req.query.force === "true";
   const user = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+  const requestedName = typeof req.query.name === "string" ? req.query.name.trim().slice(0, 120) : "";
+  const searchName = requestedName || user?.name || "";
   const decided = await dbAll<ExternalPaperMatchRow>("SELECT * FROM external_paper_matches WHERE user_id = ?", [
     req.userId!,
   ]);
   const decidedDois = new Set(decided.map((r) => r.doi));
 
-  const nameVariants = user?.name ? buildNameVariants(user.name) : [];
-  const perVariantResults = await Promise.all(
-    nameVariants.map((name) =>
-      Promise.all([
-        searchCrossRefConferencePapers(name, force),
-        searchSemanticScholarConferencePapers(name, force),
-        searchDblpConferencePapers(name, force),
-      ])
-    )
-  );
-
-  const merged = perVariantResults.flatMap(([crossRef, semanticScholar, dblp]) => [
-    ...crossRef.map((c) => ({ doi: c.doi, title: c.title, venue: c.venue, year: c.year, url: c.url })),
-    ...semanticScholar.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
-    ...dblp.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url })),
+  const nameVariants = searchName ? buildNameVariants(searchName) : [];
+  const [perVariantResults, webResults] = await Promise.all([
+    Promise.all(
+      nameVariants.map((name) =>
+        Promise.all([
+          searchCrossRefConferencePapers(name, force),
+          searchSemanticScholarConferencePapers(name, force),
+          searchDblpConferencePapers(name, force),
+        ])
+      )
+    ),
+    searchName ? searchPublicWebResearch(searchName) : Promise.resolve([]),
   ]);
+
+  const merged = [
+    ...perVariantResults.flatMap(([crossRef, semanticScholar, dblp]) => [
+      ...crossRef.map((c) => ({ doi: c.doi, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "CrossRef", recordType: "Paper" })),
+      ...semanticScholar.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "Semantic Scholar", recordType: "Research" })),
+      ...dblp.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "DBLP", recordType: "Paper" })),
+    ]),
+    ...webResults,
+  ];
 
   const seenTitles = new Set<string>();
   const candidates = merged.filter((c) => {
