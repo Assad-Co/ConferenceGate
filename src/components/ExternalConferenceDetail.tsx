@@ -87,19 +87,9 @@ interface ExternalConferenceDetailProps {
   onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
 }
 
-const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message, sourceUrl }) => (
+const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message }) => (
   <div className="py-8 text-center space-y-3">
     <p className="text-xs text-slate-500 max-w-md mx-auto">{message}</p>
-    <a
-      href={sourceUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-xl transition-colors"
-    >
-      <Globe className="w-3.5 h-3.5" />
-      <span>Check the official website</span>
-      <ExternalLink className="w-3 h-3" />
-    </a>
   </div>
 );
 
