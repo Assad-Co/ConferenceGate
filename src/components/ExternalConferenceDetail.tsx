@@ -94,6 +94,27 @@ const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ m
   </div>
 );
 
+const isOlderThanUpcomingCutoff = (value: unknown): boolean => {
+  if (typeof value !== 'string' && typeof value !== 'number') return false;
+  const text = String(value).toLowerCase();
+  const years = [...text.matchAll(/\b(20\d{2})\b/g)].map((match) => Number(match[1]));
+  if (years.length === 0) return false;
+  const latestYear = Math.max(...years);
+  if (latestYear < 2026) return true;
+  if (latestYear > 2026) return false;
+
+  const months: Record<string, number> = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+  };
+  const statedMonths = [...text.matchAll(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/g)]
+    .map((match) => months[match[1]])
+    .filter(Boolean);
+  return statedMonths.length > 0 && Math.max(...statedMonths) < 9;
+};
+
 const PersonCard: React.FC<{ name: string; title: string | null; org: string | null; role: string | null; imageUrl?: string | null }> = ({
   name,
   title,
@@ -394,7 +415,25 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     );
 
   const submissionLink = data?.submissionUrl || result.link;
-  const displayDate = data?.datesText || parseDateFromSnippet(result.snippet);
+  const upcomingImportantDates = (data?.importantDates || []).filter(
+    (entry) => !isOlderThanUpcomingCutoff(entry.date)
+  );
+  const upcomingRegistrationFees = (data?.registrationFees || []).filter(
+    (fee) => !fee.deadline || !isOlderThanUpcomingCutoff(fee.deadline)
+  );
+  const upcomingEarlyBirdDeadline =
+    data?.earlyBirdDeadline && !isOlderThanUpcomingCutoff(data.earlyBirdDeadline)
+      ? data.earlyBirdDeadline
+      : null;
+  const upcomingEventDate = upcomingImportantDates.find((entry) =>
+    /\b(conference|event|meeting|symposium|congress|start|opening|end|closing|dates?)\b/i.test(entry.label)
+  )?.date;
+  const extractedDate = data?.datesText && !isOlderThanUpcomingCutoff(data.datesText)
+    ? data.datesText
+    : upcomingEventDate;
+  const snippetDate = parseDateFromSnippet(result.snippet);
+  const displayDate = extractedDate || (snippetDate && !isOlderThanUpcomingCutoff(snippetDate) ? snippetDate : null);
+  const displayTitle = data?.conferenceTitle || result.title;
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
   // Anchor "near the venue" to the venue itself when the site named one, falling back to the
   // city line only when it didn't — searching hotels near a named convention centre is a much
@@ -471,7 +510,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               </span>
             )}
             <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
-              {result.title}
+              {displayTitle}
             </h1>
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-200 font-medium">
               {displayDate && (
@@ -524,10 +563,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'fees', label: !loading && data?.crawlComplete
                 ? data.fetchFailed
                   ? 'Fees & Pricing (not retrieved)'
-                  : data.registrationFees.length > 0
-                    ? `Fees & Pricing (${data.registrationFees.length})`
+                  : upcomingRegistrationFees.length > 0
+                    ? `Fees & Pricing (${upcomingRegistrationFees.length})`
                     : 'Fees & Pricing'
-                : incompleteLabel('Fees & Pricing', data?.registrationFees.length ?? 0) },
+                : incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
               { id: 'agenda', label: !loading && data?.crawlComplete
                 ? `Program & Agenda (${data.agendaSessions.length})`
                 : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
@@ -764,13 +803,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {/* Every dated milestone the site stated, not just the submission deadline —
                     notification, camera-ready and early-bird close all matter to an author
                     deciding whether to submit. */}
-                {(data?.importantDates || []).length > 0 && (
+                {upcomingImportantDates.length > 0 && (
                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                     <h4 className="text-sm font-bold text-slate-900">
-                      Important Dates ({data!.importantDates.length})
+                      Important Dates ({upcomingImportantDates.length})
                     </h4>
                     <ul className="space-y-1.5">
-                      {data!.importantDates.map((entry, i) => (
+                      {upcomingImportantDates.map((entry, i) => (
                         <li key={`${entry.label}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
                           <span className="text-slate-700 flex items-center gap-1.5">
                             {entry.isDeadline && (
@@ -1111,16 +1150,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Official registration information</p>
                     <h3 className="text-lg font-bold text-slate-900">Fees & Pricing</h3>
                   </div>
-                  {data?.earlyBirdDeadline && (
+                  {upcomingEarlyBirdDeadline && (
                     <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
-                      Early bird ends ${data.earlyBirdDeadline}
+                      Early bird ends {upcomingEarlyBirdDeadline}
                     </span>
                   )}
                 </div>
 
-                {(data?.registrationFees || []).length > 0 || data?.registrationUrl ? (
+                {upcomingRegistrationFees.length > 0 || data?.registrationUrl ? (
                   <div className="space-y-5">
-                    {(data?.registrationFees || []).length > 0 && (
+                    {upcomingRegistrationFees.length > 0 && (
                       <div className="overflow-x-auto rounded-2xl border border-slate-200">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
@@ -1131,13 +1170,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                             </tr>
                           </thead>
                           <tbody>
-                            {data!.registrationFees.map((fee, i) => (
+                            {upcomingRegistrationFees.map((fee, i) => (
                               <tr key={`${fee.category}-${i}`} className="border-t border-slate-200">
                                 <td className="px-4 py-3 text-slate-800 font-semibold">
-                                  ${fee.category}
-                                  {fee.notes && <div className="font-normal text-slate-500 mt-0.5">${fee.notes}</div>}
+                                  {fee.category}
+                                  {fee.notes && <div className="font-normal text-slate-500 mt-0.5">{fee.notes}</div>}
                                 </td>
-                                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">${fee.deadline || '—'}</td>
+                                <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{fee.deadline || '—'}</td>
                                 <td className="px-4 py-3 text-right font-bold text-blue-800 whitespace-nowrap">
                                   {fee.amount !== null ? `${fee.currency ? `${fee.currency} ` : ''}${fee.amount}` : 'See official site'}
                                 </td>
