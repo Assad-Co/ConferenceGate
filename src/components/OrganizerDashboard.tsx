@@ -46,12 +46,18 @@ import {
   MessageSquareQuote,
   MapPin,
 } from 'lucide-react';
-import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity } from '../types';
+import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, ReviewOpportunity } from '../types';
 import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 import { resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
-import { sendBroadcast, fetchMyBroadcasts, OrganizerBroadcast, assignReviewerToSubmission } from '../api/activity';
+import {
+  sendBroadcast,
+  fetchMyBroadcasts,
+  OrganizerBroadcast,
+  assignReviewerToSubmission,
+  PublishReviewOpportunityPayload,
+} from '../api/activity';
 import { sendMessage } from '../api/messages';
 import { SponsorApplicant, ReviewableSponsor } from '../api/sponsors';
 
@@ -73,6 +79,9 @@ interface OrganizerDashboardProps {
   onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
   reviewableSponsors?: ReviewableSponsor[];
   onReviewSponsor?: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string }) => void;
+  reviewOpportunities?: ReviewOpportunity[];
+  onPublishReviewOpportunity?: (payload: PublishReviewOpportunityPayload) => void;
+  onWithdrawReviewOpportunity?: (id: string) => void;
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
@@ -219,6 +228,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
   reviewableSponsors = [],
   onReviewSponsor = (_sponsorId: string, _review: { conferenceTitle: string; rating: number; comment: string }) => {},
+  reviewOpportunities = [],
+  onPublishReviewOpportunity = (_payload: PublishReviewOpportunityPayload) => {},
+  onWithdrawReviewOpportunity = (_id: string) => {},
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
@@ -255,6 +267,55 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     const conferenceIds = new Set(conferences.map((c) => c.id));
     return submissions.filter((s) => conferenceIds.has(s.conferenceId));
   }, [conferences, submissions]);
+
+  // The Review Opportunity Marketplace shows every organizer's calls for reviewers; this
+  // dashboard only manages the ones this organizer published.
+  const myReviewOpportunities = useMemo(() => {
+    const conferenceIds = new Set(conferences.map((c) => c.id));
+    return reviewOpportunities.filter((o) => conferenceIds.has(o.conferenceId));
+  }, [conferences, reviewOpportunities]);
+
+  const [opportunityForm, setOpportunityForm] = useState({
+    conferenceId: '',
+    topic: '',
+    track: '',
+    expertiseRequired: '',
+    reviewPeriod: '',
+    deadline: '',
+    expectedWorkload: '',
+  });
+  const [publishingOpportunity, setPublishingOpportunity] = useState(false);
+
+  const handlePublishOpportunitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!opportunityForm.conferenceId || !opportunityForm.topic.trim()) return;
+    setPublishingOpportunity(true);
+    try {
+      await onPublishReviewOpportunity({
+        conferenceId: opportunityForm.conferenceId,
+        topic: opportunityForm.topic.trim(),
+        track: opportunityForm.track.trim() || undefined,
+        expertiseRequired: opportunityForm.expertiseRequired
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        reviewPeriod: opportunityForm.reviewPeriod.trim() || undefined,
+        deadline: opportunityForm.deadline || undefined,
+        expectedWorkload: opportunityForm.expectedWorkload.trim() || undefined,
+      });
+      setOpportunityForm({
+        conferenceId: '',
+        topic: '',
+        track: '',
+        expertiseRequired: '',
+        reviewPeriod: '',
+        deadline: '',
+        expectedWorkload: '',
+      });
+    } finally {
+      setPublishingOpportunity(false);
+    }
+  };
 
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
   const [aiMatches, setAiMatches] = useState<any[] | null>(null);
@@ -1670,6 +1731,111 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <p className="text-xs text-slate-500">
               Manage incoming research submissions, assign accredited peer reviewers using AI subject-matter matching, and issue final decisions.
             </p>
+          </div>
+
+          {/* Review Opportunity Marketplace — publish a real call for reviewers on one of your
+              own conferences. This is what feeds every reviewer's Marketplace tab. */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-5">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Publish a Call for Reviewers</h3>
+              <p className="text-xs text-slate-500">
+                Post a real opening to the Review Opportunity Marketplace so accredited reviewers can volunteer for one of your conferences.
+              </p>
+            </div>
+
+            <form onSubmit={handlePublishOpportunitySubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                required
+                value={opportunityForm.conferenceId}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, conferenceId: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 sm:col-span-2"
+              >
+                <option value="">Select one of your conferences...</option>
+                {conferences.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+              <input
+                required
+                type="text"
+                placeholder="Review topic (e.g. Reservoir Analytics & AI) *"
+                value={opportunityForm.topic}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, topic: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:col-span-2"
+              />
+              <input
+                type="text"
+                placeholder="Track (optional)"
+                value={opportunityForm.track}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, track: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+              <input
+                type="text"
+                placeholder="Expertise required, comma separated"
+                value={opportunityForm.expertiseRequired}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, expertiseRequired: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+              <input
+                type="text"
+                placeholder="Review period (e.g. March 1 - March 20, 2026)"
+                value={opportunityForm.reviewPeriod}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, reviewPeriod: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+              <input
+                type="date"
+                value={opportunityForm.deadline}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, deadline: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+              <input
+                type="text"
+                placeholder="Expected workload (e.g. 3 - 5 Abstracts)"
+                value={opportunityForm.expectedWorkload}
+                onChange={(e) => setOpportunityForm({ ...opportunityForm, expectedWorkload: e.target.value })}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:col-span-2"
+              />
+              <button
+                type="submit"
+                disabled={publishingOpportunity || !opportunityForm.conferenceId || !opportunityForm.topic.trim()}
+                className="sm:col-span-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                <span>{publishingOpportunity ? 'Publishing...' : 'Publish to Marketplace'}</span>
+              </button>
+            </form>
+
+            {myReviewOpportunities.length > 0 && (
+              <div className="pt-4 border-t border-slate-100 space-y-2">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Your Published Calls ({myReviewOpportunities.length})
+                </h4>
+                {myReviewOpportunities.map((opp) => (
+                  <div
+                    key={opp.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{opp.topic}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {opp.conferenceTitle}
+                        {opp.track ? ` • ${opp.track}` : ''} • {opp.abstractsCount} abstract{opp.abstractsCount === 1 ? '' : 's'} so far
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => onWithdrawReviewOpportunity(opp.id)}
+                      className="px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer shrink-0"
+                    >
+                      Withdraw
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">

@@ -185,6 +185,21 @@ export async function initDb(): Promise<void> {
       UNIQUE(reviewer_id, opportunity_id)
     );
 
+    CREATE TABLE IF NOT EXISTS review_opportunities (
+      id TEXT PRIMARY KEY,
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      organizer_name TEXT NOT NULL,
+      topic TEXT NOT NULL,
+      track TEXT,
+      expertise_required TEXT NOT NULL DEFAULT '[]',
+      review_period TEXT,
+      deadline TEXT,
+      expected_workload TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS conference_registrations (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
@@ -521,6 +536,21 @@ export interface ReviewVolunteerRow {
   opportunity_id: string;
   conference_title: string;
   topic: string | null;
+  created_at: string;
+}
+
+export interface ReviewOpportunityRow {
+  id: string;
+  conference_id: string;
+  conference_title: string;
+  organizer_id: string;
+  organizer_name: string;
+  topic: string;
+  track: string | null;
+  expertise_required: string;
+  review_period: string | null;
+  deadline: string | null;
+  expected_workload: string | null;
   created_at: string;
 }
 

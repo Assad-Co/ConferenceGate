@@ -9,6 +9,7 @@ import {
   SubmissionReviewerAssignmentRow,
   NotificationRow,
   ReviewVolunteerRow,
+  ReviewOpportunityRow,
   ConferenceRegistrationRow,
   ConferenceInteractionRow,
   ConferenceFeedbackRow,
@@ -429,6 +430,118 @@ activityRouter.post("/submissions/:id/revisions", asyncHandler(async (req: Authe
   );
   res.status(201).json({ submission: toSubmissionDTO(updatedRow, reviewRows, assignmentRows) });
 }));
+
+function toReviewOpportunityDTO(row: ReviewOpportunityRow, abstractsCount: number) {
+  return {
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    organizerName: row.organizer_name,
+    topic: row.topic,
+    track: row.track || "",
+    expertiseRequired: JSON.parse(row.expertise_required),
+    reviewPeriod: row.review_period || "",
+    deadline: row.deadline || "",
+    expectedWorkload: row.expected_workload || "",
+    abstractsCount,
+  };
+}
+
+// How many real submissions this opportunity's abstracts figure actually covers — computed live
+// from the submissions table rather than a number the organizer typed in, so it can't drift or
+// be inflated.
+async function countAbstractsForOpportunity(conferenceId: string, track: string | null): Promise<number> {
+  const row = track
+    ? await dbGet<{ count: number }>("SELECT COUNT(*) as count FROM submissions WHERE conference_id = ? AND track = ?", [
+        conferenceId,
+        track,
+      ])
+    : await dbGet<{ count: number }>("SELECT COUNT(*) as count FROM submissions WHERE conference_id = ?", [
+        conferenceId,
+      ]);
+  return row?.count || 0;
+}
+
+// The real Review Opportunity Marketplace — every organizer's own published call for reviewers,
+// visible to every reviewer on the platform (same visibility model as created_conferences and
+// sponsorship packages).
+activityRouter.get(
+  "/review-opportunities",
+  asyncHandler(async (_req: AuthedRequest, res: Response) => {
+    const rows = await dbAll<ReviewOpportunityRow>("SELECT * FROM review_opportunities ORDER BY created_at DESC");
+    const dtos = await Promise.all(
+      rows.map(async (row) => toReviewOpportunityDTO(row, await countAbstractsForOpportunity(row.conference_id, row.track)))
+    );
+    res.json({ opportunities: dtos });
+  })
+);
+
+// An organizer publishes a real call for reviewers on one of their own conferences.
+activityRouter.post(
+  "/review-opportunities",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const body = req.body || {};
+    if (typeof body.conferenceId !== "string" || !body.conferenceId) {
+      return res.status(400).json({ error: "conferenceId is required" });
+    }
+    if (typeof body.topic !== "string" || !body.topic.trim()) {
+      return res.status(400).json({ error: "A review topic is required" });
+    }
+
+    const conference = await dbGet<CreatedConferenceRow>(
+      "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
+      [body.conferenceId, req.userId!]
+    );
+    if (!conference) {
+      return res.status(404).json({ error: "You can only publish a call for reviewers for conferences you created." });
+    }
+    const conferenceData = JSON.parse(conference.data);
+    const organizer = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+
+    const id = `ro_${crypto.randomUUID()}`;
+    const track = typeof body.track === "string" && body.track.trim() ? body.track.trim() : null;
+    await dbRun(
+      `INSERT INTO review_opportunities (
+        id, conference_id, conference_title, organizer_id, organizer_name, topic, track,
+        expertise_required, review_period, deadline, expected_workload
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        body.conferenceId,
+        conferenceData.title || conference.id,
+        req.userId!,
+        organizer?.name || "Organizer",
+        body.topic.trim(),
+        track,
+        JSON.stringify(Array.isArray(body.expertiseRequired) ? body.expertiseRequired : []),
+        typeof body.reviewPeriod === "string" ? body.reviewPeriod : null,
+        typeof body.deadline === "string" ? body.deadline : null,
+        typeof body.expectedWorkload === "string" ? body.expectedWorkload : null,
+      ]
+    );
+
+    const row = (await dbGet<ReviewOpportunityRow>("SELECT * FROM review_opportunities WHERE id = ?", [id]))!;
+    res.status(201).json({ opportunity: toReviewOpportunityDTO(row, await countAbstractsForOpportunity(row.conference_id, row.track)) });
+  })
+);
+
+// Lets an organizer close a call for reviewers once it's no longer needed.
+activityRouter.delete(
+  "/review-opportunities/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const opportunity = await dbGet<ReviewOpportunityRow>("SELECT * FROM review_opportunities WHERE id = ?", [
+      req.params.id,
+    ]);
+    if (!opportunity) {
+      return res.status(404).json({ error: "Opportunity not found" });
+    }
+    if (opportunity.organizer_id !== req.userId) {
+      return res.status(403).json({ error: "Only the organizer who published this can withdraw it" });
+    }
+    await dbRun("DELETE FROM review_opportunities WHERE id = ?", [req.params.id]);
+    res.json({ ok: true });
+  })
+);
 
 activityRouter.post("/reviews/volunteer", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};

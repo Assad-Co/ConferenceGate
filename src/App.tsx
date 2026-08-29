@@ -32,6 +32,10 @@ import {
   submitReview,
   volunteerForReview,
   fetchMyVolunteeredOpportunityIds,
+  fetchReviewOpportunities,
+  publishReviewOpportunity,
+  withdrawReviewOpportunity,
+  PublishReviewOpportunityPayload,
   registerForConference,
   fetchMyRegistrations,
   ConferenceRegistration,
@@ -88,7 +92,6 @@ import { LiveSearchResult } from './api/search';
 import {
   sampleConferences,
   currentUserProfile,
-  sampleReviewOpportunities,
   sampleSponsorshipOpportunities,
 } from './data/mockData';
 import {
@@ -102,6 +105,7 @@ import {
   UserRole,
   UserProfile,
   PostAuthor,
+  ReviewOpportunity,
 } from './types';
 
 const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
@@ -376,6 +380,7 @@ export function App() {
   // Real tracked activity — persisted server-side, loaded once authenticated.
   const [registrations, setRegistrations] = useState<ConferenceRegistration[]>([]);
   const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
+  const [reviewOpportunities, setReviewOpportunities] = useState<ReviewOpportunity[]>([]);
   const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
   const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
   // Real, non-organizer-scoped registration totals per conference — used to show a genuine
@@ -388,6 +393,7 @@ export function App() {
     fetchFeed().then(setPosts).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
+    fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
     fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
     fetchMyNotifications().then(setNotifications).catch(() => {});
     fetchMyConferenceInteractions()
@@ -442,6 +448,9 @@ export function App() {
     if (!authUser) return;
     if (['abstracts', 'reviewer', 'organizer'].includes(activeTab)) {
       fetchSubmissions().then(setSubmissions).catch(() => {});
+    }
+    if (['reviewer', 'organizer'].includes(activeTab)) {
+      fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
     }
     if (['home', 'community'].includes(activeTab)) {
       fetchFeed().then(setPosts).catch(() => {});
@@ -1043,6 +1052,29 @@ export function App() {
     }
   };
 
+  const handlePublishReviewOpportunity = async (payload: PublishReviewOpportunityPayload) => {
+    try {
+      const opportunity = await publishReviewOpportunity(payload);
+      setReviewOpportunities((prev) => [opportunity, ...prev]);
+      showToast({
+        type: 'success',
+        title: 'Call for reviewers published',
+        message: `"${opportunity.topic}" is now live on the Review Opportunity Marketplace.`,
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not publish', message: err.message || 'Please try again.' });
+    }
+  };
+
+  const handleWithdrawReviewOpportunity = async (id: string) => {
+    try {
+      await withdrawReviewOpportunity(id);
+      setReviewOpportunities((prev) => prev.filter((o) => o.id !== id));
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not withdraw', message: err.message || 'Please try again.' });
+    }
+  };
+
   const handleOpenSubmitAbstract = (confId?: string) => {
     setSubmitAbstractConfId(confId);
     setIsSubmitAbstractOpen(true);
@@ -1388,7 +1420,7 @@ export function App() {
         {activeTab === 'reviewer' && (
           <ReviewerPortal
             userProfile={userProfile}
-            opportunities={sampleReviewOpportunities}
+            opportunities={reviewOpportunities}
             submissions={submissions}
             conferences={conferences}
             onSelectConference={handleSelectConference}
@@ -1418,6 +1450,9 @@ export function App() {
             onDecideApplication={handleDecideApplication}
             reviewableSponsors={reviewableSponsorsReal}
             onReviewSponsor={handleSubmitSponsorReview}
+            reviewOpportunities={reviewOpportunities}
+            onPublishReviewOpportunity={handlePublishReviewOpportunity}
+            onWithdrawReviewOpportunity={handleWithdrawReviewOpportunity}
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}

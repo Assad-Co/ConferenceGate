@@ -1,4 +1,4 @@
-import { AbstractSubmission, Conference, NotificationItem } from '../types';
+import { AbstractSubmission, Conference, NotificationItem, ReviewOpportunity } from '../types';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
@@ -115,6 +115,43 @@ export async function fetchMyVolunteeredOpportunityIds(): Promise<string[]> {
   const res = await fetch('/api/activity/reviews/volunteers/mine', { credentials: 'include' });
   const data = await parseResponse(res);
   return data.opportunityIds;
+}
+
+export async function fetchReviewOpportunities(): Promise<ReviewOpportunity[]> {
+  const res = await fetch('/api/activity/review-opportunities', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.opportunities;
+}
+
+export interface PublishReviewOpportunityPayload {
+  conferenceId: string;
+  topic: string;
+  track?: string;
+  expertiseRequired?: string[];
+  reviewPeriod?: string;
+  deadline?: string;
+  expectedWorkload?: string;
+}
+
+export async function publishReviewOpportunity(
+  payload: PublishReviewOpportunityPayload
+): Promise<ReviewOpportunity> {
+  const res = await fetch('/api/activity/review-opportunities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.opportunity;
+}
+
+export async function withdrawReviewOpportunity(id: string): Promise<void> {
+  const res = await fetch(`/api/activity/review-opportunities/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  await parseResponse(res);
 }
 
 export async function registerForConference(
