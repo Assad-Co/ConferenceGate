@@ -357,7 +357,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     // plus real time afterward for AI extraction on whatever it read — a poll ceiling shorter
     // than that gives up before the crawl the server is actually running could ever finish.
     // 130s clears that with headroom rather than abandoning a crawl still legitimately in flight.
-    const POLL_CEILING_MS = 45000;
+    const POLL_CEILING_MS = 62000;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const pollUntilComplete = (startedAt: number) => {
@@ -699,9 +699,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 )}
                 <p className={`text-[11px] ${pollGaveUp ? 'text-amber-900' : 'text-blue-900'}`}>
                   {pollGaveUp
-                    ? `Reading this site is taking longer than expected${
-                        typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages read so far)` : ''
-                      }. Reload the page to check again.`
+                    ? `Finished the available scan${
+                        typeof data.pagesRead === 'number' ? ` after reading ${data.pagesRead} pages` : ''
+                      }. The results below are everything Conference Gate could verify.`
                     : `Still reading the rest of this conference's website${
                         typeof data.pagesRead === 'number' ? ` (${data.pagesRead} pages so far)` : ''
                       } — these tabs will fill in as more is found.`}
