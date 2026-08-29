@@ -481,10 +481,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     autoComplete="url"
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    We link to your public profile. Any abstract you're already listed as a co-author on
-                    (matched by this email) shows up in your profile automatically.
-                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">Shown on your public profile.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
