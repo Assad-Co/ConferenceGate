@@ -835,23 +835,24 @@ async function searchPublicWebResearch(fullName: string) {
   const firstLast = `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
 
   // Exact full-name results find theses and institutional records; first/last plus a publication
-  // path finds indexes that omit the middle name (especially ResearchGate, Academia.edu, and
-  // proceedings). CORE (core.ac.uk) is queried alongside them for the same reason but is the more
-  // useful record to actually click through: it's a genuine open-access aggregator with public
-  // full-text pages, not a site that bot-walls or login-gates its record pages the way
-  // ResearchGate and Academia.edu both do.
+  // path finds indexes that omit the middle name (especially Academia.edu and proceedings).
+  // ResearchGate was dropped as a targeted source — its own bot/rate-limit gating meant even a
+  // correctly-matched record routinely came back "Access Denied" when clicked, which is worse
+  // than not surfacing it at all. CORE (core.ac.uk) is queried instead: a genuine open-access
+  // aggregator with public full-text pages, not a site that bot-walls its record pages.
   const resultGroups = await Promise.all([
     searchWebForConferenceFacts(`"${fullName}" research paper abstract publication thesis proceedings`, 15),
     searchWebForConferenceFacts(`"${firstLast}" paper abstract publication conference`, 15),
-    searchWebForConferenceFacts(`"${firstLast}" site:researchgate.net/publication`, 10),
     searchWebForConferenceFacts(`"${firstLast}" site:academia.edu`, 10),
     searchWebForConferenceFacts(`"${firstLast}" site:core.ac.uk`, 10),
   ]);
   const results = resultGroups.flat();
 
-  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings|core\.ac\.uk)(\.|$)/i;
+  const researchHostRe = /(^|\.)(scholar\.google|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings|core\.ac\.uk)(\.|$)/i;
   const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis|thesis|dissertation|geology|geochemistry)\b/i;
-  const blockedHostRe = /(linkedin|facebook|instagram|inforegister|ariregister)/i;
+  // ResearchGate results are dropped outright, not just deprioritized — its own bot/rate-limit
+  // gating means even a genuinely correct match routinely dead-ends in "Access Denied".
+  const blockedHostRe = /(linkedin|facebook|instagram|inforegister|ariregister|researchgate)/i;
   // A search engine's quoted-phrase match is a ranking hint, not a hard filter — it will happily
   // return someone else's paper that merely scored well on the other query words. Requiring the
   // person's own first AND last name to actually appear in the result (not necessarily adjacent,
