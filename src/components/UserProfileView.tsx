@@ -832,47 +832,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                     </div>
                   )}
 
-                  {externalConfirmed.length > 0 && (
-                    <div className="space-y-2">
-                      {externalCandidates.length > 0 && (
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider pt-2">Confirmed</p>
-                      )}
-                      {externalConfirmed.map((paper) => (
-                        <div
-                          key={paper.doi}
-                          className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start justify-between gap-3"
-                        >
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-slate-900">{paper.title}</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              {[paper.venue, paper.year].filter(Boolean).join(' • ')}
-                            </p>
-                            {paper.url && (
-                              <a
-                                href={paper.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] text-indigo-700 mt-1 font-semibold hover:underline"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                View record
-                              </a>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleDecideExternalPaper(paper, 'dismissed')}
-                            disabled={decidingDoi === paper.doi}
-                            className="px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer disabled:opacity-50 shrink-0"
-                          >
-                            Not me, remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {externalCandidates.length === 0 && externalConfirmed.length === 0 && (
-                    <p className="text-xs text-slate-400">No papers or abstracts matched this author name yet.</p>
+                  {externalCandidates.length === 0 && (
+                    <p className="text-xs text-slate-400">No new unconfirmed papers or abstracts were found for this name.</p>
                   )}
                 </>
               )}
@@ -883,7 +844,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <BookOpen className="w-4 h-4 text-blue-600" />
                 Published Research
               </h3>
-              {userProfile.publications.length > 0 ? (
+              {userProfile.publications.length > 0 || externalConfirmed.length > 0 ? (
                 <div className="space-y-2">
                   {userProfile.publications.map((pub) => (
                     <div key={pub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
@@ -897,9 +858,40 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                       )}
                     </div>
                   ))}
+                  {externalConfirmed.map((paper) => (
+                    <div
+                      key={paper.doi}
+                      className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-start justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-xs text-slate-900">{paper.title}</h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {[paper.recordType, paper.source, paper.venue, paper.year].filter(Boolean).join(' • ')}
+                        </p>
+                        {paper.url && (
+                          <a
+                            href={paper.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-indigo-700 mt-1 font-semibold hover:underline"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View record
+                          </a>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDecideExternalPaper(paper, 'dismissed')}
+                        disabled={decidingDoi === paper.doi}
+                        className="px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer disabled:opacity-50 shrink-0"
+                      >
+                        Remove confirmation
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">No published research on record yet.</p>
+                <p className="text-xs text-slate-400">No confirmed published research yet.</p>
               )}
             </div>
           </div>
