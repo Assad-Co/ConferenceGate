@@ -26,6 +26,7 @@ import { asyncHandler } from "./asyncHandler";
 import { searchCrossRefConferencePapers } from "./crossref";
 import { searchSemanticScholarConferencePapers } from "./semanticscholar";
 import { searchDblpConferencePapers } from "./dblp";
+import { searchOpenAlexConferencePapers } from "./openalex";
 import { searchWebForConferenceFacts } from "./braveSearch";
 
 export const activityRouter = Router();
@@ -918,6 +919,7 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
           searchCrossRefConferencePapers(name, force),
           searchSemanticScholarConferencePapers(name, force),
           searchDblpConferencePapers(name, force),
+          searchOpenAlexConferencePapers(name, force),
         ])
       )
     ),
@@ -925,10 +927,11 @@ activityRouter.get("/external-papers/mine", asyncHandler(async (req: AuthedReque
   ]);
 
   const merged = [
-    ...perVariantResults.flatMap(([crossRef, semanticScholar, dblp]) => [
+    ...perVariantResults.flatMap(([crossRef, semanticScholar, dblp, openAlex]) => [
       ...crossRef.map((c) => ({ doi: c.doi, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "CrossRef", recordType: "Paper" })),
       ...semanticScholar.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "Semantic Scholar", recordType: "Research" })),
       ...dblp.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "DBLP", recordType: "Paper" })),
+      ...openAlex.map((c) => ({ doi: c.id, title: c.title, venue: c.venue, year: c.year, url: c.url, source: "OpenAlex", recordType: "Paper" })),
     ]),
     ...webResults,
   ];
