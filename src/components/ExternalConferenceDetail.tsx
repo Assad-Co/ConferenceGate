@@ -489,11 +489,24 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center">
           {result.thumbnail ? (
-            <img src={result.thumbnail} alt={result.title} className="w-full h-full object-cover opacity-70" />
-          ) : (
+            <img
+              src={result.thumbnail}
+              alt=""
+              className="w-full h-full object-cover opacity-25 blur-[1px]"
+            />
+          ) : !result.favicon ? (
             <Globe className="w-16 h-16 text-slate-700" />
+          ) : null}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-900/20"></div>
+          {result.favicon && (
+            <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
+              <img
+                src={result.favicon}
+                alt={`${displayTitle} logo`}
+                className="w-full h-full object-contain"
+              />
+            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
 
           <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
             {result.favicon && <img src={result.favicon} alt="" className="w-5 h-5 rounded shrink-0" />}
