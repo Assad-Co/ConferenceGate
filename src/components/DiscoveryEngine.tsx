@@ -59,6 +59,53 @@ const DEFAULT_DISCOVER_QUERIES = DEFAULT_DISCOVER_SUBJECTS.map(
   (subject) => `upcoming ${subject} conference ${new Date().getFullYear()}`
 );
 
+const DISCOVERY_MINIMUM_MONTH = '2026-09';
+
+function liveResultFitsDateWindow(
+  result: LiveSearchResult,
+  startMonth: string,
+  endMonth: string
+): boolean {
+  const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
+  const yearMatches = [...text.matchAll(/\b(20\d{2})\b/g)];
+  if (yearMatches.length === 0) return true;
+
+  const startYear = Number(startMonth.slice(0, 4));
+  const endYear = endMonth ? Number(endMonth.slice(0, 4)) : null;
+  const years = yearMatches.map((match) => Number(match[1]));
+
+  // Search snippets often omit the month, but an explicit old year is enough to reject an
+  // archived edition. Unknown-year results remain eligible and are verified on their detail page.
+  if (years.every((year) => year < startYear)) return false;
+  if (endYear !== null && years.every((year) => year > endYear)) return false;
+
+  const monthNumbers: Record<string, number> = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+  };
+  const explicitMonths: string[] = [];
+  for (const match of yearMatches) {
+    const year = Number(match[1]);
+    const index = match.index || 0;
+    const nearby = text.slice(Math.max(0, index - 22), index + match[0].length + 22);
+    const monthMatch = nearby.match(/\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\b/);
+    if (!monthMatch) continue;
+    explicitMonths.push(`${year}-${String(monthNumbers[monthMatch[1]]).padStart(2, '0')}`);
+  }
+
+  // When a result gives an exact month, enforce the selected range precisely. When it gives only
+  // a current/future year, keep it so a real upcoming conference is not discarded for a sparse
+  // search snippet.
+  if (explicitMonths.length > 0) {
+    return explicitMonths.some(
+      (month) => month >= startMonth && (!endMonth || month <= endMonth)
+    );
+  }
+  return years.some((year) => year >= startYear && (endYear === null || year <= endYear));
+}
+
 function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
   let host = result.displayLink || '';
   try {
@@ -170,7 +217,8 @@ const CONFERENCE_CITIES_BY_COUNTRY: Record<string, string[]> = {
 const nextMonthValue = (): string => {
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const nextMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return nextMonth < DISCOVERY_MINIMUM_MONTH ? DISCOVERY_MINIMUM_MONTH : nextMonth;
 };
 
 const DISCOVERY_MONTH_OPTIONS = [
@@ -210,6 +258,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
   const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
   const [endAtMonth, setEndAtMonth] = useState('');
+  const effectiveStartMonth =
+    startFromMonth && startFromMonth > DISCOVERY_MINIMUM_MONTH
+      ? startFromMonth
+      : DISCOVERY_MINIMUM_MONTH;
 
   const updateStartBoundary = (nextValue: string) => {
     setStartFromMonth(nextValue);
@@ -335,7 +387,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       !(conf.description || '').toLowerCase().includes(term) &&
       !(conf.topics || []).some((topic) => topic.toLowerCase().includes(term))
     ) return false;
-    if (startFromMonth && confMonth < startFromMonth) return false;
+    if (confMonth < effectiveStartMonth) return false;
     if (endAtMonth && confMonth > endAtMonth) return false;
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
@@ -374,8 +426,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // to the search engine itself. Conference Gate catalog records are filtered exactly above;
     // live results are strongly biased by the same date, place, country, and format choices.
     let dateBias = '';
-    if (startFromMonth) {
-      const [year, month] = startFromMonth.split('-').map(Number);
+    if (effectiveStartMonth) {
+      const [year, month] = effectiveStartMonth.split('-').map(Number);
       const name = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
       dateBias += ` from ${name} ${year}`;
     }
@@ -423,6 +475,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry).then((results) => {
             if (lastWebQueryRef.current !== cacheKey) return results;
             for (const result of results) {
+              if (!liveResultFitsDateWindow(result, effectiveStartMonth, endAtMonth)) continue;
               let host = result.displayLink || '';
               try {
                 host = new URL(result.link).hostname.replace(/^www\./, '');
@@ -724,7 +777,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 type="button"
                 onClick={() => {
                   setSearchInput('');
-                  setStartFromMonth('');
+                  setStartFromMonth(nextMonthValue());
                   setEndAtMonth('');
                   setLocationFilter('');
                   setCountryFilter('');
