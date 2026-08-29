@@ -12,6 +12,7 @@ import {
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
+import { createNotification } from "./activity";
 
 export const sponsorsRouter = Router();
 sponsorsRouter.use(requireAuth);
@@ -103,6 +104,51 @@ sponsorsRouter.post(
 
     const row = (await dbGet<SponsorshipPackageRow>("SELECT * FROM sponsorship_packages WHERE id = ?", [id]))!;
     res.status(201).json({ package: toPackageDTO(row, await approvedCountsByPackage()) });
+  })
+);
+
+// Notifies this organizer's verified sponsors — those with an approved application on one of
+// this organizer's packages, rated at or above the marketplace threshold — of a real published
+// package. Persisted as real per-account notifications, so it actually reaches those sponsors'
+// own accounts instead of only ever existing in the organizer's own browser session.
+sponsorsRouter.post(
+  "/packages/:id/notify-verified-sponsors",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const pkg = await dbGet<SponsorshipPackageRow>("SELECT * FROM sponsorship_packages WHERE id = ?", [
+      req.params.id,
+    ]);
+    if (!pkg || pkg.organizer_id !== req.userId) {
+      return res.status(404).json({ error: "Package not found" });
+    }
+    const opportunityName =
+      typeof req.body?.opportunityName === "string" && req.body.opportunityName.trim()
+        ? req.body.opportunityName.trim()
+        : `${pkg.tier} Sponsorship`;
+
+    const sponsorRows = await dbAll<{ sponsor_id: string }>(
+      `SELECT DISTINCT sa.sponsor_id as sponsor_id
+       FROM sponsorship_applications sa
+       JOIN sponsorship_packages sp ON sp.id = sa.package_id
+       WHERE sp.organizer_id = ? AND sa.status = 'Approved'`,
+      [req.userId!]
+    );
+
+    let notifiedCount = 0;
+    for (const row of sponsorRows) {
+      const stats = await sponsorDerivedStats(row.sponsor_id);
+      // Mirrors src/utils/sponsorVerification.ts's isSponsorVerified.
+      const verified = stats.reviewsCount === 0 || stats.rating >= 3.0;
+      if (!verified) continue;
+      await createNotification(
+        row.sponsor_id,
+        "sponsorship",
+        `New Sponsorship Opportunity: ${opportunityName}`,
+        `${pkg.tier} package now available for $${pkg.price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
+      );
+      notifiedCount++;
+    }
+
+    res.json({ notifiedCount });
   })
 );
 

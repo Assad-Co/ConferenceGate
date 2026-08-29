@@ -35,7 +35,6 @@ interface NavbarProps {
   onOrganizerLogoChange?: (dataUrl: string) => void;
   onSponsorLogoChange?: (dataUrl: string) => void;
   notifications?: NotificationItem[];
-  sponsorAlerts?: Array<{ id: string; read: boolean }>;
   unreadMessageCount?: number;
   onOpenAIAssistant?: () => void;
   onOpenAIModal?: () => void;
@@ -62,7 +61,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOrganizerLogoChange,
   onSponsorLogoChange,
   notifications = [],
-  sponsorAlerts = [],
   unreadMessageCount = 0,
   onOpenAIAssistant,
   onOpenAIModal,
@@ -149,9 +147,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const safeNotifications = notifications || [];
-  const unreadNotifCount = safeNotifications.filter((n) => !n.read).length;
-  const unreadSponsorAlertCount = sponsorAlerts.filter((a) => !a.read).length;
-  const bellUnreadCount = isSponsorRole ? unreadSponsorAlertCount : unreadNotifCount;
+  // `notifications` is already the real, role-specific feed by the time it reaches here (the
+  // sponsor's own real application decisions, reviews, and opportunity alerts included).
+  const bellUnreadCount = safeNotifications.filter((n) => !n.read).length;
   const bellClickHandler = isSponsorRole ? handleOpenSponsorAlerts : handleOpenNotifications;
   const bellTitle = isSponsorRole ? 'Sponsorship Alerts' : 'Notifications';
 

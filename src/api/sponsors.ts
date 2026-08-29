@@ -34,6 +34,17 @@ export async function createSponsorshipPackage(payload: {
   return data.package;
 }
 
+export async function notifyVerifiedSponsors(packageId: string, opportunityName: string): Promise<number> {
+  const res = await fetch(`/api/sponsors/packages/${packageId}/notify-verified-sponsors`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ opportunityName }),
+  });
+  const data = await parseResponse(res);
+  return data.notifiedCount;
+}
+
 export interface SponsorApplicationSummary {
   id: string;
   packageId: string;

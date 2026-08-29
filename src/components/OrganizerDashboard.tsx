@@ -59,7 +59,7 @@ import {
   PublishReviewOpportunityPayload,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
-import { SponsorApplicant, ReviewableSponsor } from '../api/sponsors';
+import { SponsorApplicant, ReviewableSponsor, notifyVerifiedSponsors } from '../api/sponsors';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
@@ -85,7 +85,6 @@ interface OrganizerDashboardProps {
   onCreateConference: (newConf: Partial<Conference>) => void;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
-  onNotifySponsors?: (title: string, message: string) => void;
 }
 
 const CHART_HEX = {
@@ -234,7 +233,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
-  onNotifySponsors = (_title: string, _message: string) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
@@ -799,17 +797,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const verifiedSponsorCount = new Set(
     sponsorApplicants.filter((a) => isSponsorVerified(a.sponsor)).map((a) => a.sponsor.id)
   ).size;
-  const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, string>>({});
+  const [notifiedOpportunityKeys, setNotifiedOpportunityKeys] = useState<Record<string, number>>({});
   const { showToast } = useToast();
 
   const handleDecideApplicant = (applicant: SponsorApplicant, status: 'Approved' | 'Rejected') => {
     onDecideApplication(applicant.applicationId, status);
-    if (status === 'Approved') {
-      onNotifySponsors(
-        'Sponsorship Registration Approved',
-        `${applicant.sponsor.companyName}'s registration has been approved by the organizing committee.`
-      );
-    }
+    // The sponsor's own account already picks up an Approved/Rejected decision as a real
+    // notification the next time it loads its applications — no separate broadcast needed here.
     showToast({
       type: status === 'Approved' ? 'success' : 'info',
       title: status === 'Approved' ? 'Registration approved' : 'Registration rejected',
@@ -817,12 +811,18 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     });
   };
 
-  const handleNotifyVerifiedSponsors = (opportunityName: string, pkgTier: string, price: number, key: string) => {
-    onNotifySponsors(
-      `New Sponsorship Opportunity: ${opportunityName}`,
-      `${pkgTier} package now available for $${price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
-    );
-    setNotifiedOpportunityKeys((prev) => ({ ...prev, [key]: new Date().toLocaleString() }));
+  const handleNotifyVerifiedSponsors = async (opportunityName: string, packageId: string, key: string) => {
+    try {
+      const notifiedCount = await notifyVerifiedSponsors(packageId, opportunityName);
+      setNotifiedOpportunityKeys((prev) => ({ ...prev, [key]: notifiedCount }));
+      showToast({
+        type: 'success',
+        title: 'Sponsors notified',
+        message: `Notified ${notifiedCount} verified sponsor${notifiedCount === 1 ? '' : 's'}.`,
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not notify sponsors', message: err.message || 'Please try again.' });
+    }
   };
 
   // Sponsor Feedback / Review State
@@ -2655,12 +2655,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           </button>
                           {isActive && (
                             <button
-                              onClick={() => handleNotifyVerifiedSponsors(opp.name, pkg.tier, pkg.price, key)}
+                              onClick={() => {
+                                const activePackage = sponsorshipPackages.find((p) => p.sourceOpportunityId === key);
+                                if (activePackage) handleNotifyVerifiedSponsors(opp.name, activePackage.id, key);
+                              }}
                               className="mt-1.5 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1.5"
                             >
                               <Bell className="w-3 h-3" />
-                              {notifiedOpportunityKeys[key]
-                                ? `Notified ${verifiedSponsorCount} Verified Sponsors ✓`
+                              {key in notifiedOpportunityKeys
+                                ? `Notified ${notifiedOpportunityKeys[key]} Verified Sponsors ✓`
                                 : `Notify ${verifiedSponsorCount} Verified Sponsors`}
                             </button>
                           )}

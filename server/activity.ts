@@ -53,7 +53,7 @@ function deriveVisualTimeline(status: string, hasReviews: boolean, hasAssignment
   }));
 }
 
-async function createNotification(userId: string, type: string, title: string, message: string) {
+export async function createNotification(userId: string, type: string, title: string, message: string) {
   await dbRun(
     "INSERT INTO notifications (id, user_id, type, title, message) VALUES (?, ?, ?, ?, ?)",
     [`ntf_${crypto.randomUUID()}`, userId, type, title, message]

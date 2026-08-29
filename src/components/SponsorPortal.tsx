@@ -13,25 +13,19 @@ import {
   CheckCheck,
   Clock,
 } from 'lucide-react';
-import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile } from '../types';
+import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile, NotificationItem } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 import { SponsorApplicationSummary } from '../api/sponsors';
 import { useToast } from './Toast';
-
-interface SponsorAlert {
-  id: string;
-  title: string;
-  message: string;
-  date: string;
-  read: boolean;
-}
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities?: SponsorshipOpportunity[];
   myApplications: SponsorApplicationSummary[];
   sponsorProfile: SponsorProfile;
-  sponsorAlerts?: SponsorAlert[];
+  /** This sponsor's real notifications — application decisions, organizer reviews, and new
+   * opportunity alerts an organizer actually published, all backed by real data. */
+  sponsorAlerts?: NotificationItem[];
   onMarkAlertRead?: (id: string) => void;
   onMarkAllAlertsRead?: () => void;
   onApplyForSponsorship?: (packageId: string) => void;
@@ -299,7 +293,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                         {!alert.read && <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />}
                       </div>
                       <p className="text-[11px] text-slate-600 mt-0.5">{alert.message}</p>
-                      <div className="text-[10px] text-slate-400 mt-1">{alert.date}</div>
+                      <div className="text-[10px] text-slate-400 mt-1">{alert.timestamp}</div>
                     </div>
                   </button>
                 ))}
