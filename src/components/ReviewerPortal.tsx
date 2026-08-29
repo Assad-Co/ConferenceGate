@@ -41,14 +41,19 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'opportunities' | 'my-reviews' | 'evaluate' | 'history'>('opportunities');
   const availableToReview = userProfile.reviewerInfo.available;
-  const [selectedAbstractId, setSelectedAbstractId] = useState<string>(submissions[0]?.id || '');
 
-  // Papers this reviewer hasn't submitted a review for yet vs. ones they have —
-  // both tabs previously showed the same full submissions list with no real filtering.
-  const pendingSubmissions = submissions.filter(
+  // Every submission on the platform is fetched for other views (e.g. a reviewer's own
+  // abstracts), but a paper only belongs in this reviewer's queue if an organizer actually
+  // invited them to it — otherwise this would hand every reviewer every stranger's abstract.
+  const myAssignedSubmissions = submissions.filter((sub) =>
+    (sub.reviewerAssignments || []).some((a) => a.reviewerId === userProfile.id)
+  );
+  const [selectedAbstractId, setSelectedAbstractId] = useState<string>(myAssignedSubmissions[0]?.id || '');
+
+  const pendingSubmissions = myAssignedSubmissions.filter(
     (sub) => !sub.reviews.some((r) => r.reviewerId === userProfile.id)
   );
-  const completedSubmissions = submissions.filter((sub) =>
+  const completedSubmissions = myAssignedSubmissions.filter((sub) =>
     sub.reviews.some((r) => r.reviewerId === userProfile.id)
   );
   const [volunteerSuccess, setVolunteerSuccess] = useState<string | null>(null);
@@ -71,7 +76,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   >('Oral Presentation');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const selectedSub = submissions.find((s) => s.id === selectedAbstractId) || submissions[0];
+  const selectedSub = myAssignedSubmissions.find((s) => s.id === selectedAbstractId) || myAssignedSubmissions[0];
 
   const handleVolunteer = (opp: ReviewOpportunity) => {
     onVolunteer?.(opp.id, opp.conferenceTitle, opp.topic);
@@ -307,6 +312,11 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
       )}
 
       {/* Tab 2: Evaluate Assigned Abstract Form */}
+      {activeTab === 'evaluate' && !selectedSub && (
+        <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
+          No abstract is currently assigned to you for review. Once an organizer invites you to review a paper, it'll show up here and in Review Opportunities.
+        </div>
+      )}
       {activeTab === 'evaluate' && selectedSub && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="pb-4 border-b border-slate-100 space-y-2">

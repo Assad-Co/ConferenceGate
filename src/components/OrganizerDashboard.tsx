@@ -249,6 +249,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     };
   }, [conferences, submissions, registrationCountsByConference, sponsorshipPackages]);
 
+  // Abstract management and reviewer invitations act on real submissions, so this must only ever
+  // be the organizer's own conferences — not every abstract on the platform.
+  const myConferenceSubmissions = useMemo(() => {
+    const conferenceIds = new Set(conferences.map((c) => c.id));
+    return submissions.filter((s) => conferenceIds.has(s.conferenceId));
+  }, [conferences, submissions]);
+
   const [aiMatchLoading, setAiMatchLoading] = useState(false);
   const [aiMatches, setAiMatches] = useState<any[] | null>(null);
   const [aiMatchIsFallback, setAiMatchIsFallback] = useState(false);
@@ -1097,7 +1104,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         {[
           { id: 'overview', label: 'Dashboard Overview' },
           { id: 'wizard', label: 'Conference Wizard' },
-          { id: 'abstracts', label: `Abstracts & AI Matcher (${submissions.length})` },
+          { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
           { id: 'communications', label: 'Communications Hub' },
@@ -1678,27 +1685,35 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {submissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-4 font-bold text-slate-900 max-w-xs">{sub.title}</td>
-                      <td className="p-4">{sub.primaryAuthor.name} ({sub.primaryAuthor.affiliation})</td>
-                      <td className="p-4">{sub.track}</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
-                          {sub.status}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => handleAIMatchReviewers(sub)}
-                          className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-                          <span>AI Match Reviewers</span>
-                        </button>
+                  {myConferenceSubmissions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-xs text-slate-400 font-medium">
+                        No abstract submissions yet for your conferences.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    myConferenceSubmissions.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-4 font-bold text-slate-900 max-w-xs">{sub.title}</td>
+                        <td className="p-4">{sub.primaryAuthor.name} ({sub.primaryAuthor.affiliation})</td>
+                        <td className="p-4">{sub.track}</td>
+                        <td className="p-4">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                            {sub.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => handleAIMatchReviewers(sub)}
+                            className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-[11px] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                            <span>AI Match Reviewers</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

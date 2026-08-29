@@ -147,6 +147,17 @@ activityRouter.post(
       return res.status(404).json({ error: "Reviewer account not found" });
     }
 
+    // Only the conference's own organizer may invite reviewers to its submissions. Conferences
+    // outside the organizer-wizard catalog (created_conferences) have no owner account to check
+    // against, so those stay open — same as their existing platform-wide visibility.
+    const ownedConference = await dbGet<{ organizer_id: string }>(
+      "SELECT organizer_id FROM created_conferences WHERE id = ?",
+      [submission.conference_id]
+    );
+    if (ownedConference && ownedConference.organizer_id !== req.userId) {
+      return res.status(403).json({ error: "Only this conference's organizer can invite reviewers to it" });
+    }
+
     try {
       await dbRun(
         `INSERT INTO submission_reviewer_assignments (id, submission_id, reviewer_id, reviewer_name, invited_by_id)
@@ -307,6 +318,24 @@ activityRouter.post("/submissions/:id/reviews", asyncHandler(async (req: AuthedR
   }
   if (typeof body.recommendation !== "string" || !(body.recommendation in RECOMMENDATION_TO_STATUS)) {
     return res.status(400).json({ error: "A valid recommendation is required" });
+  }
+
+  // A review only counts as a "verified" peer review if this account was actually invited to
+  // review this specific submission — otherwise anyone could score and decide on any paper on
+  // the platform just by knowing its id.
+  const assignment = await dbGet<{ id: string }>(
+    "SELECT id FROM submission_reviewer_assignments WHERE submission_id = ? AND reviewer_id = ?",
+    [submission.id, req.userId!]
+  );
+  if (!assignment) {
+    return res.status(403).json({ error: "You haven't been invited to review this abstract" });
+  }
+  const alreadyReviewed = await dbGet<{ id: string }>(
+    "SELECT id FROM submission_reviews WHERE submission_id = ? AND reviewer_id = ?",
+    [submission.id, req.userId!]
+  );
+  if (alreadyReviewed) {
+    return res.status(409).json({ error: "You've already submitted a review for this abstract" });
   }
 
   const reviewerRow = await dbGet<{ name: string; organization: string | null }>(
