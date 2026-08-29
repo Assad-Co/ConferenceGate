@@ -106,6 +106,36 @@ function liveResultFitsDateWindow(
   return years.some((year) => year >= startYear && (endYear === null || year <= endYear));
 }
 
+function liveSearchResultRelevance(result: LiveSearchResult, query: string): number {
+  const normalize = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const normalizedQuery = normalize(query);
+  if (!normalizedQuery) return 0;
+
+  const title = normalize(result.title || '');
+  const host = normalize(result.displayLink || '');
+  const snippet = normalize(result.snippet || '');
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  let score = 0;
+
+  if (title === normalizedQuery) score += 10000;
+  else if (title.startsWith(`${normalizedQuery} `)) score += 7000;
+  else if (new RegExp(`(^| )${normalizedQuery}( |$)`).test(title)) score += 5500;
+  else if (title.includes(normalizedQuery)) score += 4000;
+
+  if (host.includes(normalizedQuery.replace(/\s+/g, ''))) score += 1800;
+  score += queryTokens.filter((token) => title.split(' ').includes(token)).length * 500;
+  score += queryTokens.filter((token) => snippet.includes(token)).length * 80;
+  return score;
+}
+
+function rankLiveSearchResults(results: LiveSearchResult[], query: string): LiveSearchResult[] {
+  return results
+    .map((result, index) => ({ result, index, score: liveSearchResultRelevance(result, query) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map(({ result }) => result);
+}
+
 function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
   let host = result.displayLink || '';
   try {
@@ -469,7 +499,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         setWebSearchError(null);
         // Publish each subject as soon as it returns. The previous all-at-once barrier made
         // Discover look empty until the slowest of ten searches finished.
-        const seenHosts = new Set<string>();
+        const byHost = new Map<string, LiveSearchResult>();
         const merged: LiveSearchResult[] = [];
         const searches = effectiveQueries.map((q) =>
           searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry).then((results) => {
@@ -482,11 +512,20 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               } catch {
                 // Keep the displayLink fallback already assigned above.
               }
-              if (seenHosts.has(host)) continue;
-              seenHosts.add(host);
-              merged.push(result);
+              const existing = byHost.get(host);
+              if (!existing) {
+                byHost.set(host, result);
+                merged.push(result);
+              } else if (
+                liveSearchResultRelevance(result, trimmed) >
+                liveSearchResultRelevance(existing, trimmed)
+              ) {
+                const existingIndex = merged.indexOf(existing);
+                if (existingIndex >= 0) merged[existingIndex] = result;
+                byHost.set(host, result);
+              }
             }
-            setWebResults([...merged]);
+            setWebResults(rankLiveSearchResults(merged, trimmed));
             return results;
           })
         );
@@ -501,7 +540,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               );
               throw new Error(firstError?.reason?.message || 'Live search failed. Please try again.');
             }
-            setWebResults([...merged]);
+            setWebResults(rankLiveSearchResults(merged, trimmed));
           })
           .catch((e) => {
             if (lastWebQueryRef.current !== cacheKey) return;
@@ -1032,19 +1071,31 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 onClick={() => onOpenExternalResult(result)}
                 className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 cursor-pointer flex flex-col lg:flex-row gap-6 group"
               >
-                {/* Thumbnail / Placeholder */}
+                {/* Conference logo first; a search thumbnail is only a quiet background because
+                    conference searches often return a speaker/video still instead of the event brand. */}
                 <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-white border border-slate-200 flex items-center justify-center">
-                  <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">
-                    {fallbackConferenceAbbreviation(result)}
-                  </span>
                   {result.thumbnail && (
                     <img
                       src={result.thumbnail}
                       alt=""
                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-300"
                     />
                   )}
+                  <div className="relative z-10 min-w-24 min-h-24 px-5 py-4 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
+                    {result.favicon ? (
+                      <img
+                        src={result.favicon}
+                        alt={`${fallbackConferenceAbbreviation(result)} logo`}
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        className="w-16 h-16 object-contain"
+                      />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">
+                        {fallbackConferenceAbbreviation(result)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Info Block */}
