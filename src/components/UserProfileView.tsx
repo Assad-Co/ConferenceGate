@@ -201,6 +201,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [externalLoading, setExternalLoading] = useState(false);
   const [externalRefreshing, setExternalRefreshing] = useState(false);
   const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
+  const [researchSearchName, setResearchSearchName] = useState(userProfile.name);
+
+  useEffect(() => {
+    setResearchSearchName(userProfile.name);
+  }, [userProfile.name]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,7 +239,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const handleSearchAgain = async () => {
     setExternalRefreshing(true);
     try {
-      const res = await fetchMyExternalPapers(true);
+      const res = await fetchMyExternalPapers(true, researchSearchName);
       setExternalConfirmed(res.confirmed);
       setExternalCandidates(res.candidates);
     } catch {
@@ -730,20 +735,29 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             </div>
 
             <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between gap-3">
+              <div className="space-y-3">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Search className="w-4 h-4 text-indigo-600" />
-                  Possible Conference Papers (matched by name)
+                  Possible Papers & Abstracts (matched by name)
                 </h3>
-                <button
-                  type="button"
-                  onClick={handleSearchAgain}
-                  disabled={externalLoading || externalRefreshing}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${externalRefreshing ? 'animate-spin' : ''}`} />
-                  {externalRefreshing ? 'Searching...' : 'Search Again'}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    value={researchSearchName}
+                    onChange={(event) => setResearchSearchName(event.target.value)}
+                    placeholder="Full three-part name, e.g. Assad Hadi Ghazwani"
+                    aria-label="Research author name"
+                    className="flex-1 min-w-0 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearchAgain}
+                    disabled={externalLoading || externalRefreshing || researchSearchName.trim().split(/\s+/).length < 2}
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${externalRefreshing ? 'animate-spin' : ''}`} />
+                    {externalRefreshing ? 'Searching...' : 'Search papers & abstracts'}
+                  </button>
+                </div>
               </div>
               {onEditProfile && userProfile.name.trim().split(/\s+/).filter(Boolean).length < 3 && (
                 <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -763,16 +777,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               {externalLoading ? (
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Searching CrossRef, Semantic Scholar, and DBLP...
+                  Searching CrossRef, Semantic Scholar, DBLP, and the live web...
                 </div>
               ) : (
                 <>
                   {externalCandidates.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-[11px] text-slate-400">
-                        Found by searching your name in public indexes of published conference papers
-                        (CrossRef, Semantic Scholar, DBLP). Names aren't unique — confirm only the ones that are
-                        actually yours.
+                        Found by searching the full name above across CrossRef, Semantic Scholar, DBLP, and live
+                        web results for papers, abstracts, publications, and proceedings. Names aren't unique —
+                        confirm only records that are actually yours.
                       </p>
                       {externalCandidates.map((paper) => (
                         <div
@@ -782,8 +796,20 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                           <div className="min-w-0">
                             <h4 className="font-bold text-xs text-slate-900">{paper.title}</h4>
                             <p className="text-[11px] text-slate-500 mt-0.5">
-                              {[paper.venue, paper.year].filter(Boolean).join(' • ')}
+                              {[paper.recordType, paper.source, paper.venue, paper.year].filter(Boolean).join(' • ')}
                             </p>
+                            {paper.url && (
+                              <a
+                                href={paper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[10px] text-indigo-700 mt-1 font-semibold hover:underline"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                View record
+                              </a>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <button
@@ -846,7 +872,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   )}
 
                   {externalCandidates.length === 0 && externalConfirmed.length === 0 && (
-                    <p className="text-xs text-slate-400">No conference papers matched your name.</p>
+                    <p className="text-xs text-slate-400">No papers or abstracts matched this author name yet.</p>
                   )}
                 </>
               )}
