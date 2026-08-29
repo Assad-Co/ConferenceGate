@@ -685,21 +685,31 @@ function buildNameVariants(fullName: string): string[] {
 async function searchPublicWebResearch(fullName: string) {
   const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
   if (nameParts.length < 2) return [];
+  const firstLast = `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
 
-  const results = await searchWebForConferenceFacts(
-    `"${fullName}" (paper OR abstract OR research OR publication OR proceedings OR DOI)`,
-    15
-  );
-  const lastName = nameParts[nameParts.length - 1].toLowerCase();
-  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia)\./i;
-  const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis)\b/i;
+  // Exact full-name results find theses and institutional records; first/last plus a publication
+  // path finds indexes that omit the middle name (especially ResearchGate and proceedings).
+  const resultGroups = await Promise.all([
+    searchWebForConferenceFacts(`"${fullName}" research paper abstract publication thesis proceedings`, 15),
+    searchWebForConferenceFacts(`"${firstLast}" paper abstract publication conference`, 15),
+    searchWebForConferenceFacts(`"${firstLast}" site:researchgate.net/publication`, 10),
+  ]);
+  const results = resultGroups.flat();
+
+  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings)\./i;
+  const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis|thesis|dissertation|geology|geochemistry)\b/i;
+  const blockedHostRe = /(linkedin|facebook|instagram|inforegister|ariregister)/i;
+  const seenUrls = new Set<string>();
 
   return results
     .filter((result) => {
-      const haystack = `${result.title} ${result.snippet}`.toLowerCase();
       let host = result.displayLink || "";
       try { host = new URL(result.link).hostname; } catch { /* keep display host */ }
-      return haystack.includes(lastName) && (researchTextRe.test(haystack) || researchHostRe.test(host));
+      if (!result.link || blockedHostRe.test(host) || seenUrls.has(result.link)) return false;
+      const haystack = `${result.title} ${result.snippet}`;
+      if (!researchTextRe.test(haystack) && !researchHostRe.test(host)) return false;
+      seenUrls.add(result.link);
+      return true;
     })
     .map((result) => {
       let host = result.displayLink || "Web search";
@@ -708,9 +718,11 @@ async function searchPublicWebResearch(fullName: string) {
       const year = combined.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
       const recordType = /\babstract\b/i.test(combined)
         ? "Abstract"
-        : /\b(paper|proceedings|doi)\b/i.test(combined)
-          ? "Paper"
-          : "Research";
+        : /\b(thesis|dissertation)\b/i.test(combined)
+          ? "Thesis"
+          : /\b(paper|proceedings|doi)\b/i.test(combined)
+            ? "Paper"
+            : "Research";
       const title = result.title
         .replace(/\s+[|–—-]\s+(ResearchGate|Google Scholar|Semantic Scholar|DBLP).*$/i, "")
         .trim();
@@ -720,7 +732,7 @@ async function searchPublicWebResearch(fullName: string) {
         venue: host,
         year,
         url: result.link || null,
-        source: "Web search",
+        source: "Live web",
         recordType,
       };
     });
