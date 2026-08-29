@@ -1,21 +1,36 @@
-import React, { useState } from 'react';
-import { X, Loader2, AlertCircle, Upload } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { X, Loader2, AlertCircle, Upload, Search, CheckCircle2 } from 'lucide-react';
 import { resizeImageFile } from '../utils/image';
 import { AddSelfReportedAttendancePayload } from '../api/activity';
+import { Conference } from '../types';
 
 interface AddAttendanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (payload: AddSelfReportedAttendancePayload) => Promise<void>;
+  /** The real Conference Gate catalog, searched so a person can pick their conference instead of
+   * typing it blindly. Only past events are offered here — this modal is specifically for
+   * attendance already behind them, and an upcoming one isn't attendance yet. */
+  conferences?: Conference[];
+  /** Conference IDs this account already has a real, verified registration for. Selecting one of
+   * these needs no self-report at all — it's already shown, verified, elsewhere on the profile. */
+  registeredConferenceIds?: string[];
 }
 
 const ROLE_OPTIONS = ['Attendee', 'Speaker', 'Panelist', 'Poster Presenter', 'Committee Member', 'Volunteer', 'Other'];
+const MAX_SEARCH_RESULTS = 6;
 
 const inputClass =
   'w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600';
 const labelClass = 'block text-xs font-bold text-slate-600 mb-1.5';
 
-export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({ isOpen, onClose, onAdd }) => {
+export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({
+  isOpen,
+  onClose,
+  onAdd,
+  conferences = [],
+  registeredConferenceIds = [],
+}) => {
   const [conferenceName, setConferenceName] = useState('');
   const [location, setLocation] = useState('');
   const [year, setYear] = useState('');
@@ -25,6 +40,22 @@ export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({ isOpen, 
   const [proofError, setProofError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Tracks a real catalog conference once picked from the search results, so submission can
+  // check it against verified registrations. Cleared the moment the typed text no longer matches
+  // what was picked — editing after a selection means going back to reporting it freely.
+  const [selectedConferenceId, setSelectedConferenceId] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+
+  const registeredIdSet = useMemo(() => new Set(registeredConferenceIds), [registeredConferenceIds]);
+
+  const searchResults = useMemo(() => {
+    const term = conferenceName.trim().toLowerCase();
+    if (term.length < 2) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    return conferences
+      .filter((conf) => conf.dates.end < today && conf.title.toLowerCase().includes(term))
+      .slice(0, MAX_SEARCH_RESULTS);
+  }, [conferenceName, conferences]);
 
   if (!isOpen) return null;
 
@@ -36,11 +67,30 @@ export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({ isOpen, 
     setProofImage(null);
     setProofError(null);
     setError(null);
+    setSelectedConferenceId(null);
+    setShowResults(false);
   };
 
   const handleClose = () => {
     resetFields();
     onClose();
+  };
+
+  const handleNameChange = (value: string) => {
+    setConferenceName(value);
+    setShowResults(true);
+    // Any edit away from the exact selected title means this is no longer that specific pick —
+    // back to a plain, unlinked self-report unless they pick a result again.
+    if (selectedConferenceId) setSelectedConferenceId(null);
+  };
+
+  const handleSelectConference = (conf: Conference) => {
+    setConferenceName(conf.title);
+    setLocation(`${conf.location.city}, ${conf.location.country}`);
+    setYear(conf.dates.start.slice(0, 4));
+    setSelectedConferenceId(conf.id);
+    setShowResults(false);
+    setError(null);
   };
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +113,12 @@ export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({ isOpen, 
     e.preventDefault();
     if (!conferenceName.trim()) {
       setError('Conference name is required.');
+      return;
+    }
+    // A verified registration already says this, and better than a self-report can — no need for
+    // a second, unverified entry to exist alongside it.
+    if (selectedConferenceId && registeredIdSet.has(selectedConferenceId)) {
+      setError('You already have a verified registration for this conference — it\'s shown that way on your profile, so there\'s no need to add it again here.');
       return;
     }
     setError(null);
@@ -98,15 +154,47 @@ export const AddAttendanceModal: React.FC<AddAttendanceModalProps> = ({ isOpen, 
             This is self-reported and not verified by Conference Gate — it shows on your profile labeled that way.
           </p>
 
-          <div>
+          <div className="relative">
             <label className={labelClass}>Conference Name *</label>
-            <input
-              type="text"
-              value={conferenceName}
-              onChange={(e) => setConferenceName(e.target.value)}
-              placeholder="e.g. SPE Annual Technical Conference"
-              className={inputClass}
-            />
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={conferenceName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onFocus={() => setShowResults(true)}
+                placeholder="Search for the conference, or type its name"
+                className={`${inputClass} pl-9`}
+                autoComplete="off"
+              />
+              {selectedConferenceId && (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 absolute right-3 top-1/2 -translate-y-1/2" />
+              )}
+            </div>
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                {searchResults.map((conf) => (
+                  <button
+                    key={conf.id}
+                    type="button"
+                    onClick={() => handleSelectConference(conf)}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-b-0 cursor-pointer"
+                  >
+                    <p className="text-xs font-bold text-slate-900">{conf.title}</p>
+                    <p className="text-[11px] text-slate-500">
+                      {conf.location.city}, {conf.location.country} • {conf.dates.start.slice(0, 4)}
+                      {registeredIdSet.has(conf.id) && (
+                        <span className="ml-1.5 text-emerald-600 font-semibold">• Verified registration on file</span>
+                      )}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400 mt-1">
+              Not finding it? It's probably not one Conference Gate has on file — just type the name and fill in the
+              details yourself below.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

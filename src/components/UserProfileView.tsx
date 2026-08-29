@@ -1141,6 +1141,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         isOpen={isAddAttendanceOpen}
         onClose={() => setIsAddAttendanceOpen(false)}
         onAdd={handleAddSelfReportedAttendance}
+        conferences={conferences}
+        registeredConferenceIds={registrations.map((r) => r.conferenceId)}
       />
 
       <AddCommitteePositionModal
