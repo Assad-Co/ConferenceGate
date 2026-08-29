@@ -23,6 +23,7 @@ import {
   ExtractedConferenceDetails,
   extractConferenceDetails,
   fetchConferenceCrawlStatus,
+  fetchFocusedConferenceSection,
 } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
@@ -126,6 +127,44 @@ const PersonCard: React.FC<{ name: string; title: string | null; org: string | n
   </div>
 );
 
+const mergeFocusedSection = (
+  current: ExtractedConferenceDetails | null,
+  focused: ExtractedConferenceDetails,
+  tab: ExternalDetailTab
+): ExtractedConferenceDetails => {
+  if (!current) return focused;
+  const next = { ...current, extracted: current.extracted || focused.extracted };
+  if (tab === 'fees') {
+    next.registrationUrl = focused.registrationUrl || current.registrationUrl;
+    next.registrationFees = focused.registrationFees.length ? focused.registrationFees : current.registrationFees;
+    next.earlyBirdDeadline = focused.earlyBirdDeadline || current.earlyBirdDeadline;
+  } else if (tab === 'agenda') {
+    next.agendaSessions = focused.agendaSessions.length ? focused.agendaSessions : current.agendaSessions;
+  } else if (tab === 'speakers') {
+    next.speakers = focused.speakers.length ? focused.speakers : current.speakers;
+  } else if (tab === 'committee') {
+    next.committee = focused.committee.length ? focused.committee : current.committee;
+  } else if (tab === 'sponsors') {
+    next.sponsors = focused.sponsors.length ? focused.sponsors : current.sponsors;
+  } else if (tab === 'venue') {
+    next.venueName = focused.venueName || current.venueName;
+    next.venueAddress = focused.venueAddress || current.venueAddress;
+    next.hotels = focused.hotels.length ? focused.hotels : current.hotels;
+    next.accommodationText = focused.accommodationText || current.accommodationText;
+    next.travelText = focused.travelText || current.travelText;
+  } else if (tab === 'cfp') {
+    next.cfpStatus = focused.cfpStatus || current.cfpStatus;
+    next.cfpDeadline = focused.cfpDeadline || current.cfpDeadline;
+    next.cfpNotificationDate = focused.cfpNotificationDate || current.cfpNotificationDate;
+    next.submissionRequirements = focused.submissionRequirements || current.submissionRequirements;
+    next.submissionUrl = focused.submissionUrl || current.submissionUrl;
+    next.submissionEmail = focused.submissionEmail || current.submissionEmail;
+    next.cfpTopics = focused.cfpTopics.length ? focused.cfpTopics : current.cfpTopics;
+    next.publicationInfo = focused.publicationInfo || current.publicationInfo;
+  }
+  return next;
+};
+
 export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> = ({
   result,
   onBack,
@@ -141,6 +180,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // "still genuinely checking" from "we stopped checking and don't actually know the final
   // state", so a slow site doesn't sit forever under a label that's no longer true.
   const [pollGaveUp, setPollGaveUp] = useState(false);
+  const [fastCheckedTabs, setFastCheckedTabs] = useState<Partial<Record<ExternalDetailTab, boolean>>>({});
+  const requestedFastTabsRef = useRef(new Set<ExternalDetailTab>());
+  const mountedRef = useRef(true);
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftAuthors, setDraftAuthors] = useState('');
@@ -248,6 +290,37 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     activeTabRef.current = activeTab;
   }, [activeTab]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // A selected tab gets its own two-page fast lane. Stop the selected-tab spinner after seven
+  // seconds even if the site is unusually slow; the full crawl keeps improving the data behind it.
+  useEffect(() => {
+    if (activeTab === 'overview' || activeTab === 'community' || requestedFastTabsRef.current.has(activeTab)) return;
+    const requestedTab = activeTab;
+    requestedFastTabsRef.current.add(requestedTab);
+    const settle = () => {
+      if (!mountedRef.current) return;
+      setFastCheckedTabs((previous) => ({ ...previous, [requestedTab]: true }));
+    };
+    const timer = setTimeout(settle, 7000);
+
+    fetchFocusedConferenceSection(result.link, result.title, requestedTab)
+      .then((focused) => {
+        if (focused && mountedRef.current) {
+          setData((current) => mergeFocusedSection(current, focused, requestedTab));
+        }
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        settle();
+      });
+  }, [activeTab, result.link, result.title]);
+
   // The server answers with whatever the first round of pages found and keeps reading the rest of
   // the site in the background, so the first response is a starting point rather than the finished
   // article. Polling here is what lets a section that was empty a moment ago fill in on its own
@@ -263,7 +336,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     // plus real time afterward for AI extraction on whatever it read — a poll ceiling shorter
     // than that gives up before the crawl the server is actually running could ever finish.
     // 130s clears that with headroom rather than abandoning a crawl still legitimately in flight.
-    const POLL_CEILING_MS = 130000;
+    const POLL_CEILING_MS = 45000;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const pollUntilComplete = (startedAt: number) => {
@@ -301,19 +374,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // checked, or checking that was abandoned after the poll ceiling without ever hearing back —
   // the latter must say so rather than sit under "(checking…)" forever once nothing is actually
   // checking anymore. Partial counts already found are shown either way, since they're real.
-  const incompleteLabel = (name: string, count: number): string => {
-    if (loading) return `${name} (checking…)`;
-    if (pollGaveUp) return count > 0 ? `${name} (${count} so far, taking a while — reload)` : `${name} (taking a while — reload)`;
-    return count > 0 ? `${name} (${count} so far…)` : `${name} (checking…)`;
-  };
+  const incompleteLabel = (name: string, count: number): string =>
+    count > 0 ? `${name} (${count})` : name;
 
   // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
   // only true while polling is actually still happening. Once it's given up, say so and point at
   // reloading, rather than spinning forever over a check that has already stopped.
   const checkingOrGaveUp = (checkingText: string) =>
-    pollGaveUp ? (
+    pollGaveUp || fastCheckedTabs[activeTab] ? (
       <EmptyExtractState
-        message="This section is taking longer than expected to read. Reload the page to check again — a slow or unusually large site can take a couple of tries."
+        message="No information for this section has been found yet. The background crawl will add it automatically if the official site publishes it."
         sourceUrl={result.link}
       />
     ) : (
@@ -1095,9 +1165,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     message={
                       data?.crawlComplete
                         ? 'No registration prices were published on the pages we could read.'
-                        : pollGaveUp
-                          ? 'Reading this section is taking longer than expected. Reload the page to check again.'
-                          : 'Still checking the conference website for registration fees and ticket prices.'
+                        : pollGaveUp || fastCheckedTabs.fees
+                          ? 'No registration prices were found yet. They will appear automatically if the official site publishes them.'
+                          : 'Checking the most likely registration and pricing pages now…'
                     }
                     sourceUrl={result.link}
                   />
