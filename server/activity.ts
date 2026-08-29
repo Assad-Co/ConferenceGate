@@ -835,14 +835,18 @@ async function searchPublicWebResearch(fullName: string) {
 
   // Exact full-name results find theses and institutional records; first/last plus a publication
   // path finds indexes that omit the middle name (especially ResearchGate and proceedings).
+  // CORE (core.ac.uk) is queried alongside ResearchGate for the same reason but is the more
+  // useful record to actually click through: it's a genuine open-access aggregator with public
+  // full-text pages, not a site that bot-walls or login-gates its record pages.
   const resultGroups = await Promise.all([
     searchWebForConferenceFacts(`"${fullName}" research paper abstract publication thesis proceedings`, 15),
     searchWebForConferenceFacts(`"${firstLast}" paper abstract publication conference`, 15),
     searchWebForConferenceFacts(`"${firstLast}" site:researchgate.net/publication`, 10),
+    searchWebForConferenceFacts(`"${firstLast}" site:core.ac.uk`, 10),
   ]);
   const results = resultGroups.flat();
 
-  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings)\./i;
+  const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings|core\.ac\.uk)(\.|$)/i;
   const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis|thesis|dissertation|geology|geochemistry)\b/i;
   const blockedHostRe = /(linkedin|facebook|instagram|inforegister|ariregister)/i;
   // A search engine's quoted-phrase match is a ranking hint, not a hard filter — it will happily
