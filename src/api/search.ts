@@ -345,6 +345,29 @@ export async function extractConferenceDetails(
   }
 }
 
+/** Reads only the section the visitor opened, bypassing the full-site crawl queue. */
+export async function fetchFocusedConferenceSection(
+  url: string,
+  title: string,
+  focusTab: string
+): Promise<ExtractedConferenceDetails | null> {
+  try {
+    const res = await fetch('/api/ai/extract-conference/focus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ url, title, focusTab }),
+      signal: AbortSignal.timeout(18000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!data || data.extracted !== true) return null;
+    return normalizeTabbedExtraction(data);
+  } catch {
+    return null;
+  }
+}
+
 /** Asks for the crawl's current state for a URL whose first snapshot has already been rendered.
  *  Returns null when there's nothing newer to show, so a caller can simply keep its existing
  *  data rather than having to reason about a partial response. */
