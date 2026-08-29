@@ -2070,6 +2070,18 @@ Return JSON with exactly this shape:
     signalFirstSnapshot: () => void;
   }
   const crawlJobs = new Map<string, CrawlJob>();
+  const focusedSectionCache = new Map<string, { data: any; expiresAt: number }>();
+
+  const FOCUS_PATH_GUESSES: Record<RelevantLinkCategory, string[]> = {
+    overview: [""],
+    cfp: ["call-for-papers", "submissions", "author-guidelines"],
+    fees: ["registration", "registration-fees", "fees", "pricing", "tickets"],
+    committee: ["committee", "committees", "organizing-committee"],
+    speakers: ["speakers", "keynote-speakers", "keynotes"],
+    sponsors: ["sponsors", "partners", "exhibitors"],
+    agenda: ["program", "programme", "agenda", "schedule"],
+    venue: ["venue", "accommodation", "travel"],
+  };
 
   // Rounds of breadth-first expansion beyond the primary page.
   const MAX_CRAWL_DEPTH = 5;
@@ -2748,6 +2760,81 @@ Return JSON with exactly this shape:
     } catch (error: any) {
       console.error("Conference extraction error:", error);
       res.status(500).json({ error: error.message || "Extraction failed. Please try again." });
+    }
+  });
+
+  // Fast lane for the tab the visitor actually opened. It reads at most two likely section
+  // pages and is independent of the full-site crawl, so Fees/Speakers/etc. do not wait behind
+  // dozens of unrelated pages.
+  app.post("/api/ai/extract-conference/focus", async (req, res) => {
+    try {
+      const { url, title, focusTab } = req.body;
+      if (typeof url !== "string" || !url.trim()) return res.status(400).json({ error: "url is required" });
+      const startUrl = url.trim();
+      const category = relevantCategoryFromFocusTab(focusTab);
+      if (!category) return res.status(400).json({ error: "focusTab is required" });
+
+      const focusKey = `${startUrl}::${category}`;
+      const cached = focusedSectionCache.get(focusKey);
+      if (cached && cached.expiresAt > Date.now()) return res.json(cached.data);
+      if (!(await isSafeExternalUrl(startUrl))) {
+        return res.status(400).json({ error: "That URL cannot be fetched." });
+      }
+
+      const ai = getAIClient();
+      if (!ai) return res.json({ extracted: false, focusComplete: true });
+
+      const sitemapUrls = await Promise.race<string[]>([
+        fetchSitemapUrls(startUrl, 60),
+        new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 2200)),
+      ]);
+      const rankedMapped = sitemapUrls
+        .filter((candidate) => categoriesInUrlPath(candidate).includes(category))
+        .sort((left, right) => categoryPageScore(right, category) - categoryPageScore(left, category));
+
+      const guessed = FOCUS_PATH_GUESSES[category].map((segment) => {
+        try { return new URL(segment, startUrl.endsWith("/") ? startUrl : `${startUrl}/`).href; }
+        catch { return startUrl; }
+      });
+      const candidates = [...new Set([...rankedMapped, ...guessed])].slice(0, 2);
+
+      let winner: { page: ExtractedPage; target: string } | null = null;
+      try {
+        winner = await Promise.any(
+          candidates.map(async (target) => {
+            const page = await extractPage(ai, target, typeof title === "string" ? title : "", {
+              modelAttempts: 1,
+              modelTimeoutMs: 9000,
+            });
+            if (!page) throw new Error("page unreadable");
+            return { page, target };
+          })
+        );
+      } catch {
+        winner = null;
+      }
+
+      if (!winner) {
+        const empty = { extracted: false, focusComplete: true, focusTab: category };
+        focusedSectionCache.set(focusKey, { data: empty, expiresAt: Date.now() + 5 * 60 * 1000 });
+        return res.json(empty);
+      }
+
+      const parsed = mergeExtractionResults({}, winner.page.parsed, winner.target, winner.page.pageTitle);
+      const coverage = {
+        pagesRead: [winner.target],
+        pagesFailed: [] as string[],
+        pdfsRead: winner.page.isPdf ? [winner.target] : [] as string[],
+        urlsDiscovered: new Set<string>(candidates),
+      };
+      const result = buildExtractionResult(parsed, startUrl, 1, false, coverage);
+      result.focusComplete = true;
+      result.focusTab = category;
+      focusedSectionCache.set(focusKey, { data: result, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      res.json(result);
+    } catch (error: any) {
+      console.error("Focused conference extraction error:", error);
+      res.json({ extracted: false, focusComplete: true });
     }
   });
 
