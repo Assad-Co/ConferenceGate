@@ -835,14 +835,16 @@ async function searchPublicWebResearch(fullName: string) {
   const firstLast = `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
 
   // Exact full-name results find theses and institutional records; first/last plus a publication
-  // path finds indexes that omit the middle name (especially ResearchGate and proceedings).
-  // CORE (core.ac.uk) is queried alongside ResearchGate for the same reason but is the more
+  // path finds indexes that omit the middle name (especially ResearchGate, Academia.edu, and
+  // proceedings). CORE (core.ac.uk) is queried alongside them for the same reason but is the more
   // useful record to actually click through: it's a genuine open-access aggregator with public
-  // full-text pages, not a site that bot-walls or login-gates its record pages.
+  // full-text pages, not a site that bot-walls or login-gates its record pages the way
+  // ResearchGate and Academia.edu both do.
   const resultGroups = await Promise.all([
     searchWebForConferenceFacts(`"${fullName}" research paper abstract publication thesis proceedings`, 15),
     searchWebForConferenceFacts(`"${firstLast}" paper abstract publication conference`, 15),
     searchWebForConferenceFacts(`"${firstLast}" site:researchgate.net/publication`, 10),
+    searchWebForConferenceFacts(`"${firstLast}" site:academia.edu`, 10),
     searchWebForConferenceFacts(`"${firstLast}" site:core.ac.uk`, 10),
   ]);
   const results = resultGroups.flat();
