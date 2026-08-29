@@ -277,15 +277,22 @@ export interface ExternalPaper {
   venue: string | null;
   year: string | null;
   url: string | null;
+  source?: string | null;
+  recordType?: 'Paper' | 'Abstract' | 'Research' | string;
 }
 
 /** Real conference papers matched by name against CrossRef's public index — `confirmed` are
  * ones the account has already said are theirs, `candidates` are unconfirmed matches still
  * awaiting a yes/no. Names collide, so nothing in `candidates` is ever shown as confirmed fact. */
 export async function fetchMyExternalPapers(
-  force = false
+  force = false,
+  searchName?: string
 ): Promise<{ confirmed: ExternalPaper[]; candidates: ExternalPaper[] }> {
-  const url = `/api/activity/external-papers/mine${force ? '?force=true' : ''}`;
+  const params = new URLSearchParams();
+  if (force) params.set('force', 'true');
+  if (searchName?.trim()) params.set('name', searchName.trim());
+  const query = params.toString();
+  const url = `/api/activity/external-papers/mine${query ? `?${query}` : ''}`;
   const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) return { confirmed: [], candidates: [] };
   return res.json().catch(() => ({ confirmed: [], candidates: [] }));
