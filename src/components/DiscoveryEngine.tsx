@@ -173,6 +173,27 @@ const nextMonthValue = (): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
+const DISCOVERY_MONTH_OPTIONS = [
+  { value: '01', label: 'Jan' },
+  { value: '02', label: 'Feb' },
+  { value: '03', label: 'Mar' },
+  { value: '04', label: 'Apr' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'Jun' },
+  { value: '07', label: 'Jul' },
+  { value: '08', label: 'Aug' },
+  { value: '09', label: 'Sep' },
+  { value: '10', label: 'Oct' },
+  { value: '11', label: 'Nov' },
+  { value: '12', label: 'Dec' },
+];
+
+const discoveryCurrentYear = new Date().getFullYear();
+const DISCOVERY_YEAR_OPTIONS = Array.from(
+  { length: 15 },
+  (_, index) => String(discoveryCurrentYear + index)
+);
+
 export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   conferences,
   onSelectConference,
@@ -189,6 +210,22 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
   const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
   const [endAtMonth, setEndAtMonth] = useState('');
+
+  const updateStartBoundary = (nextValue: string) => {
+    setStartFromMonth(nextValue);
+    if (nextValue && endAtMonth && endAtMonth < nextValue) {
+      setEndAtMonth(nextValue);
+    }
+  };
+
+  const updateEndBoundary = (nextValue: string) => {
+    if (nextValue && startFromMonth && nextValue < startFromMonth) {
+      setEndAtMonth(startFromMonth);
+      return;
+    }
+    setEndAtMonth(nextValue);
+  };
+
   const [locationFilter, setLocationFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('');
@@ -463,29 +500,94 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-2.5">
-            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-2.5">
+            <div className="xl:col-span-2 flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
               <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="text-[10px] font-semibold text-slate-500">From</span>
-              <input
-                type="month"
-                value={startFromMonth}
-                onChange={(e) => setStartFromMonth(e.target.value)}
+              <select
+                aria-label="From month"
+                value={startFromMonth.split('-')[1] || ''}
+                onChange={(e) => {
+                  const month = e.target.value;
+                  updateStartBoundary(
+                    month
+                      ? `${startFromMonth.split('-')[0] || discoveryCurrentYear}-${month}`
+                      : ''
+                  );
+                }}
                 className="min-w-0 flex-1 text-xs text-slate-800 bg-transparent focus:outline-hidden"
-              />
-            </label>
+              >
+                <option value="">Month</option>
+                {DISCOVERY_MONTH_OPTIONS.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+              <select
+                aria-label="From year"
+                value={startFromMonth.split('-')[0] || ''}
+                onChange={(e) => {
+                  const year = e.target.value;
+                  updateStartBoundary(
+                    year
+                      ? `${year}-${startFromMonth.split('-')[1] || '01'}`
+                      : ''
+                  );
+                }}
+                className="w-[4.6rem] text-xs text-slate-800 bg-transparent focus:outline-hidden"
+              >
+                <option value="">Year</option>
+                {DISCOVERY_YEAR_OPTIONS.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
 
-            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
+            <div className="xl:col-span-2 flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
               <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="text-[10px] font-semibold text-slate-500">To</span>
-              <input
-                type="month"
-                value={endAtMonth}
-                min={startFromMonth || undefined}
-                onChange={(e) => setEndAtMonth(e.target.value)}
+              <select
+                aria-label="To month"
+                value={endAtMonth.split('-')[1] || ''}
+                onChange={(e) => {
+                  const month = e.target.value;
+                  updateEndBoundary(
+                    month
+                      ? `${endAtMonth.split('-')[0] || startFromMonth.split('-')[0] || discoveryCurrentYear}-${month}`
+                      : ''
+                  );
+                }}
                 className="min-w-0 flex-1 text-xs text-slate-800 bg-transparent focus:outline-hidden"
-              />
-            </label>
+              >
+                <option value="">Month</option>
+                {DISCOVERY_MONTH_OPTIONS.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+              <select
+                aria-label="To year"
+                value={endAtMonth.split('-')[0] || ''}
+                onChange={(e) => {
+                  const year = e.target.value;
+                  updateEndBoundary(
+                    year
+                      ? `${year}-${endAtMonth.split('-')[1] || '12'}`
+                      : ''
+                  );
+                }}
+                className="w-[4.6rem] text-xs text-slate-800 bg-transparent focus:outline-hidden"
+              >
+                <option value="">Year</option>
+                {DISCOVERY_YEAR_OPTIONS.map((year) => (
+                  <option
+                    key={year}
+                    value={year}
+                    disabled={Boolean(startFromMonth) && year < startFromMonth.split('-')[0]}
+                  >
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <label className="relative">
               <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
