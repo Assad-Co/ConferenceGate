@@ -824,6 +824,10 @@ function buildNameVariants(fullName: string): string[] {
   return [fullName.trim(), firstLastOnly];
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function searchPublicWebResearch(fullName: string) {
   const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
   if (nameParts.length < 2) return [];
@@ -841,6 +845,13 @@ async function searchPublicWebResearch(fullName: string) {
   const researchHostRe = /(^|\.)(scholar\.google|researchgate|semanticscholar|dblp|orcid|doi|crossref|ieee|springer|sciencedirect|onepetro|seg|eage|asce|academia|cambridge|kfupm|rwth-aachen|proceedings)\./i;
   const researchTextRe = /\b(paper|abstract|research|publication|proceedings|journal|conference|doi|study|method|analysis|thesis|dissertation|geology|geochemistry)\b/i;
   const blockedHostRe = /(linkedin|facebook|instagram|inforegister|ariregister)/i;
+  // A search engine's quoted-phrase match is a ranking hint, not a hard filter — it will happily
+  // return someone else's paper that merely scored well on the other query words. Requiring the
+  // person's own first AND last name to actually appear in the result (not necessarily adjacent,
+  // so "First Middle Last" full-name matches still pass) is what keeps a stranger's geology paper
+  // from being presented as theirs just because a web search loosely matched it.
+  const firstNameRe = new RegExp(`\\b${escapeRegex(nameParts[0])}\\b`, "i");
+  const lastNameRe = new RegExp(`\\b${escapeRegex(nameParts[nameParts.length - 1])}\\b`, "i");
   const seenUrls = new Set<string>();
 
   return results
@@ -849,6 +860,7 @@ async function searchPublicWebResearch(fullName: string) {
       try { host = new URL(result.link).hostname; } catch { /* keep display host */ }
       if (!result.link || blockedHostRe.test(host) || seenUrls.has(result.link)) return false;
       const haystack = `${result.title} ${result.snippet}`;
+      if (!firstNameRe.test(haystack) || !lastNameRe.test(haystack)) return false;
       if (!researchTextRe.test(haystack) && !researchHostRe.test(host)) return false;
       seenUrls.add(result.link);
       return true;
