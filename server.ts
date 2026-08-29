@@ -1066,7 +1066,7 @@ Return JSON with exactly this shape:
   // Conference Gate's current discovery window begins here. The extractor often encounters
   // archive pages through a site's navigation or sitemap; those pages must never refill a current
   // conference with obsolete fees, deadlines, speakers, or schedules.
-  const UPCOMING_EXTRACTION_SCHEMA_VERSION = "upcoming-2026-09-v1";
+  const UPCOMING_EXTRACTION_SCHEMA_VERSION = "upcoming-2026-09-v2";
   const UPCOMING_CONTENT_CUTOFF_YEAR = 2026;
   const UPCOMING_CONTENT_CUTOFF_MONTH = 9;
   const DATE_MONTH_NUMBERS: Record<string, number> = {
@@ -1205,7 +1205,7 @@ Return JSON with exactly this shape:
   // is what makes "skip it" (the behavior extractPage already documents for a failed page) also
   // apply to a page that's merely taking too long, so the round — and therefore the round's real,
   // already-found results — can actually complete instead of waiting on the one slowest page.
-  const PAGE_EXTRACTION_TIMEOUT_MS = 55000;
+  const PAGE_EXTRACTION_TIMEOUT_MS = 18000;
 
   async function extractPage(
     ai: NonNullable<ReturnType<typeof getAIClient>>,
@@ -2220,11 +2220,11 @@ Return JSON with exactly this shape:
   // The ceiling on how much of one site gets read. Generous because this now runs in the
   // background rather than under the user's spinner — the request returns as soon as the first
   // round lands, and everything after that is a progressive improvement to an already-usable page.
-  const MAX_TOTAL_PAGES = 35;
-  const MAX_PAGES_PER_ROUND = 8; // at most one high-value page per Conference Gate tab
+  const MAX_TOTAL_PAGES = 20;
+  const MAX_PAGES_PER_ROUND = 6; // prioritize the six strongest tab pages per round
   // The client polls for two minutes. Finish before that ceiling so "checking" cannot remain
   // indefinitely, while hub-first ordering still covers the site's useful conference sections.
-  const CRAWL_TIME_BUDGET_MS = 70000;
+  const CRAWL_TIME_BUDGET_MS = 28000;
   // How many sitemap entries to consider. A conference site is rarely bigger than this, and
   // anything past it is almost always blog/news archive rather than event content.
   const MAX_SITEMAP_URLS = 120;
@@ -2503,7 +2503,11 @@ Return JSON with exactly this shape:
       // The conference's own site is unreadable, but the conference is not a secret: its dates,
       // venue, programme and deadlines are published in directories, listings and industry press.
       // Reading those is far more use than an empty page with an explanation on it.
-      const offsite = await gatherFromOpenWeb(ai, titleHint, startUrl);
+      const offsite = await withTimeout(
+        gatherFromOpenWeb(ai, titleHint, startUrl),
+        7000,
+        "Open-web extraction fallback"
+      ).catch(() => null);
       if (offsite) {
         const result = buildExtractionResult(offsite.parsed, startUrl, offsite.sources.length, true, {
           pagesRead: offsite.sources,
@@ -2737,7 +2741,11 @@ Return JSON with exactly this shape:
     let sourcedFromOpenWeb = false;
     const provisional = buildExtractionResult(parsed, startUrl, pagesFetched, false, coverage);
     if (provisional.crawlCoverage.categoriesFound.length < THIN_RESULT_CATEGORY_THRESHOLD) {
-      const offsite = await gatherFromOpenWeb(ai, titleHint || provisional.conferenceTitle || "", startUrl);
+      const offsite = await withTimeout(
+        gatherFromOpenWeb(ai, titleHint || provisional.conferenceTitle || "", startUrl),
+        6000,
+        "Open-web extraction supplement"
+      ).catch(() => null);
       if (offsite) {
         // `parsed` is the primary argument, so anything the conference itself stated wins and the
         // outside sources only fill what it left empty.
@@ -2758,7 +2766,7 @@ Return JSON with exactly this shape:
     // the final crawl snapshot has already been published — a rate-limited geocode per hotel is
     // slow, and none of it should hold up content that's already available to show.
     try {
-      await enrichHotelDistances(parsed);
+      await withTimeout(enrichHotelDistances(parsed), 2500, "Hotel distance enrichment");
     } catch (error) {
       // Estimated distances are an enhancement; losing them must never lose the crawl's real work.
       console.error("Hotel distance estimation failed:", error);
@@ -2925,8 +2933,14 @@ Return JSON with exactly this shape:
         .sort((left, right) => categoryPageScore(right, category) - categoryPageScore(left, category));
 
       const guessed = FOCUS_PATH_GUESSES[category].map((segment) => {
-        try { return new URL(segment, startUrl.endsWith("/") ? startUrl : `${startUrl}/`).href; }
-        catch { return startUrl; }
+        try {
+          // Guess section paths from the site's origin, never from a deep search-result path.
+          // "/information-for-presenters" + "program" used to produce the fake
+          // "/information-for-presenters/program" URL and waste the fast lane on a 404.
+          return new URL(segment, new URL("/", startUrl)).href;
+        } catch {
+          return startUrl;
+        }
       });
       const candidates = [...new Set([...rankedMapped, ...guessed])].slice(0, 2);
 
