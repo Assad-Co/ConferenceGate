@@ -27,6 +27,7 @@ import {
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
+import { jinaReadPage, isJinaConfigured, hasJinaKey } from "./server/jinaReader";
 import { extractPdfText } from "./server/pdfText";
 import {
   firecrawlScrape,
@@ -1192,7 +1193,7 @@ Return JSON with exactly this shape:
   // Fetches one page and runs the Gemini extraction prompt against it. Returns null (rather than
   // throwing) on any fetch/safety failure so callers can treat a failed secondary-page fetch as
   // "just skip it" without losing the primary page's already-good result.
-  type PageReader = "plain" | "browser" | "firecrawl" | "prefetched" | "pdf";
+  type PageReader = "plain" | "jina" | "browser" | "firecrawl" | "prefetched" | "pdf";
   type ExtractedPage = { parsed: any; html: string; pageTitle: string | null; isPdf: boolean; reader: PageReader };
 
   // Every individual network call inside a page's read (plain fetch, browser render, one
@@ -1310,7 +1311,19 @@ Return JSON with exactly this shape:
       }
 
       // Either the request was refused, or it succeeded and returned a shell with nothing in it.
-      // Both are exactly what a real browser exists to get past, so try one.
+      // Both are what a renderer exists to get past. Jina's hosted reader is tried before a local
+      // browser because it is markedly faster (a couple of seconds against the launch cost of
+      // Chromium before it has even navigated) and because it needs nothing installed — on hosts
+      // without Chromium's system libraries, which is the common deployment case here, it is the
+      // only free route that works at all.
+      const viaJina = await jinaReadPage(pageUrl);
+      if (viaJina && viaJina.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+        console.log(`Read ${pageUrl} via Jina reader (plain fetch returned nothing usable)`);
+        // Markdown carries no anchors for the crawl to follow, the same as Firecrawl's markdown
+        // path below — still a fully extractable page, just one that contributes no onward links.
+        return { html: "", text: viaJina, kind: "html", reader: "jina" };
+      }
+
       const rendered = await fetchRenderedHtml(pageUrl);
       if (rendered) {
         const text = prepareHtmlForExtraction(rendered, pageUrl);
@@ -3046,6 +3059,11 @@ Return JSON with exactly this shape:
           "Live web search fallback (Serper)",
           Boolean(process.env.SERPER_API_KEY),
           "set SERPER_API_KEY so Discover keeps working when Brave hits its rate limit"
+        ),
+        capability(
+          `Fast page reader (Jina)${hasJinaKey() ? " — with key, higher rate limit" : " — keyless, set JINA_API_KEY to raise the rate limit"}`,
+          isJinaConfigured(),
+          "unset JINA_READER_DISABLED to re-enable"
         ),
         capability(
           "Advanced site reader (Firecrawl)",
