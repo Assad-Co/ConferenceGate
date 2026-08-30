@@ -321,7 +321,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // A selected tab gets its own two-page fast lane. Stop the selected-tab spinner after seven
   // seconds even if the site is unusually slow; the full crawl keeps improving the data behind it.
   useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'community' || requestedFastTabsRef.current.has(activeTab)) return;
+    // Wait for the instant cache lookup before starting any focused read. A completed prepared
+    // record already contains the whole crawl, so opening or changing tabs must not fetch again.
+    if (
+      loading ||
+      data?.crawlComplete ||
+      activeTab === 'overview' ||
+      activeTab === 'community' ||
+      requestedFastTabsRef.current.has(activeTab)
+    ) return;
     const requestedTab = activeTab;
     requestedFastTabsRef.current.add(requestedTab);
     const settle = () => {
@@ -340,7 +348,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
         clearTimeout(timer);
         settle();
       });
-  }, [activeTab, result.link, result.title]);
+  }, [activeTab, result.link, result.title, loading, data?.crawlComplete]);
 
   // The server answers with whatever the first round of pages found and keeps reading the rest of
   // the site in the background, so the first response is a starting point rather than the finished
