@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "./asyncHandler";
 import { isSerperConfigured, serperSearch } from "./serperSearch";
+import { dbAll } from "./db";
 
 export interface LiveSearchResult {
   title: string;
@@ -9,6 +10,8 @@ export interface LiveSearchResult {
   displayLink: string;
   thumbnail: string | null;
   favicon: string | null;
+  /** True when Conference Gate already has a completed structured extraction in its database. */
+  prepared?: boolean;
 }
 
 interface CacheEntry {
@@ -188,6 +191,107 @@ function toConferenceQuery(query: string): string {
   // down-rank roundup vocabulary — improving the candidate pool before the strict server-side
   // filter below is applied.
   return `${withKeyword} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
+}
+
+/**
+ * Searches Conference Gate's completed extraction database before spending external provider
+ * quota. These results are especially valuable because their tab data is already prepared, so a
+ * visitor can open the conference immediately even when Brave/Serper has reached its plan limit.
+ */
+async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
+  const rows = await dbAll<{
+    source_url: string;
+    overview: string;
+    extraction_metadata: string;
+    updated_at: string;
+  }>(
+    `SELECT source_url, overview, extraction_metadata, updated_at
+       FROM extracted_conferences
+      WHERE overview IS NOT NULL
+        AND overview <> '{}'
+      ORDER BY updated_at DESC
+      LIMIT 500`
+  );
+
+  const stopWords = new Set([
+    "conference", "conferences", "official", "website", "registration", "program", "speakers",
+    "from", "until", "upcoming", "current", "and", "the", "in", "of", "for", "worldwide",
+    "january", "february", "march", "april", "may", "june", "july", "august",
+    "september", "october", "november", "december",
+  ]);
+  const queryTokens = query
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !stopWords.has(token) && !/^20\d{2}$/.test(token));
+
+  const ranked: Array<{ result: LiveSearchResult; score: number }> = [];
+  for (const row of rows) {
+    let overview: Record<string, any>;
+    let metadata: Record<string, any>;
+    try {
+      overview = JSON.parse(row.overview || "{}");
+      metadata = JSON.parse(row.extraction_metadata || "{}");
+    } catch {
+      continue;
+    }
+    if (metadata.status && metadata.status !== "success") continue;
+
+    const title =
+      typeof overview.conference_name === "string" && overview.conference_name.trim()
+        ? overview.conference_name.trim()
+        : "";
+    if (!title) continue;
+
+    const haystack = [
+      title,
+      overview.acronym,
+      overview.description,
+      overview.city,
+      overview.country,
+      overview.format,
+      overview.organizer,
+      ...(Array.isArray(overview.topics) ? overview.topics : []),
+    ]
+      .filter((value) => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+
+    const normalizedTitle = title.toLowerCase();
+    const matchedTokens = queryTokens.filter((token) => haystack.includes(token));
+    if (queryTokens.length > 0 && matchedTokens.length === 0) continue;
+
+    let host = "";
+    try {
+      host = new URL(row.source_url).hostname.replace(/^www\./, "");
+    } catch {
+      continue;
+    }
+
+    let score = matchedTokens.length * 100;
+    if (queryTokens.some((token) => normalizedTitle.includes(token))) score += 300;
+    if (queryTokens.length > 0 && matchedTokens.length === queryTokens.length) score += 200;
+    ranked.push({
+      score,
+      result: {
+        title,
+        link: row.source_url,
+        snippet:
+          typeof overview.description === "string"
+            ? overview.description
+            : [overview.dates_text, overview.city, overview.country].filter(Boolean).join(" · "),
+        displayLink: host,
+        thumbnail: null,
+        favicon: null,
+        prepared: true,
+      },
+    });
+  }
+
+  return ranked
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 20)
+    .map(({ result }) => result);
 }
 
 // Discovery must link to one conference's own page, never a directory, calendar, roundup,
@@ -410,12 +514,21 @@ export async function searchConferences(
     return cached.data;
   }
 
-  const candidates: LiveSearchResult[] = (
-    await providerSearch(toConferenceQuery(query), 20, priority)
-  ).filter((r) => isLikelyOfficialConferencePage(r));
+  const prepared = await searchPreparedConferences(query);
+  let candidates: LiveSearchResult[] = [];
+  try {
+    candidates = (
+      await providerSearch(toConferenceQuery(query), 20, priority)
+    ).filter((result) => isLikelyOfficialConferencePage(result));
+  } catch (error) {
+    // A provider plan limit must not empty Discover when Conference Gate already has relevant,
+    // official conference records. Only surface the provider error when no prepared result can help.
+    if (prepared.length === 0) throw error;
+  }
 
-  // Nearest upcoming edition first; duplicate pages and older/future duplicate editions removed.
-  const results = deduplicateUpcomingConferences(candidates);
+  // Prepared records come first: they open instantly and cost no external-search quota. The same
+  // identity/date deduplication still prevents a cached event and its live result appearing twice.
+  const results = deduplicateUpcomingConferences([...prepared, ...candidates]);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -463,13 +576,8 @@ braveSearchRouter.get(
       return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
     }
 
-    if (!isConfigured()) {
-      return res.status(503).json({
-        error:
-          "Live search is not configured on the server. Set BRAVE_SEARCH_API_KEY or SERPER_API_KEY.",
-      });
-    }
-
+    // Even with no external provider configured, the completed extraction database remains a
+    // useful, zero-quota search source. searchConferences handles that path transparently.
     try {
       const results = await searchConferences(query, priority, force);
       res.json({ results });
