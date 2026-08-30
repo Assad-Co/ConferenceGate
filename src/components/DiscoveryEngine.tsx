@@ -20,7 +20,11 @@ import {
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
-import { searchConferencesOnTheWeb, LiveSearchResult } from '../api/search';
+import {
+  searchConferencesOnTheWeb,
+  prefetchConferenceDetails,
+  LiveSearchResult,
+} from '../api/search';
 import { ExternalDetailTab } from './ExternalConferenceDetail';
 
 interface DiscoveryEngineProps {
@@ -495,6 +499,21 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // filters would be silently skipped by that same-key guard below.
   const [manualRetryCount, setManualRetryCount] = useState(0);
   const lastHandledRetryCountRef = useRef(0);
+  const prefetchedConferenceUrlsRef = useRef(new Set<string>());
+
+  // Start preparing likely selections while the visitor is still reading Discover. The first two
+  // cards are warmed as soon as progressive search results arrive; once search settles, the first
+  // eight visible cards are queued. The server enforces a two-crawl concurrency limit.
+  useEffect(() => {
+    if (!webResults?.length) return;
+    const visibleCandidates = webResults.slice(0, webSearchLoading ? 2 : 8);
+    const newCandidates = visibleCandidates.filter(
+      (result) => !prefetchedConferenceUrlsRef.current.has(result.link)
+    );
+    if (newCandidates.length === 0) return;
+    newCandidates.forEach((result) => prefetchedConferenceUrlsRef.current.add(result.link));
+    prefetchConferenceDetails(newCandidates);
+  }, [webResults, webSearchLoading]);
 
   useEffect(() => {
     const trimmed = searchTerm.trim();
