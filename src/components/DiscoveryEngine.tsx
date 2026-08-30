@@ -511,7 +511,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // are returned by the server first and do not consume external search quota.
     const baseQuery =
       trimmed || `upcoming academic and technical conferences ${new Date().getFullYear()}`;
-    const effectiveQueries = [baseQuery + biasSuffix];
+    // A topic without a selected country/city is explicitly global. The server expands it across
+    // conferences, conventions, congresses, symposia, summits, workshops, and scientific meetings.
+    const globalScope =
+      !locationFilter.trim() && !countryFilter.trim() ? ' worldwide' : '';
+    const effectiveQueries = [baseQuery + globalScope + biasSuffix];
     const cacheKey = effectiveQueries[0];
 
     const handle = setTimeout(
