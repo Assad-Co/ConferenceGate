@@ -60,6 +60,7 @@ export interface PersonExtract {
   title: string | null;
   org: string | null;
   role: string | null;
+  email: string | null;
   imageUrl: string | null;
 }
 
@@ -319,6 +320,7 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
       name: x.name ?? x.full_name,
       org: x.org ?? x.organization,
       role: x.role ?? x.speaker_type,
+      email: x.email ?? null,
       imageUrl: x.imageUrl ?? x.photo_url,
     })),
     committee: (committee || []).map((x: any) => ({ ...x, org: x.org ?? x.organization })),
