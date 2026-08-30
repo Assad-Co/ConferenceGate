@@ -36,6 +36,8 @@ import { EditProfileModal } from './EditProfileModal';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
 import { resizeImageFile } from '../utils/image';
+import { generateInitialsAvatar } from '../utils/avatar';
+import type { KeynoteSpeakerMatch } from '../api/auth';
 import {
   ConferenceRegistration,
   fetchMyExternalPapers,
@@ -86,6 +88,7 @@ interface UserProfileViewProps {
     linkedinUrl: string;
   }) => Promise<void>;
   currentUserEmail?: string;
+  keynoteSpeakerMatches?: KeynoteSpeakerMatch[];
 }
 
 const ABSTRACT_STATUS_STYLE: Record<string, string> = {
@@ -127,6 +130,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   hasCustomAvatar = false,
   onEditProfile,
   currentUserEmail,
+  keynoteSpeakerMatches = [],
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
@@ -585,6 +589,74 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             onMarkRead={onMarkNotificationRead}
             onMarkAllRead={onMarkAllNotificationsRead}
           />
+        )}
+
+        {activeTab === 'conferences' && keynoteSpeakerMatches.length > 0 && (
+          <div className="space-y-4 pb-5 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-violet-600" />
+                <h3 className="text-base font-bold text-slate-900">Keynote Speaker Recognition</h3>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Matched automatically against named keynote, plenary, invited, and featured speakers
+                published on official conference websites.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {keynoteSpeakerMatches.map((match) => (
+                <div
+                  key={`${match.conferenceUrl}-${match.speakerName}`}
+                  className="p-4 bg-violet-50/60 rounded-2xl border border-violet-200 flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={match.photoUrl || generateInitialsAvatar(match.speakerName)}
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover ring-1 ring-violet-200 shrink-0 bg-white"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = generateInitialsAvatar(match.speakerName);
+                      }}
+                    />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm text-slate-900">{match.speakerName}</h4>
+                      <p className="text-[11px] font-semibold text-violet-700">
+                        {match.role} • {match.conferenceTitle}
+                      </p>
+                      {match.organization && (
+                        <p className="text-[11px] text-slate-500">{match.organization}</p>
+                      )}
+                      <a
+                        href={match.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-blue-700 hover:underline"
+                      >
+                        Official source
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 font-bold text-[10px] rounded-full whitespace-nowrap ${
+                      match.verified
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {match.verified ? 'Verified by email' : 'Official name match'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {keynoteSpeakerMatches.some((match) => !match.verified) && (
+              <p className="text-[10px] text-amber-700">
+                A name-only match is not treated as identity proof. It remains clearly labeled until
+                an official speaker email matches the account.
+              </p>
+            )}
+          </div>
         )}
 
         {activeTab === 'conferences' && (
