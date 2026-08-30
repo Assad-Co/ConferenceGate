@@ -829,7 +829,7 @@ Alongside that prose summary, break the SAME stated requirements out into the in
 
 For submissionEmail, only fill this in if the page explicitly names an email address as where to SEND a submission/abstract/paper to (e.g. "email your abstract to chair@conference.org"). Never use a generic contact/info email for this — leave it null unless the text specifically ties that address to submitting a paper.
 
-For speakers, include anyone credited with giving a talk, keynote, presentation, or featured appearance at the event — this covers people labeled "Speakers", "Keynotes", "Presenters", "Panelists", "Featured Guests", "Invited Guests", or any similar wording the page uses, not only people under a heading that literally says "Speakers". Use the page's own wording for role (e.g. "Keynote Speaker", "Panelist", "Presenter") when it says one, or null if it doesn't.
+For speakers, include anyone credited with giving a talk, keynote, presentation, or featured appearance at the event — this covers people labeled "Speakers", "Keynotes", "Presenters", "Panelists", "Featured Guests", "Invited Guests", or any similar wording the page uses, not only people under a heading that literally says "Speakers". Use the page's own wording for role (e.g. "Keynote Speaker", "Panelist", "Presenter") when it says one, or null if it doesn't. For a speaker's email, copy it only when the page explicitly presents that address as belonging to that named person; never use a generic conference/contact/submission address as a speaker email, and never infer an address from the person's name or organization.
 
 For agendaSessions, include every scheduled session, talk, panel, workshop, or keynote slot stated on the page no matter what the page itself calls this section — "Program", "Schedule", "Agenda", "Timetable", "Itinerary", "Day 1 / Day 2" listings, and a plain day-by-day list of time blocks are all the same thing and all count. Use the actual session/talk name as the title when one is given; when the page only labels a slot generically (e.g. "Panel Session 1", "Morning Keynote", "Breakfast & Business Meeting") use that generic label as the title rather than leaving the whole entry out — never invent a more specific title than what's actually written. Fill date/time/track/speakerName only when the page states them for that slot; otherwise leave them null.
 
@@ -921,7 +921,7 @@ Return JSON with exactly this shape:
   "cfpNotificationDate": string | null,
   "cfpTopics": string[],
   "agendaSessions": [{ "date": string | null, "time": string | null, "title": string, "speakerName": string | null, "speakerImageUrl": string | null, "track": string | null, "sessionType": string | null }],
-  "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "imageUrl": string | null }],
+  "speakers": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "email": string | null, "imageUrl": string | null }],
   "committee": [{ "name": string, "title": string | null, "org": string | null, "role": string | null, "committeeType": string | null, "imageUrl": string | null }],
   "sponsors": [{ "name": string, "tier": string | null, "partnerType": string | null, "logoUrl": string | null }],
   "accommodationText": string | null,
@@ -1067,7 +1067,7 @@ Return JSON with exactly this shape:
   // Conference Gate's current discovery window begins here. The extractor often encounters
   // archive pages through a site's navigation or sitemap; those pages must never refill a current
   // conference with obsolete fees, deadlines, speakers, or schedules.
-  const UPCOMING_EXTRACTION_SCHEMA_VERSION = "upcoming-2026-09-v2";
+  const UPCOMING_EXTRACTION_SCHEMA_VERSION = "upcoming-2026-09-v3-keynote-identity";
   const UPCOMING_CONTENT_CUTOFF_YEAR = 2026;
   const UPCOMING_CONTENT_CUTOFF_MONTH = 9;
   const DATE_MONTH_NUMBERS: Record<string, number> = {
@@ -2078,6 +2078,7 @@ Return JSON with exactly this shape:
       biography: x.bio || null,
       presentation_title: x.presentationTitle || null,
       speaker_type: x.role || null,
+      email: sanitizeEmail(x.email),
       photo_url: x.imageUrl || null,
       profile_source_url: recordSource(x, "speakers"),
       source_url: recordSource(x, "speakers"),
