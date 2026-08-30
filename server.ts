@@ -3037,7 +3037,16 @@ Return JSON with exactly this shape:
       [
         "Extraction capabilities:",
         capability("AI extraction", Boolean(process.env.GEMINI_API_KEY), "set GEMINI_API_KEY"),
-        capability("Live web search", Boolean(process.env.BRAVE_SEARCH_API_KEY), "set BRAVE_SEARCH_API_KEY"),
+        capability(
+          "Live web search",
+          Boolean(process.env.BRAVE_SEARCH_API_KEY || process.env.SERPER_API_KEY),
+          "set BRAVE_SEARCH_API_KEY and/or SERPER_API_KEY"
+        ),
+        capability(
+          "Live web search fallback (Serper)",
+          Boolean(process.env.SERPER_API_KEY),
+          "set SERPER_API_KEY so Discover keeps working when Brave hits its rate limit"
+        ),
         capability(
           "Advanced site reader (Firecrawl)",
           isFirecrawlConfigured(),

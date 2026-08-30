@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { asyncHandler } from "./asyncHandler";
+import { isSerperConfigured, serperSearch } from "./serperSearch";
 
 export interface LiveSearchResult {
   title: string;
@@ -18,8 +19,97 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — keeps us well within Brave's free 2,000 queries/month quota
 const cache = new Map<string, CacheEntry>();
 
-function isConfigured() {
+function isBraveConfigured() {
   return !!process.env.BRAVE_SEARCH_API_KEY;
+}
+
+/** Live search works as long as ANY provider is configured — Brave alone, Serper alone, or both. */
+function isConfigured() {
+  return isBraveConfigured() || isSerperConfigured();
+}
+
+/** Raw Brave results, rate-limit-queued. Throws on any request failure so the caller can decide
+ *  whether a fallback provider should answer instead. */
+async function braveSearch(
+  query: string,
+  count: number,
+  priority: "high" | "low"
+): Promise<LiveSearchResult[]> {
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("count", String(Math.min(Math.max(count, 1), 20)));
+
+  const res = await scheduleBraveRequest(
+    () =>
+      fetch(url.toString(), {
+        headers: {
+          Accept: "application/json",
+          "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
+        },
+        signal: AbortSignal.timeout(10000),
+      }),
+    priority
+  );
+
+  const rawText = await res.text();
+  let body: any = {};
+  try {
+    body = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    throw new Error(`Live search failed (unexpected response, HTTP ${res.status}). Please try again.`);
+  }
+  if (!res.ok) {
+    throw new Error(body?.error?.detail || body?.error?.message || `Brave Search API error (${res.status})`);
+  }
+
+  return (body.web?.results || []).map((item: any) => ({
+    title: stripHtml(item.title || ""),
+    link: item.url || "",
+    snippet: stripHtml(item.description || ""),
+    displayLink: item.meta_url?.hostname || item.profile?.name || "",
+    thumbnail: item.thumbnail?.src || null,
+    favicon: item.meta_url?.favicon || item.profile?.img || null,
+  }));
+}
+
+/** Raw results from whichever provider can answer.
+ *
+ *  Brave is tried first when configured: its plan is the cheaper of the two and it returns the
+ *  thumbnail/favicon that Serper's organic results don't carry. Serper is the fallback rather than
+ *  a replacement, because the failure being absorbed here is specifically Brave's per-second and
+ *  monthly ceiling — a burst of region/subject queries can exhaust it and return "Request rate
+ *  limit exceeded for plan" for every one of them, leaving Discover empty even though the web
+ *  plainly has answers.
+ *
+ *  Only throws when every configured provider failed; a provider that isn't configured is skipped
+ *  rather than counted as a failure. */
+async function providerSearch(
+  query: string,
+  count: number,
+  priority: "high" | "low"
+): Promise<LiveSearchResult[]> {
+  let braveError: unknown = null;
+
+  if (isBraveConfigured()) {
+    try {
+      return await braveSearch(query, count, priority);
+    } catch (error) {
+      // Held rather than rethrown: if Serper can answer, the reader gets results instead of an
+      // error, and this only resurfaces when there's no working fallback either.
+      braveError = error;
+    }
+  }
+
+  if (isSerperConfigured()) {
+    try {
+      return await serperSearch(query, count);
+    } catch (serperError) {
+      throw braveError || serperError;
+    }
+  }
+
+  if (braveError) throw braveError;
+  return [];
 }
 
 // Brave's plan also caps requests per second, separate from (and much stricter than) the monthly
@@ -320,44 +410,9 @@ export async function searchConferences(
     return cached.data;
   }
 
-  const url = new URL("https://api.search.brave.com/res/v1/web/search");
-  url.searchParams.set("q", toConferenceQuery(query));
-  url.searchParams.set("count", "20");
-
-  const res = await scheduleBraveRequest(
-    () =>
-      fetch(url.toString(), {
-        headers: {
-          Accept: "application/json",
-          "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY!,
-        },
-      }),
-    priority
-  );
-  const rawText = await res.text();
-  let body: any = {};
-  try {
-    body = rawText ? JSON.parse(rawText) : {};
-  } catch {
-    throw new Error(`Live search failed (unexpected response, HTTP ${res.status}). Please try again.`);
-  }
-
-  if (!res.ok) {
-    const message = body?.error?.detail || body?.error?.message || `Brave Search API error (${res.status})`;
-    throw new Error(message);
-  }
-
-  const items: any[] = body.web?.results || [];
-  const candidates: LiveSearchResult[] = items
-    .map((item) => ({
-      title: stripHtml(item.title || ""),
-      link: item.url || "",
-      snippet: stripHtml(item.description || ""),
-      displayLink: item.meta_url?.hostname || item.profile?.name || "",
-      thumbnail: item.thumbnail?.src || null,
-      favicon: item.meta_url?.favicon || item.profile?.img || null,
-    }))
-    .filter((r) => isLikelyOfficialConferencePage(r));
+  const candidates: LiveSearchResult[] = (
+    await providerSearch(toConferenceQuery(query), 20, priority)
+  ).filter((r) => isLikelyOfficialConferencePage(r));
 
   // Nearest upcoming edition first; duplicate pages and older/future duplicate editions removed.
   const results = deduplicateUpcomingConferences(candidates);
@@ -379,27 +434,8 @@ export async function searchWebForConferenceFacts(query: string, count = 8): Pro
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-  const url = new URL("https://api.search.brave.com/res/v1/web/search");
-  url.searchParams.set("q", query);
-  url.searchParams.set("count", String(Math.min(Math.max(count, 1), 20)));
-
   try {
-    const res = await scheduleBraveRequest(() =>
-      fetch(url.toString(), {
-        headers: { Accept: "application/json", "X-Subscription-Token": process.env.BRAVE_SEARCH_API_KEY! },
-        signal: AbortSignal.timeout(10000),
-      })
-    );
-    if (!res.ok) return [];
-    const body = await res.json().catch(() => ({}));
-    const results: LiveSearchResult[] = (body.web?.results || []).map((item: any) => ({
-      title: stripHtml(item.title || ""),
-      link: item.url || "",
-      snippet: stripHtml(item.description || ""),
-      displayLink: item.meta_url?.hostname || item.profile?.name || "",
-      thumbnail: item.thumbnail?.src || null,
-      favicon: item.meta_url?.favicon || item.profile?.img || null,
-    }));
+    const results = await providerSearch(query, count, "high");
     cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
     return results;
   } catch {
@@ -429,7 +465,8 @@ braveSearchRouter.get(
 
     if (!isConfigured()) {
       return res.status(503).json({
-        error: "Live search is not configured on the server. Set BRAVE_SEARCH_API_KEY.",
+        error:
+          "Live search is not configured on the server. Set BRAVE_SEARCH_API_KEY or SERPER_API_KEY.",
       });
     }
 
@@ -437,7 +474,7 @@ braveSearchRouter.get(
       const results = await searchConferences(query, priority, force);
       res.json({ results });
     } catch (error: any) {
-      console.error("Brave Search error:", error);
+      console.error("Live search error:", error);
       res.status(502).json({ error: error.message || "Live search failed. Please try again." });
     }
   })
