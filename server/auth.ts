@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import { dbGet, dbRun, UserRow } from "./db";
+import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
@@ -49,7 +49,137 @@ type AuthRole = (typeof ALLOWED_ROLES)[number];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function toPublicUser(row: UserRow) {
+interface KeynoteSpeakerIdentityMatch {
+  conferenceTitle: string;
+  conferenceUrl: string;
+  speakerName: string;
+  role: string;
+  organization: string | null;
+  photoUrl: string | null;
+  sourceUrl: string;
+  matchMethod: "email" | "exact_name";
+  verified: boolean;
+}
+
+function normalizeIdentityName(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(?:dr|prof|professor|mr|mrs|ms|miss|sir|phd|md|dds|dvm|jr|sr)\b\.?/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .sort()
+    .join(" ");
+}
+
+function parseJsonArray(value: unknown): any[] {
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseJsonObject(value: unknown): Record<string, any> {
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function findKeynoteSpeakerMatches(row: UserRow): Promise<KeynoteSpeakerIdentityMatch[]> {
+  const normalizedUserName = normalizeIdentityName(row.name);
+  const normalizedUserEmail = row.email.trim().toLowerCase();
+  if (!normalizedUserName && !normalizedUserEmail) return [];
+
+  const records = await dbAll<{
+    source_url: string;
+    overview: string;
+    keynote_speakers: string;
+    updated_at: string;
+  }>(
+    `SELECT source_url, overview, keynote_speakers, updated_at
+       FROM extracted_conferences
+      WHERE keynote_speakers IS NOT NULL
+        AND keynote_speakers <> '[]'
+      ORDER BY updated_at DESC
+      LIMIT 500`
+  );
+
+  const matches = new Map<string, KeynoteSpeakerIdentityMatch>();
+  for (const record of records) {
+    const overview = parseJsonObject(record.overview);
+    const conferenceTitle =
+      typeof overview.conference_name === "string" && overview.conference_name.trim()
+        ? overview.conference_name.trim()
+        : record.source_url;
+
+    for (const speaker of parseJsonArray(record.keynote_speakers)) {
+      const speakerName =
+        typeof speaker?.full_name === "string"
+          ? speaker.full_name.trim()
+          : typeof speaker?.name === "string"
+            ? speaker.name.trim()
+            : "";
+      const role =
+        typeof speaker?.speaker_type === "string"
+          ? speaker.speaker_type.trim()
+          : typeof speaker?.role === "string"
+            ? speaker.role.trim()
+            : "";
+      // The Keynote Speakers tab also contains invited/plenary/featured speakers. Panelists and
+      // ordinary presenters must never be upgraded into keynote recognition.
+      if (!speakerName || !/\b(keynote|plenary|invited|featured)\b/i.test(role)) continue;
+
+      const speakerEmail =
+        typeof speaker?.email === "string" ? speaker.email.trim().toLowerCase() : "";
+      const emailMatch = Boolean(speakerEmail && speakerEmail === normalizedUserEmail);
+      const nameMatch =
+        normalizedUserName.split(" ").length >= 2 &&
+        normalizeIdentityName(speakerName) === normalizedUserName;
+      if (!emailMatch && !nameMatch) continue;
+
+      const sourceUrl =
+        (typeof speaker?.profile_source_url === "string" && speaker.profile_source_url) ||
+        (typeof speaker?.source_url === "string" && speaker.source_url) ||
+        record.source_url;
+      const match: KeynoteSpeakerIdentityMatch = {
+        conferenceTitle,
+        conferenceUrl: record.source_url,
+        speakerName,
+        role: role || "Keynote Speaker",
+        organization:
+          typeof speaker?.organization === "string" && speaker.organization.trim()
+            ? speaker.organization.trim()
+            : null,
+        photoUrl:
+          typeof speaker?.photo_url === "string" && speaker.photo_url.trim()
+            ? speaker.photo_url.trim()
+            : null,
+        sourceUrl,
+        matchMethod: emailMatch ? "email" : "exact_name",
+        verified: emailMatch,
+      };
+      const key = `${record.source_url}::${normalizeIdentityName(speakerName)}`;
+      const existing = matches.get(key);
+      if (!existing || (!existing.verified && match.verified)) matches.set(key, match);
+    }
+  }
+
+  return [...matches.values()];
+}
+
+async function toPublicUser(row: UserRow) {
+  const keynoteSpeakerMatches = await findKeynoteSpeakerMatches(row);
   return {
     id: row.id,
     email: row.email,
@@ -64,6 +194,7 @@ function toPublicUser(row: UserRow) {
     linkedinUrl: row.linkedin_url,
     avatar: row.avatar,
     reviewerAvailable: !!row.reviewer_available,
+    keynoteSpeakerMatches,
   };
 }
 
@@ -175,7 +306,7 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
   const token = signToken(row.id);
   setSessionCookie(res, token);
-  res.status(201).json({ user: toPublicUser(row) });
+  res.status(201).json({ user: await toPublicUser(row) });
 }));
 
 authRouter.post("/login", asyncHandler(async (req, res) => {
@@ -198,7 +329,7 @@ authRouter.post("/login", asyncHandler(async (req, res) => {
 
   const token = signToken(row.id);
   setSessionCookie(res, token);
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: await toPublicUser(row) });
 }));
 
 authRouter.post("/logout", (_req, res) => {
@@ -212,7 +343,7 @@ authRouter.get("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res) 
     res.clearCookie(COOKIE_NAME, { path: "/" });
     return res.status(401).json({ error: "Not authenticated" });
   }
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: await toPublicUser(row) });
 }));
 
 const EDITABLE_PROFILE_FIELDS = ["name", "title", "organization", "department", "city", "country", "bio"] as const;
@@ -255,7 +386,7 @@ authRouter.patch("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res
   await dbRun(`UPDATE users SET ${setClause} WHERE id = ?`, [...Object.values(updates), req.userId!]);
 
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: await toPublicUser(row) });
 }));
 
 authRouter.patch("/me/reviewer-availability", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
@@ -265,7 +396,7 @@ authRouter.patch("/me/reviewer-availability", requireAuth, asyncHandler(async (r
   }
   await dbRun("UPDATE users SET reviewer_available = ? WHERE id = ?", [body.available ? 1 : 0, req.userId!]);
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: await toPublicUser(row) });
 }));
 
 const MAX_AVATAR_LENGTH = 2_000_000; // ~1.5MB decoded, comfortably under the request body limit
@@ -287,7 +418,7 @@ authRouter.post("/avatar", requireAuth, asyncHandler(async (req: AuthedRequest, 
 
   await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatar, req.userId!]);
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
-  res.json({ user: toPublicUser(row) });
+  res.json({ user: await toPublicUser(row) });
 }));
 
 const googleClient = process.env.GOOGLE_OAUTH_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID) : null;
@@ -352,7 +483,7 @@ authRouter.post("/google", asyncHandler(async (req, res) => {
 
   const token = signToken(row!.id);
   setSessionCookie(res, token);
-  res.json({ user: toPublicUser(row!) });
+  res.json({ user: await toPublicUser(row!) });
 }));
 
 // --- LinkedIn Sign-In (OAuth 2.0 authorization code + OpenID Connect) ---
@@ -539,5 +670,5 @@ authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
   res.clearCookie(LINKEDIN_PENDING_COOKIE, { path: "/" });
   const token = signToken(row.id);
   setSessionCookie(res, token);
-  res.status(201).json({ user: toPublicUser(row) });
+  res.status(201).json({ user: await toPublicUser(row) });
 }));
