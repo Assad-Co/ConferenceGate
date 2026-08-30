@@ -198,10 +198,20 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
   const rows = await dbAll<{
     source_url: string;
     overview: string;
+    call_for_papers: string;
+    program_agenda: string;
+    keynote_speakers: string;
+    technical_committee: string;
+    sponsors_exhibitors: string;
+    venue_accommodation: string;
+    fees_pricing: string;
+    community: string;
     extraction_metadata: string;
     updated_at: string;
   }>(
-    `SELECT source_url, overview, extraction_metadata, updated_at
+    `SELECT source_url, overview, call_for_papers, program_agenda, keynote_speakers,
+              technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing,
+              community, extraction_metadata, updated_at
        FROM extracted_conferences
       WHERE overview IS NOT NULL
         AND overview <> '{}'
@@ -264,6 +274,34 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       continue;
     }
 
+    const parseSection = (value: string, fallback: any) => {
+      try { return JSON.parse(value || ""); } catch { return fallback; }
+    };
+    const hasContent = (value: any): boolean => {
+      if (Array.isArray(value)) return value.some(hasContent);
+      if (value && typeof value === "object") {
+        return Object.entries(value).some(
+          ([key, nested]) => !["source_url", "source_urls", "status"].includes(key) && hasContent(nested)
+        );
+      }
+      return typeof value === "string"
+        ? value.trim().length > 2 && !/^(not found|not retrieved|unknown|n\/a)$/i.test(value.trim())
+        : typeof value === "number" || value === true;
+    };
+    const sections = [
+      parseSection(row.call_for_papers, {}),
+      parseSection(row.program_agenda, {}),
+      parseSection(row.keynote_speakers, []),
+      parseSection(row.technical_committee, []),
+      parseSection(row.sponsors_exhibitors, []),
+      parseSection(row.venue_accommodation, {}),
+      parseSection(row.fees_pricing, {}),
+      parseSection(row.community, {}),
+    ];
+    const populatedSections = sections.filter(hasContent).length;
+    const pagesCrawled = Number(metadata.pages_crawled) || 0;
+    const detailsReady = populatedSections >= 3 && (pagesCrawled >= 3 || populatedSections >= 5);
+
     let score = matchedTokens.length * 100;
     if (queryTokens.some((token) => normalizedTitle.includes(token))) score += 300;
     if (queryTokens.length > 0 && matchedTokens.length === queryTokens.length) score += 200;
@@ -279,7 +317,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         displayLink: host,
         thumbnail: null,
         favicon: null,
-        prepared: true,
+        prepared: detailsReady,
       },
     });
   }
@@ -510,7 +548,7 @@ export async function searchConferences(
     return cached.data;
   }
 
-  const prepared = await searchPreparedConferences(query);
+  const prepared = (await searchPreparedConferences(query)).filter(isLikelyOfficialConferencePage);
   let candidates: LiveSearchResult[] = [];
   try {
     candidates = (
