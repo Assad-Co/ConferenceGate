@@ -5,6 +5,8 @@ export interface LiveSearchResult {
   displayLink: string;
   thumbnail: string | null;
   favicon: string | null;
+  /** True when Conference Gate already has completed structured tab data for this conference. */
+  prepared?: boolean;
 }
 
 export async function searchConferencesOnTheWeb(
