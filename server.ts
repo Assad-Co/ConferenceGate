@@ -2213,6 +2213,10 @@ Return JSON with exactly this shape:
     focusCategory?: RelevantLinkCategory;
     firstSnapshot: Promise<void>;
     signalFirstSnapshot: () => void;
+    // Used by the prefetch queue to keep only a small number of whole-site crawls active at once.
+    // The ordinary detail request never waits for this; it still renders the first saved snapshot.
+    finished: Promise<void>;
+    signalFinished: () => void;
   }
   const crawlJobs = new Map<string, CrawlJob>();
   const focusedSectionCache = new Map<string, { data: any; expiresAt: number }>();
@@ -2829,8 +2833,12 @@ Return JSON with exactly this shape:
     if (!ai) return null;
 
     let signalFirstSnapshot = () => {};
+    let signalFinished = () => {};
     const firstSnapshot = new Promise<void>((resolve) => {
       signalFirstSnapshot = resolve;
+    });
+    const finished = new Promise<void>((resolve) => {
+      signalFinished = resolve;
     });
     const job: CrawlJob = {
       result: null,
@@ -2839,6 +2847,8 @@ Return JSON with exactly this shape:
       focusCategory,
       firstSnapshot,
       signalFirstSnapshot,
+      finished,
+      signalFinished,
     };
     crawlJobs.set(cacheKey, job);
 
@@ -2869,6 +2879,8 @@ Return JSON with exactly this shape:
         job.signalFirstSnapshot();
       })
       .finally(() => {
+        job.complete = true;
+        job.signalFinished();
         // Held briefly after completion so a status poll arriving right at the end still finds the
         // finished result, then dropped so the next visitor re-reads from the extraction cache.
         setTimeout(() => crawlJobs.delete(cacheKey), 60000);
@@ -2876,6 +2888,106 @@ Return JSON with exactly this shape:
 
     return job;
   }
+
+  // Search results are prepared before a visitor opens them. Two workers are enough to keep the
+  // first visible cards warm without launching dozens of website crawls at once (which would only
+  // trade a spinner for Firecrawl/search rate-limit errors). Completed results are already written
+  // to extracted_conferences by runSiteCrawl, so later visitors and later deployments reuse them.
+  type ConferencePrefetchItem = { url: string; title: string };
+  const conferencePrefetchQueue: ConferencePrefetchItem[] = [];
+  const queuedConferencePrefetchUrls = new Set<string>();
+  let activeConferencePrefetches = 0;
+  const MAX_CONCURRENT_CONFERENCE_PREFETCHES = 2;
+
+  const pumpConferencePrefetchQueue = () => {
+    while (
+      activeConferencePrefetches < MAX_CONCURRENT_CONFERENCE_PREFETCHES &&
+      conferencePrefetchQueue.length > 0
+    ) {
+      const item = conferencePrefetchQueue.shift()!;
+      activeConferencePrefetches += 1;
+      void (async () => {
+        try {
+          const cached = extractionCache.get(item.url);
+          if (cached && cached.expiresAt > Date.now()) return;
+
+          const persisted = await loadPersistedExtractedConference(item.url);
+          if (persisted) {
+            extractionCache.set(item.url, {
+              data: persisted,
+              expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
+            });
+            return;
+          }
+
+          if (!(await isSafeExternalUrl(item.url))) return;
+          const job = await getOrStartCrawlJob(item.url, item.title);
+          if (job) await job.finished;
+        } catch (error) {
+          console.warn(`Conference prefetch failed for ${item.url}:`, error);
+        } finally {
+          activeConferencePrefetches -= 1;
+          queuedConferencePrefetchUrls.delete(item.url);
+          pumpConferencePrefetchQueue();
+        }
+      })();
+    }
+  };
+
+  app.post("/api/ai/extract-conference/prefetch", (req, res) => {
+    const rawItems = Array.isArray(req.body?.conferences) ? req.body.conferences : [];
+    const accepted: ConferencePrefetchItem[] = [];
+
+    for (const raw of rawItems.slice(0, 8)) {
+      if (typeof raw?.url !== "string" || !raw.url.trim()) continue;
+      const url = raw.url.trim();
+      if (queuedConferencePrefetchUrls.has(url) || crawlJobs.has(url)) continue;
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        continue;
+      }
+      if (!["http:", "https:"].includes(parsed.protocol)) continue;
+
+      const item = {
+        url,
+        title: typeof raw?.title === "string" ? raw.title.trim().slice(0, 300) : "",
+      };
+      queuedConferencePrefetchUrls.add(url);
+      conferencePrefetchQueue.push(item);
+      accepted.push(item);
+    }
+
+    pumpConferencePrefetchQueue();
+    res.status(202).json({
+      queued: accepted.length,
+      alreadyReadyOrQueued: rawItems.length - accepted.length,
+    });
+  });
+
+  // Instant read path used when a card is opened. It never starts a crawl and never waits for one:
+  // return the completed persistent record, an in-memory record, or the latest partial snapshot.
+  app.get("/api/ai/extract-conference/cached", async (req, res) => {
+    const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
+    if (!url) return res.status(400).json({ error: "url is required" });
+
+    const cached = extractionCache.get(url);
+    if (cached && cached.expiresAt > Date.now()) return res.json(cached.data);
+
+    const persisted = await loadPersistedExtractedConference(url);
+    if (persisted) {
+      extractionCache.set(url, {
+        data: persisted,
+        expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
+      });
+      return res.json(persisted);
+    }
+
+    const running = crawlJobs.get(url);
+    if (running?.result) return res.json(running.result);
+    return res.status(204).end();
+  });
 
   app.post("/api/ai/extract-conference", async (req, res) => {
     try {
