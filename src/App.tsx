@@ -483,6 +483,8 @@ export function App() {
         ).length
       : 0;
     const certificatesCount = abstractsAccepted + conferencesReviewedFor + registrations.length;
+    const verifiedKeynoteRoles =
+      authUser?.keynoteSpeakerMatches?.filter((match) => match.verified).length || 0;
 
     return {
       conferencesAttended: registrations.length,
@@ -490,8 +492,8 @@ export function App() {
       abstractsAccepted,
       oralPresentations,
       posterPresentations,
-      speakerRoles: 0,
-      keynoteRoles: 0,
+      speakerRoles: verifiedKeynoteRoles,
+      keynoteRoles: verifiedKeynoteRoles,
       workshopsDelivered: 0,
       panelsParticipated: 0,
       sessionsChaired: 0,
@@ -503,7 +505,7 @@ export function App() {
       awards: 0,
       certificatesCount,
     };
-  }, [submissions, registrations, authUser?.id, authUser?.email]);
+  }, [submissions, registrations, authUser?.id, authUser?.email, authUser?.keynoteSpeakerMatches]);
 
   // Discover shows only real, organizer-created conferences (submitted through the app) plus
   // live web results — never the static seed catalog, which was only ever meant as starter
@@ -1479,6 +1481,7 @@ export function App() {
             userProfile={userProfile}
             currentUserId={authUser.id}
             currentUserEmail={authUser.email}
+            keynoteSpeakerMatches={authUser.keynoteSpeakerMatches}
             submissions={submissions}
             posts={posts}
             registrations={registrations}
