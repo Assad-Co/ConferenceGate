@@ -2163,6 +2163,45 @@ Return JSON with exactly this shape:
     );
   }
 
+  // "Extraction succeeded" only means at least one page was saved. A result is truly ready for
+  // the conference page only when several real tabs contain usable information.
+  function hasSubstantialTabCoverage(result: any): boolean {
+    const hasContent = (value: any): boolean => {
+      if (Array.isArray(value)) return value.some(hasContent);
+      if (value && typeof value === "object") {
+        return Object.entries(value).some(
+          ([key, nested]) =>
+            !["source_url", "source_urls", "status", "conflicts", "missing_sections"].includes(key) &&
+            hasContent(nested)
+        );
+      }
+      return typeof value === "string"
+        ? value.trim().length > 2 && !/^(not found|not retrieved|unknown|n\/a)$/i.test(value.trim())
+        : typeof value === "number" || value === true;
+    };
+
+    const sections = [
+      result?.call_for_papers,
+      result?.program_agenda,
+      result?.keynote_speakers,
+      result?.technical_committee,
+      result?.sponsors_exhibitors,
+      result?.venue_accommodation,
+      result?.fees_pricing,
+      result?.community,
+      result?.committee,
+      result?.speakers,
+      result?.sponsors,
+      result?.program,
+    ];
+    const populatedSections = sections.filter(hasContent).length;
+    const pagesRead =
+      Number(result?.pagesRead) ||
+      Number(result?.extraction_metadata?.pages_crawled) ||
+      0;
+    return populatedSections >= 3 && (pagesRead >= 3 || populatedSections >= 5);
+  }
+
   // Completed extractions are already stored in SQLite. Reuse a fresh stored result after a
   // process restart or deployment instead of making the visitor wait through the same crawl again.
   async function loadPersistedExtractedConference(sourceUrl: string): Promise<any | null> {
@@ -2910,10 +2949,16 @@ Return JSON with exactly this shape:
       void (async () => {
         try {
           const cached = extractionCache.get(item.url);
-          if (cached && cached.expiresAt > Date.now()) return;
+          if (
+            cached &&
+            cached.expiresAt > Date.now() &&
+            hasSubstantialTabCoverage(cached.data)
+          ) return;
+          // A homepage-only snapshot must not block the worker from filling the remaining tabs.
+          if (cached) extractionCache.delete(item.url);
 
           const persisted = await loadPersistedExtractedConference(item.url);
-          if (persisted) {
+          if (persisted && hasSubstantialTabCoverage(persisted)) {
             extractionCache.set(item.url, {
               data: persisted,
               expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
@@ -2976,17 +3021,22 @@ Return JSON with exactly this shape:
     const cached = extractionCache.get(url);
     if (cached && cached.expiresAt > Date.now()) return res.json(cached.data);
 
+    const running = crawlJobs.get(url);
+    if (running?.result) return res.json(running.result);
+
     const persisted = await loadPersistedExtractedConference(url);
-    if (persisted) {
+    if (persisted && hasSubstantialTabCoverage(persisted)) {
       extractionCache.set(url, {
         data: persisted,
         expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
       });
       return res.json(persisted);
     }
-
-    const running = crawlJobs.get(url);
-    if (running?.result) return res.json(running.result);
+    // Preserve a sparse saved overview while making it clear that the background job is still
+    // filling the tabs; never call this completed simply because the database row exists.
+    if (persisted) {
+      return res.json({ ...persisted, crawlComplete: false, crawlPending: true, detailsReady: false });
+    }
     return res.status(204).end();
   });
 
@@ -3006,9 +3056,9 @@ Return JSON with exactly this shape:
       }
 
       const persisted = await loadPersistedExtractedConference(cacheKey);
-      if (persisted) {
+      if (persisted && hasSubstantialTabCoverage(persisted)) {
         extractionCache.set(cacheKey, { data: persisted, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
-        return res.json(persisted);
+        return res.json({ ...persisted, detailsReady: true });
       }
 
       if (!(await isSafeExternalUrl(cacheKey))) {
@@ -3022,7 +3072,12 @@ Return JSON with exactly this shape:
       // for the whole site. If the first round is slow, the client still gets a response and picks
       // the rest up by polling.
       await Promise.race([job.firstSnapshot, new Promise((r) => setTimeout(r, FIRST_RESPONSE_DEADLINE_MS))]);
-      res.json(job.result ?? { extracted: false, isFallback: false, crawlComplete: false, crawlPending: true });
+      res.json(
+        job.result ??
+          (persisted
+            ? { ...persisted, crawlComplete: false, crawlPending: true, detailsReady: false }
+            : { extracted: false, isFallback: false, crawlComplete: false, crawlPending: true })
+      );
     } catch (error: any) {
       console.error("Conference extraction error:", error);
       res.status(500).json({ error: error.message || "Extraction failed. Please try again." });
