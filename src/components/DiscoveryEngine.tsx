@@ -59,6 +59,23 @@ const DEFAULT_DISCOVER_QUERIES = DEFAULT_DISCOVER_SUBJECTS.map(
   (subject) => `upcoming ${subject} conference ${new Date().getFullYear()}`
 );
 
+// A typed search term used to run as one single query — "energy" searched the web exactly once,
+// which a single search engine call answers with a handful of results clustered around whichever
+// country dominates that query's top hits, not a global spread. The unbiased (no-term) view above
+// already solved the equivalent problem for subject breadth by querying every subject in parallel
+// and merging; the same fix applies here by region instead, so long as the reader hasn't already
+// narrowed to a specific place via the location/country filters (in which case fanning out across
+// other regions would just work against what they explicitly asked for).
+const WORLD_REGIONS = [
+  'North America',
+  'Latin America',
+  'Europe',
+  'the Middle East and GCC',
+  'Africa',
+  'Asia',
+  'Oceania',
+];
+
 const DISCOVERY_MINIMUM_MONTH = '2026-09';
 
 function liveResultFitsDateWindow(
@@ -479,9 +496,18 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // range is biased into the query itself rather than applied as a real filter.
     const priceBias = priceFilterActive ? ` ${formatPrice(priceMin)}-${formatPrice(priceMax)}` : '';
     const biasSuffix = dateBias + locationBias + countryBias + formatBias + timingBias + priceBias;
-    // A typed search term is one specific query; with nothing typed, every default subject is
-    // queried in parallel so the unbiased view is the broadest one Discover can honestly offer.
-    const effectiveQueries = trimmed ? [trimmed + biasSuffix] : DEFAULT_DISCOVER_QUERIES.map((q) => q + biasSuffix);
+    // With nothing typed, every default subject is queried in parallel for the broadest unbiased
+    // view. A typed term used to run as a single query, which a search engine answers with results
+    // clustered around wherever that exact phrase ranks best — not a global spread. Unless the
+    // reader has already narrowed to a specific place via the location/country filters, the same
+    // term is instead fanned out across every world region in parallel and merged, the same way
+    // the unbiased view fans out across subjects.
+    const searchingSpecificPlace = Boolean(locationFilter.trim() || countryFilter.trim());
+    const effectiveQueries = trimmed
+      ? searchingSpecificPlace
+        ? [trimmed + biasSuffix]
+        : WORLD_REGIONS.map((region) => `${trimmed} conference in ${region}` + biasSuffix)
+      : DEFAULT_DISCOVER_QUERIES.map((q) => q + biasSuffix);
     const cacheKey = effectiveQueries.join('|');
 
     const handle = setTimeout(
