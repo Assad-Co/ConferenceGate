@@ -1,5 +1,17 @@
 export type AuthRole = 'professional' | 'organizer' | 'sponsor';
 
+export interface KeynoteSpeakerMatch {
+  conferenceTitle: string;
+  conferenceUrl: string;
+  speakerName: string;
+  role: string;
+  organization: string | null;
+  photoUrl: string | null;
+  sourceUrl: string;
+  matchMethod: 'email' | 'exact_name';
+  verified: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -14,6 +26,7 @@ export interface AuthUser {
   linkedinUrl: string | null;
   avatar: string | null;
   reviewerAvailable: boolean;
+  keynoteSpeakerMatches: KeynoteSpeakerMatch[];
 }
 
 export interface ProfileUpdatePayload {
