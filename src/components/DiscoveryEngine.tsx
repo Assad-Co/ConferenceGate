@@ -39,47 +39,6 @@ interface DiscoveryEngineProps {
   onToggleFollow?: (conferenceId: string) => void;
 }
 
-// The default (no-search-term) view used to run one fixed query biased toward "technology and
-// industry", which is one subject among many, not "all subjects" — a reader who never types
-// anything only ever saw tech conferences. Querying a broad spread of subjects in parallel and
-// merging the results instead surfaces the largest, most varied set Discover can honestly show
-// without the reader having to already know what to search for. Each subject is still the same
-// query for every visitor, so the server's hourly cache means this costs at most one live search
-// per subject per hour, not one per page load. The year is computed at load time so these keep
-// naming the actual current year, not a stale one.
-const DEFAULT_DISCOVER_SUBJECTS = [
-  'technology and industry',
-  'medical and healthcare',
-  'business and finance',
-  'engineering',
-  'science and research',
-  'environmental and sustainability',
-  'education',
-  'law and policy',
-  'arts and humanities',
-  'energy',
-];
-const DEFAULT_DISCOVER_QUERIES = DEFAULT_DISCOVER_SUBJECTS.map(
-  (subject) => `upcoming ${subject} conference ${new Date().getFullYear()}`
-);
-
-// A typed search term used to run as one single query — "energy" searched the web exactly once,
-// which a single search engine call answers with a handful of results clustered around whichever
-// country dominates that query's top hits, not a global spread. The unbiased (no-term) view above
-// already solved the equivalent problem for subject breadth by querying every subject in parallel
-// and merging; the same fix applies here by region instead, so long as the reader hasn't already
-// narrowed to a specific place via the location/country filters (in which case fanning out across
-// other regions would just work against what they explicitly asked for).
-const WORLD_REGIONS = [
-  'North America',
-  'Latin America',
-  'Europe',
-  'the Middle East and GCC',
-  'Africa',
-  'Asia',
-  'Oceania',
-];
-
 // Merging results from several parallel queries needs a way to tell "the same conference turned
 // up twice" apart from "two different conferences happen to share a host" — a university, a
 // professional society (IEEE, ASME...), or a shared conference-hosting platform can easily run
@@ -334,6 +293,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleFollow,
 }) => {
   const [searchTerm, setSearchInput] = useState(initialSearchQuery);
+  // Editing the box only filters the local catalog. A live web request is made once, when the
+  // visitor presses Enter or clicks Search, so one search never consumes a batch of provider calls.
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState(initialSearchQuery);
+  const [searchSubmitCount, setSearchSubmitCount] = useState(0);
   // "YYYY-MM" — only conferences whose real start date falls in this month or later are shown.
   // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
   const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
@@ -516,7 +479,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   }, [webResults, webSearchLoading]);
 
   useEffect(() => {
-    const trimmed = searchTerm.trim();
+    const trimmed = submittedSearchTerm.trim();
     // Live results do not arrive with normalized filter fields, so every selected filter is sent
     // to the search engine itself. Conference Gate catalog records are filtered exactly above;
     // live results are strongly biased by the same date, place, country, and format choices.
@@ -544,19 +507,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // range is biased into the query itself rather than applied as a real filter.
     const priceBias = priceFilterActive ? ` ${formatPrice(priceMin)}-${formatPrice(priceMax)}` : '';
     const biasSuffix = dateBias + locationBias + countryBias + formatBias + timingBias + priceBias;
-    // With nothing typed, every default subject is queried in parallel for the broadest unbiased
-    // view. A typed term used to run as a single query, which a search engine answers with results
-    // clustered around wherever that exact phrase ranks best — not a global spread. Unless the
-    // reader has already narrowed to a specific place via the location/country filters, the same
-    // term is instead fanned out across every world region in parallel and merged, the same way
-    // the unbiased view fans out across subjects.
-    const searchingSpecificPlace = Boolean(locationFilter.trim() || countryFilter.trim());
-    const effectiveQueries = trimmed
-      ? searchingSpecificPlace
-        ? [trimmed + biasSuffix]
-        : WORLD_REGIONS.map((region) => `${trimmed} conference in ${region}` + biasSuffix)
-      : DEFAULT_DISCOVER_QUERIES.map((q) => q + biasSuffix);
-    const cacheKey = effectiveQueries.join('|');
+    // Exactly one provider query per explicit search. Already-extracted Conference Gate records
+    // are returned by the server first and do not consume external search quota.
+    const baseQuery =
+      trimmed || `upcoming academic and technical conferences ${new Date().getFullYear()}`;
+    const effectiveQueries = [baseQuery + biasSuffix];
+    const cacheKey = effectiveQueries[0];
 
     const handle = setTimeout(
       () => {
@@ -571,8 +527,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         lastHandledRetryCountRef.current = manualRetryCount;
         setWebSearchLoading(true);
         setWebSearchError(null);
-        // Publish each subject as soon as it returns. The previous all-at-once barrier made
-        // Discover look empty until the slowest of ten searches finished.
         const byIdentity = new Map<string, LiveSearchResult>();
         const merged: LiveSearchResult[] = [];
         const searches = effectiveQueries.map((q) =>
@@ -620,15 +574,20 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             if (lastWebQueryRef.current === cacheKey) setWebSearchLoading(false);
           });
       },
-      // Every trigger is debounced the same way, not just typed text — a dragged price-range
-      // handle or a rapid sequence of filter changes fires this effect just as fast as typing, and
-      // an immediate (0ms) search on each intermediate value was firing a full parallel ten-query
-      // search per pixel of drag, racing itself and frequently landing on an empty result.
-      250
+      // The request is explicit, so only a tiny delay is needed to let the submitted state settle.
+      25
     );
 
     return () => clearTimeout(handle);
-  }, [searchTerm, startFromMonth, endAtMonth, locationFilter, countryFilter, formatFilter, timingFilter, priceFilterActive, priceMin, priceMax, manualRetryCount]);
+  }, [searchSubmitCount, manualRetryCount]);
+
+  const submitDiscoverySearch = (term = searchTerm) => {
+    const normalized = term.trim();
+    setSearchInput(term);
+    setSubmittedSearchTerm(normalized);
+    lastWebQueryRef.current = null;
+    setSearchSubmitCount((count) => count + 1);
+  };
 
   return (
     <div className="space-y-8">
@@ -650,16 +609,33 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
         {/* Search and filters shared by Conference Gate records and Live Web Search. */}
         <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search title, keywords, topics..."
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden transition-all"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          </div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitDiscoverySearch();
+            }}
+            className="flex gap-2"
+          >
+            <div className="relative flex-1">
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search title, keywords, topics — press Enter"
+                aria-label="Search conferences"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden transition-all"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            </div>
+            <button
+              type="submit"
+              disabled={webSearchLoading}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {webSearchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {webSearchLoading ? 'Searching' : 'Search'}
+            </button>
+          </form>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-2.5">
             <div className="xl:col-span-2 flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500">
@@ -870,7 +846,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               <button
                 key={suggestion}
                 type="button"
-                onClick={() => setSearchInput(suggestion)}
+                onClick={() => submitDiscoverySearch(suggestion)}
                 className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold transition-colors cursor-pointer ${
                   searchTerm === suggestion
                     ? 'bg-blue-600 border-blue-600 text-white'
@@ -885,6 +861,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 type="button"
                 onClick={() => {
                   setSearchInput('');
+                  setSubmittedSearchTerm('');
+                  lastWebQueryRef.current = null;
+                  setSearchSubmitCount((count) => count + 1);
                   setStartFromMonth(nextMonthValue());
                   setEndAtMonth('');
                   setLocationFilter('');
@@ -1093,7 +1072,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                {searchTerm.trim() ? `Live Web Results for "${searchTerm.trim()}"` : 'Live Web Results'}
+                {submittedSearchTerm.trim() ? `Live Web Results for "${submittedSearchTerm.trim()}"` : 'Live Web Results'}
               </h3>
               <p className="text-[11px] text-slate-500">
                 Only current and upcoming individual conference websites are shown. Old editions, duplicates,
@@ -1185,6 +1164,13 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     {/* Quick-Tab Shortcuts — jump straight into a specific section of the
                         detail page instead of always landing on the overview. */}
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border ${
+                        result.prepared
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-blue-50 border-blue-200 text-blue-700'
+                      }`}>
+                        {result.prepared ? 'Conference details ready' : 'Preparing conference details'}
+                      </span>
                       {(
                         [
                           { tab: 'cfp', label: 'Call for Papers', icon: FileText },
