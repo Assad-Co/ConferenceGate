@@ -76,6 +76,35 @@ const WORLD_REGIONS = [
   'Oceania',
 ];
 
+// Merging results from several parallel queries needs a way to tell "the same conference turned
+// up twice" apart from "two different conferences happen to share a host" — a university, a
+// professional society (IEEE, ASME...), or a shared conference-hosting platform can easily run
+// dozens of distinct, genuinely different conferences under one domain. Deduping by hostname alone
+// (the previous approach) collapsed all of those down to a single card, which is exactly why a
+// broad topic search came back with far fewer results than actually exist. Stripping dates,
+// edition ordinals, and page-section labels from the title instead identifies the conference
+// itself, the same normalization the server already applies when deciding two Brave results are
+// the same event.
+function liveResultIdentity(title: string): string {
+  const parts = title
+    .split(/\s+[|–—-]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const meaningful =
+    parts
+      .filter((part) => !/^(home|program|programme|agenda|speakers?|registration|about|official site)$/i.test(part))
+      .sort((a, b) => b.length - a.length)[0] || title;
+
+  return meaningful
+    .toLowerCase()
+    .replace(/\b20\d{2}\b/g, ' ')
+    .replace(/\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b/g, ' ')
+    .replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/g, ' ')
+    .replace(/\b(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|annual|edition|official|website|home)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 const DISCOVERY_MINIMUM_MONTH = '2026-09';
 
 function liveResultFitsDateWindow(
@@ -525,22 +554,17 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         setWebSearchError(null);
         // Publish each subject as soon as it returns. The previous all-at-once barrier made
         // Discover look empty until the slowest of ten searches finished.
-        const byHost = new Map<string, LiveSearchResult>();
+        const byIdentity = new Map<string, LiveSearchResult>();
         const merged: LiveSearchResult[] = [];
         const searches = effectiveQueries.map((q) =>
           searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry).then((results) => {
             if (lastWebQueryRef.current !== cacheKey) return results;
             for (const result of results) {
               if (!liveResultFitsDateWindow(result, effectiveStartMonth, endAtMonth)) continue;
-              let host = result.displayLink || '';
-              try {
-                host = new URL(result.link).hostname.replace(/^www\./, '');
-              } catch {
-                // Keep the displayLink fallback already assigned above.
-              }
-              const existing = byHost.get(host);
+              const identity = liveResultIdentity(result.title) || result.link;
+              const existing = byIdentity.get(identity);
               if (!existing) {
-                byHost.set(host, result);
+                byIdentity.set(identity, result);
                 merged.push(result);
               } else if (
                 liveSearchResultRelevance(result, trimmed) >
@@ -548,7 +572,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               ) {
                 const existingIndex = merged.indexOf(existing);
                 if (existingIndex >= 0) merged[existingIndex] = result;
-                byHost.set(host, result);
+                byIdentity.set(identity, result);
               }
             }
             setWebResults(rankLiveSearchResults(merged, trimmed));
