@@ -177,20 +177,16 @@ function stripHtml(text: string): string {
 // Nudges the underlying web search toward actual conference/event listings rather than
 // generic informational pages about the topic — this panel is "search the web for a
 // conference we haven't added yet", not a general-purpose search box.
-const CONFERENCE_KEYWORDS = /\b(conference|summit|symposium|convention|congress|workshop|expo|meeting)\b/i;
 function toConferenceQuery(query: string): string {
-  const withKeyword = CONFERENCE_KEYWORDS.test(query) ? query : `${query} conference`;
+  // One provider request can cover every event label. A subject search such as "geoscience"
+  // therefore includes conventions, congresses, symposia, summits, workshops, and scientific
+  // meetings instead of only pages that happen to call themselves a conference.
+  const eventTypes =
+    '("conference" OR "convention" OR "congress" OR "symposium" OR "summit" OR "workshop" OR "meeting")';
 
-  // Deliberately does NOT force the current year onto the query. Many conferences run on a
-  // biennial/triennial/irregular cycle — IMOG's next edition is 2027, not this year — so biasing
-  // every search toward "this year" would rank the actual next edition's page below noise that
-  // happens to mention the current year, working against "upcoming" in favor of "now". Recency
-  // (excluding genuinely past editions, keeping any future one regardless of which year) is
-  // already handled correctly downstream by looksOutdated/currentOrUpcomingTime once results
-  // come back, so the query itself only needs to ask for the event's own information pages and
-  // down-rank roundup vocabulary — improving the candidate pool before the strict server-side
-  // filter below is applied.
-  return `${withKeyword} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
+  // Do not force one year here: recurring and biennial events may publish their next edition in a
+  // later year. The date filter below removes genuinely old editions after results come back.
+  return `${query} ${eventTypes} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
 }
 
 /**
@@ -508,7 +504,7 @@ export async function searchConferences(
   priority: "high" | "low" = "high",
   force = false
 ): Promise<LiveSearchResult[]> {
-  const cacheKey = `official-v3:${query.trim().toLowerCase()}`;
+  const cacheKey = `official-v4:${query.trim().toLowerCase()}`;
   const cached = cache.get(cacheKey);
   if (!force && cached && cached.expiresAt > Date.now()) {
     return cached.data;
