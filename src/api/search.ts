@@ -24,6 +24,28 @@ export async function searchConferencesOnTheWeb(
   return data.results;
 }
 
+/**
+ * Queues the visible live results for background extraction. This is deliberately fire-and-forget:
+ * Discover stays responsive while the server's small worker pool fills the persistent cache.
+ */
+export function prefetchConferenceDetails(results: LiveSearchResult[]): void {
+  const conferences = results
+    .slice(0, 8)
+    .map((result) => ({ url: result.link, title: result.title }))
+    .filter((item) => item.url);
+
+  if (conferences.length === 0) return;
+  fetch('/api/ai/extract-conference/prefetch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ conferences }),
+    keepalive: true,
+  }).catch(() => {
+    // Prefetch is only an optimization. Opening the detail page retains a safe on-demand fallback.
+  });
+}
+
 export interface AgendaSessionExtract {
   date: string | null;
   time: string | null;
@@ -324,6 +346,24 @@ export async function extractConferenceDetails(
   focusTab?: string
 ): Promise<ExtractedConferenceDetails> {
   try {
+    // Opening a card first asks only for already-prepared data. This request does not crawl and
+    // usually returns from memory or the persistent database in a few milliseconds.
+    const cachedRes = await fetch(
+      `/api/ai/extract-conference/cached?url=${encodeURIComponent(url)}`,
+      {
+        credentials: 'include',
+        signal: AbortSignal.timeout(2500),
+      }
+    );
+    if (cachedRes.ok && cachedRes.status !== 204) {
+      const cachedData = await cachedRes.json().catch(() => null);
+      if (cachedData?.extracted === true || cachedData?.crawlComplete === false) {
+        return normalizeTabbedExtraction(cachedData);
+      }
+    }
+
+    // Safe fallback for a newly discovered or lower-ranked conference that has not been prepared
+    // yet. The server still answers with the first snapshot and finishes the crawl in background.
     const res = await fetch('/api/ai/extract-conference', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
