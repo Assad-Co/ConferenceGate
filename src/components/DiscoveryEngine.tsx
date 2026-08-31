@@ -22,6 +22,7 @@ import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
 import {
   searchConferencesOnTheWeb,
+  searchConferenceDirectories,
   prefetchConferenceDetails,
   LiveSearchResult,
 } from '../api/search';
@@ -533,29 +534,48 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         setWebSearchError(null);
         const byIdentity = new Map<string, LiveSearchResult>();
         const merged: LiveSearchResult[] = [];
+        // Shared by every source that contributes results, so a conference found by two of them
+        // is one card regardless of which found it first.
+        const absorb = (results: LiveSearchResult[]) => {
+          for (const result of results) {
+            if (!liveResultFitsDateWindow(result, effectiveStartMonth, endAtMonth)) continue;
+            const identity = liveResultIdentity(result.title) || result.link;
+            const existing = byIdentity.get(identity);
+            if (!existing) {
+              byIdentity.set(identity, result);
+              merged.push(result);
+            } else if (
+              liveSearchResultRelevance(result, trimmed) >
+              liveSearchResultRelevance(existing, trimmed)
+            ) {
+              const existingIndex = merged.indexOf(existing);
+              if (existingIndex >= 0) merged[existingIndex] = result;
+              byIdentity.set(identity, result);
+            }
+          }
+          setWebResults(rankLiveSearchResults(merged, trimmed));
+        };
+
         const searches = effectiveQueries.map((q) =>
           searchConferencesOnTheWeb(q, trimmed ? 'high' : 'low', isManualRetry).then((results) => {
             if (lastWebQueryRef.current !== cacheKey) return results;
-            for (const result of results) {
-              if (!liveResultFitsDateWindow(result, effectiveStartMonth, endAtMonth)) continue;
-              const identity = liveResultIdentity(result.title) || result.link;
-              const existing = byIdentity.get(identity);
-              if (!existing) {
-                byIdentity.set(identity, result);
-                merged.push(result);
-              } else if (
-                liveSearchResultRelevance(result, trimmed) >
-                liveSearchResultRelevance(existing, trimmed)
-              ) {
-                const existingIndex = merged.indexOf(existing);
-                if (existingIndex >= 0) merged[existingIndex] = result;
-                byIdentity.set(identity, result);
-              }
-            }
-            setWebResults(rankLiveSearchResults(merged, trimmed));
+            absorb(results);
             return results;
           })
         );
+
+        // Conference directories, read once for the whole search rather than once per region.
+        // They list smaller and regional events exhaustively, which is exactly what a search
+        // engine's ranking leaves out. Never allowed to fail the search: searchConferenceDirectories
+        // resolves to [] on any error.
+        if (trimmed) {
+          searches.push(
+            searchConferenceDirectories(trimmed, isManualRetry).then((results) => {
+              if (lastWebQueryRef.current === cacheKey) absorb(results);
+              return results;
+            })
+          );
+        }
 
         Promise.allSettled(searches)
           .then((outcomes) => {

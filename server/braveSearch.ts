@@ -593,6 +593,40 @@ export async function searchWebForConferenceFacts(query: string, count = 8): Pro
 
 export const braveSearchRouter = Router();
 
+// The directory harvest needs the AI client, which lives in server.ts's closure. Rather than
+// export that client (or move the router), server.ts registers the harvester at startup and this
+// module stays unaware of how it's built.
+type DirectoryHarvester = (topic: string, force: boolean) => Promise<LiveSearchResult[]>;
+let directoryHarvester: DirectoryHarvester | null = null;
+
+export function registerDirectoryHarvester(harvester: DirectoryHarvester): void {
+  directoryHarvester = harvester;
+}
+
+// A separate endpoint rather than part of /conferences on purpose: a typed search fans out across
+// seven world regions, and harvesting the same directories seven times for one search term would
+// be seven times the work for identical results. The client calls this once per search instead.
+braveSearchRouter.get(
+  "/conferences/directories",
+  asyncHandler(async (req, res) => {
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    const force = req.query.force === "true";
+    if (!query || query.length < 2) {
+      return res.status(400).json({ error: "Provide a search query of at least 2 characters." });
+    }
+    if (!directoryHarvester) return res.json({ results: [] });
+
+    try {
+      res.json({ results: await directoryHarvester(query, force) });
+    } catch (error) {
+      // Directory results are a supplement to Discover, never the thing it depends on — a failure
+      // here returns nothing rather than failing the search the reader actually ran.
+      console.error("Directory harvest failed:", error);
+      res.json({ results: [] });
+    }
+  })
+);
+
 braveSearchRouter.get(
   "/conferences",
   asyncHandler(async (req, res) => {

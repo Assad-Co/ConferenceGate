@@ -26,6 +26,31 @@ export async function searchConferencesOnTheWeb(
   return data.results;
 }
 
+/** Conferences mined from conference directories for this topic.
+ *
+ *  Directories list smaller and regional events exhaustively — that is their whole purpose —
+ *  where a search engine only surfaces conferences whose own sites rank well. Each result names
+ *  the directory that listed it, since that is weaker evidence than a conference's own website.
+ *
+ *  Returns [] rather than throwing: these supplement Discover's results and must never be able to
+ *  fail the search itself. */
+export async function searchConferenceDirectories(
+  query: string,
+  force = false
+): Promise<LiveSearchResult[]> {
+  try {
+    const res = await fetch(
+      `/api/search/conferences/directories?q=${encodeURIComponent(query)}${force ? '&force=true' : ''}`,
+      { credentials: 'include' }
+    );
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.results) ? data.results : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Queues the visible live results for background extraction. This is deliberately fire-and-forget:
  * Discover stays responsive while the server's small worker pool fills the persistent cache.

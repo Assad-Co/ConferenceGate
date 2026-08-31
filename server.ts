@@ -6,7 +6,13 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
-import { braveSearchRouter, searchConferences, searchWebForConferenceFacts } from "./server/braveSearch";
+import {
+  braveSearchRouter,
+  searchConferences,
+  searchWebForConferenceFacts,
+  registerDirectoryHarvester,
+} from "./server/braveSearch";
+import { harvestDirectoryConferences } from "./server/directoryHarvest";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
@@ -1000,6 +1006,15 @@ Return JSON with exactly this shape:
   // Flash-Lite is Google's low-latency document-parsing model. The former model repeatedly hit
   // 40-second deadlines when several recovered pages were structured at once.
   const EXTRACTION_MODEL = process.env.EXTRACTION_MODEL || "gemini-3.5-flash-lite";
+
+  // Lets the search router mine conference directories for the individual conferences they list,
+  // without this module's AI client having to leak out of the closure. Registered once at setup;
+  // if no AI client is configured the harvester simply reports nothing.
+  registerDirectoryHarvester(async (topic, force) => {
+    const ai = getAIClient();
+    if (!ai) return [];
+    return harvestDirectoryConferences(ai, EXTRACTION_MODEL, topic, force);
+  });
   const MODEL_RETRY_ATTEMPTS = 2;
   const MODEL_RETRY_BASE_DELAY_MS = 1000;
   const SECONDARY_MODEL_TIMEOUT_MS = 14000;
