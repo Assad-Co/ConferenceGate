@@ -76,7 +76,8 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const [moreMenuOpenId, setMoreMenuOpenId] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  const composerAvatar = userProfile?.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80';
+  // Their own initials, not a stock portrait of someone else, when they have no picture set.
+  const composerAvatar = resolveAvatar(userProfile?.avatar, userProfile?.name || '');
   const composerName = userProfile?.name || 'You';
 
   const handleSubmitPost = async (e: React.FormEvent) => {

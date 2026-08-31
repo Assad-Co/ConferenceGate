@@ -1154,9 +1154,11 @@ export function App() {
       id: `conf_${Date.now()}`,
       title: newConfData.title || 'New Conference',
       organizerName: newConfData.organizerName || 'Conference Organizing Board',
-      organizerLogo: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
-      banner: newConfData.banner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
-      logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=200&q=80',
+      // No stock photography stands in for imagery the organizer didn't supply — a card with no
+      // banner shows the conference's initials instead of a stranger's conference.
+      organizerLogo: newConfData.organizerLogo || '',
+      banner: newConfData.banner || '',
+      logo: newConfData.logo || '',
       description: newConfData.description || '',
       industry: newConfData.industry || 'General Science',
       topics: newConfData.topics || [],

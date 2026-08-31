@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
+import { generateInitialsAvatar, getInitials } from '../utils/avatar';
 import {
   searchConferencesOnTheWeb,
   searchConferenceDirectories,
@@ -933,11 +934,22 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               >
                 {/* Conference Logo & Banner */}
                 <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-slate-900">
-                  <img
-                    src={conf.banner}
-                    alt={conf.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90"
-                  />
+                  {/* A conference created without a banner gets its initials, not an <img src="">.
+                      An empty src makes the browser re-request the whole page, and no stock photo
+                      is substituted for one the organiser never supplied. */}
+                  {conf.banner ? (
+                    <img
+                      src={conf.banner}
+                      alt={conf.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90"
+                    />
+                  ) : (
+                    <div className="w-full h-full min-h-48 flex items-center justify-center">
+                      <span className="text-3xl font-black tracking-wider text-white/70">
+                        {getInitials(conf.title)}
+                      </span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
 
                   <div className="absolute top-3 left-3 bg-white/90 text-slate-800 font-bold text-[10px] uppercase px-2.5 py-1 rounded-full backdrop-blur-md">
@@ -946,7 +958,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
                   <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
                     <img
-                      src={conf.logo}
+                      src={conf.logo || generateInitialsAvatar(conf.organizerName)}
                       alt={conf.organizerName}
                       className="w-8 h-8 rounded-lg object-cover ring-2 ring-white/50"
                     />

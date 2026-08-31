@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange } from '../utils/date';
+import { generateInitialsAvatar, getInitials } from '../utils/avatar';
 
 interface ConferenceDetailProps {
   conference: Conference;
@@ -118,17 +119,27 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
       {/* Hero Banner Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="relative h-64 sm:h-80 bg-slate-900">
-          <img
-            src={conference.banner}
-            alt={conference.title}
-            className="w-full h-full object-cover opacity-85"
-          />
+          {/* No banner means no <img>: an empty src makes the browser re-request the whole page,
+              and a stock photo would be standing in for one the organiser never supplied. */}
+          {conference.banner ? (
+            <img
+              src={conference.banner}
+              alt={conference.title}
+              className="w-full h-full object-cover opacity-85"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-5xl font-black tracking-wider text-white/60">
+                {getInitials(conference.title)}
+              </span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
 
           {/* Organizer Logo & Name */}
           <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
             <img
-              src={conference.organizerLogo}
+              src={conference.organizerLogo || generateInitialsAvatar(conference.organizerName)}
               alt={conference.organizerName}
               className="w-8 h-8 rounded-lg object-cover ring-2 ring-white/50"
             />

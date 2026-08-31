@@ -49,7 +49,7 @@ import {
 import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, ReviewOpportunity } from '../types';
 import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
-import { resolveAvatar } from '../utils/avatar';
+import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 import {
   sendBroadcast,
@@ -213,7 +213,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   conferences,
   submissions,
   organizerName = 'Conference Organizing Board',
-  organizerLogo = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&q=80',
+  organizerLogo = '',
   organizerBio = '',
   organizerCity = '',
   organizerCountry = '',
@@ -329,9 +329,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [newConfEndDate, setNewConfEndDate] = useState('2026-10-18');
   const [newConfLocation, setNewConfLocation] = useState('Paris, France');
   const [newConfTracks, setNewConfTracks] = useState('Track 1: Subsurface AI, Track 2: Carbon Storage');
-  const [newConfBanner, setNewConfBanner] = useState(
-    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1600&q=80'
-  );
+  const [newConfBanner, setNewConfBanner] = useState('');
   const [newConfMainThemes, setNewConfMainThemes] = useState('Subsurface AI, Net Zero Solutions');
   const [newConfSubmissionGuidelines, setNewConfSubmissionGuidelines] = useState('');
   const [wizardPublished, setWizardPublished] = useState(false);
@@ -1063,8 +1061,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       title: newConfTitle || 'International Energy & Subsurface Congress 2026',
       organizerName,
       organizerLogo,
-      banner: newConfBanner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
-      logo: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=200&q=80',
+      // Left empty when the organizer supplied nothing: the card renders the conference's
+      // initials rather than a stock photograph of somebody else's event.
+      banner: newConfBanner.trim(),
+      logo: '',
       description: 'Newly created international congress focusing on energy transition, geosciences, and subsurface AI.',
       industry: newConfIndustry,
       topics: ['Energy', 'Geosciences', 'Subsurface AI'],
@@ -1086,7 +1086,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         name: sp.name,
         title: sp.title,
         org: sp.org,
-        avatar: sp.avatar || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80',
+        avatar: sp.avatar || generateInitialsAvatar(sp.name),
         role: 'Speaker',
         bio: sp.bio,
         interests: [],
@@ -1096,7 +1096,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         name: member.name,
         title: member.title,
         org: member.org,
-        avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80',
+        // Initials, never a stock portrait: this is a named real person on a real committee.
+        avatar: generateInitialsAvatar(member.name),
         committeeRole: member.committeeRole,
       })),
       sponsors: [],
@@ -1192,7 +1193,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="flex items-center gap-4 min-w-0">
               <img
-                src={organizerLogo}
+                src={organizerLogo || generateInitialsAvatar(organizerName)}
                 alt={organizerName}
                 className="w-16 h-16 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
               />
@@ -1262,7 +1263,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               {(conferences || []).map((conf) => (
                 <div key={conf.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <img src={conf.logo} alt={conf.title} className="w-12 h-12 rounded-xl object-cover" />
+                    <img
+                      src={conf.logo || generateInitialsAvatar(conf.title)}
+                      alt={conf.title}
+                      className="w-12 h-12 rounded-xl object-cover"
+                    />
                     <div>
                       <h4 className="font-bold text-sm text-slate-900">{conf.title}</h4>
                       <div className="text-xs text-slate-500 font-medium">
@@ -1651,10 +1656,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   {newConfSpeakers.map((sp, idx) => (
                     <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <img
-                        src={
-                          sp.avatar ||
-                          'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=100&q=80'
-                        }
+                        // A speaker with no photo gets their initials, not a stock photograph of
+                        // an unrelated person standing in for them.
+                        src={sp.avatar || generateInitialsAvatar(sp.name)}
                         alt={sp.name}
                         className="w-12 h-12 rounded-xl object-cover shrink-0 ring-1 ring-slate-200"
                       />
