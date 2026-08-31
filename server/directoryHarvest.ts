@@ -30,27 +30,44 @@ export interface HarvestedConference {
 interface DirectorySource {
   name: string;
   host: string;
-  /** Built from the reader's topic. `{q}` is replaced with the URL-encoded search term. */
-  searchUrl: (topic: string) => string;
+  /** Search URLs to try, in order, until one reads. A directory's query parameter is not a
+   *  contract — it gets renamed, or the search moves behind a POST — and a single hard-coded
+   *  pattern fails silently when that happens: the fetch still returns a page, just not the one
+   *  that was asked for, and the harvest quietly yields nothing with no error anywhere. Each list
+   *  therefore ends with the directory's plain listing page, which needs no parameter at all; the
+   *  topic filter is applied by the extraction prompt regardless of which URL answered. */
+  searchUrls: (topic: string) => string[];
 }
 
 // Kept small and explicit rather than open-ended: each of these is a general, worldwide,
-// multi-discipline conference index with a stable public search page.
+// multi-discipline conference index with a public listing page.
 const DIRECTORY_SOURCES: DirectorySource[] = [
   {
     name: "ConferenceLists",
     host: "conferencelists.org",
-    searchUrl: (topic) => `https://www.conferencelists.org/search-events?query=${encodeURIComponent(topic)}`,
+    searchUrls: (topic) => [
+      `https://www.conferencelists.org/search-events/?query=${encodeURIComponent(topic)}`,
+      `https://www.conferencelists.org/search-events/?s=${encodeURIComponent(topic)}`,
+      "https://www.conferencelists.org/search-events/",
+    ],
   },
   {
     name: "iConf",
     host: "iconf.org",
-    searchUrl: (topic) => `https://www.iconf.org/conferences?search=${encodeURIComponent(topic)}`,
+    searchUrls: (topic) => [
+      `https://www.iconf.org/conferences?search=${encodeURIComponent(topic)}`,
+      `https://www.iconf.org/?s=${encodeURIComponent(topic)}`,
+      "https://www.iconf.org/conferences",
+    ],
   },
   {
     name: "Resurchify",
     host: "resurchify.com",
-    searchUrl: (topic) => `https://www.resurchify.com/search.php?query=${encodeURIComponent(topic)}`,
+    searchUrls: (topic) => [
+      `https://www.resurchify.com/search.php?query=${encodeURIComponent(topic)}`,
+      `https://www.resurchify.com/conference-list.php?query=${encodeURIComponent(topic)}`,
+      "https://www.resurchify.com/conference-list.php",
+    ],
   },
 ];
 
@@ -58,6 +75,9 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // Listings change slowly; six hours ke
 const cache = new Map<string, { data: HarvestedConference[]; expiresAt: number }>();
 
 const FETCH_TIMEOUT_MS = 10000;
+// How long one directory may spend working through its candidate URLs. Sources run in parallel,
+// so this is the whole harvest's fetch ceiling, not a per-source addition.
+const SOURCE_BUDGET_MS = 22000;
 const MAX_PAGE_CHARS = 18000;
 const MAX_PER_DIRECTORY = 15;
 
@@ -86,6 +106,31 @@ async function readListingText(url: string): Promise<string | null> {
 
   const viaJina = await jinaReadPage(url);
   return viaJina ? viaJina.slice(0, MAX_PAGE_CHARS) : null;
+}
+
+/** Tries a source's candidate URLs until one both reads and looks like it answered the question.
+ *
+ *  A page that mentions the topic is taken immediately. Otherwise the first page that read at all
+ *  is used — an unfiltered listing of real conferences is still worth extracting from, and the
+ *  prompt does the topic filtering either way. Bounded by a wall-clock budget so a directory that
+ *  is merely slow can never hold up the others. */
+async function readBestListing(
+  urls: string[],
+  topic: string,
+  deadline: number
+): Promise<{ url: string; text: string } | null> {
+  const needle = topic.toLowerCase();
+  let firstReadable: { url: string; text: string } | null = null;
+
+  for (const url of urls) {
+    if (Date.now() >= deadline) break;
+    const text = await readListingText(url);
+    if (!text) continue;
+    if (!firstReadable) firstReadable = { url, text };
+    if (text.toLowerCase().includes(needle)) return { url, text };
+  }
+
+  return firstReadable;
 }
 
 function htmlToText(html: string): string {
@@ -136,12 +181,19 @@ export async function harvestDirectoryConferences(
   const cached = cache.get(cacheKey);
   if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
 
+  const deadline = Date.now() + SOURCE_BUDGET_MS;
   const perSource = await Promise.all(
     DIRECTORY_SOURCES.map(async (source) => {
       try {
-        const listingUrl = source.searchUrl(term);
-        const text = await readListingText(listingUrl);
-        if (!text) return [];
+        const listing = await readBestListing(source.searchUrls(term), term, deadline);
+        if (!listing) {
+          // Logged rather than swallowed: "no conferences from this directory" and "this
+          // directory's search URL no longer works" look identical from the outside, and only the
+          // second one is a thing to go and fix.
+          console.warn(`Directory harvest: none of ${source.name}'s listing URLs could be read for "${term}"`);
+          return [];
+        }
+        const { url: listingUrl, text } = listing;
 
         const response = await ai.models.generateContent({
           model,
@@ -180,8 +232,9 @@ export async function harvestDirectoryConferences(
               listedBy: source.name,
             };
           });
-      } catch {
+      } catch (error) {
         // One unreadable or unparseable directory must never affect the others, or the search.
+        console.warn(`Directory harvest: ${source.name} failed for "${term}":`, (error as any)?.message || error);
         return [];
       }
     })
@@ -197,6 +250,11 @@ export async function harvestDirectoryConferences(
     merged.push(entry);
   }
 
+  console.log(
+    `Directory harvest for "${term}": ${merged.length} conferences from ${
+      new Set(merged.map((c) => c.listedBy)).size
+    }/${DIRECTORY_SOURCES.length} directories`
+  );
   cache.set(cacheKey, { data: merged, expiresAt: Date.now() + CACHE_TTL_MS });
   return merged;
 }
