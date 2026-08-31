@@ -550,6 +550,93 @@ Provide constructive feedback in JSON format with fields:
       .trim();
   }
 
+  // The [LINK: …] / [IMAGE: …] markers above exist for one reader only: the extraction model's
+  // prompt. They are scaffolding, not prose, and a marker that survives into an extracted value is
+  // rendered verbatim on screen — which is exactly the raw "[LINK: https://…]" soup a reader
+  // should never be shown. Two shapes mean different things and are treated differently:
+  //   - a value that IS a single marker is the model naming that URL, so it becomes the bare URL;
+  //   - a marker sitting inside a sentence is leftover page furniture, so it is dropped.
+  function stripExtractionMarkers(value: string): string {
+    const soleMarker = value.trim().match(/^\[(?:LINK|IMAGE):\s*([^\]]*)\]$/i);
+    if (soleMarker) return soleMarker[1].trim();
+    return value
+      .replace(/\[(?:LINK|IMAGE):\s*[^\]]*\]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // Applied to a whole extraction result, so no field on any tab can carry a marker to the screen
+  // regardless of which one the model happened to echo it into.
+  function stripExtractionMarkersDeep(value: any): any {
+    if (typeof value === "string") return stripExtractionMarkers(value);
+    if (Array.isArray(value)) return value.map(stripExtractionMarkersDeep);
+    if (value && typeof value === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [key, entry] of Object.entries(value)) out[key] = stripExtractionMarkersDeep(entry);
+      return out;
+    }
+    return value;
+  }
+
+  // Is this passage the page describing itself, or is it page furniture? Menus, language
+  // switchers and button labels are short, unpunctuated and heavily capitalised; a description is
+  // a finished sentence of ordinary length in sentence case.
+  function readsAsProse(passage: string): boolean {
+    if (passage.length < 40) return false;
+    if (!/[.!?]$/.test(passage)) return false;
+    const words = passage.split(/\s+/);
+    if (words.length < 8) return false;
+    // A run of navigation labels ("Exhibit Sponsor Registration Program EN FR") is nearly all
+    // capitalised words; real prose is not.
+    const capitalised = words.filter((w) => /^[A-Z]/.test(w)).length;
+    return capitalised / words.length <= 0.6;
+  }
+
+  // A page whose fetch succeeded but whose structuring model call failed still has its text — and
+  // some of that text really is the conference describing itself. The rest is menus, cookie
+  // notices, language switchers and link markers.
+  //
+  // Paragraphs are read from the HTML where there is HTML, because that keeps the page's own
+  // structure: a <p> is where a site puts its description, and a nav bar is not one. Tag-stripped
+  // text is the fallback (a markdown reader returns no HTML), and there the menu labels have
+  // already been flattened into the same run of words as the prose, so only whole sentences that
+  // read as prose survive.
+  //
+  // Returns null when the page holds neither, because showing a reader a raw dump of page
+  // furniture is worse than showing them nothing — the UI has an honest empty state for a summary
+  // that isn't there.
+  function readableProseSummary(pageText: string, html = "", limit = 900): string | null {
+    const kept: string[] = [];
+    let total = 0;
+    const take = (passage: string) => {
+      if (total >= limit || !readsAsProse(passage)) return;
+      kept.push(passage);
+      total += passage.length + 1;
+    };
+
+    const paragraphRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = paragraphRe.exec(html)) && total < limit) {
+      take(stripExtractionMarkers(decodeEntitiesAndTags(match[1])));
+    }
+
+    if (!kept.length) {
+      // Blank lines are the only block boundary a markdown read leaves behind, and they matter:
+      // without them a menu list runs straight into the first paragraph and is carried along as
+      // part of its opening sentence.
+      for (const block of pageText.split(/\n\s*\n/)) {
+        if (total >= limit) break;
+        for (const sentence of stripExtractionMarkers(block).split(/(?<=[.!?])\s+/)) {
+          if (total >= limit) break;
+          take(sentence.trim());
+        }
+      }
+    }
+
+    const summary = kept.join(" ").slice(0, limit).trim();
+    return summary.length >= 120 ? summary : null;
+  }
+
   // Scans the page's raw HTML (before tag-stripping) for every <a> whose visible text matches a
   // topic pattern, returning up to `limit` distinct resolved absolute URLs — a deterministic,
   // cheap way to find same-site "Call for Papers"/"Submission Guidelines"/"Committee" pages
@@ -1125,7 +1212,7 @@ Return JSON with exactly this shape:
   }
 
   function sanitizeUpcomingPageExtraction(parsedValue: any, pageTitle: string): any {
-    const parsed = parsedValue && typeof parsedValue === "object" ? { ...parsedValue } : {};
+    const parsed = parsedValue && typeof parsedValue === "object" ? stripExtractionMarkersDeep({ ...parsedValue }) : {};
     const importantDates = Array.isArray(parsed.importantDates) ? parsed.importantDates : [];
     const eventDateEntries = importantDates.filter(
       (entry: any) => entry && /\b(conference|event|meeting|symposium|congress|start|opening|end|closing|dates?)\b/i.test(String(entry.label || ""))
@@ -1409,7 +1496,9 @@ Return JSON with exactly this shape:
       const exactEmail = pageText.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i)?.[0] || null;
       parsed = {
         conferenceTitle: title || pageTitleOf(html, pageUrl),
-        overviewSummary: pageText.slice(0, 1200),
+        // Only the page's own readable prose, never the raw prepared text — that carries the
+        // prompt's link/image markers and every nav label on the page.
+        overviewSummary: readableProseSummary(pageText, html),
         contactEmail: exactEmail,
       };
     }

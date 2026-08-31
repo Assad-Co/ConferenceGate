@@ -749,12 +749,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                     {data?.overviewSummary || result.snippet}
                   </p>
-                  {!data?.extracted && (
+                  {!data?.extracted ? (
                     <p className="text-[11px] text-slate-400 italic">
                       {data?.isFallback
                         ? 'AI extraction is not available right now — the summary above comes from the search result snippet only.'
                         : "Couldn't read this page's full content — the summary above comes from the search result snippet only."}
                     </p>
+                  ) : (
+                    !data?.overviewSummary && (
+                      <p className="text-[11px] text-slate-400 italic">
+                        This website was read, but it didn't state a description of itself that
+                        could be quoted — the summary above comes from the search result snippet.
+                      </p>
+                    )
                   )}
                 </div>
               </div>
