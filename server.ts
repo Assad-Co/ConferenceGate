@@ -43,6 +43,8 @@ import {
   type FirecrawlBatchPage,
 } from "./server/firecrawl";
 import { checkWordCompliance } from "./server/wordLimit";
+import { initDiscoverySchema } from "./server/discovery/schema";
+import { discoveryRouter } from "./server/discovery/router";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -50,6 +52,9 @@ async function startServer() {
   // be ready before any request can be handled.
   await initDb();
   await initAuthSecret();
+  // The discovery engine's own tables. Purely additive `CREATE TABLE IF NOT EXISTS` on new
+  // `discovery_*` names — no existing table is altered and no existing row is touched.
+  await initDiscoverySchema();
 
   const app = express();
   const PORT = 3000;
@@ -79,6 +84,12 @@ async function startServer() {
 
   // Real community feed: posts, reactions, comments, reposts, saves
   app.use("/api/posts", postsRouter);
+
+  // Backend administration for the conference discovery engine: status, metrics, quality report,
+  // CSV export and crawl control. Read routes need a signed-in account; anything that starts a
+  // crawl or changes the source registry also needs DISCOVERY_ADMIN_TOKEN. No UI is served here —
+  // the CLI (`npm run discovery`) and this API are the whole of Phase 1's interface.
+  app.use("/api/admin/discovery", discoveryRouter);
 
   // AI Routes using Gemini SDK
   const getAIClient = () => {

@@ -69,3 +69,38 @@ pages over a real local HTTP server, and make real model calls.
 
 Note that the SSRF guard in `server/urlSafety.ts` blocks loopback addresses, so the full route
 can't be pointed at a local test server. Don't weaken it — extract the pieces instead.
+
+## The conference discovery engine
+
+`server/discovery/` finds conferences on its own, rather than waiting for someone to paste a URL
+into Discover. It is backend-only: it added no frontend file and changed none.
+
+Same rule as the extraction pipeline above, applied at every stage: a field the source did not
+state is `null`, and everything stored carries its provenance — which page supplied it, whether
+it was read from structured data, from labelled HTML, or from a model, how confident that was,
+and when it was last confirmed (`discovery_event_fields`).
+
+The order of the extraction routes is a cost decision, exactly like the four page readers:
+schema.org structured data (free, and the organiser's own machine-readable statement), then
+deterministic labelled-HTML parsing (free), then an AI fallback that is capped per run and off by
+default. Don't reorder them, and don't reach for the model for something a label already states.
+
+Two things are guarded rather than merely configured:
+
+- **robots.txt has no override.** A blanket disallow skips the domain and records why; a
+  disallowed path is never requested. `Crawl-delay` can raise this engine's per-domain interval
+  and never lower it.
+- **Publication is opt-in.** Discovered conferences live in the `discovery_*` tables. Writing one
+  into `extracted_conferences` — which is what makes it visible in Discover — needs
+  `DISCOVERY_PUBLISH_TO_CONFERENCES=1`, never overwrites an existing row, and only takes records
+  that have a title, a date, a country, a real official URL and nothing open in the review queue.
+
+Deduplication merges on strong agreement, queues the middle ground for review, and leaves weak
+matches alone. It never deletes a record because two titles looked alike.
+
+Tests are fixture-backed and need no network: `npm run test:discovery`. There is also a full
+end-to-end rehearsal against a local eleven-site fixture web
+(`npx tsx server/discovery/tests/phase1Rehearsal.ts --out <dir>`), which exercises robots
+compliance, all four markup styles, cross-domain deduplication and the unchanged-page skip in one
+run. The conferences it finds are invented fixtures — its CSV goes to a scratch directory and
+never into the repository.

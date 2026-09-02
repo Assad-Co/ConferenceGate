@@ -10,7 +10,9 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "postinstall": "node scripts/installBrowser.mjs",
-    "install:browser": "playwright-core install chromium"
+    "install:browser": "playwright-core install chromium",
+    "discovery": "tsx server/discovery/cli.ts",
+    "test:discovery": "tsx --test server/discovery/tests/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
