@@ -17,6 +17,7 @@ import { classifyCategories } from "./categories";
 import { classifyRelevance } from "./classify";
 import { extractFromHtml, pageText as readablePageText } from "./htmlExtract";
 import { discoveryFetch, hashContent, isHtmlLike, type UrlGuard } from "./httpClient";
+import { readWithJina } from "./jinaFetch";
 import { canonicalLink, documentTitle, parseHtml } from "./html";
 import { RunLogger } from "./logging";
 import {
@@ -34,7 +35,7 @@ import { isPathAllowed, type RobotsPolicy } from "./robots";
 import { allProviders } from "./providers";
 import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
 import { getDomain, newId, recordCrawlSuccess, TRUST_BY_SOURCE_TYPE } from "./sourceRegistry";
-import { eventIdForUrl, getUrlState, recordUrlVisit, rememberUrl, storeEvent, type StoreOutcome } from "./store";
+import { eventIdForUrl, getUrlState, queueForReview, recordUrlVisit, rememberUrl, storeEvent, type StoreOutcome } from "./store";
 import { extractStructuredEvents } from "./structuredData";
 import { validateEvent } from "./validate";
 import {
@@ -102,6 +103,16 @@ export interface RunSummary {
   /** The accepted events, in memory, so a caller can export a CSV without re-reading the DB. */
   events: NormalizedEvent[];
   errors: string[];
+  qualityByProvider: Record<string, ProviderQuality>;
+}
+
+interface ProviderQuality {
+  candidates: number; fetched: number; conferencePositive: number; accepted: number;
+  needsReview: number; rejected: number; finished: number; fetchFailures: number;
+}
+
+function providerQuality(summary: RunSummary, provider: string): ProviderQuality {
+  return summary.qualityByProvider[provider] ||= { candidates: 0, fetched: 0, conferencePositive: 0, accepted: 0, needsReview: 0, rejected: 0, finished: 0, fetchFailures: 0 };
 }
 
 function defaultTargetYears(now = new Date()): number[] {
@@ -150,6 +161,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     counters: {},
     events: [],
     errors: [],
+    qualityByProvider: {},
   };
 
   await dbRun(
@@ -199,6 +211,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     summary.skippedDomains = sitemapProvider.skipped;
     summary.egressBlockedDomains = sitemapProvider.egressBlocked;
     summary.candidatesDiscovered = candidates.length;
+    for (const candidate of candidates) providerQuality(summary, candidate.provider).candidates += 1;
     if (summary.egressBlockedDomains.length > 0) {
       summary.errors.push(
         `${summary.egressBlockedDomains.length} domain(s) unreachable from this machine: the local network egress policy refused the connection. This is not the sites refusing us. Allow these hosts, or run the discovery worker where outbound HTTPS is permitted: ${summary.egressBlockedDomains.join(", ")}`
@@ -244,7 +257,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       const trust = domainTrust.get(candidate.sourceDomain)!;
 
       const previous = await getUrlState(candidate.url);
-      const response = await discoveryFetch(candidate.url, {
+      let response = await discoveryFetch(candidate.url, {
         etag: previous?.etag ?? null,
         lastModified: previous?.last_modified ?? null,
         urlGuard: options.urlGuard,
@@ -279,8 +292,20 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         continue;
       }
 
+      let usedJina = false;
+      if ((!response.ok || !response.body || readablePageText(response.body, 2000).length < 500) && process.env.DISCOVERY_JINA_ENABLED === "1") {
+        logger.log("jina_attempted", { url: candidate.url });
+        const jina = await readWithJina(candidate.url);
+        if (jina.ok) {
+          usedJina = true;
+          logger.log("jina_successful", { url: candidate.url });
+          response = { ...response, ok: true, status: 200, body: jina.html, error: null, contentHash: hashContent(jina.html) };
+        } else logger.log("jina_failed", { url: candidate.url, detail: jina.error || "unknown" });
+      }
+
       if (!response.ok || !response.body) {
         summary.pagesFailed += 1;
+        providerQuality(summary, candidate.provider).fetchFailures += 1;
         logger.log(response.error === "timeout" ? "page_timeout" : "page_failed", {
           url: candidate.url,
           detail: response.error || `http_${response.status}`,
@@ -301,6 +326,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       pagesRead += 1;
       summary.pagesFetched += 1;
+      providerQuality(summary, candidate.provider).fetched += 1;
       logger.log("page_fetched", { url: candidate.url });
 
       if (!isHtmlLike(response)) {
@@ -361,7 +387,10 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         options,
         maxAiCalls,
         robotsPolicy: policy,
+        usedJina,
       });
+
+      if (usedJina && outcome.isEvent) logger.log("jina_recovered_event", { url: candidate.url });
 
       await recordUrlVisit({
         url: candidate.url,
@@ -413,6 +442,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         aiCalls: summary.aiCalls,
         extractionMethods: summary.extractionMethods,
         rejectionReasons: summary.rejectionReasons,
+        qualityByProvider: Object.fromEntries(Object.entries(summary.qualityByProvider).map(([provider, q]) => [provider, {
+          ...q,
+          candidatePrecision: q.fetched ? Number((q.conferencePositive / q.fetched).toFixed(4)) : 0,
+          validatedYield: q.fetched ? Number(((q.accepted - q.needsReview) / q.fetched).toFixed(4)) : 0,
+        }])),
         ...summary.counters,
       }),
       JSON.stringify(logger.entries.slice(0, 800)),
@@ -436,6 +470,7 @@ interface ProcessPageInput {
   options: RunOptions;
   maxAiCalls: number;
   robotsPolicy?: RobotsPolicy;
+  usedJina?: boolean;
 }
 
 /** One page: extract, normalize, classify, validate, store. Exported shape kept internal. */
@@ -500,6 +535,7 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
   });
 
   summary.eventsDetected += 1;
+  if (relevance.isRelevantEvent) providerQuality(summary, candidate.provider).conferencePositive += 1;
   logger.log("event_detected", { url: pageUrl, confidence: relevance.confidenceScore, method: raw.method });
 
   const categories = classifyCategories({
@@ -605,6 +641,8 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
 
   if (!validation.valid) {
     summary.eventsRejected += 1;
+    providerQuality(summary, candidate.provider).rejected += 1;
+    if (validation.errors.includes("event_already_finished")) providerQuality(summary, candidate.provider).finished += 1;
     for (const reason of validation.errors) {
       summary.rejectionReasons[reason] = (summary.rejectionReasons[reason] || 0) + 1;
     }
@@ -621,7 +659,18 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
     isOfficial: input.trust.type !== "conference_directory" && officialUrl === pageUrl,
   });
 
+  if (validation.status === "needs_review" && stored.outcome !== "review_queued") {
+    await queueForReview({
+      eventId: stored.eventId,
+      reason: "quality_review",
+      payload: { qualityFlags: validation.qualityFlags, sourceUrl: pageUrl },
+    });
+    summary.reviewQueued += 1;
+  }
+
   countOutcome(summary, stored.outcome);
+  providerQuality(summary, candidate.provider).accepted += 1;
+  if (validation.status === "needs_review") providerQuality(summary, candidate.provider).needsReview += 1;
   summary.extractionMethods[raw.method] = (summary.extractionMethods[raw.method] || 0) + 1;
   summary.events.push(event);
 
@@ -706,3 +755,4 @@ function buildProvenance(
 }
 
 export { canonicalizeUrl, emptyRawExtraction };
+
