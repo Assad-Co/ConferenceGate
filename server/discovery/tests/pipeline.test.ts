@@ -23,6 +23,7 @@ let modules: {
   closeDb: typeof import("../../db").closeDb;
 };
 let testRoot: string;
+const originalCwd = process.cwd();
 let firstRun: Awaited<ReturnType<typeof import("../pipeline").runDiscovery>>;
 
 before(async () => {
@@ -77,6 +78,7 @@ after(async () => {
   await web?.stop();
   modules?.resetDomainLimits();
   modules?.closeDb();
+  process.chdir(originalCwd);
   if (testRoot) fs.rmSync(testRoot, { recursive: true, force: true });
 });
 
@@ -117,7 +119,7 @@ test("concerts, roundups and finished events are rejected rather than stored", a
   const past = await modules.dbGet("SELECT id FROM discovery_events WHERE title LIKE '%Coastal Resilience%'");
   assert.equal(past, undefined, "a 2019 event is not an upcoming conference");
   assert.ok(firstRun.rejectionReasons.classified_as_not_a_conference > 0);
-  assert.ok(firstRun.rejectionReasons.event_already_finished > 0);
+  assert.equal(firstRun.rejectionReasons.event_already_finished || 0, 0, "obvious past sitemap URLs are filtered before fetch");
 });
 
 test("a directory listing joins the conference's own record instead of duplicating it", async () => {
@@ -173,6 +175,15 @@ test("nothing is auto-published in Phase 1", async () => {
   assert.equal(Number(extracted?.count ?? 0), 0, "the app's own table is untouched unless publishing is enabled");
 });
 
+test("every needs_review event has an open review queue row", async () => {
+  const missing = await modules.dbGet<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM discovery_events e
+      WHERE e.status = 'needs_review'
+        AND NOT EXISTS (SELECT 1 FROM discovery_review_queue q WHERE q.event_id = e.id AND q.status = 'open')`
+  );
+  assert.equal(Number(missing?.count ?? 0), 0);
+});
+
 test("dates, countries and formats are normalized on the way in", async () => {
   const rows = await modules.dbAll<{
     start_date: string | null;
@@ -212,3 +223,4 @@ test("a second pass over an unchanged web does no work", async () => {
   assert.equal(second.pagesFetched, 0, "every page answers 304 and is skipped");
   assert.ok(second.pagesUnchanged > 0);
 });
+
