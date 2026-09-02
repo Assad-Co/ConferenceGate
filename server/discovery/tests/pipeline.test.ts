@@ -79,7 +79,7 @@ after(async () => {
   modules?.resetDomainLimits();
   modules?.closeDb();
   process.chdir(originalCwd);
-  if (testRoot) fs.rmSync(testRoot, { recursive: true, force: true });
+  if (testRoot) fs.rmSync(testRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 test("the run reads several domains and stores conferences from all of them", async () => {
@@ -223,4 +223,3 @@ test("a second pass over an unchanged web does no work", async () => {
   assert.equal(second.pagesFetched, 0, "every page answers 304 and is skipped");
   assert.ok(second.pagesUnchanged > 0);
 });
-
