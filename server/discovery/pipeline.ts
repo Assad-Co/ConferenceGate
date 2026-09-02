@@ -55,7 +55,7 @@ export interface RunOptions {
   /** Subject terms, for query-driven providers only. */
   topics?: string[];
   maxCandidates?: number;
-  /** Pages actually fetched and read. The real cost ceiling of a run. */
+  /** Candidate pages attempted, including failed and unchanged fetches. The real cost ceiling. */
   maxPages?: number;
   /** Hard wall-clock limit. */
   timeBudgetMs?: number;
@@ -81,6 +81,7 @@ export interface RunSummary {
   targetYears: number[];
   domains: string[];
   candidatesDiscovered: number;
+  pagesAttempted: number;
   pagesFetched: number;
   pagesUnchanged: number;
   pagesFailed: number;
@@ -143,6 +144,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     targetYears,
     domains: options.domains ?? [],
     candidatesDiscovered: 0,
+    pagesAttempted: 0,
     pagesFetched: 0,
     pagesUnchanged: 0,
     pagesFailed: 0,
@@ -230,12 +232,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     }
 
     // ---- Stage 2..8: read, extract, normalize, classify, validate, deduplicate, store.
-    let pagesRead = 0;
     const domainTrust = new Map<string, { trust: number; type: SourceType }>();
 
     for (const candidate of candidates) {
       if (options.signal?.aborted) break;
-      if (pagesRead >= maxPages) break;
+      if (summary.pagesAttempted >= maxPages) break;
       if (Date.now() > deadline) {
         logger.log("run_finished", { detail: "time budget reached" });
         break;
@@ -257,6 +258,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       const trust = domainTrust.get(candidate.sourceDomain)!;
 
       const previous = await getUrlState(candidate.url);
+      summary.pagesAttempted += 1;
       let response = await discoveryFetch(candidate.url, {
         etag: previous?.etag ?? null,
         lastModified: previous?.last_modified ?? null,
@@ -324,7 +326,6 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         continue;
       }
 
-      pagesRead += 1;
       summary.pagesFetched += 1;
       providerQuality(summary, candidate.provider).fetched += 1;
       logger.log("page_fetched", { url: candidate.url });
@@ -430,6 +431,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       summary.errors.length > 0 ? "completed_with_errors" : "completed",
       JSON.stringify({
         candidatesDiscovered: summary.candidatesDiscovered,
+        pagesAttempted: summary.pagesAttempted,
         pagesFetched: summary.pagesFetched,
         pagesUnchanged: summary.pagesUnchanged,
         pagesFailed: summary.pagesFailed,
@@ -755,4 +757,3 @@ function buildProvenance(
 }
 
 export { canonicalizeUrl, emptyRawExtraction };
-
