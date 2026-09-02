@@ -68,6 +68,8 @@ export async function serperSearch(query: string, count = 20): Promise<LiveSearc
       // consumer already renders a fallback rather than assuming an image exists.
       thumbnail: null,
       favicon: null,
+      discoveryProvider: "serper" as const,
     };
   });
 }
+
