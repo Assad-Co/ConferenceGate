@@ -30,6 +30,7 @@ const LABELS = {
   date: /^\s*(?:conference\s+)?(?:dates?|event\s+dates?|when|date\s+and\s+time|datum|fecha|dates?\s+of\s+(?:the\s+)?(?:event|conference))\s*[:\-–]?\s*$/i,
   location: /^\s*(?:location|where|place|city|country|held\s+in|lieu|ubicación|standort)\s*[:\-–]?\s*$/i,
   venue: /^\s*(?:venue|conference\s+venue|location\s+&?\s*venue|facility|hall|centre|center)\s*[:\-–]?\s*$/i,
+  address: /^\s*(?:address|venue\s+address|event\s+address|host\s+city)\s*[:\-–]?\s*$/i,
   organizer: /^\s*(?:organi[sz]ers?|organi[sz]ed\s+by|organi[sz]ing\s+(?:body|committee|institution)|hosted\s+by|host|presented\s+by|convened\s+by)\s*[:\-–]?\s*$/i,
   contact: /^\s*(?:contact|contact\s+(?:person|us|details|information)|enquiries|inquiries|secretariat)\s*[:\-–]?\s*$/i,
   email: /^\s*(?:e-?mail|email\s+address)\s*[:\-–]?\s*$/i,
@@ -87,6 +88,7 @@ const PHONE_RE = /(?:\+\d{1,3}[\s.-]?)?(?:\(\d{1,4}\)[\s.-]?)?\d[\d\s.-]{6,15}\d
 
 const REGISTRATION_LINK_RE = /\b(?:register|registration|sign\s?up|book\s+(?:now|your)|tickets?|enroll)\b/i;
 const SUBMISSION_LINK_RE = /\b(?:submit|submission|call\s+for\s+(?:papers?|abstracts?)|cfp|abstract)\b/i;
+const OFFICIAL_LINK_RE = /\b(?:official\s+(?:conference|event|congress)?\s*(?:site|website|page)|conference\s+website|event\s+website|visit\s+(?:the\s+)?website)\b/i;
 
 /** A date-shaped string, in the formats conference sites actually write. */
 const DATE_TEXT_RE =
@@ -284,14 +286,17 @@ export function extractFromHtml(
   raw.title = seed?.title || findTitle(root);
   raw.description = seed?.description || describePage(root);
 
+  const pageBody = mainText(root, 40000);
   const dateLabel = findLabelled(root, LABELS.date);
-  raw.datesText = seed?.datesText || dateLabel || null;
+  raw.datesText = seed?.datesText || dateLabel || DATE_TEXT_RE.exec(pageBody)?.[0] || null;
 
   const locationValue = findLabelled(root, LABELS.location);
   const venueValue = findLabelled(root, LABELS.venue);
-  raw.locationText = seed?.locationText || locationValue || venueValue || null;
+  const addressValue = findLabelled(root, LABELS.address);
+  const metaLocation = metaContent(root, "event:location") || metaContent(root, "place") || metaContent(root, "location");
+  raw.locationText = seed?.locationText || locationValue || addressValue || venueValue || metaLocation || null;
   raw.venue = seed?.venue || venueValue || null;
-  raw.venueAddress = seed?.venueAddress || null;
+  raw.venueAddress = seed?.venueAddress || addressValue || null;
   raw.city = seed?.city || null;
   raw.region = seed?.region || null;
   raw.country = seed?.country || null;
@@ -342,7 +347,7 @@ export function extractFromHtml(
 
   raw.registrationUrl = seed?.registrationUrl || findLinkByText(root, REGISTRATION_LINK_RE, pageUrl);
   raw.submissionUrl = seed?.submissionUrl || findLinkByText(root, SUBMISSION_LINK_RE, pageUrl);
-  raw.officialUrl = seed?.officialUrl || null;
+  raw.officialUrl = seed?.officialUrl || findLinkByText(root, OFFICIAL_LINK_RE, pageUrl) || null;
   raw.organizerUrl = seed?.organizerUrl || null;
   raw.imageUrl = seed?.imageUrl || absoluteUrl(metaContent(root, "og:image"), pageUrl);
   raw.price = seed?.price || null;
@@ -418,3 +423,4 @@ export function eventLinksOnPage(html: string, pageUrl: string, limit = 60): str
 }
 
 export { walk, parseHtml };
+
