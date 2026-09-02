@@ -118,6 +118,8 @@ export interface DiscoveryCandidate {
     title?: string | null;
     snippet?: string | null;
     lastModified?: string | null;
+    discoveryProviders?: string[];
+    discoveryQuery?: string | null;
   };
 }
 
@@ -327,3 +329,4 @@ export interface DiscoveryProvider {
   readonly baseConfidence: number;
   discover(context: DiscoveryContext): Promise<DiscoveryCandidate[]>;
 }
+
