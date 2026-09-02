@@ -9,7 +9,7 @@
 // the sitemap route is free — so this is opt-in, for filling gaps in coverage rather than for
 // bulk discovery (section 42).
 
-import { searchWebForConferenceFacts } from "../../braveSearch";
+import { searchWebForConferenceFactsByProvider } from "../../braveSearch";
 import { scoreCandidateUrl } from "../sitemaps";
 import type { DiscoveryCandidate, DiscoveryContext, DiscoveryProvider } from "../types";
 import type { RunLogger } from "../logging";
@@ -51,24 +51,40 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
     if (topics.length === 0) return [];
 
     const perQuery = this.options.resultsPerQuery ?? 8;
-    const maxQueries = this.options.maxQueries ?? 10;
+    const maxQueries = this.options.maxQueries ?? 30;
     const queries: string[] = [];
-    for (const topic of topics) {
-      for (const year of context.targetYears) {
-        queries.push(`${topic} conference ${year} call for papers registration`);
-        if (queries.length >= maxQueries) break;
+    const regions = ["Europe", "Asia", "Africa", "Middle East", "North America", "South America", "Oceania"];
+    const countries = ["Germany", "Japan", "UAE", "Canada", "Brazil", "Singapore", "South Africa", "Australia"];
+    const eventTypes = ["conference", "congress", "symposium", "summit", "annual meeting"];
+    const years = [...context.targetYears].sort((a, b) => (a === 2027 ? -1 : b === 2027 ? 1 : a - b));
+    outer: for (const year of years) {
+      for (let i = 0; i < Math.max(topics.length, regions.length, countries.length); i += 1) {
+        const topic = topics[i % topics.length];
+        const place = i % 2 === 0 ? regions[i % regions.length] : countries[i % countries.length];
+        const kind = eventTypes[i % eventTypes.length];
+        queries.push(`${year} ${topic} ${kind} ${place} official`);
+        if (queries.length >= maxQueries) break outer;
       }
-      if (queries.length >= maxQueries) break;
     }
 
     const candidates: DiscoveryCandidate[] = [];
     const seen = new Set<string>();
     for (const query of queries) {
       if (context.signal?.aborted) break;
-      const results = await searchWebForConferenceFacts(query, perQuery);
-      this.options.logger?.log("urls_discovered", { detail: `search "${query}"`, count: results.length });
+      const results = await searchWebForConferenceFactsByProvider(query, perQuery);
+      const counts = results.reduce<Record<string, number>>((a, r) => { const p = r.discoveryProvider || "unknown"; a[p] = (a[p] || 0) + 1; return a; }, {});
+      for (const [provider, count] of Object.entries(counts)) this.options.logger?.log("search_results", { detail: `${provider}: ${query}`, count });
       for (const result of results) {
-        if (!result.link || seen.has(result.link)) continue;
+        if (!result.link) continue;
+        if (seen.has(result.link)) {
+          const existing = candidates.find((candidate) => candidate.url === result.link);
+          const provider = result.discoveryProvider || "unknown";
+          if (existing && !existing.hints?.discoveryProviders?.includes(provider)) {
+            existing.hints?.discoveryProviders?.push(provider);
+            existing.provider = existing.hints?.discoveryProviders?.sort().join("+") || existing.provider;
+          }
+          continue;
+        }
         seen.add(result.link);
         let domain: string;
         try {
@@ -80,12 +96,12 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
         candidates.push({
           url: result.link,
           sourceDomain: domain,
-          provider: this.name,
+          provider: result.discoveryProvider || this.name,
           // A search hit that already names an event in its title is a stronger candidate than
           // the URL alone suggests, but never as strong as a domain we chose to trust.
           priority: Math.min(0.85, score + (/\b(conference|congress|symposium|summit)\b/i.test(result.title) ? 0.2 : 0)),
           reason: `${reason}; web search result for "${query}"`,
-          hints: { title: result.title, snippet: result.snippet },
+          hints: { title: result.title, snippet: result.snippet, discoveryProviders: [result.discoveryProvider || "unknown"], discoveryQuery: query },
         });
         if (candidates.length >= context.maxCandidates) return candidates;
       }
@@ -93,3 +109,4 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
     return candidates;
   }
 }
+
