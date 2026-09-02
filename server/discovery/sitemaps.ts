@@ -27,7 +27,12 @@ const NEGATIVE_TERMS = [
   "/news/", "/blog/", "/press", "/tag/", "/tags/", "/category/", "/categories/", "/author/",
   "/login", "/signin", "/register-account", "/privacy", "/terms", "/cookie", "/sitemap",
   "/search", "/feed", "/rss", "/archive/", "/past-", "/jobs", "/careers", "/shop", "/cart",
+  "/album", "/gallery", "/people", "/staff", "/faculty", "/degree", "/course", "/admissions",
+  "/forms", "/contact", "/about", "/media", "/recording",
 ];
+
+const HARD_NOISE_RE = /\/(?:news|blog|album|gallery|people|staff|faculty|degrees?|courses?|admissions|forms?|login|privacy|contact|about|jobs|media|recordings?)(?:\/|$)/i;
+const EVENT_INTENT_RE = /\b(?:conferences?|congress(?:es)?|symposi(?:um|a)|summits?|meetings?|workshops?|forums?|expos?|exhibitions?|conventions?|colloqui(?:um|a)|call[-_]?for[-_]?papers?)\b/i;
 
 const NON_PAGE_EXT_RE = /\.(jpe?g|png|gif|svg|webp|ico|css|js|zip|pptx?|xlsx?|docx?|mp4|mp3|avi|woff2?|ttf)(\?|#|$)/i;
 
@@ -250,6 +255,18 @@ export function scoreCandidateUrl(url: string, targetYears: number[]): { score: 
   };
 }
 
+/** Pre-fetch admission for sitemap URLs. A sitemap is an inventory, not an event feed. */
+export function isLikelySitemapCandidate(url: string, targetYears: number[], sourceDomain: string): boolean {
+  let path = "";
+  try { path = `${new URL(url).pathname}${new URL(url).search}`.toLowerCase(); } catch { return false; }
+  const { score } = scoreCandidateUrl(url, targetYears);
+  const hasIntent = EVENT_INTENT_RE.test(path);
+  const hasTargetYear = targetYears.some((year) => new RegExp(`(?:^|[\\/_-])${year}(?:[\\/_-]|$)`).test(path));
+  const isDedicatedEventHost = /(?:conference|congress|symposium|summit|events?)\./i.test(sourceDomain);
+  if (HARD_NOISE_RE.test(path) && !hasIntent) return false;
+  return score >= 0.45 && (hasIntent || (hasTargetYear && (isDedicatedEventHost || /\/events?\//i.test(path))));
+}
+
 export function entriesToCandidates(
   entries: SitemapEntry[],
   domain: string,
@@ -257,6 +274,7 @@ export function entriesToCandidates(
   targetYears: number[]
 ): DiscoveryCandidate[] {
   return entries
+    .filter((entry) => isLikelySitemapCandidate(entry.url, targetYears, domain))
     .map((entry) => {
       const { score, reason } = scoreCandidateUrl(entry.url, targetYears);
       return {
@@ -270,3 +288,4 @@ export function entriesToCandidates(
     })
     .sort((left, right) => right.priority - left.priority);
 }
+
