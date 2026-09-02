@@ -12,7 +12,7 @@
     "postinstall": "node scripts/installBrowser.mjs",
     "install:browser": "playwright-core install chromium",
     "discovery": "tsx server/discovery/cli.ts",
-    "test:discovery": "tsx --test server/discovery/tests/*.test.ts"
+    "test:discovery": "node scripts/runDiscoveryTests.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
