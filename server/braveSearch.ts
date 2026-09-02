@@ -12,6 +12,8 @@ export interface LiveSearchResult {
   favicon: string | null;
   /** True when Conference Gate already has a completed structured extraction in its database. */
   prepared?: boolean;
+  /** External provider that produced this result. */
+  discoveryProvider?: "brave" | "serper";
 }
 
 interface CacheEntry {
@@ -72,6 +74,7 @@ async function braveSearch(
     displayLink: item.meta_url?.hostname || item.profile?.name || "",
     thumbnail: item.thumbnail?.src || null,
     favicon: item.meta_url?.favicon || item.profile?.img || null,
+    discoveryProvider: "brave" as const,
   }));
 }
 
@@ -591,6 +594,18 @@ export async function searchWebForConferenceFacts(query: string, count = 8): Pro
   }
 }
 
+/** Discovery-only search with explicit provider attribution. Both providers are queried when
+ * configured so overlap is measurable instead of being hidden by fallback control flow. */
+export async function searchWebForConferenceFactsByProvider(query: string, count = 8): Promise<LiveSearchResult[]> {
+  const batches: LiveSearchResult[][] = [];
+  if (isBraveConfigured()) batches.push(await braveSearch(query, count, "high"));
+  if (isSerperConfigured()) {
+    const rows = await serperSearch(query, count);
+    batches.push(rows.map((row) => ({ ...row, discoveryProvider: "serper" as const })));
+  }
+  return batches.flat();
+}
+
 export const braveSearchRouter = Router();
 
 // The directory harvest needs the AI client, which lives in server.ts's closure. Rather than
@@ -655,3 +670,4 @@ braveSearchRouter.get(
     }
   })
 );
+
