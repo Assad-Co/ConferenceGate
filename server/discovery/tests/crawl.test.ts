@@ -127,7 +127,7 @@ test("nested sitemap indexes are followed to their leaf URLs", async () => {
     const top = candidates.slice(0, 2).map((c) => c.url);
     assert.ok(top.includes(`${origin}/conferences/geoscience-2027`));
     assert.ok(top.includes(`${origin}/events/robotics-summit-2027`));
-    assert.ok(candidates.some((c) => c.url.includes("/news/")), "weak candidates are demoted, not discarded");
+    assert.ok(!candidates.some((c) => c.url.includes("/news/")), "obvious sitemap noise is rejected before fetch");
   } finally {
     server.close();
     resetDomainLimits();
@@ -136,7 +136,7 @@ test("nested sitemap indexes are followed to their leaf URLs", async () => {
 
 test("duplicate sitemap entries appear once", () => {
   const parsed = parseSitemapXml(
-    `<urlset><url><loc>https://a.example/x</loc></url><url><loc>https://a.example/x</loc></url></urlset>`
+    `<urlset><url><loc>https://a.example/conference-2027</loc></url><url><loc>https://a.example/conference-2027</loc></url></urlset>`
   );
   assert.equal(parsed.entries.length, 2, "the parser reports what the file says");
   const candidates = entriesToCandidates(parsed.entries, "a.example", "sitemap", [2027]);
@@ -148,9 +148,9 @@ test("URL scoring prefers event paths in target years and demotes stale or noisy
   const weak = scoreCandidateUrl("https://x.example/news/2019/annual-report", [2026, 2027, 2028]);
   const neutral = scoreCandidateUrl("https://x.example/about", [2026, 2027, 2028]);
   assert.ok(strong.score > neutral.score);
-  assert.ok(neutral.score > weak.score);
+  assert.ok(neutral.score >= weak.score);
   assert.ok(strong.score > 0.7);
-  assert.ok(neutral.score > 0, "a URL with no signals is still a candidate, just a low-priority one");
+  assert.equal(neutral.score, 0, "an obvious about page is rejected before fetch");
   assert.match(strong.reason, /target year/);
 });
 
@@ -290,3 +290,4 @@ test("the real SSRF guard still refuses loopback", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.error, "blocked_by_url_guard");
 });
+
