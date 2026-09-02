@@ -18,11 +18,16 @@ export type DiscoveryEventName =
   | "sitemap_fetched"
   | "sitemap_missing"
   | "urls_discovered"
+  | "search_results"
   | "url_skipped"
   | "url_unchanged"
   | "page_fetched"
   | "page_failed"
   | "page_timeout"
+  | "jina_attempted"
+  | "jina_successful"
+  | "jina_failed"
+  | "jina_recovered_event"
   | "extraction_structured"
   | "extraction_html"
   | "extraction_ai"
@@ -101,3 +106,4 @@ export class RunLogger {
     return Object.fromEntries([...this.counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
   }
 }
+
