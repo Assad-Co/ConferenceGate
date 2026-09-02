@@ -391,6 +391,16 @@ async function writeSource(eventId: string, event: NormalizedEvent, options: Sto
       JSON.stringify({ contentHash: event.contentHash, qualityFlags: event.qualityFlags }),
     ]
   );
+  if (event.officialUrl && event.officialUrl !== event.sourceUrl) {
+    let officialDomain = event.sourceDomain;
+    try { officialDomain = new URL(event.officialUrl).hostname.toLowerCase().replace(/^www\./, ""); } catch { /* validated elsewhere */ }
+    await dbRun(
+      `INSERT INTO discovery_event_sources (id, event_id, source_url, source_domain, source_type, provider, trust_score, extraction_method, confidence, is_official, raw_extraction)
+       VALUES (?, ?, ?, ?, 'official_website', ?, ?, ?, ?, 1, ?)
+       ON CONFLICT(event_id, source_url) DO NOTHING`,
+      [newId("dsrc"), eventId, event.officialUrl, officialDomain, options.provider ?? null, Math.max(options.sourceTrust, 0.7), event.extractionMethod, event.confidenceScore, JSON.stringify({ discoveredFrom: event.sourceUrl })]
+    );
+  }
 }
 
 async function writeFieldProvenance(eventId: string, event: NormalizedEvent): Promise<void> {
@@ -518,7 +528,12 @@ export async function rememberUrl(input: {
 }): Promise<void> {
   await dbRun(
     `INSERT INTO discovery_urls (url, domain, provider, priority) VALUES (?, ?, ?, ?)
-     ON CONFLICT(url) DO UPDATE SET priority = MAX(discovery_urls.priority, excluded.priority)`,
+     ON CONFLICT(url) DO UPDATE SET
+       priority = MAX(discovery_urls.priority, excluded.priority),
+       provider = CASE
+         WHEN discovery_urls.provider = excluded.provider OR instr(discovery_urls.provider, excluded.provider) > 0 THEN discovery_urls.provider
+         ELSE discovery_urls.provider || '+' || excluded.provider
+       END`,
     [input.url, input.domain, input.provider, input.priority]
   );
 }
@@ -574,3 +589,4 @@ export async function recordUrlVisit(input: {
     ]
   );
 }
+
