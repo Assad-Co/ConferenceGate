@@ -115,6 +115,14 @@ test("missing values stay null rather than being filled in", () => {
   assert.deepEqual(raw.topics, []);
 });
 
+test("dates in an event heading are extracted without a labelled date field", () => {
+  const raw = extractFromHtml(
+    "<html><body><h1>Global Engineering Congress — March 15–18, 2027</h1><p>The professional congress brings engineers together.</p></body></html>",
+    "https://example.org/congress-2027"
+  );
+  assert.equal(raw.datesText, "March 15–18, 2027");
+});
+
 test("malformed markup is parsed as far as it goes rather than throwing", () => {
   const html = fixture("malformed.html");
   const raw = extractFromHtml(html, "https://example.is/symposium");
@@ -169,3 +177,4 @@ test("AI output is discarded when the page does not support it", () => {
   assert.ok(droppedFields.includes("country"));
   assert.ok(droppedFields.includes("contact_email"));
 });
+
