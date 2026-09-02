@@ -18,6 +18,7 @@ import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
 import { providerStatus } from "./providers";
 import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
+import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { SEED_DOMAINS } from "./sources.seed";
 import { listDomains, setDomainEnabled, upsertDomain } from "./sourceRegistry";
@@ -56,6 +57,11 @@ function numberFlag(value: string | boolean | undefined, fallback: number): numb
 
 const HELP = `Conference Gate — discovery engine
 
+  preflight [--domains a,b] [--registry]
+                            Can this machine reach the open web? Asks each domain for its
+                            robots.txt and says whether the network, the site, or nothing at
+                            all is in the way. Run this before a first crawl in a new
+                            environment. Exits non-zero when outbound HTTPS is blocked.
   seed                      Load the Phase 1 seed domains into the registry (idempotent).
   domains                   List the registry with its scheduling and health state.
   enable   --domain d       Enable a domain.
@@ -77,6 +83,18 @@ async function main(): Promise<void> {
   await initDiscoverySchema();
 
   switch (command) {
+    case "preflight": {
+      const report = await runPreflight({
+        domains: list(flags.domains),
+        fromRegistry: flags.registry === true,
+      });
+      console.log(formatPreflightReport(report));
+      // Non-zero on a blocked network, so a deploy check or CI step fails loudly rather than
+      // going on to run a crawl that cannot possibly work.
+      if (report.outboundHttps === "blocked") process.exitCode = 2;
+      break;
+    }
+
     case "seed": {
       for (const domain of SEED_DOMAINS) await upsertDomain(domain);
       console.log(`Seeded ${SEED_DOMAINS.length} domains.`);

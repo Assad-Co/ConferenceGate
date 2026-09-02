@@ -93,6 +93,10 @@ export interface RunSummary {
   extractionMethods: Record<string, number>;
   rejectionReasons: Record<string, number>;
   skippedDomains: Array<{ domain: string; reason: string }>;
+  /** Domains this machine's own network refused to reach. An infrastructure problem to fix, not
+   *  a property of the domains — listed separately so it can never be read as "these sites
+   *  blocked us". */
+  egressBlockedDomains: string[];
   providers: Array<{ name: string; enabled: boolean; reason: string | null; candidates: number }>;
   counters: Record<string, number>;
   /** The accepted events, in memory, so a caller can export a CSV without re-reading the DB. */
@@ -141,6 +145,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     extractionMethods: {},
     rejectionReasons: {},
     skippedDomains: [],
+    egressBlockedDomains: [],
     providers: [],
     counters: {},
     events: [],
@@ -192,7 +197,13 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       });
     }
     summary.skippedDomains = sitemapProvider.skipped;
+    summary.egressBlockedDomains = sitemapProvider.egressBlocked;
     summary.candidatesDiscovered = candidates.length;
+    if (summary.egressBlockedDomains.length > 0) {
+      summary.errors.push(
+        `${summary.egressBlockedDomains.length} domain(s) unreachable from this machine: the local network egress policy refused the connection. This is not the sites refusing us. Allow these hosts, or run the discovery worker where outbound HTTPS is permitted: ${summary.egressBlockedDomains.join(", ")}`
+      );
+    }
 
     // Highest-priority candidates first, so a capped run reads the most promising pages.
     candidates.sort((left, right) => right.priority - left.priority);
@@ -252,6 +263,18 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           contentHash: previous?.content_hash ?? null,
           isEvent: previous?.is_event === null || previous?.is_event === undefined ? null : previous.is_event === 1,
           recheckHours: recheckHoursFor(previous?.is_event === 1 ? true : previous?.is_event === 0 ? false : null, false),
+        });
+        continue;
+      }
+
+      if (response.blockedByLocalPolicy) {
+        // Same reasoning as for robots.txt above: record nothing against the URL or its domain.
+        if (!summary.egressBlockedDomains.includes(candidate.sourceDomain)) {
+          summary.egressBlockedDomains.push(candidate.sourceDomain);
+        }
+        logger.log("url_skipped", {
+          url: candidate.url,
+          detail: "unreachable from this machine (local network egress policy)",
         });
         continue;
       }
@@ -354,7 +377,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       });
     }
 
+    // Only domains we actually reached count as successfully crawled; one we could not get out
+    // to must not have its schedule advanced as though it had been read.
+    const unreachable = new Set(summary.egressBlockedDomains);
     for (const domain of new Set(candidates.map((candidate) => candidate.sourceDomain))) {
+      if (unreachable.has(domain)) continue;
       await recordCrawlSuccess(domain);
     }
   } catch (error: any) {

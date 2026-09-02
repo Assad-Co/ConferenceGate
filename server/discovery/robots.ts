@@ -161,6 +161,12 @@ export async function fetchRobots(
     timeoutMs: options.timeoutMs,
   });
 
+  if (result.blockedByLocalPolicy) {
+    // Not "this site has no robots.txt" — "this machine cannot reach this site". Passed up
+    // verbatim so the caller can tell an infrastructure problem from a site's answer.
+    return { ...ALLOW_ALL, error: "blocked_by_local_egress_policy" };
+  }
+
   if (!result.ok || !result.body.trim()) {
     // A 404 genuinely means "no restrictions stated"; anything else is an unknown we record but
     // do not treat as permission granted by silence — the caller sees `fetched: false` and the

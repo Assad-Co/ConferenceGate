@@ -31,6 +31,7 @@ answer for every conference in the database.
 ## Quick start
 
 ```bash
+npm run discovery -- preflight               # can this machine reach the open web at all?
 npm run discovery -- seed                    # load the seed domain registry
 npm run discovery -- domains                 # what is registered, and when each is next due
 npm run discovery -- run --domains egu.eu --max-pages 40
@@ -45,6 +46,39 @@ An end-to-end rehearsal against a local eleven-site fixture web, with no network
 ```bash
 npx tsx server/discovery/tests/phase1Rehearsal.ts --out /tmp/discovery-rehearsal
 ```
+
+## Before the first run in a new environment: preflight
+
+```bash
+npm run discovery -- preflight            # the ten seed domains
+npm run discovery -- preflight --registry # whatever is actually in your registry
+GET /api/admin/discovery/preflight        # the same check, from the deployed server itself
+```
+
+It asks each domain for its `robots.txt` — one cheap request each, the file a crawler is supposed
+to read first anyway — and classifies the answer:
+
+| Verdict | Meaning |
+| --- | --- |
+| `reachable` | The request left this machine and the site answered. |
+| `egress_blocked` | **This machine's own network refused.** The site was never contacted. |
+| `dns_failure` | The hostname does not resolve from here. |
+| `origin_refused` | The site itself said no (anti-bot, geoblock, 403/429). |
+| `robots_disallowed` | The site answered and asked crawlers to stay out; it will be skipped. |
+| `timeout` | No answer in time. |
+
+That first distinction is the reason this command exists. A firewall, VPC allowlist or sandbox
+answers a forbidden host with a 403 that is indistinguishable, at a glance, from a conference site
+refusing a crawler — so a run inside one produces a page of plausible site errors that are really
+one infrastructure problem, and the registry backs off ten innocent domains for a week. The engine
+now recognises that shape (`looksLikeLocalEgressBlock`), reports it as an infrastructure fault,
+does not retry it, and leaves the domain's crawl schedule and failure count untouched.
+
+Preflight exits non-zero when outbound HTTPS is blocked, so it works as a deploy or CI gate.
+
+**A note on proxies:** Node's built-in `fetch` ignores `HTTPS_PROXY` unless `NODE_USE_ENV_PROXY=1`
+is set (Node ≥ 22.21). If your environment requires a proxy for outbound HTTPS, set that variable
+for the worker — preflight says so in its output when it detects the mismatch.
 
 ## Files
 
@@ -72,6 +106,7 @@ npx tsx server/discovery/tests/phase1Rehearsal.ts --out /tmp/discovery-rehearsal
 | `pipeline.ts` | The sequencing and the budgets. |
 | `metrics.ts` / `exportCsv.ts` | Metrics, CSV export, quality report. |
 | `publish.ts` | The opt-in bridge into the app's existing `extracted_conferences` table. |
+| `preflight.ts` | Connectivity check: is the network, the site, or nothing in the way? |
 | `router.ts` / `cli.ts` | The Phase 1 interface: an API and a command line. No dashboard. |
 | `providers/` | The sitemap provider, the search adapter, and Phase 2 stubs. |
 
@@ -121,6 +156,7 @@ Read routes need a signed-in account. Mutating routes also need the
 `x-discovery-admin-token` header matching `DISCOVERY_ADMIN_TOKEN`.
 
 ```
+GET  /api/admin/discovery/preflight            — can this deployment reach the open web?
 GET  /api/admin/discovery/status
 GET  /api/admin/discovery/metrics
 GET  /api/admin/discovery/report

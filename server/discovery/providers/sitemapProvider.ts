@@ -47,6 +47,9 @@ export class SitemapDiscoveryProvider implements DiscoveryProvider {
 
   /** Domains skipped because their robots.txt said so, with the reason — reported, not hidden. */
   readonly skipped: Array<{ domain: string; reason: string }> = [];
+  /** Domains this machine could not reach at all because its own network refused. Kept apart
+   *  from `skipped`: nothing about these domains is wrong, and they must not be penalised. */
+  readonly egressBlocked: string[] = [];
   /** robots policies gathered during the last discover(), so the pipeline can reuse them rather
    *  than fetching robots.txt a second time before reading each page. */
   readonly policies = new Map<string, RobotsPolicy>();
@@ -85,6 +88,19 @@ export class SitemapDiscoveryProvider implements DiscoveryProvider {
 
       const origin = `${scheme}://${domain.domain}`;
       const policy = await fetchRobots(origin, { urlGuard: this.options.urlGuard });
+
+      if (policy.error === "blocked_by_local_egress_policy") {
+        // This machine's own network would not let the request out. That says nothing about the
+        // site, so the domain is left completely untouched — no failure count, no backoff — and
+        // the run reports an infrastructure problem instead of ten innocent-looking site errors.
+        this.egressBlocked.push(domain.domain);
+        logger?.log("domain_skipped", {
+          domain: domain.domain,
+          detail: "this host is not reachable from this machine: outbound request refused by the local network egress policy, not by the site",
+        });
+        continue;
+      }
+
       this.policies.set(domain.domain, policy);
       setDomainCrawlDelay(domain.domain, policy.crawlDelayMs);
 

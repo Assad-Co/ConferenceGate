@@ -55,7 +55,35 @@ export interface FetchResult {
   contentHash: string | null;
   redirects: string[];
   error: string | null;
+  /** True when the failure was our own network refusing to reach the host, not the host
+   *  refusing us. Callers must not hold the domain responsible for this. */
+  blockedByLocalPolicy: boolean;
   elapsedMs: number;
+}
+
+/**
+ * Recognises a block imposed by OUR OWN network rather than by the site.
+ *
+ * Corporate egress filters, cloud VPC allowlists and sandboxed CI networks all answer a request
+ * for a host they do not permit with a short 403 or 407 whose body says so. That is a completely
+ * different fact from the conference's own server refusing us, and confusing the two is
+ * expensive: it makes a perfectly willing site look hostile, and it makes the registry back that
+ * domain off for a week over a problem that has nothing to do with the domain at all.
+ *
+ * Deliberately evidence-based rather than status-based: a bare 403 stays a bare 403. Only a
+ * response that actually names an allowlist, an egress policy or a proxy denial is reclassified.
+ */
+const LOCAL_EGRESS_BLOCK_RE =
+  /\b(?:not in (?:the )?allowlist|host not allowed|egress (?:policy|settings|rules?)|blocked by (?:network|proxy|policy|firewall)|proxy denied|denied by (?:the )?proxy|access denied by network|forbidden by egress|network policy (?:denial|denied)|not permitted by (?:your )?(?:network|organization|organisation))\b/i;
+
+export function looksLikeLocalEgressBlock(status: number, body: string, headers?: Headers | null): boolean {
+  if (status !== 403 && status !== 407 && status !== 502) return false;
+  // A real site's 403 page is a page: navigation, styling, a brand. These are a sentence.
+  if (body.length > 2000) return false;
+  if (!LOCAL_EGRESS_BLOCK_RE.test(body)) return false;
+  // A response the origin actually produced normally carries at least one origin-ish header.
+  const server = headers?.get("server") || "";
+  return !/cloudflare|nginx|apache|akamai|cloudfront|iis|litespeed|envoy|gse/i.test(server);
 }
 
 export function hashContent(text: string): string {
@@ -209,6 +237,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         contentHash: null,
         redirects,
         error: hop === 0 ? "blocked_by_url_guard" : "redirect_blocked_by_url_guard",
+        blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
       };
     }
@@ -243,6 +272,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         contentHash: null,
         redirects,
         error: error?.name === "TimeoutError" || /timeout/i.test(String(error?.message)) ? "timeout" : String(error?.message || error),
+        blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
       };
     }
@@ -263,6 +293,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         contentHash: null,
         redirects,
         error: null,
+        blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
       };
     }
@@ -283,6 +314,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
           contentHash: null,
           redirects,
           error: "redirect_without_location",
+          blockedByLocalPolicy: false,
           elapsedMs: Date.now() - startedAt,
         };
       }
@@ -303,6 +335,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
           contentHash: null,
           redirects,
           error: "redirect_location_unparseable",
+          blockedByLocalPolicy: false,
           elapsedMs: Date.now() - startedAt,
         };
       }
@@ -311,20 +344,25 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
       continue;
     }
 
-    const body = response.ok ? await readCapped(response, maxBytes) : "";
+    // A failed response's body is read too, but only a little of it: it is the only place a
+    // network-level block explains itself, and without it every such block looks like the site
+    // saying no.
+    const body = await readCapped(response, response.ok ? maxBytes : 4096);
+    const locallyBlocked = !response.ok && looksLikeLocalEgressBlock(response.status, body, response.headers);
     return {
       url,
       finalUrl: current,
       status: response.status,
       ok: response.ok,
       notModified: false,
-      body,
+      body: response.ok ? body : "",
       contentType: response.headers.get("content-type"),
       etag: response.headers.get("etag"),
       lastModified: response.headers.get("last-modified"),
-      contentHash: body ? hashContent(body) : null,
+      contentHash: response.ok && body ? hashContent(body) : null,
       redirects,
-      error: response.ok ? null : `http_${response.status}`,
+      error: response.ok ? null : locallyBlocked ? "blocked_by_local_egress_policy" : `http_${response.status}`,
+      blockedByLocalPolicy: locallyBlocked,
       elapsedMs: Date.now() - startedAt,
     };
   }
@@ -342,6 +380,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
     contentHash: null,
     redirects,
     error: "too_many_redirects",
+    blockedByLocalPolicy: false,
     elapsedMs: Date.now() - startedAt,
   };
 }
@@ -360,8 +399,9 @@ export async function discoveryFetch(url: string, options: FetchOptions = {}): P
       const result = await fetchOnce(url, options);
       last = result;
       const retryable =
-        (result.status === 0 && result.error !== "blocked_by_url_guard" && result.error !== "redirect_blocked_by_url_guard") ||
-        RETRYABLE_STATUSES.has(result.status);
+        !result.blockedByLocalPolicy &&
+        ((result.status === 0 && result.error !== "blocked_by_url_guard" && result.error !== "redirect_blocked_by_url_guard") ||
+          RETRYABLE_STATUSES.has(result.status));
       if (result.ok || !retryable || attempt === MAX_ATTEMPTS) return result;
       // Exponential backoff, so a struggling server gets more room each time rather than less.
       await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)));

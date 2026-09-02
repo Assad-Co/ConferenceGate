@@ -4,7 +4,7 @@ import http from "http";
 import { AddressInfo } from "net";
 import { isPathAllowed, parseRobotsTxt, fetchRobots, ROBOTS_AGENT_TOKEN } from "../robots";
 import { discoverSitemapUrls, entriesToCandidates, parseSitemapXml, scoreCandidateUrl } from "../sitemaps";
-import { configureDomainLimits, discoveryFetch, resetDomainLimits } from "../httpClient";
+import { configureDomainLimits, discoveryFetch, looksLikeLocalEgressBlock, resetDomainLimits } from "../httpClient";
 
 // The SSRF guard in server/urlSafety.ts blocks loopback, which is exactly what it should do —
 // so these tests inject their own guard for the local fixture server rather than weakening it.
@@ -214,6 +214,70 @@ test("a conditional request that answers 304 is reported as unchanged, not as a 
     assert.equal(second.notModified, true);
     assert.equal(second.ok, true);
     assert.equal(second.body, "", "an unchanged page is not downloaded again");
+  } finally {
+    server.close();
+    resetDomainLimits();
+  }
+});
+
+test("a network's own block is told apart from a site's refusal", () => {
+  // The exact shape a sandbox/VPC allowlist answers with: a sentence, no origin server header.
+  assert.equal(
+    looksLikeLocalEgressBlock(403, "Host not in allowlist: www.egu.eu. Add this host to your network egress settings to allow access."),
+    true
+  );
+  assert.equal(looksLikeLocalEgressBlock(407, "Proxy denied: host not permitted by your organization policy."), true);
+
+  // A real site refusing a crawler must NOT be reclassified — that would hide a genuine signal.
+  assert.equal(
+    looksLikeLocalEgressBlock(403, "Access denied. You do not have permission to view this page.", new Headers({ server: "cloudflare" })),
+    false
+  );
+  assert.equal(looksLikeLocalEgressBlock(403, "<html><body><h1>403 Forbidden</h1></body></html>"), false);
+  assert.equal(looksLikeLocalEgressBlock(404, "Host not in allowlist"), false, "only 403/407/502 are candidates");
+  assert.equal(
+    looksLikeLocalEgressBlock(403, `not in allowlist ${"x".repeat(3000)}`),
+    false,
+    "a full-length page is a real page, not a filter's one-line answer"
+  );
+});
+
+test("a locally blocked host is reported as such, and is not retried", async () => {
+  let requests = 0;
+  const server = http.createServer((req, res) => {
+    requests += 1;
+    res.writeHead(403, { "content-type": "text/plain" });
+    res.end("Host not in allowlist: example.org. Add this host to your network egress settings to allow access.");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  try {
+    const result = await discoveryFetch(`http://127.0.0.1:${port}/robots.txt`, { urlGuard: localGuard });
+    assert.equal(result.ok, false);
+    assert.equal(result.blockedByLocalPolicy, true);
+    assert.equal(result.error, "blocked_by_local_egress_policy", "not reported as the site's own http_403");
+    assert.equal(requests, 1, "a policy denial will not change on a retry, so it is not retried");
+  } finally {
+    server.close();
+    resetDomainLimits();
+  }
+});
+
+test("robots.txt reports an unreachable host as unreachable, not as 'no robots.txt'", async () => {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(403, { "content-type": "text/plain" });
+    res.end("Host not in allowlist: example.org. Add this host to your network egress settings to allow access.");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  try {
+    const policy = await fetchRobots(`http://127.0.0.1:${port}`, { urlGuard: localGuard });
+    assert.equal(policy.error, "blocked_by_local_egress_policy");
+    assert.equal(policy.fetched, false, "we never actually read this site's rules");
   } finally {
     server.close();
     resetDomainLimits();

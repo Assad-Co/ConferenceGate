@@ -16,6 +16,7 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { buildQualityReport, exportEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
+import { runPreflight } from "./preflight";
 import { providerStatus } from "./providers";
 import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
 import { discoverySchemaReady } from "./schema";
@@ -102,6 +103,22 @@ discoveryRouter.get(
         counters: safeJson(run.counters),
       })),
     });
+  })
+);
+
+/** Whether this deployment can reach the open web at all. Read-only and cheap: one robots.txt
+ *  request per domain. Worth checking from the server itself, since a laptop's connectivity says
+ *  nothing about the container the engine will actually run in. */
+discoveryRouter.get(
+  "/preflight",
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const domains =
+      typeof req.query.domains === "string"
+        ? req.query.domains.split(",").map((part) => part.trim()).filter(Boolean).slice(0, 25)
+        : undefined;
+    const report = await runPreflight({ domains, fromRegistry: req.query.registry === "true" });
+    res.json({ preflight: report });
   })
 );
 
