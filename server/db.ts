@@ -2,19 +2,44 @@ import { createClient, type Client, type InValue } from "@libsql/client";
 import path from "path";
 import fs from "fs";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const IS_TEST = process.env.NODE_ENV === "test";
+const TURSO_URL = process.env.TURSO_DATABASE_URL?.trim() || undefined;
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
+const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
+
+// Defence in depth: the test runner removes production credentials, but the database module also
+// refuses them before constructing a client. A broken runner or an ad-hoc NODE_ENV=test command
+// therefore fails before the first query, rather than writing fixtures into Turso.
+if (IS_TEST && (TURSO_URL || TURSO_AUTH_TOKEN)) {
+  throw new Error(
+    "Refusing to start tests with TURSO_DATABASE_URL or TURSO_AUTH_TOKEN set. " +
+      "Tests must use an isolated TEST_DATABASE_PATH."
+  );
+}
+if (IS_TEST && !TEST_DATABASE_PATH) {
+  throw new Error("NODE_ENV=test requires an explicit TEST_DATABASE_PATH.");
+}
+
+const localDatabasePath = TEST_DATABASE_PATH
+  ? path.resolve(TEST_DATABASE_PATH)
+  : path.join(process.cwd(), "data", "app.db");
+const DATA_DIR = path.dirname(localDatabasePath);
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const TURSO_URL = process.env.TURSO_DATABASE_URL;
-const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN;
+export const db: Client = IS_TEST
+  ? createClient({ url: `file:${localDatabasePath}` })
+  : TURSO_URL
+    ? createClient({ url: TURSO_URL, authToken: TURSO_AUTH_TOKEN })
+    : createClient({ url: `file:${localDatabasePath}` });
 
-export const db: Client = TURSO_URL
-  ? createClient({ url: TURSO_URL, authToken: TURSO_AUTH_TOKEN })
-  : createClient({ url: `file:${path.join(DATA_DIR, "app.db")}` });
+/** Close the client explicitly in bounded jobs and integration tests. */
+export function closeDb(): void {
+  db.close();
+}
 
-if (!TURSO_URL) {
+if (!TURSO_URL && !IS_TEST) {
   console.warn(
     "[db] TURSO_DATABASE_URL is not set — using a local SQLite file. On hosts without a persistent " +
       "disk (e.g. a default Render web service), this file resets on every restart or redeploy, wiping " +
