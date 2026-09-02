@@ -20,15 +20,22 @@ let modules: {
   dbAll: typeof import("../../db").dbAll;
   dbGet: typeof import("../../db").dbGet;
   resetDomainLimits: typeof import("../httpClient").resetDomainLimits;
+  closeDb: typeof import("../../db").closeDb;
 };
+let testRoot: string;
 let firstRun: Awaited<ReturnType<typeof import("../pipeline").runDiscovery>>;
 
 before(async () => {
-  // The engine's database is resolved from the working directory, so the test runs in its own
-  // temporary one and never touches the app's data/app.db.
-  process.chdir(fs.mkdtempSync(path.join(os.tmpdir(), "discovery-pipeline-")));
+  // The dedicated test runner has already removed Turso credentials and selected a disposable
+  // SQLite database. Keep a separate working directory for the fixture web's own scratch files.
+  assert.equal(process.env.NODE_ENV, "test");
+  assert.ok(process.env.TEST_DATABASE_PATH);
+  assert.equal(process.env.TURSO_DATABASE_URL, undefined);
+  assert.equal(process.env.TURSO_AUTH_TOKEN, undefined);
+  testRoot = fs.mkdtempSync(path.join(os.tmpdir(), "discovery-pipeline-"));
+  process.chdir(testRoot);
 
-  const { initDb, dbAll, dbGet } = await import("../../db");
+  const { initDb, dbAll, dbGet, closeDb } = await import("../../db");
   const { initDiscoverySchema } = await import("../schema");
   const { upsertDomain } = await import("../sourceRegistry");
   const { runDiscovery } = await import("../pipeline");
@@ -52,7 +59,7 @@ before(async () => {
     });
   }
 
-  modules = { runDiscovery, dbAll, dbGet, resetDomainLimits };
+  modules = { runDiscovery, dbAll, dbGet, resetDomainLimits, closeDb };
   firstRun = await runDiscovery({
     targetYears: [2026, 2027, 2028],
     domains: web.sites.map((site) => site.domain),
@@ -69,6 +76,8 @@ before(async () => {
 after(async () => {
   await web?.stop();
   modules?.resetDomainLimits();
+  modules?.closeDb();
+  if (testRoot) fs.rmSync(testRoot, { recursive: true, force: true });
 });
 
 test("the run reads several domains and stores conferences from all of them", async () => {
