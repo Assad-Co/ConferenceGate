@@ -146,6 +146,10 @@ test("concerts, roundups and finished events are rejected rather than stored", a
 });
 
 test("a directory listing joins the conference's own record instead of duplicating it", async () => {
+  assert.ok(firstRun.directoryResolution.directoryLeads > 0, "directory pages enter the resolution path");
+  assert.ok(firstRun.directoryResolution.resolutionsAttempted > 0, "linked official sites are actually fetched");
+  assert.ok(firstRun.directoryResolution.resolutionsSuccessful > 0, "an official-site fetch yields a conference");
+  assert.ok(firstRun.directoryResolution.validatedAfterResolution > 0, "the official page passes full validation");
   const directory = web.sites.find((site) => site.key === "directory")!;
   const shared = await modules.dbAll<{ event_id: string; sources: number }>(
     `SELECT event_id, COUNT(*) AS sources FROM discovery_event_sources GROUP BY event_id HAVING COUNT(*) > 1`
