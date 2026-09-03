@@ -189,7 +189,8 @@ async function main(): Promise<void> {
     case "export": {
       const out = String(flags.out || "discovery_test.csv");
       const years = list(flags.years).map(Number).filter(Number.isInteger);
-      const result = await writeEventsCsv(out, { years: years.length > 0 ? years : undefined });
+      const runId = typeof flags["run-id"] === "string" ? flags["run-id"] : undefined;
+      const result = await writeEventsCsv(out, { years: years.length > 0 ? years : undefined, runId });
       console.log(`Wrote ${result.rows} rows to ${result.path}`);
       break;
     }
