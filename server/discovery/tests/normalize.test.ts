@@ -106,6 +106,21 @@ test('"Online" is not treated as a city', () => {
   assert.equal(location.rawLocation, "Online");
 });
 
+test("an explicitly stated unambiguous city can derive country with provenance metadata", () => {
+  const raw = emptyRawExtraction("structured_data");
+  raw.city = "Tokyo";
+  const location = normalizeLocation(raw);
+  assert.equal(location.country, "Japan");
+  assert.deepEqual(location.countryInference, { method: "explicit_city_country_map", city: "Tokyo", confidence: 0.82 });
+});
+
+test("ambiguous cities never imply a country", () => {
+  const raw = emptyRawExtraction("html");
+  raw.city = "Cambridge";
+  assert.equal(normalizeLocation(raw).country, null);
+  assert.equal(normalizeLocation(raw).countryInference, null);
+});
+
 test("event dates are taken from the event, never from a deadline row", () => {
   const raw = emptyRawExtraction("html");
   raw.importantDates = [
