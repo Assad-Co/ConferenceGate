@@ -120,6 +120,8 @@ export interface DiscoveryCandidate {
     lastModified?: string | null;
     discoveryProviders?: string[];
     discoveryQuery?: string | null;
+    /** Search evidence that this directory URL is one event detail, never a generic listing. */
+    directoryLeadEligible?: boolean;
   };
 }
 
