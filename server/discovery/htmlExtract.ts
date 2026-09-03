@@ -23,6 +23,7 @@ import {
   walk,
   type HtmlNode,
 } from "./html";
+import { findCountryInText } from "./countries";
 import { emptyRawExtraction, type RawEventExtraction } from "./types";
 
 /** Label vocabularies. Each maps a field to the words a site might introduce it with. */
@@ -294,12 +295,14 @@ export function extractFromHtml(
   const venueValue = findLabelled(root, LABELS.venue);
   const addressValue = findLabelled(root, LABELS.address);
   const metaLocation = metaContent(root, "event:location") || metaContent(root, "place") || metaContent(root, "location");
-  raw.locationText = seed?.locationText || locationValue || addressValue || venueValue || metaLocation || null;
+  const headerLocation = [documentTitle(root), ...byTag(root, "h1", "h2").slice(0, 4).map((node) => textOf(node))]
+    .find((value) => !!value && !!findCountryInText(value)) || null;
+  raw.locationText = seed?.locationText || locationValue || addressValue || venueValue || metaLocation || headerLocation || null;
   raw.venue = seed?.venue || venueValue || null;
   raw.venueAddress = seed?.venueAddress || addressValue || null;
   raw.city = seed?.city || null;
   raw.region = seed?.region || null;
-  raw.country = seed?.country || null;
+  raw.country = seed?.country || findCountryInText(headerLocation)?.name || null;
 
   raw.organizer = seed?.organizer || findLabelled(root, LABELS.organizer);
   raw.language = seed?.language || findLabelled(root, LABELS.language);
@@ -423,4 +426,3 @@ export function eventLinksOnPage(html: string, pageUrl: string, limit = 60): str
 }
 
 export { walk, parseHtml };
-
