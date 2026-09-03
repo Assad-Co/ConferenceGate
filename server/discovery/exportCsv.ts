@@ -42,24 +42,27 @@ export interface ExportOptions {
   statuses?: string[];
   limit?: number;
   years?: number[];
+  /** Restrict rows to events attributable to one run, including merges into older records. */
+  runId?: string;
 }
 
 export async function exportEventsCsv(options: ExportOptions = {}): Promise<string> {
   const statuses = options.statuses ?? ["validated", "published", "needs_review"];
   const placeholders = statuses.map(() => "?").join(", ");
   const yearFilter = options.years?.length ? ` AND start_year IN (${options.years.map(() => "?").join(", ")})` : "";
+  const runJoin = options.runId ? " JOIN discovery_run_events re ON re.event_id = e.id AND re.run_id = ?" : "";
 
   const rows = await dbAll<Record<string, any>>(
-    `SELECT e.*, (
+    `SELECT DISTINCT e.*, (
         SELECT GROUP_CONCAT(c.category, '; ')
           FROM discovery_event_categories c
          WHERE c.event_id = e.id
        ) AS categories
-       FROM discovery_events e
+       FROM discovery_events e${runJoin}
       WHERE e.status IN (${placeholders})${yearFilter}
       ORDER BY e.start_date IS NULL, e.start_date ASC, e.title ASC
       LIMIT ?`,
-    [...statuses, ...(options.years ?? []), options.limit ?? 5000]
+    [...(options.runId ? [options.runId] : []), ...statuses, ...(options.years ?? []), options.limit ?? 5000]
   );
 
   const lines = [CSV_COLUMNS.join(",")];
