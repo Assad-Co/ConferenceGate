@@ -50,6 +50,10 @@ export const PUBLICATION_STATUSES = [
 ] as const;
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
 
+/** Phase 1.4 readiness is deliberately separate from publication status: no row is published. */
+export const PUBLISH_READINESS = ["publish_ready", "needs_enrichment", "needs_review"] as const;
+export type PublishReadiness = (typeof PUBLISH_READINESS)[number];
+
 /** What kind of organisation a domain is, which is what its trust score is derived from. */
 export const SOURCE_TYPES = [
   "university",
