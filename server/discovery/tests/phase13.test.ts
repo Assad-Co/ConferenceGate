@@ -12,7 +12,7 @@ import { alternateUrlsFor, DomainCircuitBreaker, MAX_ALTERNATES_PER_URL } from "
 import { findOfficialCandidates, newDirectoryResolutionStats, resolutionRate } from "../officialResolution";
 import { worldRegionForCountry, WORLD_REGIONS, canonicalizeUrl } from "../normalize";
 import { limitPerDomain } from "../sitemaps";
-import { cellKey, planSearchQueries } from "../providers/searchProvider";
+import { cellKey, isEligibleDirectoryLead, planSearchQueries, SearchDiscoveryProvider } from "../providers/searchProvider";
 import { configureDomainLimits, resetDomainLimits } from "../httpClient";
 import { newReadBudget, readPage } from "../readPage";
 
@@ -199,6 +199,54 @@ test("Serper receives a free-account-safe query while Brave keeps its precision 
   assert.doesNotMatch(planned.serperQuery, /["+\-]|\b(?:site|inurl|intitle):|\bOR\b/);
 });
 
+test("Serper executes coverage-gap queries even after Brave fills the candidate return cap", async () => {
+  const previousBrave = process.env.BRAVE_SEARCH_API_KEY;
+  const previousSerper = process.env.SERPER_API_KEY;
+  process.env.BRAVE_SEARCH_API_KEY = "fixture-brave";
+  process.env.SERPER_API_KEY = "fixture-serper";
+  let serperCalls = 0;
+
+  try {
+    const provider = new SearchDiscoveryProvider({
+      enabled: true,
+      maxQueries: 1,
+      resultsPerQuery: 1,
+      serperYieldThreshold: 99,
+      braveClient: async () => [{
+        title: "Global Water Conference 2027",
+        link: "https://water2027.example.org/",
+        snippet: "Conference in Germany in 2027",
+        displayLink: "water2027.example.org",
+        thumbnail: null,
+        favicon: null,
+      }],
+      serperClient: async (query) => {
+        serperCalls += 1;
+        assert.doesNotMatch(query, /["+\-]/);
+        return [{
+          title: "European Energy Congress 2027",
+          link: "https://energy2027.example.org/",
+          snippet: "Congress in Germany in 2027",
+          displayLink: "energy2027.example.org",
+          thumbnail: null,
+          favicon: null,
+        }];
+      },
+    });
+    await provider.discover({ targetYears: [2027], topics: ["Water"], maxCandidates: 1 });
+    assert.equal(serperCalls, 1);
+    assert.equal(provider.accounting.serperQueries, 1);
+    assert.equal(provider.accounting.serperRawResults, 1);
+    assert.equal(provider.metrics.serper.queriesIssued, 1);
+    assert.equal(provider.metrics.serper.rawResults, 1);
+  } finally {
+    if (previousBrave === undefined) delete process.env.BRAVE_SEARCH_API_KEY;
+    else process.env.BRAVE_SEARCH_API_KEY = previousBrave;
+    if (previousSerper === undefined) delete process.env.SERPER_API_KEY;
+    else process.env.SERPER_API_KEY = previousSerper;
+  }
+});
+
 test("a refused direct page is handed to Jina and recovered content reaches extraction", async () => {
   const server = http.createServer((_req, res) => {
     res.writeHead(403, { "content-type": "text/html" });
@@ -261,6 +309,29 @@ test("a failed Jina attempt retains its exact reason", async () => {
 // ---------------------------------------------------------------------------------------------
 // 4. Directory resolution
 // ---------------------------------------------------------------------------------------------
+
+test("only individual dated directory results are eligible for pre-acceptance resolution", () => {
+  const result = (title: string, link: string, snippet = "") => ({
+    title, link, snippet, displayLink: "conferenceindex.org", thumbnail: null, favicon: null,
+  });
+  assert.equal(isEligibleDirectoryLead(result(
+    "International Conference on Clean Energy 2027",
+    "https://conferenceindex.org/event/clean-energy-2027"
+  )), true);
+  assert.equal(isEligibleDirectoryLead(result(
+    "Upcoming Conferences in Germany 2027",
+    "https://conferenceindex.org/conferences/germany"
+  )), false);
+  assert.equal(isEligibleDirectoryLead(result(
+    "Top 20 Technology Conferences",
+    "https://conferenceindex.org/category/technology",
+    "Events for 2027"
+  )), false);
+  assert.equal(isEligibleDirectoryLead(result(
+    "International Conference on Clean Energy 2027",
+    "https://conferenceindex.org/events"
+  )), false);
+});
 
 test("a directory's link to the conference's own site is found by its adjacent label", () => {
   const html = `<html><body>
@@ -463,3 +534,4 @@ test("a run's failures are broken down by class and by domain, with what each im
     process.chdir(previousCwd);
   }
 });
+
