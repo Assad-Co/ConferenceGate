@@ -11,6 +11,7 @@
 // the paid one runs only for pages the free routes left incomplete.
 
 import { dbRun } from "../db";
+import { isDirectoryHost } from "../braveSearch";
 import type { AiJsonCaller } from "./aiExtract";
 import { extractWithAi, needsAiFallback } from "./aiExtract";
 import { DomainCircuitBreaker } from "./alternateUrl";
@@ -586,7 +587,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       if (read.usedFallback) {
         logger.log("jina_attempted", { url: candidate.url });
         if (usedJina) logger.log("jina_successful", { url: candidate.url });
-        else logger.log("jina_failed", { url: candidate.url, detail: read.failureReason || "added nothing" });
+        else logger.log("jina_failed", { url: candidate.url, detail: read.fallbackFailureReason || "added nothing" });
       }
 
       if (!read.html) {
@@ -728,9 +729,10 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       // source, and if resolution fails the record keeps its null official URL rather than being
       // quietly promoted.
       if (
-        outcome.isEvent &&
         outcome.event &&
-        (outcome.classification === "directory" || outcome.classification === "aggregator")
+        (outcome.classification === "directory" ||
+          outcome.classification === "aggregator" ||
+          isDirectoryHost(candidate.sourceDomain))
       ) {
         directoryStats.directoryLeads += 1;
         const directoryPageUrl = response.finalUrl || candidate.url;
@@ -865,11 +867,10 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
               directoryStats.resolutionsSuccessful += 1;
               summary.recoveryMethods.directory_resolution =
                 (summary.recoveryMethods.directory_resolution || 0) + 1;
-              if (officialOutcome.eventId === outcome.eventId) {
-                // Deduplication recognised it as the same conference, so the record now carries
-                // both provenances: the directory that led us there and the site that confirmed it.
-                directoryStats.validatedAfterResolution += 1;
-              }
+              // The official page passed the unchanged full validation rules. This also counts
+              // when the directory page itself was rejected: it was a lead, never the evidence
+              // used to accept the conference.
+              directoryStats.validatedAfterResolution += 1;
               logger.log("event_updated", {
                 url: officialCandidate.url,
                 detail: `resolved from a directory lead (${officialCandidate.reason})`,
@@ -1364,7 +1365,7 @@ async function processPage(
       summary.rejectionReasons[reason] = (summary.rejectionReasons[reason] || 0) + 1;
     }
     logger.log("event_rejected", { url: pageUrl, detail: validation.errors.join(", ") });
-    return { isEvent: false, eventId: null, event: null, classification: null };
+    return { isEvent: false, eventId: null, event, classification: sourceClass.classification };
   }
 
   // --- Deduplication and storage.
