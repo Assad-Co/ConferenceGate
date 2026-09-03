@@ -20,6 +20,7 @@ import { discoveryFetch, hashContent, isHtmlLike, type UrlGuard } from "./httpCl
 import { readWithJina } from "./jinaFetch";
 import { canonicalLink, documentTitle, parseHtml } from "./html";
 import { RunLogger } from "./logging";
+import { classifySource, isHighConfidenceOfficial } from "./sourceClassification";
 import {
   canonicalizeUrl,
   cleanDescription,
@@ -85,6 +86,7 @@ export interface RunSummary {
   pagesFetched: number;
   pagesUnchanged: number;
   pagesFailed: number;
+  terminalOutcomes: Record<string, number>;
   eventsDetected: number;
   eventsRejected: number;
   created: number;
@@ -105,15 +107,37 @@ export interface RunSummary {
   events: NormalizedEvent[];
   errors: string[];
   qualityByProvider: Record<string, ProviderQuality>;
+  searchProviderMetrics: Record<string, { queriesIssued: number; rawResults: number; uniqueUrls: number; sharedUrls: number }>;
 }
 
 interface ProviderQuality {
   candidates: number; fetched: number; conferencePositive: number; accepted: number;
-  needsReview: number; rejected: number; finished: number; fetchFailures: number;
+  fullyValidated: number; needsReview: number; rejected: number; finished: number; fetchFailures: number; duplicates: number;
 }
 
 function providerQuality(summary: RunSummary, provider: string): ProviderQuality {
-  return summary.qualityByProvider[provider] ||= { candidates: 0, fetched: 0, conferencePositive: 0, accepted: 0, needsReview: 0, rejected: 0, finished: 0, fetchFailures: 0 };
+  return summary.qualityByProvider[provider] ||= { candidates: 0, fetched: 0, conferencePositive: 0, accepted: 0, fullyValidated: 0, needsReview: 0, rejected: 0, finished: 0, fetchFailures: 0, duplicates: 0 };
+}
+
+function providerDecisionMetrics(summary: RunSummary): Record<string, Record<string, number>> {
+  const shared = summary.qualityByProvider["brave+serper"];
+  const out: Record<string, Record<string, number>> = {};
+  for (const provider of ["brave", "serper"]) {
+    const own = summary.qualityByProvider[provider];
+    const search = summary.searchProviderMetrics[provider];
+    const add = (field: keyof ProviderQuality) => (own?.[field] || 0) + (shared?.[field] || 0);
+    const queries = search?.queriesIssued || 0;
+    out[provider] = {
+      queriesIssued: queries, rawResults: search?.rawResults || 0, uniqueUrls: search?.uniqueUrls || 0,
+      sharedUrls: search?.sharedUrls || 0, fetched: add("fetched"), accepted: add("accepted"),
+      fullyValidated: add("fullyValidated"), needsReview: add("needsReview"), rejected: add("rejected"),
+      duplicates: add("duplicates"), providerOnlyAccepted: own?.accepted || 0,
+      sharedAccepted: shared?.accepted || 0,
+      acceptedPerQuery: queries ? Number((add("accepted") / queries).toFixed(4)) : 0,
+      uniqueUsefulUrlsPerQuery: queries ? Number((add("conferencePositive") / queries).toFixed(4)) : 0,
+    };
+  }
+  return out;
 }
 
 function defaultTargetYears(now = new Date()): number[] {
@@ -148,6 +172,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     pagesFetched: 0,
     pagesUnchanged: 0,
     pagesFailed: 0,
+    terminalOutcomes: {},
     eventsDetected: 0,
     eventsRejected: 0,
     created: 0,
@@ -164,6 +189,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     events: [],
     errors: [],
     qualityByProvider: {},
+    searchProviderMetrics: {},
   };
 
   await dbRun(
@@ -180,7 +206,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       scheme: options.scheme,
       ignoreSchedule: !!options.domains?.length,
     });
-    const providers = [sitemapProvider, ...allProviders().filter((p) => p.name !== "sitemap")];
+    const providers = [sitemapProvider, ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap")];
 
     const candidates: DiscoveryCandidate[] = [];
     for (const provider of providers) {
@@ -197,6 +223,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           });
           produced = found.length;
           candidates.push(...found);
+          if (provider.name === "search") summary.searchProviderMetrics = { ...(provider as any).metrics };
         } catch (error: any) {
           // One provider failing is not the run failing.
           summary.errors.push(`${provider.name}: ${error?.message || error}`);
@@ -242,8 +269,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         break;
       }
 
+      summary.pagesAttempted += 1;
+      const terminal = (outcome: string) => { summary.terminalOutcomes[outcome] = (summary.terminalOutcomes[outcome] || 0) + 1; };
       const policy = sitemapProvider.policies.get(candidate.sourceDomain);
       if (policy && !isPathAllowed(policy, candidate.url)) {
+        terminal("robots_disallowed");
         logger.log("url_skipped", { url: candidate.url, detail: "disallowed by robots.txt" });
         continue;
       }
@@ -258,7 +288,6 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       const trust = domainTrust.get(candidate.sourceDomain)!;
 
       const previous = await getUrlState(candidate.url);
-      summary.pagesAttempted += 1;
       let response = await discoveryFetch(candidate.url, {
         etag: previous?.etag ?? null,
         lastModified: previous?.last_modified ?? null,
@@ -267,6 +296,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       if (response.notModified) {
         summary.pagesUnchanged += 1;
+        terminal("unchanged_304");
         logger.log("url_unchanged", { url: candidate.url });
         await recordUrlVisit({
           url: candidate.url,
@@ -283,6 +313,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       }
 
       if (response.blockedByLocalPolicy) {
+        terminal("skipped_local_policy");
         // Same reasoning as for robots.txt above: record nothing against the URL or its domain.
         if (!summary.egressBlockedDomains.includes(candidate.sourceDomain)) {
           summary.egressBlockedDomains.push(candidate.sourceDomain);
@@ -307,6 +338,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       if (!response.ok || !response.body) {
         summary.pagesFailed += 1;
+        terminal("fetch_failed");
         providerQuality(summary, candidate.provider).fetchFailures += 1;
         logger.log(response.error === "timeout" ? "page_timeout" : "page_failed", {
           url: candidate.url,
@@ -327,6 +359,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       }
 
       summary.pagesFetched += 1;
+      terminal("fetched_processed");
       providerQuality(summary, candidate.provider).fetched += 1;
       logger.log("page_fetched", { url: candidate.url });
 
@@ -435,6 +468,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         pagesFetched: summary.pagesFetched,
         pagesUnchanged: summary.pagesUnchanged,
         pagesFailed: summary.pagesFailed,
+        terminalOutcomes: summary.terminalOutcomes,
         eventsDetected: summary.eventsDetected,
         eventsRejected: summary.eventsRejected,
         created: summary.created,
@@ -449,6 +483,8 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           candidatePrecision: q.fetched ? Number((q.conferencePositive / q.fetched).toFixed(4)) : 0,
           validatedYield: q.fetched ? Number(((q.accepted - q.needsReview) / q.fetched).toFixed(4)) : 0,
         }])),
+        searchProviderMetrics: summary.searchProviderMetrics,
+        providerMetrics: providerDecisionMetrics(summary),
         ...summary.counters,
       }),
       JSON.stringify(logger.entries.slice(0, 800)),
@@ -552,10 +588,11 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
   // A directory listing's own address is the source, and the organiser's site — when the page
   // names one — is the official URL (section 16).
   const parsedDoc = parseHtml(html);
-  const officialUrl =
-    raw.officialUrl ||
-    canonicalLink(parsedDoc, pageUrl) ||
-    (input.trust.type === "conference_directory" ? null : pageUrl);
+  const declaredOfficialUrl = raw.officialUrl || canonicalLink(parsedDoc, pageUrl);
+  const sourceClass = classifySource({ pageUrl, officialUrl: declaredOfficialUrl, organizerUrl: raw.organizerUrl,
+    title: raw.title, organizer: raw.organizer, pageText: text, registryType: input.trust.type });
+  const sourceIsOfficial = isHighConfidenceOfficial(sourceClass.classification, sourceClass.confidence);
+  const officialUrl = declaredOfficialUrl || (sourceIsOfficial ? pageUrl : null);
 
   const provenance = buildProvenance(raw, {
     sourceUrl: pageUrl,
@@ -577,6 +614,24 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
       description,
     },
   });
+  if (location.countryInference && location.country) {
+    provenance.country = {
+      value: location.country,
+      sourceUrl: pageUrl,
+      sourceDomain: candidate.sourceDomain,
+      method: "derived",
+      confidence: location.countryInference.confidence,
+      lastVerified: new Date().toISOString(),
+    };
+    provenance.countryInference = {
+      value: `${location.countryInference.method}:${location.countryInference.city}`,
+      sourceUrl: pageUrl,
+      sourceDomain: candidate.sourceDomain,
+      method: "derived",
+      confidence: location.countryInference.confidence,
+      lastVerified: new Date().toISOString(),
+    };
+  }
 
   const event: NormalizedEvent = {
     title: raw.title,
@@ -658,8 +713,18 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
     sourceTrust: input.trust.trust,
     sourceType: input.trust.type,
     provider: candidate.provider,
-    isOfficial: input.trust.type !== "conference_directory" && officialUrl === pageUrl,
+    isOfficial: sourceIsOfficial && officialUrl === pageUrl,
+    sourceClassification: sourceClass.classification,
+    classificationConfidence: sourceClass.confidence,
+    classificationEvidence: sourceClass.evidence,
   });
+
+  await dbRun(
+    `INSERT INTO discovery_run_events (run_id, event_id, outcome, validation_status, provider, source_url, source_classification)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(run_id, event_id, source_url) DO UPDATE SET outcome=excluded.outcome, validation_status=excluded.validation_status`,
+    [summary.runId, stored.eventId, stored.outcome, validation.status, candidate.provider, pageUrl, sourceClass.classification]
+  );
 
   if (validation.status === "needs_review" && stored.outcome !== "review_queued") {
     await queueForReview({
@@ -673,6 +738,8 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
   countOutcome(summary, stored.outcome);
   providerQuality(summary, candidate.provider).accepted += 1;
   if (validation.status === "needs_review") providerQuality(summary, candidate.provider).needsReview += 1;
+  else providerQuality(summary, candidate.provider).fullyValidated += 1;
+  if (stored.duplicate) providerQuality(summary, candidate.provider).duplicates += 1;
   summary.extractionMethods[raw.method] = (summary.extractionMethods[raw.method] || 0) + 1;
   summary.events.push(event);
 
