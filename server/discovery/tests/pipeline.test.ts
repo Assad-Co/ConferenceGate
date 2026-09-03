@@ -79,7 +79,7 @@ after(async () => {
   modules?.resetDomainLimits();
   modules?.closeDb();
   process.chdir(originalCwd);
-  if (testRoot) fs.rmSync(testRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  if (testRoot) await fs.promises.rm(testRoot, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
 });
 
 test("the run reads several domains and stores conferences from all of them", async () => {
@@ -88,6 +88,26 @@ test("the run reads several domains and stores conferences from all of them", as
     "SELECT DISTINCT source_domain FROM discovery_events"
   );
   assert.ok(domains.length >= 2, "conferences come from more than one independent domain");
+});
+
+test("attempt terminal outcomes reconcile exactly", () => {
+  const terminalTotal = Object.values(firstRun.terminalOutcomes).reduce((sum, count) => sum + count, 0);
+  assert.equal(terminalTotal, firstRun.pagesAttempted);
+});
+
+test("accepted and merged records are attributed to their run", async () => {
+  const contributions = await modules.dbGet<{ count: number }>(
+    "SELECT COUNT(*) AS count FROM discovery_run_events WHERE run_id = ?",
+    [firstRun.runId]
+  );
+  assert.equal(Number(contributions?.count || 0), firstRun.events.length);
+  const distinctEvents = await modules.dbGet<{ count: number }>(
+    "SELECT COUNT(DISTINCT event_id) AS count FROM discovery_run_events WHERE run_id = ?",
+    [firstRun.runId]
+  );
+  const { exportEventsCsv } = await import("../exportCsv");
+  const csv = await exportEventsCsv({ runId: firstRun.runId });
+  assert.equal(csv.trim().split("\n").length - 1, Number(distinctEvents?.count || 0));
 });
 
 test("no model call is made when deterministic extraction is enough", () => {
