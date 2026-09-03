@@ -11,7 +11,6 @@
 // the paid one runs only for pages the free routes left incomplete.
 
 import { dbRun } from "../db";
-import { isDirectoryHost } from "../braveSearch";
 import type { AiJsonCaller } from "./aiExtract";
 import { extractWithAi, needsAiFallback } from "./aiExtract";
 import { DomainCircuitBreaker } from "./alternateUrl";
@@ -730,9 +729,9 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       // quietly promoted.
       if (
         outcome.event &&
-        (outcome.classification === "directory" ||
-          outcome.classification === "aggregator" ||
-          isDirectoryHost(candidate.sourceDomain))
+        ((outcome.isEvent &&
+          (outcome.classification === "directory" || outcome.classification === "aggregator")) ||
+          candidate.hints?.directoryLeadEligible === true)
       ) {
         directoryStats.directoryLeads += 1;
         const directoryPageUrl = response.finalUrl || candidate.url;
@@ -1487,3 +1486,4 @@ function buildProvenance(
 }
 
 export { canonicalizeUrl, emptyRawExtraction };
+
