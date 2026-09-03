@@ -194,6 +194,65 @@ container-local SQLite file produces results the web service cannot see and a de
 — a run that looks like a success and leaves nothing behind. Pass `--allow-local-db` if a
 throwaway run really is what you want.
 
+## When a fetch fails (Phase 1.3)
+
+A fetch failure is not one thing, and Phase 1.2's benchmark showed why that matters: 203 terminal
+failures against 121 successful reads, recorded as one string in one column, which could not be
+turned into a plan. Every failure is now classified — `http_403`, `http_404`, `http_429`,
+`timeout`, `dns_failure`, `tls_failure`, `connection_reset`, `redirect_failure`,
+`response_size_limit`, `unsupported_content`, `blocked_by_local_egress_policy` and the rest — and
+each class carries the two decisions that follow from it: is it worth retrying, and is it worth
+looking for a different URL.
+
+```bash
+npm run discovery -- diagnose             # the most recent run
+npm run discovery -- diagnose --run <id>  # a specific one
+```
+
+The reading cascade follows from the taxonomy:
+
+1. **Direct fetch.**
+2. **The hosted reader**, when the direct read failed or was too thin (opt-in, capped).
+3. **An alternate URL on the same site**, when the class says one could help. A 404 on
+   `/events/2027/water-congress` usually means the site is alive and the path is stale, so the
+   site root and the parent path are tried. A 429 gets none of this — that means "slower", not
+   "elsewhere" — and neither does a local network block.
+
+A **circuit breaker** stops asking a host after three consecutive refusals: a site that has
+refused us three times will refuse the next two hundred candidates too, and each of those is page
+budget spent on a certainty. A 404 deliberately does not count towards it — one missing page says
+nothing about the next.
+
+Every accepted conference records **which route produced it** (`recovery_method`), so "the reader
+recovered one event" is a measurement rather than an anecdote.
+
+## Directories are leads, not destinations
+
+Phase 1.2 took 27 of 51 accepted events from directories and only 12 from official event sites,
+which is the wrong way round for a platform whose premise is that the organiser's own word
+outranks a listing. A directory that yields a conference is now read once more for the one thing
+it uniquely offers — a link to where the event actually lives — and that site is then read too.
+
+The directory stays recorded as the directory. The resolved site is a **separate** source with its
+own provenance, and `resolved_from_directory` marks the record. A directory is never promoted to
+official: it sets `<link rel="canonical">` to itself and often puts its own listing URL in its
+structured data, so a declared URL is only accepted from a page already believed authoritative, or
+when it points somewhere else entirely. Failing resolution leaves the official URL null rather
+than filling it with the listing's address.
+
+Reported per run: `directoryLeads`, `resolutionsAttempted`, `resolutionsSuccessful`,
+`validatedAfterResolution` and `resolutionRate`.
+
+## Concurrency
+
+Phase 1.2 read one page at a time, so the per-domain politeness delay became a global one. Domains
+are independent, so several are now read at once — while each domain individually is still read
+politely, in order, one request at a time, at its own interval. `--domain-concurrency` sets how
+many; nothing about validation changes to buy the speed.
+
+A per-domain candidate cap (`--max-per-domain`) stops one large site consuming the budget, which
+is what left Phase 1.2 exhausted at 324 candidates with most of them from a handful of hosts.
+
 ## Files
 
 | File | What it does |
@@ -225,6 +284,10 @@ throwaway run really is what you want.
 | `readPage.ts` | The read chain: direct fetch, then the capped hosted-reader fallback. |
 | `jinaFetch.ts` | The hosted-reader route itself, and the markdown-to-HTML conversion. |
 | `audit.ts` | Field-level audit of real records against their real sources. |
+| `failureClass.ts` | The failure taxonomy, and what each class implies. |
+| `alternateUrl.ts` | Alternate URLs for a failed page, and the per-domain circuit breaker. |
+| `officialResolution.ts` | Finding a conference's own site from a directory listing. |
+| `diagnose.ts` | A run's failures, by class and by domain, with what they imply. |
 | `router.ts` / `cli.ts` | The Phase 1 interface: an API and a command line. No dashboard. |
 | `providers/` | The sitemap provider, the search adapter, and Phase 2 stubs. |
 
@@ -263,6 +326,7 @@ Every variable is optional; each one missing degrades a capability rather than b
 | `DISCOVERY_PUBLISH_TO_CONFERENCES` | `1` allows publication into `extracted_conferences`. |
 | `DISCOVERY_SEARCH_PROVIDER` | `1` lets discovery use the existing Brave/Serper search integration. |
 | `DISCOVERY_JINA_ENABLED` | `1` allows the hosted reader as a fallback for pages a direct fetch cannot read. |
+| `TEST_DATABASE_PATH` | Required when `NODE_ENV=test`; keeps tests off any real database. |
 | `DISCOVERY_MIN_REQUEST_INTERVAL_MS` | Politeness floor per domain (default 1200). |
 | `DISCOVERY_MAX_CONCURRENT_PER_DOMAIN` | Default 1. |
 | `DISCOVERY_FETCH_TIMEOUT_MS`, `DISCOVERY_FETCH_ATTEMPTS`, `DISCOVERY_RETRY_BASE_MS` | Fetch behaviour. |

@@ -28,6 +28,11 @@ export interface StoreResult {
 
 export interface StoreOptions {
   status: PublicationStatus;
+  /** Which retrieval route finally produced this record: direct, jina, alternate_url or
+   *  directory_resolution. Without it, "the reader recovered one event" is an anecdote. */
+  recoveryMethod?: string | null;
+  /** True when this record began as a directory listing whose own site was then found. */
+  resolvedFromDirectory?: boolean;
   /** Trust of the domain this record came from, 0–1. Decides who wins a field-level conflict. */
   sourceTrust: number;
   sourceType?: string | null;
@@ -63,6 +68,7 @@ const UPDATABLE_FIELDS: Array<{ column: string; read: (event: NormalizedEvent) =
   { column: "region", read: (e) => e.region },
   { column: "country", read: (e) => e.country },
   { column: "country_code", read: (e) => e.countryCode },
+  { column: "world_region", read: (e) => e.worldRegion },
   { column: "raw_location", read: (e) => e.rawLocation },
   { column: "latitude", read: (e) => e.latitude },
   { column: "longitude", read: (e) => e.longitude },
@@ -207,15 +213,16 @@ async function insertEvent(event: NormalizedEvent, options: StoreOptions): Promi
        start_date, end_date, start_year, start_month, date_precision, dates_text,
        abstract_deadline, paper_submission_deadline, early_bird_deadline,
        registration_deadline, notification_date, camera_ready_deadline,
-       venue, venue_address, city, region, country, country_code, raw_location, latitude, longitude,
+       venue, venue_address, city, region, country, country_code, world_region, raw_location, latitude, longitude,
        format, event_type, original_event_type,
        organizer, organizer_url, official_url, canonical_url, registration_url, submission_url, image_url,
        price, currency, language, contact_name, contact_email, contact_phone,
        topics, primary_category, series_id, edition,
        status, confidence_score, relevance_classification, relevance_reason, quality_flags,
        extraction_method, source_url, source_domain, content_hash,
+       recovery_method, resolved_from_directory,
        last_verified
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
     [
       id,
       event.title,
@@ -240,6 +247,7 @@ async function insertEvent(event: NormalizedEvent, options: StoreOptions): Promi
       event.region,
       event.country,
       event.countryCode,
+      event.worldRegion,
       event.rawLocation,
       event.latitude,
       event.longitude,
@@ -272,6 +280,8 @@ async function insertEvent(event: NormalizedEvent, options: StoreOptions): Promi
       event.sourceUrl,
       event.sourceDomain,
       event.contentHash,
+      options.recoveryMethod ?? null,
+      options.resolvedFromDirectory ? 1 : 0,
     ]
   );
 
@@ -562,6 +572,10 @@ export async function recordUrlVisit(input: {
   lastModified: string | null;
   contentHash: string | null;
   failureReason?: string | null;
+  /** The taxonomy class, so a run's failures can be counted by kind rather than by message. */
+  failureClass?: string | null;
+  /** A URL found to carry the same conference when this one did not answer. */
+  alternateUrl?: string | null;
   isEvent?: boolean | null;
   eventId?: string | null;
   recheckHours: number;
@@ -570,8 +584,8 @@ export async function recordUrlVisit(input: {
   await dbRun(
     `INSERT INTO discovery_urls (
        url, domain, provider, last_checked, last_status, etag, last_modified, content_hash,
-       fetch_failures, last_failure_reason, next_check_at, is_event, event_id
-     ) VALUES (?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, datetime('now', '+' || ? || ' hours'), ?, ?)
+       fetch_failures, last_failure_reason, failure_class, alternate_url, next_check_at, is_event, event_id
+     ) VALUES (?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+' || ? || ' hours'), ?, ?)
      ON CONFLICT(url) DO UPDATE SET
        last_checked = datetime('now'),
        last_status = excluded.last_status,
@@ -580,6 +594,8 @@ export async function recordUrlVisit(input: {
        content_hash = COALESCE(excluded.content_hash, discovery_urls.content_hash),
        fetch_failures = CASE WHEN ? THEN discovery_urls.fetch_failures + 1 ELSE 0 END,
        last_failure_reason = excluded.last_failure_reason,
+       failure_class = excluded.failure_class,
+       alternate_url = COALESCE(excluded.alternate_url, discovery_urls.alternate_url),
        next_check_at = excluded.next_check_at,
        is_event = COALESCE(excluded.is_event, discovery_urls.is_event),
        event_id = COALESCE(excluded.event_id, discovery_urls.event_id)`,
@@ -593,6 +609,8 @@ export async function recordUrlVisit(input: {
       input.contentHash,
       failed ? 1 : 0,
       input.failureReason ?? null,
+      input.failureClass ?? null,
+      input.alternateUrl ?? null,
       input.recheckHours,
       input.isEvent === null || input.isEvent === undefined ? null : input.isEvent ? 1 : 0,
       input.eventId ?? null,

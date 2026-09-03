@@ -357,8 +357,18 @@ function renderConference(site: FixtureSite, conference: FixtureConference, orig
   );
 }
 
-/** A directory's page about a conference hosted elsewhere: the official URL points off-site. */
-function renderDirectoryEntry(conference: FixtureConference, officialUrl: string, origin: string): string {
+/** A directory's page about a conference hosted elsewhere.
+ *
+ *  Two shapes on purpose, because real directories come both ways: one declares the conference's
+ *  own URL in its structured data, and one only links to it in the page body. The second is the
+ *  case that makes official-site resolution necessary — without it that path would never run in a
+ *  test, and an untested resolution step is not a resolution step. */
+function renderDirectoryEntry(
+  conference: FixtureConference,
+  officialUrl: string,
+  origin: string,
+  declareOfficialUrl: boolean
+): string {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -366,7 +376,7 @@ function renderDirectoryEntry(conference: FixtureConference, officialUrl: string
     description: conference.description,
     startDate: conference.startDate,
     endDate: conference.endDate,
-    url: officialUrl,
+    ...(declareOfficialUrl ? { url: officialUrl } : {}),
     location: {
       "@type": "Place",
       name: conference.venue,
@@ -377,7 +387,7 @@ function renderDirectoryEntry(conference: FixtureConference, officialUrl: string
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
      <h1>${conference.title}</h1>
      <p>${conference.description}</p>
-     <p><strong>Official website:</strong> <a href="${officialUrl}">${officialUrl}</a></p>
+     <p><strong>Official website:</strong> <a href="${officialUrl}">Visit the conference website</a></p>
      <p><strong>Dates:</strong> ${dateRangeText(conference.startDate, conference.endDate)}</p>
      <p><strong>Location:</strong> ${conference.city}, ${conference.countryPhrase}</p>
      <p>Listed by WorldConferenceIndex. <a href="${origin}/browse">Browse all conferences</a>.</p>`,
@@ -469,7 +479,11 @@ export async function startFixtureWeb(sites = buildFixtureSites()): Promise<Fixt
       const sourceOrigins = [originByKey.get("socai")!, originByKey.get("pub")!];
       site.conferences.forEach((conference, i) => {
         const officialOrigin = i < 6 ? sourceOrigins[0] : sourceOrigins[1];
-        routes.set(`/listing/${conference.slug}`, renderDirectoryEntry(conference, `${officialOrigin}/events/${conference.slug}`, origin));
+        // Alternating: half declare the official URL, half only link to it in the body.
+        routes.set(
+          `/listing/${conference.slug}`,
+          renderDirectoryEntry(conference, `${officialOrigin}/events/${conference.slug}`, origin, i % 2 === 0)
+        );
       });
       routes.set(
         "/browse",

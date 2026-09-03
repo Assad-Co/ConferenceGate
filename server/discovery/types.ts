@@ -251,6 +251,8 @@ export interface NormalizedEvent {
   region: string | null;
   country: string | null;
   countryCode: string | null;
+  /** One of the seven world regions, derived from the validated country. Never asked of a page. */
+  worldRegion: string | null;
   /** The location string exactly as the page gave it. */
   rawLocation: string | null;
   latitude: number | null;

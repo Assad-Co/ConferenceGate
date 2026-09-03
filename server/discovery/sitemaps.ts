@@ -17,6 +17,15 @@ const STRONG_EVENT_TERMS = [
   "conference", "conferences", "congress", "symposium", "symposia", "summit", "summits",
   "convention", "annual-meeting", "annualmeeting", "scientific-meeting", "colloquium",
 ];
+/** Page shapes that carry a conference's own details. A URL naming one of these is worth more
+ *  than a URL that merely sits on an events domain: a call-for-papers page states deadlines, a
+ *  programme page states dates, a registration page states fees. */
+const HIGH_VALUE_PAGE_TERMS = [
+  "call-for-papers", "callforpapers", "call-for-abstracts", "cfp", "abstract-submission",
+  "submission", "programme", "program", "agenda", "schedule", "sessions",
+  "registration", "register", "fees", "important-dates", "key-dates", "venue", "speakers",
+];
+
 /** Weaker signals: real, but they also appear on listings, news posts and calendars. */
 const WEAK_EVENT_TERMS = [
   "event", "events", "meeting", "meetings", "workshop", "workshops", "forum", "forums",
@@ -236,6 +245,12 @@ export function scoreCandidateUrl(url: string, targetYears: number[]): { score: 
     }
   }
 
+  const highValue = HIGH_VALUE_PAGE_TERMS.find((term) => path.includes(term));
+  if (highValue) {
+    score += 0.15;
+    reasons.push(`path names a "${highValue}" page`);
+  }
+
   const negative = NEGATIVE_TERMS.find((term) => path.includes(term));
   if (negative) {
     score -= 0.3;
@@ -265,6 +280,39 @@ export function isLikelySitemapCandidate(url: string, targetYears: number[], sou
   const isDedicatedEventHost = /(?:conference|congress|symposium|summit|events?)\./i.test(sourceDomain);
   if (HARD_NOISE_RE.test(path) && !hasIntent) return false;
   return score >= 0.45 && (hasIntent || (hasTargetYear && (isDedicatedEventHost || /\/events?\//i.test(path))));
+}
+
+/**
+ * Caps how many candidates any single domain may contribute.
+ *
+ * Phase 1.2 drew 27 of 51 accepted events from directories and exhausted at 324 candidates: the
+ * budget went to whichever hosts had the most URLs rather than to the widest set of conferences.
+ * Diversity is therefore enforced rather than hoped for — the highest-scoring candidates from
+ * each domain are kept, and the tail of an enormous site is dropped in favour of another site's
+ * head.
+ */
+export function limitPerDomain<T extends { sourceDomain: string; priority: number }>(
+  candidates: T[],
+  maxPerDomain: number
+): { kept: T[]; dropped: number; domainsAtCap: string[] } {
+  const byDomain = new Map<string, T[]>();
+  for (const candidate of [...candidates].sort((left, right) => right.priority - left.priority)) {
+    const bucket = byDomain.get(candidate.sourceDomain) ?? [];
+    bucket.push(candidate);
+    byDomain.set(candidate.sourceDomain, bucket);
+  }
+
+  const kept: T[] = [];
+  const domainsAtCap: string[] = [];
+  let dropped = 0;
+  for (const [domain, bucket] of byDomain) {
+    if (bucket.length > maxPerDomain) {
+      domainsAtCap.push(domain);
+      dropped += bucket.length - maxPerDomain;
+    }
+    kept.push(...bucket.slice(0, maxPerDomain));
+  }
+  return { kept: kept.sort((left, right) => right.priority - left.priority), dropped, domainsAtCap };
 }
 
 export function entriesToCandidates(

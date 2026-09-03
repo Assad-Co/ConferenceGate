@@ -98,6 +98,22 @@ Two things are guarded rather than merely configured:
 Deduplication merges on strong agreement, queues the middle ground for review, and leaves weak
 matches alone. It never deletes a record because two titles looked alike.
 
+A fetch failure is classified rather than counted (`failureClass.ts`), because a 403, a 404 and a
+429 call for three different responses: don't retry and look elsewhere, don't retry but try the
+site root, and retry more slowly. The reading cascade follows from that — direct fetch, then the
+hosted reader, then an alternate URL on the same site — and a host that refuses three times in a
+row is dropped for the rest of the run rather than asked two hundred more times.
+
+Directories are leads. One that yields a conference is read again for its link to the event's own
+site, and that site is read too; the directory stays recorded as the directory, the resolved site
+becomes a separate source, and a listing is never promoted to official (it sets its canonical link
+to itself, so a declared URL is only trusted from a page already believed authoritative or when it
+points off-host).
+
+`region` on a discovered event is the state or province a page stated. The world region is
+`world_region`, derived from the validated country by table lookup — never asked of a page, never
+inferred by a model, and null when the country did not resolve.
+
 Provider spend is gated on measured yield, not on configuration. Brave runs first; Serper runs
 only when Brave's strong-candidate count falls short of the run's target, and then only re-asks
 the queries Brave answered poorly. Jina is opt-in (`DISCOVERY_JINA_ENABLED=1`) and even then is

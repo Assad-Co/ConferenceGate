@@ -54,6 +54,8 @@ export interface FetchResult {
   lastModified: string | null;
   contentHash: string | null;
   redirects: string[];
+  /** True when the response hit the size cap and what we have is a fragment. */
+  truncated: boolean;
   error: string | null;
   /** True when the failure was our own network refusing to reach the host, not the host
    *  refusing us. Callers must not hold the domain responsible for this. */
@@ -185,9 +187,9 @@ function hostOf(url: string): string {
   }
 }
 
-async function readCapped(response: Response, maxBytes: number): Promise<string> {
+async function readCapped(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
   const reader = response.body?.getReader();
-  if (!reader) return response.text();
+  if (!reader) return { text: await response.text(), truncated: false };
   const chunks: Uint8Array[] = [];
   let total = 0;
   while (total < maxBytes) {
@@ -210,7 +212,11 @@ async function readCapped(response: Response, maxBytes: number): Promise<string>
     offset += chunk.byteLength;
     if (offset >= total) break;
   }
-  return new TextDecoder("utf-8", { fatal: false }).decode(merged);
+  return {
+    text: new TextDecoder("utf-8", { fatal: false }).decode(merged),
+    // Hitting the cap exactly is how a page too large to read announces itself.
+    truncated: total >= maxBytes,
+  };
 }
 
 /** One request, redirects followed by hand with the SSRF guard applied to every hop. */
@@ -237,6 +243,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         contentHash: null,
         redirects,
         error: hop === 0 ? "blocked_by_url_guard" : "redirect_blocked_by_url_guard",
+        truncated: false,
         blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
       };
@@ -272,6 +279,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         contentHash: null,
         redirects,
         error: error?.name === "TimeoutError" || /timeout/i.test(String(error?.message)) ? "timeout" : String(error?.message || error),
+        truncated: false,
         blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
       };
@@ -292,6 +300,7 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
         lastModified: response.headers.get("last-modified") || options.lastModified || null,
         contentHash: null,
         redirects,
+        truncated: false,
         error: null,
         blockedByLocalPolicy: false,
         elapsedMs: Date.now() - startedAt,
@@ -314,7 +323,8 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
           contentHash: null,
           redirects,
           error: "redirect_without_location",
-          blockedByLocalPolicy: false,
+          truncated: false,
+        blockedByLocalPolicy: false,
           elapsedMs: Date.now() - startedAt,
         };
       }
@@ -335,7 +345,8 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
           contentHash: null,
           redirects,
           error: "redirect_location_unparseable",
-          blockedByLocalPolicy: false,
+          truncated: false,
+        blockedByLocalPolicy: false,
           elapsedMs: Date.now() - startedAt,
         };
       }
@@ -347,8 +358,10 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
     // A failed response's body is read too, but only a little of it: it is the only place a
     // network-level block explains itself, and without it every such block looks like the site
     // saying no.
-    const body = await readCapped(response, response.ok ? maxBytes : 4096);
+    const capped = await readCapped(response, response.ok ? maxBytes : 4096);
+    const body = capped.text;
     const locallyBlocked = !response.ok && looksLikeLocalEgressBlock(response.status, body, response.headers);
+    const truncated = response.ok && capped.truncated;
     return {
       url,
       finalUrl: current,
@@ -361,7 +374,16 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
       lastModified: response.headers.get("last-modified"),
       contentHash: response.ok && body ? hashContent(body) : null,
       redirects,
-      error: response.ok ? null : locallyBlocked ? "blocked_by_local_egress_policy" : `http_${response.status}`,
+      truncated,
+      // A truncated page is reported as such rather than as a success with odd content: half a
+      // document extracts into half-truths.
+      error: response.ok
+        ? truncated
+          ? "response_size_limit"
+          : null
+        : locallyBlocked
+          ? "blocked_by_local_egress_policy"
+          : `http_${response.status}`,
       blockedByLocalPolicy: locallyBlocked,
       elapsedMs: Date.now() - startedAt,
     };
@@ -380,7 +402,8 @@ async function fetchOnce(url: string, options: FetchOptions): Promise<FetchResul
     contentHash: null,
     redirects,
     error: "too_many_redirects",
-    blockedByLocalPolicy: false,
+    truncated: false,
+        blockedByLocalPolicy: false,
     elapsedMs: Date.now() - startedAt,
   };
 }

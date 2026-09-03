@@ -44,7 +44,9 @@ export function classifySource(input: {
 }
 
 function safeHost(value: string): string {
-  try { return new URL(value).hostname.toLowerCase().replace(/^www\./, ""); } catch { return ""; }
+  // `host` rather than `hostname`: two origins that differ only by port are different sites, and
+  // treating them as one made a listing's link to an event look like a self-reference.
+  try { return new URL(value).host.toLowerCase().replace(/^www\./, ""); } catch { return ""; }
 }
 
 export function isHighConfidenceOfficial(classification: SourceClassification, confidence: number): boolean {

@@ -13,6 +13,7 @@
 import { dbRun } from "../db";
 import type { AiJsonCaller } from "./aiExtract";
 import { extractWithAi, needsAiFallback } from "./aiExtract";
+import { DomainCircuitBreaker } from "./alternateUrl";
 import { classifyCategories } from "./categories";
 import { classifyRelevance } from "./classify";
 import { extractFromHtml, pageText as readablePageText } from "./htmlExtract";
@@ -32,12 +33,29 @@ import {
   normalizeFormat,
   normalizeLocation,
 } from "./normalize";
+import { classifyFailure, failurePolicy, type FailureClass } from "./failureClass";
+import {
+  findOfficialCandidates,
+  newDirectoryResolutionStats,
+  resolutionRate,
+  type DirectoryResolutionStats,
+} from "./officialResolution";
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
+import { limitPerDomain } from "./sitemaps";
 import { allProviders } from "./providers";
 import { SearchDiscoveryProvider, type SearchAccounting } from "./providers/searchProvider";
 import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
 import { getDomain, newId, recordCrawlSuccess, TRUST_BY_SOURCE_TYPE } from "./sourceRegistry";
-import { eventIdForUrl, getUrlState, queueForReview, recordUrlVisit, rememberUrl, storeEvent, type StoreOutcome } from "./store";
+import {
+  eventIdForUrl,
+  getUrlState,
+  queueForReview,
+  recordChange,
+  recordUrlVisit,
+  rememberUrl,
+  storeEvent,
+  type StoreOutcome,
+} from "./store";
 import { extractStructuredEvents } from "./structuredData";
 import { validateEvent } from "./validate";
 import {
@@ -68,6 +86,17 @@ export interface RunOptions {
   maxAiCalls?: number;
   /** Hosted-reader calls permitted. Only pages the direct fetch could not read consume these. */
   maxJinaPages?: number;
+  /** Alternate-URL retries permitted across the run. */
+  maxAlternateUrls?: number;
+  /** How many DIFFERENT domains may be read at once. Each domain is still read one request at a
+   *  time, at its own polite interval — this only stops one slow site holding up the others. */
+  domainConcurrency?: number;
+  /** Stop once this many conferences have been accepted. 0 means "use the page budget". */
+  acceptedTarget?: number;
+  /** Candidates any one domain may contribute, so a single large site cannot crowd out the rest. */
+  maxCandidatesPerDomain?: number;
+  /** Consecutive refusals from one host before the run stops asking it. */
+  domainRefusalThreshold?: number;
   ai?: AiJsonCaller | null;
   /** Let high-confidence records from trusted official sources publish automatically. Off for
    *  Phase 1: everything coherent is validated and held. */
@@ -126,6 +155,30 @@ export interface RunSummary {
   providers: Array<{ name: string; enabled: boolean; reason: string | null; candidates: number }>;
   /** Queries spent and candidates gained, per search engine. Null when search was not used. */
   search: SearchAccounting | null;
+  /** How many domains were in play, how many were read at once, and how long reading took. */
+  concurrency: { domains: number; workers: number; readElapsedMs: number };
+  /** Why the read phase ended, when it ended early. */
+  stopReason: string | null;
+  /** Candidates never requested because their host had already refused us enough times. Not an
+   *  attempt, so deliberately outside `terminalOutcomes`. */
+  skippedForDomainRefusal: number;
+  /** Candidates skipped because this run had already read that exact page — usually a site
+   *  directory resolution reached first. Also not an attempt. */
+  alreadyReadThisRun: number;
+  /** Every fetch failure, by class — the taxonomy, not one number. */
+  failureClasses: Record<string, number>;
+  /** The same, per domain, so a bad host is visible rather than averaged away. */
+  failuresByDomain: Record<string, Record<string, number>>;
+  /** Domains the run stopped asking, and after how many refusals. */
+  circuitBrokenDomains: Array<{ domain: string; afterAttempts: number; failureClass: string }>;
+  /** Alternate-URL retries: attempted, and how many rescued a conference. */
+  alternateUrls: { attempted: number; recovered: number };
+  /** Directory leads and how many were resolved to the conference's own site. */
+  directoryResolution: DirectoryResolutionStats & { resolutionRate: number };
+  /** Which retrieval route produced each accepted conference. */
+  recoveryMethods: Record<string, number>;
+  /** Candidates dropped by the per-domain diversity cap, and which domains hit it. */
+  diversity: { candidatesDropped: number; domainsAtCap: string[] };
   counters: Record<string, number>;
   /** The accepted events, in memory, so a caller can export a CSV without re-reading the DB. */
   events: NormalizedEvent[];
@@ -184,6 +237,10 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
   const deadline = Date.now() + (options.timeBudgetMs ?? 10 * 60 * 1000);
   const maxPages = options.maxPages ?? 200;
   const maxAiCalls = options.maxAiCalls ?? 0;
+  const acceptedTarget = options.acceptedTarget ?? 0;
+  // Buffered rather than written per failure: one insert per failure would triple the database
+  // traffic of a run whose whole problem is that fetches fail.
+  const failureRows: Array<{ domain: string; failureClass: FailureClass; status: number | null; detail: string | null }> = [];
 
   const summary: RunSummary = {
     runId,
@@ -221,6 +278,17 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     egressBlockedDomains: [],
     providers: [],
     search: null,
+    concurrency: { domains: 0, workers: 0, readElapsedMs: 0 },
+    stopReason: null,
+    skippedForDomainRefusal: 0,
+    alreadyReadThisRun: 0,
+    failureClasses: {},
+    failuresByDomain: {},
+    circuitBrokenDomains: [],
+    alternateUrls: { attempted: 0, recovered: 0 },
+    directoryResolution: { ...newDirectoryResolutionStats(), resolutionRate: 0 },
+    recoveryMethods: {},
+    diversity: { candidatesDropped: 0, domainsAtCap: [] },
     counters: {},
     events: [],
     errors: [],
@@ -305,7 +373,21 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
     // ---- Stage 2..8: read, extract, normalize, classify, validate, deduplicate, store.
     const domainTrust = new Map<string, { trust: number; type: SourceType }>();
-    const readBudget: ReadBudget = newReadBudget(options.maxJinaPages ?? 40);
+    const readBudget: ReadBudget = newReadBudget(options.maxJinaPages ?? 40, options.maxAlternateUrls ?? 60);
+
+    // One trust lookup per domain, shared by the main read path and by directory resolution —
+    // which reaches domains the registry has never seen and must still weigh them correctly.
+    const trustFor = async (domain: string): Promise<{ trust: number; type: SourceType }> => {
+      const cached = domainTrust.get(domain);
+      if (cached) return cached;
+      const row = await getDomain(domain);
+      const resolved = {
+        trust: row?.trust_score ?? TRUST_BY_SOURCE_TYPE.unknown,
+        type: (row?.source_type as SourceType) ?? "unknown",
+      };
+      domainTrust.set(domain, resolved);
+      return resolved;
+    };
 
     // Candidates from search land on domains the registry has never heard of, so their robots.txt
     // has not been read yet. Fetching it lazily, once per domain, is what keeps the "no page is
@@ -330,12 +412,99 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       return policy;
     };
 
+    // ---- Candidate diversity.
+    //
+    // Phase 1.2 exhausted at 324 candidates with 27 of 51 accepted events coming from
+    // directories: the budget went to whichever hosts had the most URLs, not to the widest set of
+    // conferences. Capping each domain's contribution spends the same budget across more sites.
+    const diversityCap = options.maxCandidatesPerDomain ?? 25;
+    const limited = limitPerDomain(candidates, diversityCap);
+    summary.diversity = { candidatesDropped: limited.dropped, domainsAtCap: limited.domainsAtCap.slice(0, 40) };
+    if (limited.dropped > 0) {
+      logger.log("urls_discovered", {
+        detail: `per-domain diversity cap of ${diversityCap} dropped ${limited.dropped} lower-priority candidates from ${limited.domainsAtCap.length} domain(s)`,
+        count: limited.kept.length,
+      });
+    }
+    candidates.length = 0;
+    candidates.push(...limited.kept);
+
+    // A host that has refused us three times will refuse the next two hundred candidates too,
+    // and every one of those is page budget spent on a certainty.
+    const breaker = new DomainCircuitBreaker(options.domainRefusalThreshold ?? 3);
+    const directoryStats = newDirectoryResolutionStats();
+    // Every page this run has already extracted, by canonical URL. Directory resolution often
+    // points at a site the run crawled directly minutes earlier; fetching it twice costs a
+    // request, costs the site a request, and files the same source against the same event twice.
+    const processedUrls = new Set<string>();
+
+    const noteFailure = (domain: string, failureClass: FailureClass, detail: string | null, status: number | null) => {
+      summary.failureClasses[failureClass] = (summary.failureClasses[failureClass] || 0) + 1;
+      const perDomain = (summary.failuresByDomain[domain] ||= {});
+      perDomain[failureClass] = (perDomain[failureClass] || 0) + 1;
+      failureRows.push({ domain, failureClass, status, detail });
+      if (breaker.record(domain, failureClass)) {
+        logger.log("domain_skipped", {
+          domain,
+          detail: `no longer asking this host: ${breaker.reasonFor(domain)}`,
+        });
+      }
+    };
+
+    // ---- Controlled concurrency.
+    //
+    // Phase 1.2 read one page at a time, so the per-domain politeness delay became a GLOBAL
+    // delay: most of a 324-attempt run's wall clock went on a courtesy owed to one site at a
+    // time. Domains are independent, though, so several can be in flight at once while each one
+    // individually is still read politely, in order, one request at a time.
+    //
+    // Nothing about validation changes to buy this. The only thing that changes is how many
+    // different sites we are waiting on simultaneously.
+    const byDomain = new Map<string, DiscoveryCandidate[]>();
     for (const candidate of candidates) {
-      if (options.signal?.aborted) break;
-      if (summary.pagesAttempted >= maxPages) break;
-      if (Date.now() > deadline) {
-        logger.log("run_finished", { detail: "time budget reached" });
-        break;
+      const bucket = byDomain.get(candidate.sourceDomain) ?? [];
+      bucket.push(candidate);
+      byDomain.set(candidate.sourceDomain, bucket);
+    }
+    // Best-first across domains, so a capped run spends its budget on the most promising sites.
+    const domainOrder = [...byDomain.entries()]
+      .sort(
+        (left, right) =>
+          Math.max(...right[1].map((c) => c.priority)) - Math.max(...left[1].map((c) => c.priority))
+      )
+      .map(([domain]) => domain);
+    summary.concurrency.domains = domainOrder.length;
+
+    const stopRequested = (): string | null => {
+      if (options.signal?.aborted) return "aborted";
+      if (summary.pagesAttempted >= maxPages) return "page budget reached";
+      if (Date.now() > deadline) return "time budget reached";
+      if (acceptedTarget > 0 && summary.created + summary.updated >= acceptedTarget) {
+        return "accepted target reached";
+      }
+      return null;
+    };
+
+    const processCandidate = async (candidate: DiscoveryCandidate): Promise<void> => {
+
+      // Resolution may have already read this exact page a moment ago (it is often a site the
+      // run was going to reach anyway). Reading it twice would cost the site a request and file
+      // the same source against the same event twice.
+      const candidateCanonical = canonicalizeUrl(candidate.url) ?? candidate.url;
+      if (processedUrls.has(candidateCanonical)) {
+        summary.alreadyReadThisRun += 1;
+        return;
+      }
+      // Claimed before the fetch, not after: this is a mutual exclusion between concurrent
+      // workers, and a claim made after the await would be too late to prevent anything.
+      processedUrls.add(candidateCanonical);
+
+      if (breaker.isOpen(candidate.sourceDomain)) {
+        // Counted separately, not as a terminal outcome: no request was made, so this is not an
+        // attempt, and folding it in would break the reconciliation invariant that every attempt
+        // ends in exactly one outcome.
+        summary.skippedForDomainRefusal += 1;
+        return;
       }
 
       summary.pagesAttempted += 1;
@@ -345,20 +514,20 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       try {
         origin = new URL(candidate.url).origin;
       } catch {
-        continue;
+        return;
       }
       const policy = await robotsFor(candidate.sourceDomain, origin);
       if (policy?.blanketDisallow) {
         logger.log("robots_disallowed", { domain: candidate.sourceDomain, url: candidate.url });
         summary.robotsDisallowedUrls += 1;
         terminal("robots_disallowed");
-        continue;
+        return;
       }
       if (policy && !isPathAllowed(policy, candidate.url)) {
         terminal("robots_disallowed");
         logger.log("url_skipped", { url: candidate.url, detail: "disallowed by robots.txt" });
         summary.robotsDisallowedUrls += 1;
-        continue;
+        return;
       }
 
       if (!domainTrust.has(candidate.sourceDomain)) {
@@ -397,7 +566,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           isEvent: previous?.is_event === null || previous?.is_event === undefined ? null : previous.is_event === 1,
           recheckHours: recheckHoursFor(previous?.is_event === 1 ? true : previous?.is_event === 0 ? false : null, false),
         });
-        continue;
+        return;
       }
 
       if (response.blockedByLocalPolicy) {
@@ -410,7 +579,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           url: candidate.url,
           detail: "unreachable from this machine (local network egress policy)",
         });
-        continue;
+        return;
       }
 
       const usedJina = read.route === "jina";
@@ -422,11 +591,20 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       if (!read.html) {
         summary.pagesFailed += 1;
-        terminal("fetch_failed");
+        const failureClass =
+          read.failureClass ??
+          classifyFailure({
+            status: response.status,
+            error: response.error,
+            blockedByLocalPolicy: response.blockedByLocalPolicy,
+            contentType: response.contentType,
+          });
+        terminal(`fetch_failed:${failureClass}`);
         providerQuality(summary, candidate.provider).fetchFailures += 1;
-        logger.log(response.error === "timeout" ? "page_timeout" : "page_failed", {
+        noteFailure(candidate.sourceDomain, failureClass, read.failureReason || response.error, response.status || null);
+        logger.log(failureClass === "timeout" ? "page_timeout" : "page_failed", {
           url: candidate.url,
-          detail: read.failureReason || response.error || `http_${response.status}`,
+          detail: `${failureClass}: ${failurePolicy(failureClass).meaning}`,
         });
         await recordUrlVisit({
           url: candidate.url,
@@ -437,9 +615,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           lastModified: null,
           contentHash: null,
           failureReason: read.failureReason || response.error,
-          recheckHours: 168,
+          failureClass,
+          // A class that will not change on a retry is asked again much later than one that might.
+          recheckHours: failurePolicy(failureClass).retryable ? 24 : 720,
         });
-        continue;
+        return;
       }
 
       summary.pagesFetched += 1;
@@ -461,7 +641,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           isEvent: false,
           recheckHours: 720,
         });
-        continue;
+        return;
       }
 
       const contentHash = response.contentHash || hashContent(read.html);
@@ -493,12 +673,23 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           eventId: knownEventId,
           recheckHours: recheckHoursFor(previous.is_event === 1, false),
         });
-        continue;
+        return;
       }
 
       terminal("fetched_processed");
+      // A host that answered is not refusing us; its tally resets.
+      breaker.recordSuccess(candidate.sourceDomain);
+      // A redirect means the page that answered is not the URL we asked for; claim that too.
+      processedUrls.add(canonicalizeUrl(response.finalUrl || candidate.url) ?? candidate.url);
+      if (read.resolvedUrl) {
+        logger.log("page_fetched", {
+          url: candidate.url,
+          detail: `read from an alternate URL after ${read.failureClass}: ${read.resolvedUrl}`,
+        });
+      }
 
       const outcome = await processPage({
+        recoveryMethod: read.route === "alternate_url" ? "alternate_url" : read.route === "jina" ? "jina" : "direct",
         html: read.html,
         pageUrl: response.finalUrl || candidate.url,
         candidate,
@@ -517,11 +708,189 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       // "direct-fetch extraction success rate" and "reader recovery rate" are measured, not
       // estimated.
       if (outcome.isEvent) {
+        const route = read.route === "alternate_url" ? "alternate_url" : usedJina ? "jina" : "direct";
+        summary.recoveryMethods[route] = (summary.recoveryMethods[route] || 0) + 1;
         if (usedJina) {
           summary.reads.jinaExtractionSuccesses += 1;
           logger.log("jina_recovered_event", { url: candidate.url });
         } else {
           summary.reads.directExtractionSuccesses += 1;
+        }
+      }
+
+      // ---- A directory listing is a lead, not a destination.
+      //
+      // Phase 1.2 took 27 of its 51 accepted events from directories and only 12 from official
+      // event sites, which is the wrong way round for a platform whose premise is that the
+      // organiser's own word outranks a listing. So a directory that yields an event is read once
+      // more for the one thing it uniquely offers: a link to where the event actually lives. The
+      // directory stays recorded as the directory; the resolved site is added as a SEPARATE
+      // source, and if resolution fails the record keeps its null official URL rather than being
+      // quietly promoted.
+      if (
+        outcome.isEvent &&
+        outcome.event &&
+        (outcome.classification === "directory" || outcome.classification === "aggregator")
+      ) {
+        directoryStats.directoryLeads += 1;
+        const directoryPageUrl = response.finalUrl || candidate.url;
+        const directoryHost = (() => {
+          try {
+            return new URL(directoryPageUrl).host.toLowerCase().replace(/^www\./, "");
+          } catch {
+            return "";
+          }
+        })();
+        const declaredOfficial = outcome.event.officialUrl;
+        const declaredIsOffHost = (() => {
+          if (!declaredOfficial) return false;
+          try {
+            return new URL(declaredOfficial).host.toLowerCase().replace(/^www\./, "") !== directoryHost;
+          } catch {
+            return false;
+          }
+        })();
+
+        // The listing may already name the conference's own site — in its structured data, or in
+        // a link the deterministic extractor recognised. When it does, that is the candidate; the
+        // scanner is the fallback for listings that bury it. Either way the site is then actually
+        // READ, because a URL a directory printed is still only the directory's word for it: the
+        // point of the exercise is to end up holding the organiser's own page as a source.
+        const officialCandidates = declaredIsOffHost
+          ? [{ url: declaredOfficial!, score: 1, reason: "the listing named the conference's own site" }]
+          : findOfficialCandidates(read.html, directoryPageUrl, {
+              title: outcome.event.title,
+              acronym: outcome.event.acronym,
+            });
+
+        if (officialCandidates.length === 0) {
+          directoryStats.noCandidateFound += 1;
+          logger.log("url_skipped", {
+            url: candidate.url,
+            detail: "directory lead: no plausible link to the conference's own site on the page",
+          });
+        } else {
+          let resolved = false;
+          for (const officialCandidate of officialCandidates.slice(0, 2)) {
+            if (stopRequested()) break;
+            let officialDomain: string;
+            let officialOrigin: string;
+            try {
+              const parsed = new URL(officialCandidate.url);
+              officialDomain = parsed.hostname.toLowerCase().replace(/^www\./, "");
+              officialOrigin = parsed.origin;
+            } catch {
+              continue;
+            }
+            if (breaker.isOpen(officialDomain)) continue;
+
+            // Already read this run: the conference's own page is on file, so the lead is
+            // resolved without spending a second request on it.
+            const officialCanonical = canonicalizeUrl(officialCandidate.url) ?? officialCandidate.url;
+            if (processedUrls.has(officialCanonical)) {
+              resolved = true;
+              directoryStats.resolutionsAttempted += 1;
+              directoryStats.resolutionsSuccessful += 1;
+              directoryStats.validatedAfterResolution += 1;
+              logger.log("event_updated", {
+                url: officialCandidate.url,
+                detail: "directory lead resolved to a page this run had already read",
+              });
+              break;
+            }
+
+            // The resolved site is a site like any other: its robots.txt is read first.
+            const officialPolicy = await robotsFor(officialDomain, officialOrigin);
+            if (officialPolicy?.blanketDisallow || (officialPolicy && !isPathAllowed(officialPolicy, officialCandidate.url))) {
+              logger.log("robots_disallowed", { domain: officialDomain, url: officialCandidate.url });
+              summary.robotsDisallowedUrls += 1;
+              continue;
+            }
+
+            directoryStats.resolutionsAttempted += 1;
+            summary.pagesAttempted += 1;
+            // Same claim-before-fetch rule as the main loop, and for the same reason.
+            processedUrls.add(officialCanonical);
+            const officialRead = await readPage(officialCandidate.url, {
+              urlGuard: options.urlGuard,
+              budget: readBudget,
+              allowFallback: true,
+            });
+            if (!officialRead.html) {
+              directoryStats.candidateUnreadable += 1;
+              const officialFailure =
+                officialRead.failureClass ??
+                classifyFailure({ status: officialRead.direct.status, error: officialRead.direct.error });
+              terminal(`fetch_failed:${officialFailure}`);
+              summary.pagesFailed += 1;
+              noteFailure(officialDomain, officialFailure, officialRead.failureReason, officialRead.direct.status || null);
+              continue;
+            }
+
+            terminal("fetched_processed");
+            summary.pagesFetched += 1;
+            breaker.recordSuccess(officialDomain);
+            const officialOutcome = await processPage({
+              recoveryMethod: "directory_resolution",
+              resolvedFromDirectory: true,
+              html: officialRead.html,
+              pageUrl: officialRead.direct.finalUrl || officialCandidate.url,
+              // Attributed to the domain that actually served it, so source counts stay honest.
+              candidate: { ...candidate, url: officialCandidate.url, sourceDomain: officialDomain },
+              contentHash: officialRead.direct.contentHash || hashContent(officialRead.html),
+              trust: await trustFor(officialDomain),
+              targetYears,
+              logger,
+              summary,
+              options,
+              maxAiCalls,
+              robotsPolicy: officialPolicy ?? undefined,
+            });
+
+            await recordUrlVisit({
+              url: officialCandidate.url,
+              domain: officialDomain,
+              provider: `${candidate.provider}+directory_resolution`,
+              status: officialRead.direct.status,
+              etag: officialRead.direct.etag,
+              lastModified: officialRead.direct.lastModified,
+              contentHash: officialRead.direct.contentHash,
+              isEvent: officialOutcome.isEvent,
+              eventId: officialOutcome.eventId,
+              recheckHours: recheckHoursFor(officialOutcome.isEvent, true),
+            });
+
+            if (officialOutcome.isEvent) {
+              resolved = true;
+              directoryStats.resolutionsSuccessful += 1;
+              summary.recoveryMethods.directory_resolution =
+                (summary.recoveryMethods.directory_resolution || 0) + 1;
+              if (officialOutcome.eventId === outcome.eventId) {
+                // Deduplication recognised it as the same conference, so the record now carries
+                // both provenances: the directory that led us there and the site that confirmed it.
+                directoryStats.validatedAfterResolution += 1;
+              }
+              logger.log("event_updated", {
+                url: officialCandidate.url,
+                detail: `resolved from a directory lead (${officialCandidate.reason})`,
+              });
+              await recordChange(
+                officialOutcome.eventId!,
+                "official_source_resolved",
+                "official_url",
+                null,
+                officialCandidate.url,
+                candidate.url
+              );
+              break;
+            }
+          }
+          if (!resolved) {
+            logger.log("url_skipped", {
+              url: candidate.url,
+              detail: "directory lead: the conference's own site could not be confirmed",
+            });
+          }
         }
       }
 
@@ -535,10 +904,57 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         contentHash,
         isEvent: outcome.isEvent,
         eventId: outcome.eventId,
+        alternateUrl: read.resolvedUrl,
         recheckHours: recheckHoursFor(outcome.isEvent, !unchangedBody),
       });
+    };
+
+    const workerCount = Math.max(1, Math.min(options.domainConcurrency ?? 4, domainOrder.length || 1));
+    summary.concurrency.workers = workerCount;
+    const readStartedAt = Date.now();
+    let stopReason: string | null = null;
+
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const domain = domainOrder.shift();
+        if (!domain) return;
+        // Every candidate on one domain is read strictly in sequence, so the per-domain interval
+        // and concurrency ceiling in httpClient still mean exactly what they say.
+        for (const candidate of byDomain.get(domain) ?? []) {
+          const stop = stopRequested();
+          if (stop) {
+            stopReason ??= stop;
+            return;
+          }
+          try {
+            await processCandidate(candidate);
+          } catch (error: any) {
+            // One bad page must not take down its worker, let alone the run.
+            summary.errors.push(`${candidate.url}: ${String(error?.message || error).slice(0, 200)}`);
+            logger.log("error", { url: candidate.url, detail: String(error?.message || error) });
+          }
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    summary.concurrency.readElapsedMs = Date.now() - readStartedAt;
+    if (stopReason) {
+      summary.stopReason = stopReason;
+      logger.log("run_finished", { detail: stopReason });
     }
 
+
+    summary.alternateUrls = { attempted: readBudget.alternateAttempted, recovered: readBudget.alternateRecovered };
+    summary.directoryResolution = { ...directoryStats, resolutionRate: resolutionRate(directoryStats) };
+    summary.circuitBrokenDomains = breaker.summary();
+    for (const [failureClass, count] of Object.entries(readBudget.failureClasses)) {
+      // The read chain sees failures the pipeline never does — a direct fetch that the reader or
+      // an alternate URL then rescued. Those belong in the taxonomy too: they are what the
+      // cascade recovered from, and hiding them would flatter the fetch-failure rate.
+      summary.failureClasses[`recovered:${failureClass}`] =
+        (summary.failureClasses[`recovered:${failureClass}`] || 0) + count;
+    }
     summary.reads.directPages = readBudget.directReads;
     summary.reads.directUsablePages = readBudget.directUsable;
     summary.reads.jinaPages = readBudget.jinaUsed;
@@ -563,6 +979,97 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     detail: `${summary.created} created, ${summary.updated} updated, ${summary.merged} merged, ${summary.reviewQueued} for review`,
   });
 
+  // ---- Run-scoped persistence, so the next phase can query this run rather than re-read a log.
+  try {
+    for (const [provider, metric] of Object.entries(summary.searchProviderMetrics)) {
+      const accounting = summary.search;
+      const isBrave = provider === "brave";
+      const isSerper = provider === "serper";
+      await dbRun(
+        `INSERT INTO discovery_run_providers (
+           id, run_id, provider, configured, queries_planned, queries_issued, queries_zero_results,
+           queries_failed, raw_results, candidates, strong_candidates, unique_urls, shared_urls,
+           accepted_events, decision, errors
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(run_id, provider) DO UPDATE SET
+           queries_issued = excluded.queries_issued,
+           queries_zero_results = excluded.queries_zero_results,
+           queries_failed = excluded.queries_failed,
+           raw_results = excluded.raw_results,
+           candidates = excluded.candidates,
+           strong_candidates = excluded.strong_candidates,
+           unique_urls = excluded.unique_urls,
+           shared_urls = excluded.shared_urls,
+           accepted_events = excluded.accepted_events,
+           decision = excluded.decision,
+           errors = excluded.errors`,
+        [
+          newId("dprv"),
+          runId,
+          provider,
+          accounting ? (isBrave ? (accounting.braveConfigured ? 1 : 0) : isSerper ? (accounting.serperConfigured ? 1 : 0) : 1) : 0,
+          accounting?.queriesPlanned ?? 0,
+          metric.queriesIssued,
+          accounting ? (isBrave ? accounting.braveZeroResultQueries : isSerper ? accounting.serperZeroResultQueries : 0) : 0,
+          accounting ? (isBrave ? accounting.braveFailedQueries : isSerper ? accounting.serperFailedQueries : 0) : 0,
+          metric.rawResults,
+          accounting ? (isBrave ? accounting.braveCandidates : isSerper ? accounting.serperCandidates : 0) : 0,
+          accounting ? (isBrave ? accounting.braveStrongCandidates : isSerper ? accounting.serperStrongCandidates : 0) : 0,
+          metric.uniqueUrls,
+          metric.sharedUrls,
+          summary.qualityByProvider[provider]?.accepted ?? 0,
+          isSerper ? accounting?.serperDecision ?? null : null,
+          JSON.stringify(
+            accounting ? (isBrave ? accounting.braveErrors : isSerper ? accounting.serperErrors : []) : []
+          ),
+        ]
+      );
+    }
+
+    // Serper deserves a row even when it never ran: "no row" and "zero queries" are different
+    // facts, and Phase 1.2's benchmark could not tell them apart.
+    if (summary.search && !summary.searchProviderMetrics.serper) {
+      await dbRun(
+        `INSERT INTO discovery_run_providers (id, run_id, provider, configured, queries_planned, decision, errors)
+         VALUES (?, ?, 'serper', ?, ?, ?, ?)
+         ON CONFLICT(run_id, provider) DO UPDATE SET decision = excluded.decision`,
+        [
+          newId("dprv"),
+          runId,
+          summary.search.serperConfigured ? 1 : 0,
+          summary.search.queriesPlanned,
+          summary.search.serperDecision,
+          JSON.stringify(summary.search.serperErrors),
+        ]
+      );
+    }
+
+    const failureTally = new Map<string, { domain: string; failureClass: string; count: number; status: number | null; detail: string | null }>();
+    for (const row of failureRows) {
+      const key = `${row.domain}|${row.failureClass}`;
+      const existing = failureTally.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.status = row.status ?? existing.status;
+        existing.detail = row.detail ?? existing.detail;
+      } else {
+        failureTally.set(key, { domain: row.domain, failureClass: row.failureClass, count: 1, status: row.status, detail: row.detail });
+      }
+    }
+    for (const row of failureTally.values()) {
+      await dbRun(
+        `INSERT INTO discovery_run_failures (id, run_id, domain, failure_class, count, last_status, last_detail)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(run_id, domain, failure_class) DO UPDATE SET
+           count = excluded.count, last_status = excluded.last_status, last_detail = excluded.last_detail`,
+        [newId("dfail"), runId, row.domain, row.failureClass, row.count, row.status, (row.detail || "").slice(0, 300)]
+      );
+    }
+  } catch (error: any) {
+    // Losing the metrics must not lose the run.
+    summary.errors.push(`run metrics persistence: ${String(error?.message || error).slice(0, 200)}`);
+  }
+
   await dbRun(
     `UPDATE discovery_runs SET finished_at = datetime('now'), status = ?, counters = ?, log = ?, error = ? WHERE id = ?`,
     [
@@ -583,6 +1090,17 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         aiCalls: summary.aiCalls,
         extractionMethods: summary.extractionMethods,
         rejectionReasons: summary.rejectionReasons,
+        failureClasses: summary.failureClasses,
+        failuresByDomain: summary.failuresByDomain,
+        circuitBrokenDomains: summary.circuitBrokenDomains,
+        alternateUrls: summary.alternateUrls,
+        directoryResolution: summary.directoryResolution,
+        recoveryMethods: summary.recoveryMethods,
+        diversity: summary.diversity,
+        skippedForDomainRefusal: summary.skippedForDomainRefusal,
+        alreadyReadThisRun: summary.alreadyReadThisRun,
+        concurrency: summary.concurrency,
+        stopReason: summary.stopReason,
         qualityByProvider: Object.fromEntries(Object.entries(summary.qualityByProvider).map(([provider, q]) => [provider, {
           ...q,
           candidatePrecision: q.fetched ? Number((q.conferencePositive / q.fetched).toFixed(4)) : 0,
@@ -613,11 +1131,25 @@ interface ProcessPageInput {
   options: RunOptions;
   maxAiCalls: number;
   robotsPolicy?: RobotsPolicy;
+  /** Which route produced the text, for the record's retrieval provenance. */
+  recoveryMethod?: string;
+  /** Set when this page is a directory listing whose own site has already been resolved. */
+  resolvedFromDirectory?: boolean;
   usedJina?: boolean;
 }
 
 /** One page: extract, normalize, classify, validate, store. Exported shape kept internal. */
-async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean | null; eventId: string | null }> {
+async function processPage(
+  input: ProcessPageInput
+): Promise<{
+  isEvent: boolean | null;
+  eventId: string | null;
+  /** The event as normalized, so a caller can look for its official site. Null when the page was
+   *  not a conference. */
+  event: NormalizedEvent | null;
+  /** How this page's source was classified, so a directory lead can be recognised as one. */
+  classification: string | null;
+}> {
   const { html, pageUrl, candidate, logger, summary, options } = input;
 
   // --- Extraction, cheapest and most authoritative first.
@@ -651,7 +1183,7 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
 
   if (!raw.title) {
     logger.log("extraction_empty", { url: pageUrl });
-    return { isEvent: false, eventId: null };
+    return { isEvent: false, eventId: null, event: null, classification: null };
   }
 
   // --- Normalization.
@@ -697,7 +1229,29 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
   const sourceClass = classifySource({ pageUrl, officialUrl: declaredOfficialUrl, organizerUrl: raw.organizerUrl,
     title: raw.title, organizer: raw.organizer, pageText: text, registryType: input.trust.type });
   const sourceIsOfficial = isHighConfidenceOfficial(sourceClass.classification, sourceClass.confidence);
-  const officialUrl = declaredOfficialUrl || (sourceIsOfficial ? pageUrl : null);
+
+  // A directory sets `<link rel="canonical">` to ITSELF, and its JSON-LD `Event.url` often points
+  // at its own listing too — so taking a declared URL at face value quietly promoted directory
+  // pages to "official", which is the one thing section 4 forbids. A declared URL is only
+  // accepted from a page we already believe is authoritative, or when it points somewhere else
+  // entirely (which is the genuine signal: the directory telling us where the event lives).
+  const declaredIsSameHost = (() => {
+    if (!declaredOfficialUrl) return false;
+    try {
+      // `host`, not `hostname`: the port is part of a site's identity, and ignoring it makes two
+      // genuinely different origins look like one.
+      const declared = new URL(declaredOfficialUrl).host.toLowerCase().replace(/^www\./, "");
+      const page = new URL(pageUrl).host.toLowerCase().replace(/^www\./, "");
+      return declared === page;
+    } catch {
+      return false;
+    }
+  })();
+  const officialUrl = sourceIsOfficial
+    ? declaredOfficialUrl || pageUrl
+    : declaredOfficialUrl && !declaredIsSameHost
+      ? declaredOfficialUrl
+      : null;
 
   const provenance = buildProvenance(raw, {
     sourceUrl: pageUrl,
@@ -755,6 +1309,7 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
     region: location.region,
     country: location.country,
     countryCode: location.countryCode,
+    worldRegion: location.worldRegion,
     rawLocation: location.rawLocation,
     latitude: raw.latitude,
     longitude: raw.longitude,
@@ -809,7 +1364,7 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
       summary.rejectionReasons[reason] = (summary.rejectionReasons[reason] || 0) + 1;
     }
     logger.log("event_rejected", { url: pageUrl, detail: validation.errors.join(", ") });
-    return { isEvent: false, eventId: null };
+    return { isEvent: false, eventId: null, event: null, classification: null };
   }
 
   // --- Deduplication and storage.
@@ -822,6 +1377,8 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
     sourceClassification: sourceClass.classification,
     classificationConfidence: sourceClass.confidence,
     classificationEvidence: sourceClass.evidence,
+    recoveryMethod: input.recoveryMethod ?? "direct",
+    resolvedFromDirectory: input.resolvedFromDirectory ?? false,
   });
 
   await dbRun(
@@ -861,7 +1418,7 @@ async function processPage(input: ProcessPageInput): Promise<{ isEvent: boolean 
     logger.log("duplicate_detected", { url: pageUrl, detail: stored.duplicate.reason, confidence: stored.duplicate.score });
   }
 
-  return { isEvent: true, eventId: stored.eventId };
+  return { isEvent: true, eventId: stored.eventId, event, classification: sourceClass.classification };
 }
 
 function countOutcome(summary: RunSummary, outcome: StoreOutcome): void {

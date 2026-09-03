@@ -22,6 +22,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     region: null,
     country: "Portugal",
     countryCode: "PT",
+    worldRegion: "Europe",
     rawLocation: "Centro de Congressos de Lisboa, Lisbon, Portugal",
     latitude: null,
     longitude: null,

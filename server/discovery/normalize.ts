@@ -83,12 +83,41 @@ export function normalizeEventType(...values: Array<string | null | undefined>):
 export interface NormalizedLocation {
   venue: string | null;
   city: string | null;
+  /** The state or province the page named, e.g. "Texas". NOT a world region. */
   region: string | null;
   country: string | null;
   countryCode: string | null;
+  /**
+   * One of the seven world regions, derived from the validated country by table lookup.
+   *
+   * Country stays authoritative and this is a pure function of it: no page is asked what
+   * continent it is on, no model is consulted, and a country that did not resolve yields null
+   * rather than a guess. Deliberately a separate field from `region` above, which already means
+   * the state or province a source stated — overwriting that would destroy real data.
+   */
+  worldRegion: WorldRegion | null;
   /** Untouched, exactly as the page wrote it. */
   rawLocation: string | null;
   countryInference: { method: "explicit_city_country_map"; city: string; confidence: number } | null;
+}
+
+/** The seven regions the platform reports coverage across. */
+export const WORLD_REGIONS = [
+  "North America",
+  "South America",
+  "Europe",
+  "Middle East",
+  "Africa",
+  "Asia",
+  "Oceania",
+] as const;
+export type WorldRegion = (typeof WORLD_REGIONS)[number];
+
+/** Country → world region, by lookup. Null when the country did not resolve. */
+export function worldRegionForCountry(country: string | null | undefined): WorldRegion | null {
+  const resolved = normalizeCountry(country);
+  if (!resolved) return null;
+  return (WORLD_REGIONS as readonly string[]).includes(resolved.region) ? (resolved.region as WorldRegion) : null;
 }
 
 /** Deliberately conservative: only globally unambiguous city names. Ambiguous names such as
@@ -186,6 +215,7 @@ export function normalizeLocation(raw: RawEventExtraction): NormalizedLocation {
     region: region || null,
     country: country?.name ?? null,
     countryCode: country?.iso2 ?? null,
+    worldRegion: worldRegionForCountry(country?.name ?? null),
     rawLocation,
     countryInference,
   };
@@ -338,7 +368,10 @@ export function canonicalizeUrl(url: string | null | undefined): string | null {
   } catch {
     return null;
   }
-  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  // `host`, not `hostname`: the port is part of a site's identity. Dropping it makes two
+  // genuinely different origins canonicalise to the same string, which silently deduplicates
+  // unrelated pages and unrelated conferences.
+  const host = parsed.host.toLowerCase().replace(/^www\./, "");
   let path = parsed.pathname.replace(/\/index\.(?:html?|php|aspx?)$/i, "/").replace(/\/+$/, "");
   if (!path) path = "";
   const keptParams = [...parsed.searchParams.entries()]

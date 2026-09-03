@@ -15,6 +15,8 @@
 // unavailable on this route by definition — markdown has no <script> — which is exactly why it is
 // second and not first.
 
+import { alternateUrlsFor, MAX_ALTERNATES_PER_URL } from "./alternateUrl";
+import { classifyFailure, failurePolicy, type FailureClass } from "./failureClass";
 import { pageText } from "./htmlExtract";
 import { discoveryFetch, isHtmlLike, type FetchOptions, type FetchResult } from "./httpClient";
 import { isJinaFallbackEnabled, readWithJina } from "./jinaFetch";
@@ -22,7 +24,9 @@ import { isJinaFallbackEnabled, readWithJina } from "./jinaFetch";
 /** Below this much readable text, a page has not really been read: almost always a JS shell. */
 export const MIN_EXTRACTABLE_TEXT_CHARS = 500;
 
-export type ReadRoute = "direct" | "jina" | "none";
+/** Which route finally produced usable text. `alternate_url` means a different URL on the same
+ *  site answered after the requested one did not. */
+export type ReadRoute = "direct" | "jina" | "alternate_url" | "none";
 
 export interface PageRead {
   route: ReadRoute;
@@ -36,6 +40,10 @@ export interface PageRead {
   /** True when the fallback actually rescued a page the direct fetch could not deliver. */
   recovered: boolean;
   failureReason: string | null;
+  /** Exactly why the direct fetch did not suffice, from the taxonomy. Null when it did. */
+  failureClass: FailureClass | null;
+  /** The URL that actually answered, when it was not the one asked for. */
+  resolvedUrl: string | null;
 }
 
 export interface ReadBudget {
@@ -46,9 +54,15 @@ export interface ReadBudget {
   jinaSkippedForCap: number;
   directReads: number;
   directUsable: number;
+  /** Alternate-URL attempts still available this run, and what they achieved. */
+  alternateRemaining: number;
+  alternateAttempted: number;
+  alternateRecovered: number;
+  /** Failure classes seen, so a run can report the taxonomy without a database round-trip. */
+  failureClasses: Record<string, number>;
 }
 
-export function newReadBudget(maxJinaPages: number): ReadBudget {
+export function newReadBudget(maxJinaPages: number, maxAlternateUrls = 60): ReadBudget {
   return {
     jinaRemaining: Math.max(0, maxJinaPages),
     jinaUsed: 0,
@@ -56,6 +70,10 @@ export function newReadBudget(maxJinaPages: number): ReadBudget {
     jinaSkippedForCap: 0,
     directReads: 0,
     directUsable: 0,
+    alternateRemaining: Math.max(0, maxAlternateUrls),
+    alternateAttempted: 0,
+    alternateRecovered: 0,
+    failureClasses: {},
   };
 }
 
@@ -65,10 +83,18 @@ export function newReadBudget(maxJinaPages: number): ReadBudget {
 export { markdownToDocument } from "./jinaFetch";
 
 /**
- * Reads one page through the chain, spending the reader budget only where it is needed.
+ * Reads one page through the cascade:
  *
- * `allowFallback` lets the caller withhold the reader for pages it does not care enough about —
- * a low-priority candidate is not worth a paid read.
+ *   1. direct fetch
+ *   2. the hosted reader, if the direct read failed or was too thin (capped, opt-in)
+ *   3. an alternate URL on the same site, if the failure class says one could help
+ *
+ * Stage 3 exists because Phase 1.2 discarded a reachable conference every time a deep link had
+ * gone stale. It never guesses at a domain and never spends search quota: the alternates come
+ * from the failed URL itself, and each is subject to the same robots, SSRF and politeness rules.
+ *
+ * `allowFallback` lets the caller withhold the paid stages for pages it does not care enough
+ * about — a low-priority candidate is not worth a reader call.
  */
 export async function readPage(
   url: string,
@@ -79,97 +105,106 @@ export async function readPage(
 
   if (direct.notModified) {
     return {
-      route: "direct", html: "", direct, textLength: 0,
-      usedFallback: false, recovered: false, failureReason: null,
+      route: "direct", html: "", direct, textLength: 0, usedFallback: false,
+      recovered: false, failureReason: null, failureClass: null, resolvedUrl: null,
     };
   }
 
   const directUsable = direct.ok && !!direct.body && isHtmlLike(direct);
   const directText = directUsable ? pageText(direct.body, 30000) : "";
   budget.directReads += 1;
+
   if (directUsable && directText.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
     budget.directUsable += 1;
     return {
       route: "direct", html: direct.body, direct, textLength: directText.length,
-      usedFallback: false, recovered: false, failureReason: null,
+      usedFallback: false, recovered: false, failureReason: null, failureClass: null, resolvedUrl: null,
     };
   }
 
-  // The direct fetch was not enough. Is the reader worth spending here?
-  const thinReason = direct.blockedByLocalPolicy
-    ? "blocked_by_local_egress_policy"
-    : !direct.ok
-      ? direct.error || `http_${direct.status}`
-      : !isHtmlLike(direct)
-        ? "not_html"
-        : "too_little_text";
+  // The direct read was not enough. Name exactly why, once, and let the policy for that class
+  // decide which of the remaining stages are even worth attempting.
+  const failureClass: FailureClass = direct.ok && directUsable
+    ? "empty_response"
+    : classifyFailure({
+        status: direct.status,
+        error: direct.error,
+        blockedByLocalPolicy: direct.blockedByLocalPolicy,
+        contentType: direct.contentType,
+      });
+  budget.failureClasses[failureClass] = (budget.failureClasses[failureClass] || 0) + 1;
+  const policy = failurePolicy(failureClass);
 
-  // A local network block is not something a hosted reader can fix, and neither is a page that
-  // simply is not HTML. Neither is worth a paid call.
-  const worthFallback =
+  const asDirect = (reason: string | null): PageRead => ({
+    route: directUsable ? "direct" : "none",
+    html: directUsable ? direct.body : "",
+    direct,
+    textLength: directText.length,
+    usedFallback: false,
+    recovered: false,
+    failureReason: directUsable ? null : reason,
+    failureClass,
+    resolvedUrl: null,
+  });
+
+  // ---- Stage 2: the hosted reader.
+  // A local network block is not something a hosted reader can fix, and neither is a response
+  // that was never HTML. Neither is worth a paid call.
+  const worthReader =
     allowFallback &&
     isJinaFallbackEnabled() &&
     !direct.blockedByLocalPolicy &&
-    thinReason !== "not_html";
+    failureClass !== "unsupported_content" &&
+    failureClass !== "blocked_by_url_guard";
 
-  if (!worthFallback) {
-    return {
-      route: directUsable ? "direct" : "none",
-      html: directUsable ? direct.body : "",
-      direct,
-      textLength: directText.length,
-      usedFallback: false,
-      recovered: false,
-      failureReason: directUsable ? null : thinReason,
-    };
-  }
-
-  if (budget.jinaRemaining <= 0) {
+  if (worthReader && budget.jinaRemaining <= 0) {
     budget.jinaSkippedForCap += 1;
-    return {
-      route: directUsable ? "direct" : "none",
-      html: directUsable ? direct.body : "",
-      direct,
-      textLength: directText.length,
-      usedFallback: false,
-      recovered: false,
-      failureReason: directUsable ? null : `${thinReason} (reader budget exhausted)`,
-    };
+  } else if (worthReader) {
+    budget.jinaRemaining -= 1;
+    budget.jinaUsed += 1;
+    const jina = await readWithJina(url);
+    if (jina.ok) {
+      const text = pageText(jina.html, 30000);
+      if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS || text.length > directText.length) {
+        budget.jinaRecovered += 1;
+        return {
+          route: "jina", html: jina.html, direct, textLength: text.length,
+          usedFallback: true, recovered: true, failureReason: null, failureClass, resolvedUrl: null,
+        };
+      }
+    }
   }
 
-  budget.jinaRemaining -= 1;
-  budget.jinaUsed += 1;
-  const jina = await readWithJina(url);
-  if (!jina.ok) {
-    return {
-      route: directUsable ? "direct" : "none",
-      html: directUsable ? direct.body : "",
-      direct,
-      textLength: directText.length,
-      usedFallback: true,
-      recovered: false,
-      failureReason: directUsable ? null : `${thinReason}; ${jina.error ?? "reader returned nothing"}`,
-    };
+  // ---- Stage 3: a different URL for the same conference.
+  if (allowFallback && policy.tryAlternateUrl && budget.alternateRemaining > 0 && !direct.blockedByLocalPolicy) {
+    for (const alternate of alternateUrlsFor(url, failureClass).slice(0, MAX_ALTERNATES_PER_URL)) {
+      if (budget.alternateRemaining <= 0) break;
+      budget.alternateRemaining -= 1;
+      budget.alternateAttempted += 1;
+      // Deliberately without the conditional-request validators: they belong to the URL that
+      // failed, not to this one.
+      const retry = await discoveryFetch(alternate.url, { ...fetchOptions, etag: null, lastModified: null });
+      if (!retry.ok || !retry.body || !isHtmlLike(retry)) continue;
+      const retryText = pageText(retry.body, 30000);
+      if (retryText.length < MIN_EXTRACTABLE_TEXT_CHARS) continue;
+      budget.alternateRecovered += 1;
+      return {
+        route: "alternate_url",
+        html: retry.body,
+        // The alternate's own response becomes the record's fetch state: its ETag and content
+        // hash are what incremental crawling should remember, not the dead URL's.
+        direct: retry,
+        textLength: retryText.length,
+        usedFallback: true,
+        recovered: true,
+        failureReason: null,
+        failureClass,
+        resolvedUrl: retry.finalUrl || alternate.url,
+      };
+    }
   }
 
-  const html = jina.html;
-  const text = pageText(html, 30000);
-  if (text.length < MIN_EXTRACTABLE_TEXT_CHARS && directText.length >= text.length) {
-    // The reader did no better than the direct fetch; keep whichever had more to say.
-    return {
-      route: directUsable ? "direct" : "none",
-      html: directUsable ? direct.body : "",
-      direct,
-      textLength: directText.length,
-      usedFallback: true,
-      recovered: false,
-      failureReason: directUsable ? null : `${thinReason}; reader added nothing`,
-    };
-  }
-
-  budget.jinaRecovered += 1;
-  return {
-    route: "jina", html, direct, textLength: text.length,
-    usedFallback: true, recovered: true, failureReason: null,
-  };
+  return asDirect(
+    budget.jinaSkippedForCap > 0 && worthReader ? `${failureClass} (reader budget exhausted)` : failureClass
+  );
 }

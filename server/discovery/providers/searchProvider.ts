@@ -48,8 +48,23 @@ export interface SearchAccounting {
   directoryUrlsDemoted: number;
   braveErrors: string[];
   serperErrors: string[];
+  /**
+   * The three states Phase 1.2 could not tell apart, now separate.
+   *
+   * Its benchmark reported "Serper: 0 queries" and there was no way to know whether Serper was
+   * unconfigured, asked and silent, or asked and failing — because the metric was incremented
+   * only when a provider returned at least one RESULT, so a provider that answered nothing was
+   * indistinguishable from one that was never called. That is the root cause of the zero, and
+   * counting at the point of issue is the fix.
+   */
+  braveZeroResultQueries: number;
+  serperZeroResultQueries: number;
+  braveFailedQueries: number;
+  serperFailedQueries: number;
   /** Why Serper was or was not used. The whole point of the gate is that this is legible. */
   serperDecision: string;
+  /** Which matrix cells Brave left thin, and therefore what Serper was actually sent at. */
+  coverageGaps: Array<{ cell: string; braveStrong: number }>;
   queriesExecuted: Array<{ provider: "brave" | "serper"; query: string; results: number; strong: number }>;
 }
 
@@ -70,7 +85,12 @@ function emptyAccounting(): SearchAccounting {
     directoryUrlsDemoted: 0,
     braveErrors: [],
     serperErrors: [],
+    braveZeroResultQueries: 0,
+    serperZeroResultQueries: 0,
+    braveFailedQueries: 0,
+    serperFailedQueries: 0,
     serperDecision: "not evaluated",
+    coverageGaps: [],
     queriesExecuted: [],
   };
 }
@@ -120,34 +140,58 @@ export function planSearchQueries(context: {
   priorityYear?: number;
   topics?: string[];
   maxQueries: number;
+  /** Share of queries that must name the priority year. Defaults to 0.6 for a 2027-first run. */
+  priorityYearShare?: number;
 }): PlannedQuery[] {
   const subjects = context.topics?.length ? context.topics : subjectPhrases();
   const regions = Object.keys(QUERY_COUNTRIES_BY_REGION);
   const years = context.targetYears.length > 0 ? context.targetYears : [new Date().getUTCFullYear() + 1];
   const priorityYear = context.priorityYear ?? (years.includes(2027) ? 2027 : years[Math.floor(years.length / 2)]);
+  const otherYears = years.filter((year) => year !== priorityYear);
+  const priorityShare = context.priorityYearShare ?? 0.6;
+  const priorityBudget = Math.round(context.maxQueries * priorityShare);
 
   const planned: PlannedQuery[] = [];
   const seen = new Set<string>();
+  let priorityUsed = 0;
 
-  for (let index = 0; planned.length < context.maxQueries && index < context.maxQueries * 8; index += 1) {
-    const subject = subjects[index % subjects.length];
+  // Five dimensions rotated on co-prime-ish strides, so consecutive queries differ in all of
+  // them and the matrix is swept evenly rather than marching through one axis at a time. The
+  // year is chosen by remaining budget, which is what actually enforces the 2027 priority
+  // instead of merely hoping the rotation lands there.
+  for (let index = 0; planned.length < context.maxQueries && index < context.maxQueries * 12; index += 1) {
     const region = regions[index % regions.length];
     const countries = QUERY_COUNTRIES_BY_REGION[region];
     const country = countries[Math.floor(index / regions.length) % countries.length];
-    const eventWord = EVENT_WORDS[index % EVENT_WORDS.length];
-    // Every other query asks about the priority year; the rest rotate through the others.
-    const year = index % 2 === 0 ? priorityYear : years.filter((y) => y !== priorityYear)[Math.floor(index / 2) % Math.max(1, years.length - 1)] ?? priorityYear;
+    const subject = subjects[(index * 3) % subjects.length];
+    const eventWord = EVENT_WORDS[(index * 2) % EVENT_WORDS.length];
 
-    // Negatives keep roundups and directory pages out of the results we pay for; the intent words
-    // bias towards a conference's own site rather than an article about it.
-    const query = `${subject} ${eventWord} ${year} ${country} call for papers registration -"top conferences" -"list of conferences" -"upcoming conferences"`;
+    const priorityRemaining = priorityBudget - priorityUsed;
+    const otherRemaining = context.maxQueries - planned.length - priorityRemaining;
+    const year =
+      otherYears.length === 0 || priorityRemaining > 0 && (otherRemaining <= 0 || index % 5 !== 4)
+        ? priorityYear
+        : otherYears[Math.floor(index / 5) % otherYears.length];
+
     const key = `${subject}|${country}|${year}|${eventWord}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    if (year === priorityYear) priorityUsed += 1;
+
+    // Intent words bias towards a conference's own site; the negatives keep roundups and
+    // directory pages out of results we are paying for.
+    const query = `${subject} ${eventWord} ${year} ${country} call for papers registration -"top conferences" -"list of conferences" -"upcoming conferences"`;
     planned.push({ query, subject, country, region, year });
   }
 
   return planned;
+}
+
+/** One cell of the discovery matrix: a region, a subject and a year. Coverage is measured per
+ *  cell rather than in aggregate, because "600 candidates" can still mean nothing at all for
+ *  Africa in 2027. */
+export function cellKey(item: PlannedQuery): string {
+  return `${item.region}|${item.subject}|${item.year}`;
 }
 
 /** A candidate looks like one conference's own page rather than a listing or an article. */
@@ -172,6 +216,12 @@ export interface SearchProviderOptions {
    * Defaults to `maxQueries * 4` — roughly four usable conference pages per query asked.
    */
   serperYieldThreshold?: number;
+  /**
+   * A matrix cell (one region × category × year) is a COVERAGE GAP when Brave produced fewer
+   * than this many strong candidates for it. Serper is sent at the gaps rather than at
+   * everything, which is what makes it complementary instead of merely a second bill.
+   */
+  gapThresholdPerCell?: number;
   /** Known URLs, so "new candidate" means new to the database and not just new to this run. */
   isKnownUrl?: (url: string) => Promise<boolean>;
 }
@@ -291,12 +341,15 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
         if (context.signal?.aborted) break;
         if (candidates.length >= context.maxCandidates) break;
         try {
-          const results = await braveSearch(item.query, perQuery, "low");
+          // Counted here, before anything is known about the answer: a query that returned
+          // nothing was still a query that was issued and billed.
           this.accounting.braveQueries += 1;
-          this.accounting.braveRawResults += results.length;
           const metric = metricFor("brave");
           metric.queriesIssued += 1;
+          const results = await braveSearch(item.query, perQuery, "low");
+          this.accounting.braveRawResults += results.length;
           metric.rawResults += results.length;
+          if (results.length === 0) this.accounting.braveZeroResultQueries += 1;
           const { added, strong } = absorb(results, "brave", item);
           this.accounting.braveCandidates += added;
           this.accounting.braveStrongCandidates += strong;
@@ -309,6 +362,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           // Held, not thrown: one failed query must not end the run, and a plan limit part-way
           // through is exactly the case Serper exists to absorb.
           const message = String(error?.message || error).slice(0, 200);
+          this.accounting.braveFailedQueries += 1;
           if (this.accounting.braveErrors.length < 5) this.accounting.braveErrors.push(message);
           this.options.logger?.log("error", { detail: `brave query failed: ${message}` });
         }
@@ -317,26 +371,59 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
       this.accounting.braveErrors.push("BRAVE_SEARCH_API_KEY is not set");
     }
 
-    // ---- Serper, only if Brave did not already do the job.
+    // ---- Serper: complementary, not duplicative.
+    //
+    // Phase 1.2 queried both engines on every query, which measures overlap beautifully and pays
+    // twice for it. Phase 1.2's benchmark then reported zero Serper queries, which measured
+    // nothing at all. Neither is what we want. Serper now runs at the specific matrix cells Brave
+    // left thin — a region/category/year with too few strong candidates is a real coverage gap,
+    // and a second index is exactly the right tool for it.
+    const gapThreshold = this.options.gapThresholdPerCell ?? 2;
     const threshold = this.options.serperYieldThreshold ?? maxQueries * 4;
-    const braveStrong = this.accounting.braveStrongCandidates;
 
+    // Strong candidates Brave found, per matrix cell.
+    const braveStrongByCell = new Map<string, number>();
+    for (const item of planned) {
+      const executed = this.accounting.queriesExecuted.find((q) => q.provider === "brave" && q.query === item.query);
+      const cell = cellKey(item);
+      braveStrongByCell.set(cell, (braveStrongByCell.get(cell) ?? 0) + (executed?.strong ?? 0));
+    }
+    const gapCells = new Set(
+      [...braveStrongByCell.entries()].filter(([, strong]) => strong < gapThreshold).map(([cell]) => cell)
+    );
+    // A cell Brave never reached at all is a gap too — that is "Brave query coverage exhausted".
+    for (const item of planned) {
+      const executed = this.accounting.queriesExecuted.find((q) => q.provider === "brave" && q.query === item.query);
+      if (!executed) gapCells.add(cellKey(item));
+    }
+    this.accounting.coverageGaps = [...gapCells]
+      .map((cell) => ({ cell, braveStrong: braveStrongByCell.get(cell) ?? 0 }))
+      .sort((a, b) => a.braveStrong - b.braveStrong)
+      .slice(0, 40);
+
+    const braveStrong = this.accounting.braveStrongCandidates;
     if (!isSerperConfigured()) {
-      this.accounting.serperDecision = "skipped: SERPER_API_KEY is not set";
-    } else if (this.accounting.braveErrors.length > 0 && this.accounting.braveQueries === 0) {
-      this.accounting.serperDecision = "used: Brave could not run at all";
-    } else if (braveStrong >= threshold) {
-      this.accounting.serperDecision = `skipped: Brave already produced ${braveStrong} strong candidates (threshold ${threshold}) — no reason to spend Serper quota`;
+      // Said plainly, and separately from "asked and got nothing", because Phase 1.2 could not.
+      this.accounting.serperDecision = "skipped: SERPER_API_KEY is not set, so Serper was never called";
+    } else if (this.accounting.braveQueries === 0) {
+      this.accounting.serperDecision = "used: Brave issued no queries at all (unconfigured or failing)";
+    } else if (gapCells.size === 0 && braveStrong >= threshold) {
+      this.accounting.serperDecision = `skipped: Brave covered every matrix cell to at least ${gapThreshold} strong candidates and returned ${braveStrong} overall — nothing left for a second index to add`;
     } else {
-      this.accounting.serperDecision = `used: Brave produced ${braveStrong} strong candidates, short of the ${threshold} this run wanted`;
+      this.accounting.serperDecision = `used: ${gapCells.size} of ${braveStrongByCell.size} matrix cells came back under ${gapThreshold} strong candidates from Brave`;
     }
 
     if (this.accounting.serperDecision.startsWith("used")) {
-      // Not a blind repeat of every query: the ones Brave answered well need no second opinion.
-      const weakQueries = planned.filter((item) => {
-        const executed = this.accounting.queriesExecuted.find((q) => q.provider === "brave" && q.query === item.query);
-        return !executed || executed.strong < 3;
-      });
+      // Only the gap cells, and within them the queries Brave answered worst — so Serper spend
+      // goes where Brave demonstrably did not reach, including the 2027 cells specifically.
+      const weakQueries = planned
+        .filter((item) => gapCells.size === 0 || gapCells.has(cellKey(item)))
+        .sort((left, right) => {
+          const strongOf = (item: PlannedQuery) =>
+            this.accounting.queriesExecuted.find((q) => q.provider === "brave" && q.query === item.query)?.strong ?? -1;
+          // Thinnest first, and among equals the priority year first.
+          return strongOf(left) - strongOf(right) || (right.year === 2027 ? 1 : 0) - (left.year === 2027 ? 1 : 0);
+        });
       for (const item of weakQueries) {
         if (context.signal?.aborted) break;
         if (candidates.length >= context.maxCandidates) break;
@@ -345,12 +432,16 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           break;
         }
         try {
-          const results = await serperSearch(item.query, perQuery);
           this.accounting.serperQueries += 1;
-          this.accounting.serperRawResults += results.length;
           const metric = metricFor("serper");
           metric.queriesIssued += 1;
+          const results = await serperSearch(item.query, perQuery);
+          this.accounting.serperRawResults += results.length;
           metric.rawResults += results.length;
+          // serperSearch returns [] when unconfigured and throws on a real failure, so an empty
+          // answer here means the index genuinely had nothing — worth knowing, and worth keeping
+          // apart from a query that was never sent.
+          if (results.length === 0) this.accounting.serperZeroResultQueries += 1;
           const { added, strong } = absorb(results, "serper", item);
           this.accounting.serperCandidates += added;
           this.accounting.serperStrongCandidates += strong;
@@ -361,6 +452,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           });
         } catch (error: any) {
           const message = String(error?.message || error).slice(0, 200);
+          this.accounting.serperFailedQueries += 1;
           if (this.accounting.serperErrors.length < 5) this.accounting.serperErrors.push(message);
           this.options.logger?.log("error", { detail: `serper query failed: ${message}` });
         }

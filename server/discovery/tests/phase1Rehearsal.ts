@@ -35,6 +35,7 @@ async function main(): Promise<void> {
   const { runDiscovery } = await import("../pipeline");
   const { configureDomainLimits, resetDomainLimits } = await import("../httpClient");
   const { auditDiscoveredConferences, formatAuditReport } = await import("../audit");
+  const { diagnoseRun, formatDiagnosis } = await import("../diagnose");
   const { buildQualityReport, formatQualityReport, writeEventsCsv } = await import("../exportCsv");
   const { publishDiscoveredConferences } = await import("../publish");
 
@@ -101,6 +102,11 @@ async function main(): Promise<void> {
 
     // The same audit the Render run will produce, exercised against the fixture web so the
     // command and its report format are proven before they matter.
+    // The same failure diagnosis the Render run will produce, exercised here so the report and
+    // its query path are proven before they are needed.
+    const diagnosis = await diagnoseRun(summary.runId);
+    fs.writeFileSync(path.join(outDir, "fetch_diagnosis.txt"), `${formatDiagnosis(diagnosis)}\n`, "utf8");
+
     const audit = await auditDiscoveredConferences({ sample: 20, urlGuard, maxJinaPages: 0 });
     const auditText = formatAuditReport(audit);
     fs.writeFileSync(path.join(outDir, "field_audit.txt"), `${auditText}\n`, "utf8");

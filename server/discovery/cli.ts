@@ -16,6 +16,7 @@ import "../env";
 import fs from "fs";
 import path from "path";
 import { auditDiscoveredConferences, formatAuditReport } from "./audit";
+import { diagnoseRun, formatDiagnosis } from "./diagnose";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -79,6 +80,8 @@ const HELP = `Conference Gate — discovery engine
   add      --domain d --name "…" --type university [--country … --region … --trust 0.9]
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
+  diagnose [--run <id>]     Break a run's fetch failures down by class and by domain, and say
+                            what each class implies. Defaults to the most recent run.
   metrics                   Print database metrics as JSON.
   report                    Print the quality report.
   audit [--sample 20] [--out audit.txt]
@@ -262,6 +265,10 @@ async function main(): Promise<void> {
         maxCandidates: numberFlag(flags["max-candidates"], 2000),
         maxSearchQueries: numberFlag(flags["max-search-queries"], 24),
         maxJinaPages: Number(flags["max-jina-pages"] ?? 40),
+        maxAlternateUrls: Number(flags["max-alternate-urls"] ?? 80),
+        domainConcurrency: numberFlag(flags["domain-concurrency"], 4),
+        maxCandidatesPerDomain: numberFlag(flags["max-per-domain"], 25),
+        acceptedTarget: Number(flags["accepted-target"] ?? 0),
         maxAiCalls: Number(flags["max-ai-calls"]) || 0,
         timeBudgetMs: numberFlag(flags["time-budget-ms"], 25 * 60 * 1000),
         // Never on, whatever the flags say: this command exists to produce evidence for a human
@@ -278,6 +285,13 @@ async function main(): Promise<void> {
       console.log(qualityText);
       write("03-quality-report.txt", qualityText);
       write("03-quality-report.json", JSON.stringify(quality, null, 2));
+
+      console.log("\nSTEP 4b — fetch failure diagnosis\n");
+      const diagnosis = await diagnoseRun(summary.runId);
+      const diagnosisText = formatDiagnosis(diagnosis);
+      console.log(diagnosisText);
+      write("03b-fetch-diagnosis.txt", diagnosisText);
+      write("03b-fetch-diagnosis.json", JSON.stringify(diagnosis, null, 2));
 
       console.log("\nSTEP 5 — CSV export\n");
       const csv = await writeEventsCsv(path.join(outDir, "discovery_test.csv"));
@@ -297,6 +311,17 @@ async function main(): Promise<void> {
       console.log(
         `Publishing was NOT enabled: ${summary.created} discovered conference(s) are in the discovery_* tables only.`
       );
+      break;
+    }
+
+    case "diagnose": {
+      const diagnosis = await diagnoseRun(typeof flags.run === "string" ? flags.run : undefined);
+      console.log(formatDiagnosis(diagnosis));
+      if (typeof flags.out === "string") {
+        fs.mkdirSync(path.dirname(path.resolve(flags.out)), { recursive: true });
+        fs.writeFileSync(path.resolve(flags.out), JSON.stringify(diagnosis, null, 2), "utf8");
+        console.log(`\nWritten to ${path.resolve(flags.out)}`);
+      }
       break;
     }
 

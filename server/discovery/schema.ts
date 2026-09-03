@@ -10,6 +10,8 @@
 import { db, dbAll } from "../db";
 
 export const DISCOVERY_TABLES = [
+  "discovery_run_providers",
+  "discovery_run_failures",
   "discovery_domains",
   "discovery_runs",
   "discovery_run_events",
@@ -260,6 +262,47 @@ export async function initDiscoverySchema(): Promise<void> {
       resolution TEXT
     );
 
+    -- Per-run, per-provider search accounting. A row here answers "what did Brave cost and what
+    -- did it return, in THIS run" without unpacking a JSON blob — and, crucially, records the
+    -- difference between a provider that was not configured, one that was asked and answered
+    -- nothing, and one that failed. Phase 1.2 could not tell those three apart.
+    CREATE TABLE IF NOT EXISTS discovery_run_providers (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      configured INTEGER NOT NULL DEFAULT 0,
+      queries_planned INTEGER NOT NULL DEFAULT 0,
+      queries_issued INTEGER NOT NULL DEFAULT 0,
+      queries_zero_results INTEGER NOT NULL DEFAULT 0,
+      queries_failed INTEGER NOT NULL DEFAULT 0,
+      raw_results INTEGER NOT NULL DEFAULT 0,
+      candidates INTEGER NOT NULL DEFAULT 0,
+      strong_candidates INTEGER NOT NULL DEFAULT 0,
+      unique_urls INTEGER NOT NULL DEFAULT 0,
+      shared_urls INTEGER NOT NULL DEFAULT 0,
+      accepted_events INTEGER NOT NULL DEFAULT 0,
+      decision TEXT,
+      errors TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(run_id, provider)
+    );
+
+    -- Per-run fetch-failure tally, by class and by domain. The Phase 1.2 benchmark could report
+    -- "203 terminal failures" and nothing more; this is what turns that number into a plan.
+    CREATE TABLE IF NOT EXISTS discovery_run_failures (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      domain TEXT NOT NULL,
+      failure_class TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      last_status INTEGER,
+      last_detail TEXT,
+      UNIQUE(run_id, domain, failure_class)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_discovery_run_providers_run ON discovery_run_providers(run_id);
+    CREATE INDEX IF NOT EXISTS idx_discovery_run_failures_run ON discovery_run_failures(run_id);
+    CREATE INDEX IF NOT EXISTS idx_discovery_run_failures_class ON discovery_run_failures(failure_class);
     CREATE INDEX IF NOT EXISTS idx_discovery_urls_domain ON discovery_urls(domain);
     CREATE INDEX IF NOT EXISTS idx_discovery_urls_next_check ON discovery_urls(next_check_at);
     CREATE INDEX IF NOT EXISTS idx_discovery_events_year ON discovery_events(start_year);
@@ -283,6 +326,20 @@ export async function initDiscoverySchema(): Promise<void> {
     "ALTER TABLE discovery_event_sources ADD COLUMN source_classification TEXT NOT NULL DEFAULT 'unknown'",
     "ALTER TABLE discovery_event_sources ADD COLUMN classification_confidence REAL NOT NULL DEFAULT 0",
     "ALTER TABLE discovery_event_sources ADD COLUMN classification_evidence TEXT NOT NULL DEFAULT '[]'",
+    // The world region (Europe, Asia, …), derived deterministically from the validated country.
+    // A NEW column on purpose: `region` already means the state or province a page stated, and
+    // overwriting that would destroy a value a source actually gave us.
+    "ALTER TABLE discovery_events ADD COLUMN world_region TEXT",
+    // Which retrieval route finally produced this record: direct, jina, alternate_url or
+    // directory_resolution. Without it, "Jina recovered 1 event" is an anecdote.
+    "ALTER TABLE discovery_events ADD COLUMN recovery_method TEXT",
+    // Set when this record began as a directory listing and its own site was then found, so a
+    // resolved event is never confused with one discovered on its official site directly.
+    "ALTER TABLE discovery_events ADD COLUMN resolved_from_directory INTEGER NOT NULL DEFAULT 0",
+    // The precise failure class for a URL that could not be read, so the taxonomy survives a run.
+    "ALTER TABLE discovery_urls ADD COLUMN failure_class TEXT",
+    // A URL the engine found as a better home for the same conference.
+    "ALTER TABLE discovery_urls ADD COLUMN alternate_url TEXT",
   ]) {
     try { await db.execute(statement); } catch (error: any) {
       if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
