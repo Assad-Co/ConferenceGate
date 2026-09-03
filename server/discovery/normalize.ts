@@ -88,7 +88,23 @@ export interface NormalizedLocation {
   countryCode: string | null;
   /** Untouched, exactly as the page wrote it. */
   rawLocation: string | null;
+  countryInference: { method: "explicit_city_country_map"; city: string; confidence: number } | null;
 }
+
+/** Deliberately conservative: only globally unambiguous city names. Ambiguous names such as
+ * Paris, Cambridge, Melbourne and Victoria are excluded. */
+const UNAMBIGUOUS_CITY_COUNTRY: Record<string, string> = {
+  tokyo: "Japan", osaka: "Japan", kyoto: "Japan", singapore: "Singapore",
+  dubai: "United Arab Emirates", "abu dhabi": "United Arab Emirates", doha: "Qatar",
+  riyadh: "Saudi Arabia", berlin: "Germany", munich: "Germany", vienna: "Austria",
+  zurich: "Switzerland", geneva: "Switzerland", amsterdam: "Netherlands",
+  copenhagen: "Denmark", stockholm: "Sweden", helsinki: "Finland", lisbon: "Portugal",
+  barcelona: "Spain", madrid: "Spain", rome: "Italy", athens: "Greece",
+  seoul: "South Korea", beijing: "China", shanghai: "China", bangkok: "Thailand",
+  jakarta: "Indonesia", nairobi: "Kenya", cairo: "Egypt", "cape town": "South Africa",
+  sydney: "Australia", auckland: "New Zealand", toronto: "Canada", vancouver: "Canada",
+  "new york": "United States", chicago: "United States", boston: "United States",
+};
 
 /** US state abbreviations, which are the one region form common enough to be worth resolving. */
 const US_STATES: Record<string, string> = {
@@ -114,6 +130,7 @@ export function normalizeLocation(raw: RawEventExtraction): NormalizedLocation {
   let city = clean(raw.city);
   let region = clean(raw.region);
   let venue = clean(raw.venue);
+  let countryInference: NormalizedLocation["countryInference"] = null;
 
   // A structured city/country pair is authoritative; only fall back to reading the free text.
   if (!country) country = findCountryInText(raw.country) || findCountryInText(rawLocation);
@@ -149,6 +166,16 @@ export function normalizeLocation(raw: RawEventExtraction): NormalizedLocation {
     }
   }
 
+  // The page must explicitly state the city. This never uses the domain, organiser address or
+  // search snippet, and only resolves names that have one reliable country interpretation.
+  if (!country && city) {
+    const mapped = UNAMBIGUOUS_CITY_COUNTRY[city.toLowerCase().replace(/\s+/g, " ").trim()];
+    if (mapped) {
+      country = normalizeCountry(mapped);
+      if (country) countryInference = { method: "explicit_city_country_map", city, confidence: 0.82 };
+    }
+  }
+
   // A "city" that is really the word Online is not a city.
   if (city && ONLINE_PLACE_RE.test(city)) city = null;
   if (venue && ONLINE_PLACE_RE.test(venue)) venue = null;
@@ -160,6 +187,7 @@ export function normalizeLocation(raw: RawEventExtraction): NormalizedLocation {
     country: country?.name ?? null,
     countryCode: country?.iso2 ?? null,
     rawLocation,
+    countryInference,
   };
 }
 
