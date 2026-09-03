@@ -17,6 +17,7 @@ import fs from "fs";
 import path from "path";
 import { auditDiscoveredConferences, formatAuditReport } from "./audit";
 import { diagnoseRun, formatDiagnosis } from "./diagnose";
+import { formatEnrichmentReport, runEnrichment } from "./enrichment";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -80,6 +81,11 @@ const HELP = `Conference Gate — discovery engine
   add      --domain d --name "…" --type university [--country … --region … --trust 0.9]
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
+  enrich   [--limit 500] [--max-search-queries 500] [--max-jina-pages 200]
+           [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
+                            Verify accepted records against first-party pages, preserve field
+                            provenance/history, enrich supported fields and classify publication
+                            readiness. Does not discover new events and never publishes.
   diagnose [--run <id>]     Break a run's fetch failures down by class and by domain, and say
                             what each class implies. Defaults to the most recent run.
   metrics                   Print database metrics as JSON.
@@ -191,6 +197,35 @@ async function main(): Promise<void> {
       const { events, ...rest } = summary;
       console.log("\n--- Run summary ---");
       console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
+      break;
+    }
+
+    case "enrich": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error(
+          "TURSO_DATABASE_URL is not set. Enrichment must use the same durable database as the web service. " +
+          "Pass --allow-local-db only for an intentional throwaway local verification."
+        );
+        process.exitCode = 3;
+        break;
+      }
+      // This command has no AI dependency and no publishing call. Keep both safeguards visible in
+      // the report rather than depending on whichever environment happens to invoke it.
+      if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
+        throw new Error("Refusing enrichment while DISCOVERY_PUBLISH_TO_CONFERENCES=1. Set it to 0 first.");
+      }
+      const report = await runEnrichment({
+        limit: numberFlag(flags.limit, 500),
+        maxSearchQueries: numberFlag(flags["max-search-queries"], 500),
+        maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
+        timeBudgetMs: numberFlag(flags["time-budget-ms"], 30 * 60 * 1000),
+        quiet: flags.quiet === true,
+      });
+      console.log("\n--- Enrichment report ---");
+      console.log(formatEnrichmentReport(report));
+      console.log("\n--- Enrichment JSON ---");
+      console.log(JSON.stringify(report, null, 2));
+      if (report.status === "failed") process.exitCode = 2;
       break;
     }
 
@@ -384,3 +419,4 @@ main()
     console.error(error?.stack || error?.message || error);
     process.exit(1);
   });
+
