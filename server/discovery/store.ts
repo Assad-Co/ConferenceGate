@@ -15,6 +15,7 @@ import { bestDuplicate, seriesKeyFor, seriesNameFor, type DuplicateCandidate, ty
 import { canonicalizeUrl, normalizeTitle } from "./normalize";
 import { newId } from "./sourceRegistry";
 import type { NormalizedEvent, PublicationStatus } from "./types";
+import type { SourceClassification } from "./sourceClassification";
 
 export type StoreOutcome = "created" | "updated" | "unchanged" | "merged" | "review_queued";
 
@@ -34,6 +35,9 @@ export interface StoreOptions {
   /** True when the record came from the conference's own site rather than someone writing about
    *  it. Official sources outrank directories. */
   isOfficial?: boolean;
+  sourceClassification?: SourceClassification;
+  classificationConfidence?: number;
+  classificationEvidence?: string[];
 }
 
 /** Columns that hold a value read from a page, and can therefore be updated by a better source. */
@@ -369,13 +373,17 @@ async function writeSource(eventId: string, event: NormalizedEvent, options: Sto
   await dbRun(
     `INSERT INTO discovery_event_sources (
        id, event_id, source_url, source_domain, source_type, provider, trust_score,
-       extraction_method, confidence, is_official, raw_extraction
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       extraction_method, confidence, is_official, raw_extraction,
+       source_classification, classification_confidence, classification_evidence
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(event_id, source_url) DO UPDATE SET
        trust_score = excluded.trust_score,
        extraction_method = excluded.extraction_method,
        confidence = excluded.confidence,
        is_official = excluded.is_official,
+       source_classification = excluded.source_classification,
+       classification_confidence = excluded.classification_confidence,
+       classification_evidence = excluded.classification_evidence,
        last_verified = datetime('now')`,
     [
       newId("dsrc"),
@@ -389,16 +397,19 @@ async function writeSource(eventId: string, event: NormalizedEvent, options: Sto
       event.confidenceScore,
       options.isOfficial ? 1 : 0,
       JSON.stringify({ contentHash: event.contentHash, qualityFlags: event.qualityFlags }),
+      options.sourceClassification ?? "unknown",
+      options.classificationConfidence ?? 0,
+      JSON.stringify(options.classificationEvidence ?? []),
     ]
   );
   if (event.officialUrl && event.officialUrl !== event.sourceUrl) {
     let officialDomain = event.sourceDomain;
     try { officialDomain = new URL(event.officialUrl).hostname.toLowerCase().replace(/^www\./, ""); } catch { /* validated elsewhere */ }
     await dbRun(
-      `INSERT INTO discovery_event_sources (id, event_id, source_url, source_domain, source_type, provider, trust_score, extraction_method, confidence, is_official, raw_extraction)
-       VALUES (?, ?, ?, ?, 'official_website', ?, ?, ?, ?, 1, ?)
+      `INSERT INTO discovery_event_sources (id, event_id, source_url, source_domain, source_type, provider, trust_score, extraction_method, confidence, is_official, raw_extraction, source_classification, classification_confidence, classification_evidence)
+       VALUES (?, ?, ?, ?, 'official_website', ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(event_id, source_url) DO NOTHING`,
-      [newId("dsrc"), eventId, event.officialUrl, officialDomain, options.provider ?? null, Math.max(options.sourceTrust, 0.7), event.extractionMethod, event.confidenceScore, JSON.stringify({ discoveredFrom: event.sourceUrl })]
+      [newId("dsrc"), eventId, event.officialUrl, officialDomain, options.provider ?? null, Math.max(options.sourceTrust, 0.7), event.extractionMethod, event.confidenceScore, options.isOfficial ? 1 : 0, JSON.stringify({ discoveredFrom: event.sourceUrl }), options.sourceClassification ?? "unknown", options.classificationConfidence ?? 0, JSON.stringify(options.classificationEvidence ?? [])]
     );
   }
 }
@@ -589,4 +600,3 @@ export async function recordUrlVisit(input: {
     ]
   );
 }
-
