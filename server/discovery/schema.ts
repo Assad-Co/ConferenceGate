@@ -12,6 +12,7 @@ import { db, dbAll } from "../db";
 export const DISCOVERY_TABLES = [
   "discovery_domains",
   "discovery_runs",
+  "discovery_run_events",
   "discovery_urls",
   "discovery_events",
   "discovery_event_sources",
@@ -63,6 +64,18 @@ export async function initDiscoverySchema(): Promise<void> {
       counters TEXT NOT NULL DEFAULT '{}',
       log TEXT NOT NULL DEFAULT '[]',
       error TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_run_events (
+      run_id TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      validation_status TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      source_url TEXT NOT NULL,
+      source_classification TEXT NOT NULL DEFAULT 'unknown',
+      first_attributed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (run_id, event_id, source_url)
     );
 
     -- Candidate URLs and their fetch state. ETag/Last-Modified/content hash live here so an
@@ -170,6 +183,9 @@ export async function initDiscoverySchema(): Promise<void> {
       source_url TEXT NOT NULL,
       source_domain TEXT NOT NULL,
       source_type TEXT,
+      source_classification TEXT NOT NULL DEFAULT 'unknown',
+      classification_confidence REAL NOT NULL DEFAULT 0,
+      classification_evidence TEXT NOT NULL DEFAULT '[]',
       provider TEXT,
       trust_score REAL NOT NULL DEFAULT 0.5,
       extraction_method TEXT NOT NULL,
@@ -255,6 +271,7 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_events_domain ON discovery_events(source_domain);
     CREATE INDEX IF NOT EXISTS idx_discovery_events_series ON discovery_events(series_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_sources_event ON discovery_event_sources(event_id);
+    CREATE INDEX IF NOT EXISTS idx_discovery_run_events_run ON discovery_run_events(run_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_fields_event ON discovery_event_fields(event_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_categories_event ON discovery_event_categories(event_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_categories_cat ON discovery_event_categories(category);
@@ -262,6 +279,15 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_review_status ON discovery_review_queue(status);
     CREATE INDEX IF NOT EXISTS idx_discovery_domains_next ON discovery_domains(next_crawl_at);
   `);
+  for (const statement of [
+    "ALTER TABLE discovery_event_sources ADD COLUMN source_classification TEXT NOT NULL DEFAULT 'unknown'",
+    "ALTER TABLE discovery_event_sources ADD COLUMN classification_confidence REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE discovery_event_sources ADD COLUMN classification_evidence TEXT NOT NULL DEFAULT '[]'",
+  ]) {
+    try { await db.execute(statement); } catch (error: any) {
+      if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
+    }
+  }
   initialized = true;
 }
 
