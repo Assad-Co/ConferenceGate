@@ -155,6 +155,7 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
   const rows = await dbAll<Record<string, any>>(
     `SELECT e.* FROM discovery_events e
       WHERE e.status IN (${placeholders})
+        AND e.publish_readiness = 'publish_ready'
         AND e.confidence_score >= ?
         AND e.title IS NOT NULL AND e.title <> ''
         AND e.official_url IS NOT NULL AND e.official_url <> ''
@@ -222,3 +223,4 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
 
   return result;
 }
+
