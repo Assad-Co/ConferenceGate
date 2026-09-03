@@ -67,6 +67,9 @@ before(async () => {
     maxPages: 200,
     maxCandidates: 2000,
     maxAiCalls: 0,
+    // No hosted-reader calls: a test must not depend on, or spend money at, a third-party
+    // service. The read chain records the skip instead of reaching out.
+    maxJinaPages: 0,
     scheme: "http",
     urlGuard,
     quiet: true,
@@ -227,6 +230,90 @@ test("dates, countries and formats are normalized on the way in", async () => {
   }
 });
 
+test("read routes are accounted for, and the reader is only ever a fallback", () => {
+  assert.ok(firstRun.reads.directPages > 0);
+  // Most fixture pages are substantial and read directly; a few (a news post, a concert listing)
+  // are genuinely short, and those are exactly the pages a fallback would be considered for.
+  assert.ok(
+    firstRun.reads.directUsablePages / firstRun.reads.directPages > 0.7,
+    `only ${firstRun.reads.directUsablePages}/${firstRun.reads.directPages} pages read directly`
+  );
+  // The hosted reader is opt-in (DISCOVERY_JINA_ENABLED), and unset here — so it is not merely
+  // unspent, it is never even considered. That is the default a fresh deployment gets.
+  assert.equal(firstRun.reads.jinaPages, 0, "not one reader call is made");
+  assert.ok(firstRun.reads.directExtractionSuccesses > 0);
+  assert.equal(firstRun.reads.jinaExtractionSuccesses, 0);
+});
+
+test("robots.txt is read for every domain before its pages are, whatever route found it", async () => {
+  // The fixture sites all come from the registry, so nothing needed an on-demand check here —
+  // but the counter must exist and be honest, because search-discovered hosts depend on it.
+  assert.equal(typeof firstRun.robotsCheckedOnDemand, "number");
+  assert.ok(firstRun.robotsDisallowedUrls >= 0);
+});
+
+test("the field audit re-reads real sources and reports per-field accuracy", async () => {
+  const { auditDiscoveredConferences } = await import("../audit");
+  const report = await auditDiscoveredConferences({ sample: 12, urlGuard });
+
+  assert.ok(report.auditedRecords > 0, "the audit sampled something");
+  assert.equal(report.unreadableRecords, 0, "every fixture source page is re-readable");
+  assert.equal(report.fieldAccuracy.length, 11, "all eleven audited fields are reported");
+
+  // Fixture pages are internally consistent, so a correct engine should confirm nearly everything
+  // it claimed. A low number here would mean the audit or the extraction is broken.
+  assert.ok(
+    report.overallAccuracy !== null && report.overallAccuracy >= 0.9,
+    `overall accuracy was ${report.overallAccuracy}`
+  );
+
+  const title = report.fieldAccuracy.find((f) => f.field === "title")!;
+  assert.equal(title.coverage, 1, "every record has a title");
+  assert.ok(title.accuracy !== null && title.accuracy >= 0.9);
+
+  // A null is not an error: it must land in `absent`, never in `not_supported`.
+  for (const field of report.fieldAccuracy) {
+    assert.ok(field.absent + field.confirmed + field.supported + field.notSupported + field.unverifiable === report.auditedRecords);
+  }
+
+  for (const record of report.records) {
+    assert.match(record.sourceUrl, /^http/, "each audited row names the source a human can check");
+  }
+});
+
+test("placeholder and staging records are flagged, real ones are not", async () => {
+  const { suspicionFlagsFor } = await import("../audit");
+
+  assert.deepEqual(
+    suspicionFlagsFor({
+      title: "33rd International Meeting on Organic Geochemistry",
+      official_url: "https://imog2027.example-real.org/",
+      start_date: "2027-09-12",
+      end_date: "2027-09-17",
+      start_year: 2027,
+      confidence_score: 0.88,
+      quality_flags: "[]",
+    }),
+    [],
+    "a plausible record raises nothing"
+  );
+
+  const flags = suspicionFlagsFor({
+    title: "Test Conference {{year}}",
+    official_url: "http://localhost:3000/staging/event",
+    start_date: "2027-01-01",
+    end_date: "2027-06-01",
+    start_year: 2027,
+    confidence_score: 0.2,
+    quality_flags: "[]",
+  });
+  assert.ok(flags.includes("title_looks_like_placeholder"));
+  assert.ok(flags.includes("title_contains_template_markup"));
+  assert.ok(flags.includes("url_is_not_a_public_site"));
+  assert.ok(flags.includes("date_span_implausibly_long"));
+  assert.ok(flags.includes("very_low_confidence"));
+});
+
 test("a second pass over an unchanged web does no work", async () => {
   const second = await modules.runDiscovery({
     targetYears: [2026, 2027, 2028],
@@ -234,6 +321,7 @@ test("a second pass over an unchanged web does no work", async () => {
     maxPages: 200,
     maxCandidates: 2000,
     maxAiCalls: 0,
+    maxJinaPages: 0,
     scheme: "http",
     urlGuard,
     quiet: true,

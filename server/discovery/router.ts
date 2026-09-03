@@ -117,7 +117,13 @@ discoveryRouter.get(
       typeof req.query.domains === "string"
         ? req.query.domains.split(",").map((part) => part.trim()).filter(Boolean).slice(0, 25)
         : undefined;
-    const report = await runPreflight({ domains, fromRegistry: req.query.registry === "true" });
+    const report = await runPreflight({
+      domains,
+      fromRegistry: req.query.registry === "true",
+      // Default to skipping the provider checks on the HTTP route: each spends a unit of quota,
+      // and this endpoint is the one somebody might refresh.
+      skipProviders: req.query.providers !== "true",
+    });
     res.json({ preflight: report });
   })
 );

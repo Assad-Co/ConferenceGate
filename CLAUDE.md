@@ -98,7 +98,19 @@ Two things are guarded rather than merely configured:
 Deduplication merges on strong agreement, queues the middle ground for review, and leaves weak
 matches alone. It never deletes a record because two titles looked alike.
 
-Tests are fixture-backed and need no network: `npm run test:discovery`. There is also a full
+Provider spend is gated on measured yield, not on configuration. Brave runs first; Serper runs
+only when Brave's strong-candidate count falls short of the run's target, and then only re-asks
+the queries Brave answered poorly. Jina is opt-in (`DISCOVERY_JINA_ENABLED=1`) and even then is
+reached only for a page the direct fetch could not read (failed, or under 500 characters of text),
+only for high-priority candidates, and capped per run. `--max-ai-calls` defaults to 0, so a run is free unless asked otherwise. Every one of those
+decisions is reported in the run summary in words, so a cheap run explains itself.
+
+A crawl belongs on a worker, not in the web service — see `render-discovery-worker.yaml`. Both
+share one Turso database; `phase1` refuses to start without `TURSO_DATABASE_URL` rather than write
+results to a container-local file nothing can read.
+
+Tests are fixture-backed and need no network: `npm run test:discovery`. Fixtures pass
+`maxJinaPages: 0` so no test can reach a third-party service or spend anyone's quota. There is also a full
 end-to-end rehearsal against a local eleven-site fixture web
 (`npx tsx server/discovery/tests/phase1Rehearsal.ts --out <dir>`), which exercises robots
 compliance, all four markup styles, cross-domain deduplication and the unchanged-page skip in one

@@ -284,6 +284,92 @@ test("robots.txt reports an unreachable host as unreachable, not as 'no robots.t
   }
 });
 
+test("the hosted reader is opt-in, and capped once opted in", async () => {
+  const { newReadBudget, readPage } = await import("../readPage");
+  const { isJinaFallbackEnabled } = await import("../jinaFetch");
+
+  // A page that answers, but with almost nothing in it — the signature of a JS-rendered shell,
+  // and the only situation the reader exists for.
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end("<html><body><div id='app'></div></body></html>");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  const previous = process.env.DISCOVERY_JINA_ENABLED;
+  try {
+    delete process.env.DISCOVERY_JINA_ENABLED;
+    assert.equal(isJinaFallbackEnabled(), false, "off unless explicitly enabled");
+
+    const offBudget = newReadBudget(5);
+    const off = await readPage(`http://127.0.0.1:${port}/thin`, { urlGuard: localGuard, budget: offBudget });
+    assert.equal(off.usedFallback, false, "a disabled reader is not called, whatever the budget");
+    assert.equal(offBudget.jinaUsed, 0);
+    assert.equal(offBudget.jinaSkippedForCap, 0, "not skipped for budget — not considered at all");
+    // The thin HTML is still handed on rather than thrown away: a page with barely any visible
+    // text can still carry a complete JSON-LD block, and structured data is the best source there
+    // is. It is passed along as a direct read, with its short text length recorded.
+    assert.equal(off.route, "direct");
+    assert.ok(off.textLength < 500, "and it is recorded as the thin read it was");
+
+    // Enabled, but with no budget left: the page is counted as skipped and still no call is made.
+    process.env.DISCOVERY_JINA_ENABLED = "1";
+    const cappedBudget = newReadBudget(0);
+    const capped = await readPage(`http://127.0.0.1:${port}/thin`, { urlGuard: localGuard, budget: cappedBudget });
+    assert.equal(cappedBudget.jinaUsed, 0, "the cap is a hard limit, not a suggestion");
+    assert.equal(cappedBudget.jinaSkippedForCap, 1, "and what it cost us is recorded");
+    assert.equal(capped.route, "direct", "the thin direct read is still what gets extracted");
+
+    // Low-priority candidates are not worth a paid read even when budget remains.
+    const withheldBudget = newReadBudget(5);
+    const withheld = await readPage(`http://127.0.0.1:${port}/thin`, {
+      urlGuard: localGuard,
+      budget: withheldBudget,
+      allowFallback: false,
+    });
+    assert.equal(withheldBudget.jinaUsed, 0);
+    assert.equal(withheld.usedFallback, false);
+  } finally {
+    if (previous === undefined) delete process.env.DISCOVERY_JINA_ENABLED;
+    else process.env.DISCOVERY_JINA_ENABLED = previous;
+    server.close();
+    resetDomainLimits();
+  }
+});
+
+test("a substantial page is read directly and never reaches the reader", async () => {
+  const { newReadBudget, readPage } = await import("../readPage");
+  const body = `<html><body><main><h1>International Congress on Water Reuse 2027</h1><p>${"Membrane technology and brine management for utilities across the Gulf region. ".repeat(
+    20
+  )}</p></main></body></html>`;
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(body);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  const previous = process.env.DISCOVERY_JINA_ENABLED;
+  try {
+    process.env.DISCOVERY_JINA_ENABLED = "1";
+    const budget = newReadBudget(5);
+    const read = await readPage(`http://127.0.0.1:${port}/full`, { urlGuard: localGuard, budget });
+    assert.equal(read.route, "direct");
+    assert.equal(read.usedFallback, false, "the reader is a fallback, not a step");
+    assert.equal(budget.jinaUsed, 0);
+    assert.equal(budget.directUsable, 1);
+    assert.ok(read.textLength > 500);
+  } finally {
+    if (previous === undefined) delete process.env.DISCOVERY_JINA_ENABLED;
+    else process.env.DISCOVERY_JINA_ENABLED = previous;
+    server.close();
+    resetDomainLimits();
+  }
+});
+
 test("the real SSRF guard still refuses loopback", async () => {
   // Proof that the production guard has not been relaxed to make these tests pass.
   const result = await discoveryFetch("http://127.0.0.1:1/never");

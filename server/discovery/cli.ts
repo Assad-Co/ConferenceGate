@@ -13,6 +13,9 @@
 //   npm run discovery -- publish --dry-run
 
 import "../env";
+import fs from "fs";
+import path from "path";
+import { auditDiscoveredConferences, formatAuditReport } from "./audit";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -57,11 +60,18 @@ function numberFlag(value: string | boolean | undefined, fallback: number): numb
 
 const HELP = `Conference Gate — discovery engine
 
-  preflight [--domains a,b] [--registry]
+  preflight [--domains a,b] [--registry] [--skip-providers]
                             Can this machine reach the open web? Asks each domain for its
                             robots.txt and says whether the network, the site, or nothing at
-                            all is in the way. Run this before a first crawl in a new
+                            all is in the way, then checks Brave, Serper, Jina, Turso and
+                            Gemini (one request each). Run this before a first crawl in a new
                             environment. Exits non-zero when outbound HTTPS is blocked.
+  phase1 [--out ./phase1] [--max-pages 400] [--years 2026,2027,2028] [--sample 20]
+         [--max-search-queries 24] [--max-jina-pages 40] [--allow-local-db]
+                            The whole benchmark in one command: preflight, seed, run, report,
+                            CSV export and a random field audit, written into one directory.
+                            Stops before crawling if outbound HTTPS is blocked. Publishing stays
+                            off regardless.
   seed                      Load the Phase 1 seed domains into the registry (idempotent).
   domains                   List the registry with its scheduling and health state.
   enable   --domain d       Enable a domain.
@@ -71,6 +81,10 @@ const HELP = `Conference Gate — discovery engine
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
   metrics                   Print database metrics as JSON.
   report                    Print the quality report.
+  audit [--sample 20] [--out audit.txt]
+                            Re-fetch a random sample of stored records from their source pages
+                            and check every audited field against what the page says. Reports
+                            field-level accuracy and flags records worth a closer look.
   export   [--out discovery_test.csv] [--years 2027]
   publish  [--dry-run] [--limit 200]
                             Write qualifying records into extracted_conferences. Requires
@@ -87,6 +101,7 @@ async function main(): Promise<void> {
       const report = await runPreflight({
         domains: list(flags.domains),
         fromRegistry: flags.registry === true,
+        skipProviders: flags["skip-providers"] === true,
       });
       console.log(formatPreflightReport(report));
       // Non-zero on a blocked network, so a deploy check or CI step fails loudly rather than
@@ -173,6 +188,115 @@ async function main(): Promise<void> {
       const { events, ...rest } = summary;
       console.log("\n--- Run summary ---");
       console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
+      break;
+    }
+
+    case "audit": {
+      const report = await auditDiscoveredConferences({
+        sample: numberFlag(flags.sample, 20),
+        onProgress: (done, total, title) =>
+          console.error(`  [${done}/${total}] re-reading ${title.slice(0, 70)}`),
+      });
+      const text = formatAuditReport(report);
+      console.log(text);
+      if (typeof flags.out === "string") {
+        fs.mkdirSync(path.dirname(path.resolve(flags.out)), { recursive: true });
+        fs.writeFileSync(path.resolve(flags.out), `${text}\n`, "utf8");
+        fs.writeFileSync(path.resolve(flags.out).replace(/\.txt$/, "") + ".json", JSON.stringify(report, null, 2), "utf8");
+        console.log(`\nWritten to ${path.resolve(flags.out)}`);
+      }
+      break;
+    }
+
+    case "phase1": {
+      const outDir = path.resolve(String(flags.out || "phase1-results"));
+      fs.mkdirSync(outDir, { recursive: true });
+      const write = (name: string, body: string) => {
+        fs.writeFileSync(path.join(outDir, name), body.endsWith("\n") ? body : `${body}\n`, "utf8");
+        console.log(`  wrote ${path.join(outDir, name)}`);
+      };
+
+      // On Render, a worker with no Turso credentials writes to a container-local SQLite file that
+      // the web service cannot see and that vanishes on the next deploy. The run would look like a
+      // success and leave nothing behind, which is worse than refusing.
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error(
+          "TURSO_DATABASE_URL is not set.\n\n" +
+            "This would write discovered conferences to a local SQLite file. On a Render worker that\n" +
+            "file is not shared with the web service and does not survive a deploy, so the results of\n" +
+            "this run would be invisible and then lost.\n\n" +
+            "Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN to the SAME database the web service uses,\n" +
+            "or pass --allow-local-db if a throwaway local run is genuinely what you want."
+        );
+        process.exitCode = 3;
+        break;
+      }
+
+      console.log("STEP 1 — preflight\n");
+      const preflight = await runPreflight({ fromRegistry: false });
+      const preflightText = formatPreflightReport(preflight);
+      console.log(preflightText);
+      write("01-preflight.txt", preflightText);
+      write("01-preflight.json", JSON.stringify(preflight, null, 2));
+
+      if (preflight.outboundHttps === "blocked") {
+        // Refusing to continue is the point: a crawl from here would produce a page of failures
+        // that look like the sites' fault, and the run would be worse than no run at all.
+        console.error(
+          "\nSTOPPING: outbound HTTPS is blocked from this machine, so no real crawl is possible.\n" +
+            "Nothing was crawled and nothing was written to the database.\n" +
+            preflight.recommendation
+        );
+        process.exitCode = 2;
+        break;
+      }
+
+      console.log("\nSTEP 2 — seeding the registry\n");
+      for (const domain of SEED_DOMAINS) await upsertDomain(domain);
+      console.log(`  seeded ${SEED_DOMAINS.length} domains`);
+
+      console.log("\nSTEP 3 — discovery run\n");
+      const summary = await runDiscovery({
+        targetYears: list(flags.years).map(Number).filter(Number.isInteger),
+        maxPages: numberFlag(flags["max-pages"], 400),
+        maxCandidates: numberFlag(flags["max-candidates"], 2000),
+        maxSearchQueries: numberFlag(flags["max-search-queries"], 24),
+        maxJinaPages: Number(flags["max-jina-pages"] ?? 40),
+        maxAiCalls: Number(flags["max-ai-calls"]) || 0,
+        timeBudgetMs: numberFlag(flags["time-budget-ms"], 25 * 60 * 1000),
+        // Never on, whatever the flags say: this command exists to produce evidence for a human
+        // decision, and publishing is that decision.
+        allowAutoPublish: false,
+        trigger: "phase1",
+      });
+      const { events, ...runRest } = summary;
+      write("02-run-summary.json", JSON.stringify({ ...runRest, eventsAccepted: events.length }, null, 2));
+
+      console.log("\nSTEP 4 — quality report\n");
+      const quality = await buildQualityReport();
+      const qualityText = formatQualityReport(quality);
+      console.log(qualityText);
+      write("03-quality-report.txt", qualityText);
+      write("03-quality-report.json", JSON.stringify(quality, null, 2));
+
+      console.log("\nSTEP 5 — CSV export\n");
+      const csv = await writeEventsCsv(path.join(outDir, "discovery_test.csv"));
+      console.log(`  ${csv.rows} rows → ${csv.path}`);
+
+      console.log("\nSTEP 6 — field audit\n");
+      const audit = await auditDiscoveredConferences({
+        sample: numberFlag(flags.sample, 20),
+        onProgress: (done, total, title) => console.error(`  [${done}/${total}] re-reading ${title.slice(0, 70)}`),
+      });
+      const auditText = formatAuditReport(audit);
+      console.log(auditText);
+      write("04-field-audit.txt", auditText);
+      write("04-field-audit.json", JSON.stringify(audit, null, 2));
+
+      console.log(`\nDone. Everything is in ${outDir}`);
+      console.log(
+        `Publishing was NOT enabled: ${summary.created} discovered conference(s) are in the discovery_* tables only.`
+      );
       break;
     }
 

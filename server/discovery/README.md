@@ -31,14 +31,24 @@ answer for every conference in the database.
 ## Quick start
 
 ```bash
+# The whole Phase 1 benchmark in one command: preflight, seed, run, report, CSV, field audit.
+# Refuses to crawl if outbound HTTPS is blocked, or if it would write to a database nothing else
+# can read. Publishing stays off regardless of any flag.
+npm run discovery -- phase1 --out ./phase1 --max-pages 400
+```
+
+Or the same steps one at a time:
+
+```bash
 npm run discovery -- preflight               # can this machine reach the open web at all?
 npm run discovery -- seed                    # load the seed domain registry
 npm run discovery -- domains                 # what is registered, and when each is next due
-npm run discovery -- run --domains egu.eu --max-pages 40
+npm run discovery -- run --years 2026,2027,2028 --max-pages 400
 npm run discovery -- report                  # quality report
 npm run discovery -- export --out discovery_test.csv
+npm run discovery -- audit --sample 20       # field accuracy against the real sources
 npm run discovery -- publish --dry-run       # what would reach the app's own table
-npm run test:discovery                       # 86 fixture-backed tests, no network
+npm run test:discovery                       # 102 fixture-backed tests, no network
 ```
 
 An end-to-end rehearsal against a local eleven-site fixture web, with no network access at all:
@@ -50,10 +60,18 @@ npx tsx server/discovery/tests/phase1Rehearsal.ts --out /tmp/discovery-rehearsal
 ## Before the first run in a new environment: preflight
 
 ```bash
-npm run discovery -- preflight            # the ten seed domains
-npm run discovery -- preflight --registry # whatever is actually in your registry
-GET /api/admin/discovery/preflight        # the same check, from the deployed server itself
+npm run discovery -- preflight                  # the ten seed domains, plus every provider
+npm run discovery -- preflight --registry       # whatever is actually in your registry
+npm run discovery -- preflight --skip-providers # domains only, spending no provider quota
+GET /api/admin/discovery/preflight              # from the deployed server itself
+GET /api/admin/discovery/preflight?providers=true
 ```
+
+It also checks Brave, Serper, Jina, Turso and Gemini with one request each, reporting
+`reachable` / `blocked` / `authentication_failed` / `rate_limited` / `timeout` /
+`not_configured` — a wrong key, an exhausted plan and a blocked network being three different
+problems that look identical in a log which only says "search failed". No credential is ever
+printed, returned or logged; provider error text goes through a redactor first.
 
 It asks each domain for its `robots.txt` — one cheap request each, the file a crawler is supposed
 to read first anyway — and classifies the answer:
@@ -79,6 +97,102 @@ Preflight exits non-zero when outbound HTTPS is blocked, so it works as a deploy
 **A note on proxies:** Node's built-in `fetch` ignores `HTTPS_PROXY` unless `NODE_USE_ENV_PROXY=1`
 is set (Node ≥ 22.21). If your environment requires a proxy for outbound HTTPS, set that variable
 for the worker — preflight says so in its output when it detects the mismatch.
+
+## The provider chain, and what it costs
+
+```
+  registry sitemaps (free)  ─┐
+  Brave search              ─┤  candidates ─▶ URL de-duplication ─▶ robots check ─▶ direct fetch
+  Serper (only if needed)   ─┘                                                          │
+                                                    ┌─────────────────────────────────────┘
+                                                    ▼
+                              schema.org structured data (free, first-hand)
+                                                    │ nothing usable?
+                                                    ▼
+                              deterministic labelled-HTML extraction (free)
+                                                    │ page came back thin, or failed?
+                                                    ▼
+                              Jina hosted reader (capped per run, high-priority pages only)
+                                                    │ still missing something important?
+                                                    ▼
+                              AI fallback (capped, off by default, every value grounded)
+```
+
+Three gates stop this becoming an expensive habit:
+
+**Serper is not called just because it is configured.** Brave goes first — the cheaper plan — and
+Serper runs only when Brave's *measured* yield of strong candidates falls short of what the run
+asked for, or when Brave failed outright. Even then it re-asks only the queries Brave answered
+poorly, and stops as soon as the combined yield is enough. The run reports the decision in words
+(`serperDecision`), so a run that spent nothing on Serper says why.
+
+**Not every page goes through the reader.** Jina is opt-in (`DISCOVERY_JINA_ENABLED=1`) and even
+then is reached only when the direct fetch failed or returned under 500 characters of text — the
+signature of a JavaScript shell — and only for candidates that scored highly enough to be worth a
+paid read. `--max-jina-pages` caps the run, and pages skipped for the cap are counted rather than
+silently dropped. Structured data does not survive markdown, which is another reason this route is
+second and not first: a thin page is still handed to the extractors first, because a page with
+barely any visible text can still carry a complete JSON-LD block.
+
+**The AI fallback is off unless asked for.** `--max-ai-calls` defaults to 0, so a run is free.
+
+Search-discovered hosts are not in the registry, so their `robots.txt` is fetched on demand, once
+per domain, before any page on them is requested. `robotsCheckedOnDemand` counts those, because
+"we obey robots.txt" has to hold for every route into the engine, not just the one that starts
+from a sitemap.
+
+Search queries are a matrix over the platform's own category taxonomy × a country spread covering
+all seven world regions × the target years, with roughly half naming the priority year. The
+countries are an explicit input rather than whatever the index happens to rank, which is what
+stops search discovery quietly becoming a North-America-and-Europe engine.
+
+## Auditing what was found
+
+```bash
+npm run discovery -- audit --sample 20 --out audit.txt
+```
+
+Re-fetches a random sample of stored records from the pages they came from and checks all eleven
+audited fields against what that page says now:
+
+| Verdict | Meaning |
+| --- | --- |
+| `confirmed` | Re-extracting the page today produces exactly the stored value. |
+| `supported` | The stored value appears verbatim in the page, though re-extraction read it differently. |
+| `not_supported` | The page does not contain the stored value — a real error, or a page that changed. |
+| `absent` | The record stores null. Nothing was claimed, so nothing can be wrong. |
+| `unverifiable` | The page could not be re-read. |
+
+`absent` is never counted as an error — a null is the engine working correctly — and is reported
+as *coverage* instead, because a record with eleven nulls is honest and useless. The sample uses
+`RANDOM()` rather than confidence order: auditing the twenty most confident records would flatter
+the engine, which is the opposite of the point. Every row carries its source URL, because this
+produces the evidence for a human audit rather than replacing one.
+
+The audit also flags records that look like test data or bad listings — placeholder titles,
+template markup, non-public URLs, implausible date spans — as neutral indicators worth a look,
+never as accusations about an organiser.
+
+## Running it on Render
+
+The web service should not crawl: a run is minutes of outbound HTTP competing with real users for
+the same event loop. Use a Cron Job (or Background Worker) on the **same repository** and the
+**same Turso database** — `render-discovery-worker.yaml` at the repo root carries both a
+dashboard recipe and an opt-in blueprint.
+
+```
+  ConferenceGate Web Service ──┐
+                               ├── Turso (one database)
+  Discovery Worker (cron) ─────┘
+           │
+           ▼
+     Public internet
+```
+
+`phase1` refuses to start when `TURSO_DATABASE_URL` is unset, because a worker writing to a
+container-local SQLite file produces results the web service cannot see and a deploy then deletes
+— a run that looks like a success and leaves nothing behind. Pass `--allow-local-db` if a
+throwaway run really is what you want.
 
 ## Files
 
@@ -107,6 +221,10 @@ for the worker — preflight says so in its output when it detects the mismatch.
 | `metrics.ts` / `exportCsv.ts` | Metrics, CSV export, quality report. |
 | `publish.ts` | The opt-in bridge into the app's existing `extracted_conferences` table. |
 | `preflight.ts` | Connectivity check: is the network, the site, or nothing in the way? |
+| `providerHealth.ts` | Brave, Serper, Jina, Turso, Gemini: reachable, or exactly why not. Never a key. |
+| `readPage.ts` | The read chain: direct fetch, then the capped hosted-reader fallback. |
+| `jinaFetch.ts` | The hosted-reader route itself, and the markdown-to-HTML conversion. |
+| `audit.ts` | Field-level audit of real records against their real sources. |
 | `router.ts` / `cli.ts` | The Phase 1 interface: an API and a command line. No dashboard. |
 | `providers/` | The sitemap provider, the search adapter, and Phase 2 stubs. |
 
@@ -144,6 +262,7 @@ Every variable is optional; each one missing degrades a capability rather than b
 | `DISCOVERY_USER_AGENT` | Overrides the whole User-Agent string. |
 | `DISCOVERY_PUBLISH_TO_CONFERENCES` | `1` allows publication into `extracted_conferences`. |
 | `DISCOVERY_SEARCH_PROVIDER` | `1` lets discovery use the existing Brave/Serper search integration. |
+| `DISCOVERY_JINA_ENABLED` | `1` allows the hosted reader as a fallback for pages a direct fetch cannot read. |
 | `DISCOVERY_MIN_REQUEST_INTERVAL_MS` | Politeness floor per domain (default 1200). |
 | `DISCOVERY_MAX_CONCURRENT_PER_DOMAIN` | Default 1. |
 | `DISCOVERY_FETCH_TIMEOUT_MS`, `DISCOVERY_FETCH_ATTEMPTS`, `DISCOVERY_RETRY_BASE_MS` | Fetch behaviour. |

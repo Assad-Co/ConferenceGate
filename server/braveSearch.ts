@@ -24,7 +24,7 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — keeps us well within Brave's free 2,000 queries/month quota
 const cache = new Map<string, CacheEntry>();
 
-function isBraveConfigured() {
+export function isBraveConfigured() {
   return !!process.env.BRAVE_SEARCH_API_KEY;
 }
 
@@ -34,8 +34,13 @@ function isConfigured() {
 }
 
 /** Raw Brave results, rate-limit-queued. Throws on any request failure so the caller can decide
- *  whether a fallback provider should answer instead. */
-async function braveSearch(
+ *  whether a fallback provider should answer instead.
+ *
+ *  Exported for the discovery engine, which needs Brave and Serper as separately measurable calls
+ *  so it can decide whether Serper is worth spending at all — `providerSearch` below deliberately
+ *  hides that distinction, because Discover only cares that *someone* answered. Callers here get
+ *  the same rate-limit queue and the same error behaviour; nothing about Discover changes. */
+export async function braveSearch(
   query: string,
   count: number,
   priority: "high" | "low"
@@ -369,7 +374,9 @@ function normalizedHost(link: string, displayLink: string): string {
   }
 }
 
-function isDirectoryHost(host: string): boolean {
+/** Exported for the discovery engine, which needs the same judgement about what is a listing
+ *  site rather than a conference — one list, not two that drift apart. */
+export function isDirectoryHost(host: string): boolean {
   return [...DIRECTORY_DOMAINS].some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 

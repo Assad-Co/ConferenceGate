@@ -1,0 +1,117 @@
+# Render blueprint for the discovery worker — OPT-IN, and deliberately not named render.yaml.
+#
+# Render only treats a file called `render.yaml` at the repository root as a Blueprint. This one
+# is inert until you rename it, which is the point: adopting a Blueprint makes Render manage
+# every service in it, and a Blueprint that declared only the worker could interfere with the web
+# service you already run. Both services are therefore declared here, so renaming this file is
+# safe — but read the two options below before you do, because you probably do not need to.
+#
+#   OPTION A — dashboard, no blueprint (recommended, nothing in this repo changes)
+#     New + → Cron Job → connect this repository
+#       Build command:  npm install
+#       Command:        npm run discovery -- phase1 --out /tmp/phase1 --max-pages 400
+#       Schedule:       0 3 * * 1        (03:00 UTC every Monday)
+#     Add the environment variables listed under the worker below. Done.
+#
+#   OPTION B — this blueprint
+#     Rename this file to render.yaml, adjust the web service's name/branch to match the service
+#     you already have, and sync the Blueprint. Render will then manage both.
+#
+# Why a separate service at all, rather than a route on the web service:
+#
+#   * A crawl is minutes of outbound HTTP. Running it inside the process that serves users
+#     competes with them for the same CPU and the same event loop.
+#   * A worker can be given only the credentials a crawl needs.
+#   * A crawl that hangs or is killed takes nothing user-facing with it.
+#
+# Both services talk to the SAME Turso database. That is what makes this work at all: the worker
+# writes to discovery_* tables and the web service reads them. Do not point the worker at a new
+# database — there would be nothing to read.
+#
+#     ConferenceGate Web Service ──┐
+#                                  ├── Turso (one database)
+#     Discovery Worker (cron) ─────┘
+#              │
+#              ▼
+#        Public internet
+
+services:
+  # ---- The existing user-facing app. Adjust `name` and `branch` to match what you already run.
+  - type: web
+    name: conferencegate
+    runtime: node
+    plan: starter
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # `sync: false` means Render prompts for the value and it is never written into this repo.
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: JINA_API_KEY
+        sync: false
+
+  # ---- The discovery worker. Crawls, extracts, stores. Serves no traffic.
+  - type: cron
+    name: conferencegate-discovery
+    runtime: node
+    plan: starter
+    branch: main
+    # 03:00 UTC on Mondays. Weekly suits Phase 1: conference pages change slowly, the engine
+    # skips anything unchanged, and a weekly cadence keeps provider spend predictable.
+    schedule: "0 3 * * 1"
+    buildCommand: npm install
+    # Phase 1: the full benchmark, so each run leaves behind a preflight, a run summary, a quality
+    # report, a CSV and a field audit. Switch to `run` once the benchmark has been signed off:
+    #   npm run discovery -- run --years 2026,2027,2028 --max-pages 400
+    startCommand: npm run discovery -- phase1 --out /tmp/phase1 --max-pages 400 --sample 20
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # The same database as the web service. Without these the worker writes to a local file
+      # nothing else can see, and `phase1` refuses to run rather than pretend otherwise.
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      # Identifies the crawler to the sites it reads, and gives them somewhere to complain to.
+      # Not a secret.
+      - key: DISCOVERY_CONTACT_EMAIL
+        value: discovery@conferencegate.com
+      # Turns on search-engine discovery. Without it the worker only reads registry sitemaps.
+      - key: DISCOVERY_SEARCH_PROVIDER
+        value: "1"
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      # Turns on the hosted-reader fallback for pages a direct fetch cannot read. Opt-in because
+      # it is a paid route; capped per run by --max-jina-pages regardless.
+      - key: DISCOVERY_JINA_ENABLED
+        value: "1"
+      # Raises the reader's rate limit. It works without a key, just slowly.
+      - key: JINA_API_KEY
+        sync: false
+      # Only needed if you enable the capped AI fallback with --max-ai-calls.
+      - key: GEMINI_API_KEY
+        sync: false
+      # Deliberately absent: DISCOVERY_PUBLISH_TO_CONFERENCES.
+      # Until it is set to "1", discovered conferences stay in the discovery_* tables and reach no
+      # user. Do not add it here until the audit has been reviewed and signed off.
+      # A browser is neither needed nor wanted on the worker: the engine reads HTML directly and
+      # falls back to the hosted reader, so skip the postinstall download entirely.
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "1"

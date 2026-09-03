@@ -16,8 +16,8 @@ import { extractWithAi, needsAiFallback } from "./aiExtract";
 import { classifyCategories } from "./categories";
 import { classifyRelevance } from "./classify";
 import { extractFromHtml, pageText as readablePageText } from "./htmlExtract";
-import { discoveryFetch, hashContent, isHtmlLike, type UrlGuard } from "./httpClient";
-import { readWithJina } from "./jinaFetch";
+import { hashContent, isHtmlLike, setDomainCrawlDelay, type UrlGuard } from "./httpClient";
+import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { canonicalLink, documentTitle, parseHtml } from "./html";
 import { RunLogger } from "./logging";
 import { classifySource, isHighConfidenceOfficial } from "./sourceClassification";
@@ -32,8 +32,9 @@ import {
   normalizeFormat,
   normalizeLocation,
 } from "./normalize";
-import { isPathAllowed, type RobotsPolicy } from "./robots";
+import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
 import { allProviders } from "./providers";
+import { SearchDiscoveryProvider, type SearchAccounting } from "./providers/searchProvider";
 import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
 import { getDomain, newId, recordCrawlSuccess, TRUST_BY_SOURCE_TYPE } from "./sourceRegistry";
 import { eventIdForUrl, getUrlState, queueForReview, recordUrlVisit, rememberUrl, storeEvent, type StoreOutcome } from "./store";
@@ -53,8 +54,11 @@ export interface RunOptions {
   targetYears?: number[];
   /** Registry domains to visit. Empty means "whichever are due". */
   domains?: string[];
-  /** Subject terms, for query-driven providers only. */
+  /** Subject terms, for query-driven providers only. Left empty, the search provider builds its
+   *  own matrix from the platform's category taxonomy and a global country spread. */
   topics?: string[];
+  /** Total search queries the run may spend across Brave and Serper together. */
+  maxSearchQueries?: number;
   maxCandidates?: number;
   /** Candidate pages attempted, including failed and unchanged fetches. The real cost ceiling. */
   maxPages?: number;
@@ -62,6 +66,8 @@ export interface RunOptions {
   timeBudgetMs?: number;
   /** Model calls permitted. 0 (the default) means the run is entirely free. */
   maxAiCalls?: number;
+  /** Hosted-reader calls permitted. Only pages the direct fetch could not read consume these. */
+  maxJinaPages?: number;
   ai?: AiJsonCaller | null;
   /** Let high-confidence records from trusted official sources publish automatically. Off for
    *  Phase 1: everything coherent is validated and held. */
@@ -87,6 +93,22 @@ export interface RunSummary {
   pagesUnchanged: number;
   pagesFailed: number;
   terminalOutcomes: Record<string, number>;
+  /** How each page that was read got read, and how well each route did. */
+  reads: {
+    directPages: number;
+    directUsablePages: number;
+    jinaPages: number;
+    jinaRecoveredPages: number;
+    jinaSkippedForCap: number;
+    /** Pages read by direct fetch that produced an accepted conference. */
+    directExtractionSuccesses: number;
+    /** Same, for pages the hosted reader rescued. */
+    jinaExtractionSuccesses: number;
+  };
+  /** Domains whose robots.txt was fetched on demand because they came from search, not the
+   *  registry — proof that a search-discovered host is checked before it is crawled. */
+  robotsCheckedOnDemand: number;
+  robotsDisallowedUrls: number;
   eventsDetected: number;
   eventsRejected: number;
   created: number;
@@ -102,6 +124,8 @@ export interface RunSummary {
    *  blocked us". */
   egressBlockedDomains: string[];
   providers: Array<{ name: string; enabled: boolean; reason: string | null; candidates: number }>;
+  /** Queries spent and candidates gained, per search engine. Null when search was not used. */
+  search: SearchAccounting | null;
   counters: Record<string, number>;
   /** The accepted events, in memory, so a caller can export a CSV without re-reading the DB. */
   events: NormalizedEvent[];
@@ -173,6 +197,17 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     pagesUnchanged: 0,
     pagesFailed: 0,
     terminalOutcomes: {},
+    reads: {
+      directPages: 0,
+      directUsablePages: 0,
+      jinaPages: 0,
+      jinaRecoveredPages: 0,
+      jinaSkippedForCap: 0,
+      directExtractionSuccesses: 0,
+      jinaExtractionSuccesses: 0,
+    },
+    robotsCheckedOnDemand: 0,
+    robotsDisallowedUrls: 0,
     eventsDetected: 0,
     eventsRejected: 0,
     created: 0,
@@ -185,6 +220,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     skippedDomains: [],
     egressBlockedDomains: [],
     providers: [],
+    search: null,
     counters: {},
     events: [],
     errors: [],
@@ -206,7 +242,15 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       scheme: options.scheme,
       ignoreSchedule: !!options.domains?.length,
     });
-    const providers = [sitemapProvider, ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap")];
+    const searchProvider = new SearchDiscoveryProvider({
+      logger,
+      maxQueries: options.maxSearchQueries ?? 24,
+    });
+    const providers = [
+      sitemapProvider,
+      searchProvider,
+      ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
+    ];
 
     const candidates: DiscoveryCandidate[] = [];
     for (const provider of providers) {
@@ -237,6 +281,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         candidates: produced,
       });
     }
+    if (searchProvider.isEnabled()) summary.search = searchProvider.accounting;
     summary.skippedDomains = sitemapProvider.skipped;
     summary.egressBlockedDomains = sitemapProvider.egressBlocked;
     summary.candidatesDiscovered = candidates.length;
@@ -260,6 +305,30 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
     // ---- Stage 2..8: read, extract, normalize, classify, validate, deduplicate, store.
     const domainTrust = new Map<string, { trust: number; type: SourceType }>();
+    const readBudget: ReadBudget = newReadBudget(options.maxJinaPages ?? 40);
+
+    // Candidates from search land on domains the registry has never heard of, so their robots.txt
+    // has not been read yet. Fetching it lazily, once per domain, is what keeps the "no page is
+    // requested before its site's robots.txt has been read" rule true for every route into the
+    // engine and not just the sitemap one.
+    const robotsByDomain = new Map<string, RobotsPolicy | null>(sitemapProvider.policies);
+    const robotsFor = async (domain: string, origin: string): Promise<RobotsPolicy | null> => {
+      if (robotsByDomain.has(domain)) return robotsByDomain.get(domain) ?? null;
+      const policy = await fetchRobots(origin, { urlGuard: options.urlGuard });
+      summary.robotsCheckedOnDemand += 1;
+      if (policy.error === "blocked_by_local_egress_policy") {
+        if (!summary.egressBlockedDomains.includes(domain)) summary.egressBlockedDomains.push(domain);
+        robotsByDomain.set(domain, null);
+        return null;
+      }
+      setDomainCrawlDelay(domain, policy.crawlDelayMs);
+      logger.log("robots_fetched", {
+        domain,
+        detail: `on demand (search-discovered host); ${policy.rules.length} rules`,
+      });
+      robotsByDomain.set(domain, policy);
+      return policy;
+    };
 
     for (const candidate of candidates) {
       if (options.signal?.aborted) break;
@@ -271,10 +340,24 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       summary.pagesAttempted += 1;
       const terminal = (outcome: string) => { summary.terminalOutcomes[outcome] = (summary.terminalOutcomes[outcome] || 0) + 1; };
-      const policy = sitemapProvider.policies.get(candidate.sourceDomain);
+
+      let origin: string;
+      try {
+        origin = new URL(candidate.url).origin;
+      } catch {
+        continue;
+      }
+      const policy = await robotsFor(candidate.sourceDomain, origin);
+      if (policy?.blanketDisallow) {
+        logger.log("robots_disallowed", { domain: candidate.sourceDomain, url: candidate.url });
+        summary.robotsDisallowedUrls += 1;
+        terminal("robots_disallowed");
+        continue;
+      }
       if (policy && !isPathAllowed(policy, candidate.url)) {
         terminal("robots_disallowed");
         logger.log("url_skipped", { url: candidate.url, detail: "disallowed by robots.txt" });
+        summary.robotsDisallowedUrls += 1;
         continue;
       }
 
@@ -288,11 +371,16 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       const trust = domainTrust.get(candidate.sourceDomain)!;
 
       const previous = await getUrlState(candidate.url);
-      let response = await discoveryFetch(candidate.url, {
+      const read = await readPage(candidate.url, {
         etag: previous?.etag ?? null,
         lastModified: previous?.last_modified ?? null,
         urlGuard: options.urlGuard,
+        budget: readBudget,
+        // The hosted reader is spent only on candidates worth reading twice. A low-priority URL
+        // that came back as an empty shell is simply left unread.
+        allowFallback: candidate.priority >= 0.35,
       });
+      const response = read.direct;
 
       if (response.notModified) {
         summary.pagesUnchanged += 1;
@@ -325,24 +413,20 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         continue;
       }
 
-      let usedJina = false;
-      if ((!response.ok || !response.body || readablePageText(response.body, 2000).length < 500) && process.env.DISCOVERY_JINA_ENABLED === "1") {
+      const usedJina = read.route === "jina";
+      if (read.usedFallback) {
         logger.log("jina_attempted", { url: candidate.url });
-        const jina = await readWithJina(candidate.url);
-        if (jina.ok) {
-          usedJina = true;
-          logger.log("jina_successful", { url: candidate.url });
-          response = { ...response, ok: true, status: 200, body: jina.html, error: null, contentHash: hashContent(jina.html) };
-        } else logger.log("jina_failed", { url: candidate.url, detail: jina.error || "unknown" });
+        if (usedJina) logger.log("jina_successful", { url: candidate.url });
+        else logger.log("jina_failed", { url: candidate.url, detail: read.failureReason || "added nothing" });
       }
 
-      if (!response.ok || !response.body) {
+      if (!read.html) {
         summary.pagesFailed += 1;
         terminal("fetch_failed");
         providerQuality(summary, candidate.provider).fetchFailures += 1;
         logger.log(response.error === "timeout" ? "page_timeout" : "page_failed", {
           url: candidate.url,
-          detail: response.error || `http_${response.status}`,
+          detail: read.failureReason || response.error || `http_${response.status}`,
         });
         await recordUrlVisit({
           url: candidate.url,
@@ -352,7 +436,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
           etag: null,
           lastModified: null,
           contentHash: null,
-          failureReason: response.error,
+          failureReason: read.failureReason || response.error,
           recheckHours: 168,
         });
         continue;
@@ -360,9 +444,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
       summary.pagesFetched += 1;
       providerQuality(summary, candidate.provider).fetched += 1;
-      logger.log("page_fetched", { url: candidate.url });
+      logger.log("page_fetched", { url: candidate.url, method: read.route });
 
-      if (!isHtmlLike(response)) {
+      // A PDF, an image or a feed is not a page we extract from — and not a failure either.
+      // Recorded with a long re-check interval so it is not fetched again any time soon.
+      if (response.ok && !isHtmlLike(response)) {
         terminal("skipped_non_html");
         await recordUrlVisit({
           url: candidate.url,
@@ -378,7 +464,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         continue;
       }
 
-      const contentHash = response.contentHash || hashContent(response.body);
+      const contentHash = response.contentHash || hashContent(read.html);
       const unchangedBody = !!previous?.content_hash && previous.content_hash === contentHash;
       if (unchangedBody && previous?.is_event !== null && previous?.is_event !== undefined) {
         terminal("unchanged_content_hash");
@@ -413,7 +499,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       terminal("fetched_processed");
 
       const outcome = await processPage({
-        html: response.body,
+        html: read.html,
         pageUrl: response.finalUrl || candidate.url,
         candidate,
         contentHash,
@@ -423,11 +509,21 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         summary,
         options,
         maxAiCalls,
-        robotsPolicy: policy,
+        robotsPolicy: policy ?? undefined,
         usedJina,
       });
 
-      if (usedJina && outcome.isEvent) logger.log("jina_recovered_event", { url: candidate.url });
+      // Attribute the accepted conference to the route that actually produced the text, so
+      // "direct-fetch extraction success rate" and "reader recovery rate" are measured, not
+      // estimated.
+      if (outcome.isEvent) {
+        if (usedJina) {
+          summary.reads.jinaExtractionSuccesses += 1;
+          logger.log("jina_recovered_event", { url: candidate.url });
+        } else {
+          summary.reads.directExtractionSuccesses += 1;
+        }
+      }
 
       await recordUrlVisit({
         url: candidate.url,
@@ -442,6 +538,12 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         recheckHours: recheckHoursFor(outcome.isEvent, !unchangedBody),
       });
     }
+
+    summary.reads.directPages = readBudget.directReads;
+    summary.reads.directUsablePages = readBudget.directUsable;
+    summary.reads.jinaPages = readBudget.jinaUsed;
+    summary.reads.jinaRecoveredPages = readBudget.jinaRecovered;
+    summary.reads.jinaSkippedForCap = readBudget.jinaSkippedForCap;
 
     // Only domains we actually reached count as successfully crawled; one we could not get out
     // to must not have its schedule advanced as though it had been read.

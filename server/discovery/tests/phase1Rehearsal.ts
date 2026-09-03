@@ -34,6 +34,7 @@ async function main(): Promise<void> {
   const { upsertDomain } = await import("../sourceRegistry");
   const { runDiscovery } = await import("../pipeline");
   const { configureDomainLimits, resetDomainLimits } = await import("../httpClient");
+  const { auditDiscoveredConferences, formatAuditReport } = await import("../audit");
   const { buildQualityReport, formatQualityReport, writeEventsCsv } = await import("../exportCsv");
   const { publishDiscoveredConferences } = await import("../publish");
 
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
       maxCandidates: 4000,
       timeBudgetMs: 5 * 60 * 1000,
       maxAiCalls: 0, // the whole rehearsal runs without a single model call
+      maxJinaPages: 0, // and without a single call to any third-party service
       scheme: "http",
       urlGuard,
       trigger: "rehearsal",
@@ -85,6 +87,7 @@ async function main(): Promise<void> {
       maxCandidates: 4000,
       timeBudgetMs: 5 * 60 * 1000,
       maxAiCalls: 0,
+      maxJinaPages: 0,
       scheme: "http",
       urlGuard,
       trigger: "rehearsal-rerun",
@@ -95,6 +98,12 @@ async function main(): Promise<void> {
     const csvPath = path.join(outDir, "discovery_test.csv");
     const csv = await writeEventsCsv(csvPath);
     const publishPreview = await publishDiscoveredConferences({ dryRun: true, limit: 500 });
+
+    // The same audit the Render run will produce, exercised against the fixture web so the
+    // command and its report format are proven before they matter.
+    const audit = await auditDiscoveredConferences({ sample: 20, urlGuard, maxJinaPages: 0 });
+    const auditText = formatAuditReport(audit);
+    fs.writeFileSync(path.join(outDir, "field_audit.txt"), `${auditText}\n`, "utf8");
 
     const text = formatQualityReport(report);
     fs.writeFileSync(path.join(outDir, "quality_report.txt"), `${text}\n`, "utf8");
@@ -155,6 +164,8 @@ async function main(): Promise<void> {
     console.log(`CSV:    ${csv.path} (${csv.rows} rows)`);
     console.log(`Report: ${path.join(outDir, "quality_report.txt")}`);
     console.log(`Would publish into extracted_conferences (dry run): ${publishPreview.written}`);
+    console.log("");
+    console.log(auditText);
   } finally {
     await web.stop();
     resetDomainLimits();

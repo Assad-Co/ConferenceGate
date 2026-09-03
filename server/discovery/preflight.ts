@@ -21,6 +21,7 @@
 
 import dns from "dns";
 import { discoveryFetch, DISCOVERY_USER_AGENT } from "./httpClient";
+import { checkAllProviders, type ProviderCheck } from "./providerHealth";
 import { isPathAllowed, parseRobotsTxt } from "./robots";
 import { listDomains } from "./sourceRegistry";
 
@@ -59,6 +60,8 @@ export interface PreflightReport {
     note: string | null;
   };
   probes: PreflightProbe[];
+  /** Brave, Serper, Jina, Turso and Gemini: reachable, or exactly why not. Never a credential. */
+  providers: ProviderCheck[];
   counts: Record<PreflightVerdict, number>;
   /** The one-line answer: can a discovery run do useful work from this machine? */
   outboundHttps: "working" | "partial" | "blocked";
@@ -184,6 +187,8 @@ async function probe(domain: string, scheme: "http" | "https"): Promise<Prefligh
 
 export interface PreflightOptions {
   domains?: string[];
+  /** Skip the provider checks. Each one spends a single unit of that provider's quota. */
+  skipProviders?: boolean;
   /** Use the registry's enabled domains instead of the built-in list. */
   fromRegistry?: boolean;
   scheme?: "http" | "https";
@@ -201,6 +206,8 @@ export async function runPreflight(options: PreflightOptions = {}): Promise<Pref
   for (const domain of domains) {
     probes.push(await probe(domain, options.scheme || "https"));
   }
+
+  const providers = options.skipProviders ? [] : await checkAllProviders();
 
   const counts = probes.reduce(
     (acc, item) => {
@@ -233,6 +240,7 @@ export async function runPreflight(options: PreflightOptions = {}): Promise<Pref
           : null,
     },
     probes,
+    providers,
     counts,
     outboundHttps,
     verdictSummary:
@@ -273,6 +281,17 @@ export function formatPreflightReport(report: PreflightReport): string {
     lines.push(
       `  ${icon[item.verdict]}  ${item.domain.padEnd(20)} ${String(item.httpStatus ?? "—").padStart(4)}  ${String(item.elapsedMs).padStart(6)}ms  ${item.detail}`
     );
+  }
+  if (report.providers.length > 0) {
+    lines.push("");
+    lines.push("Providers");
+    for (const check of report.providers) {
+      lines.push(
+        `  ${check.status.padEnd(22)} ${check.provider.padEnd(20)} ${
+          check.credentialConfigured ? "key set   " : "no key    "
+        } ${String(check.elapsedMs).padStart(6)}ms  ${check.detail}`
+      );
+    }
   }
   lines.push("");
   lines.push(`Outbound HTTPS: ${report.outboundHttps.toUpperCase()}`);

@@ -6,10 +6,11 @@
 
 import type { DiscoveryProvider } from "../types";
 import { SitemapDiscoveryProvider, type SitemapProviderOptions } from "./sitemapProvider";
-import { SearchDiscoveryProvider, type SearchProviderOptions } from "./searchProvider";
+import { SearchDiscoveryProvider, type SearchAccounting, type SearchProviderOptions } from "./searchProvider";
 import { CommonCrawlProvider, OpenAlexProvider } from "./phase2Providers";
 
 export { SitemapDiscoveryProvider, SearchDiscoveryProvider, CommonCrawlProvider, OpenAlexProvider };
+export type { SearchAccounting };
 
 export interface ProviderSetOptions {
   sitemap?: SitemapProviderOptions;
