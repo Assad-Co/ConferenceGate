@@ -359,11 +359,11 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       }
 
       summary.pagesFetched += 1;
-      terminal("fetched_processed");
       providerQuality(summary, candidate.provider).fetched += 1;
       logger.log("page_fetched", { url: candidate.url });
 
       if (!isHtmlLike(response)) {
+        terminal("skipped_non_html");
         await recordUrlVisit({
           url: candidate.url,
           domain: candidate.sourceDomain,
@@ -381,6 +381,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       const contentHash = response.contentHash || hashContent(response.body);
       const unchangedBody = !!previous?.content_hash && previous.content_hash === contentHash;
       if (unchangedBody && previous?.is_event !== null && previous?.is_event !== undefined) {
+        terminal("unchanged_content_hash");
         // Byte-identical to a page already read. Nothing can have changed, so nothing is
         // re-extracted, re-classified or re-deduplicated — but a known event is still marked as
         // seen and verified today, which is the honest record: we looked, and it still says this.
@@ -408,6 +409,8 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         });
         continue;
       }
+
+      terminal("fetched_processed");
 
       const outcome = await processPage({
         html: response.body,
