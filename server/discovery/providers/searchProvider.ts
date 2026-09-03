@@ -208,6 +208,35 @@ function isStrongCandidate(result: LiveSearchResult, host: string, urlScore: num
   return namesEvent && hasYear && urlScore >= 0.35;
 }
 
+const GENERIC_DIRECTORY_TITLE_RE =
+  /\b(?:top|best|all|upcoming|popular|browse|search|find|calendar|directory|list)\b.{0,50}\b(?:conferences?|events?|summits?|congress(?:es)?|symposia)\b|\b\d+\s+(?:conferences?|events?)\b/i;
+const GENERIC_DIRECTORY_PATH_RE = /\/(?:categor(?:y|ies)|search|browse|calendar|topics?|countries|locations?)(?:\/|$)/i;
+const GENERIC_DIRECTORY_SLUG_RE = /^(?:conferences?|events?|summits?|congress(?:es)?|symposia|index|listing|list|all|upcoming)(?:\.[a-z]+)?$/i;
+
+/**
+ * A directory result may enter the official-site resolution path before acceptance only when the
+ * search result itself describes one named, dated event. Generic lists stay low priority and are
+ * never interpreted as an individual conference.
+ */
+export function isEligibleDirectoryLead(result: LiveSearchResult): boolean {
+  const title = result.title.trim();
+  if (!title || GENERIC_DIRECTORY_TITLE_RE.test(title) || /\bconferences\b/i.test(title)) return false;
+  if (!/\b(?:conference|congress|symposium|summit|convention|workshop|forum|expo|meeting)\b/i.test(title)) return false;
+  if (!/\b20\d{2}\b/.test(`${title} ${result.snippet}`)) return false;
+
+  try {
+    const parsed = new URL(result.link);
+    if (GENERIC_DIRECTORY_PATH_RE.test(parsed.pathname)) return false;
+    const slug = parsed.pathname.split("/").filter(Boolean).at(-1) || "";
+    if (!slug || GENERIC_DIRECTORY_SLUG_RE.test(slug)) return false;
+    // A query-backed event-detail endpoint is acceptable only when it actually identifies a row.
+    if (/\.(?:php|aspx?)$/i.test(slug) && !/[?&](?:id|event|eventid|conferenceid)=/i.test(parsed.search)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface SearchProviderOptions {
   logger?: RunLogger;
   enabled?: boolean;
@@ -228,6 +257,9 @@ export interface SearchProviderOptions {
   gapThresholdPerCell?: number;
   /** Known URLs, so "new candidate" means new to the database and not just new to this run. */
   isKnownUrl?: (url: string) => Promise<boolean>;
+  /** Fixture seams; production uses the existing rate-limited clients. */
+  braveClient?: typeof braveSearch;
+  serperClient?: typeof serperSearch;
 }
 
 export class SearchDiscoveryProvider implements DiscoveryProvider {
@@ -273,6 +305,10 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
 
     const metricFor = (provider: string) =>
       (this.metrics[provider] ||= { queriesIssued: 0, rawResults: 0, uniqueUrls: 0, sharedUrls: 0 });
+    // Persist a row for each search provider even when every request fails or yields zero rows.
+    // Configuration, issued/failed-query counts and error_json then tell the truth independently.
+    metricFor("brave");
+    metricFor("serper");
 
     const absorb = (
       results: LiveSearchResult[],
@@ -310,7 +346,8 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
         const { score, reason } = scoreCandidateUrl(result.link, context.targetYears);
         const isStrong = isStrongCandidate(result, host, score);
         const directory = isDirectoryHost(host);
-        if (directory) this.accounting.directoryUrlsDemoted += 1;
+        const eligibleDirectoryLead = directory && isEligibleDirectoryLead(result);
+        if (directory && !eligibleDirectoryLead) this.accounting.directoryUrlsDemoted += 1;
 
         const candidate: DiscoveryCandidate = {
           url: result.link,
@@ -319,16 +356,19 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           // accepted conferences to the engine that actually found them.
           provider,
           priority: directory
-            ? 0.15
+            ? eligibleDirectoryLead ? 0.85 : 0.15
             : Math.min(0.85, score + (isStrong ? 0.2 : 0) + (result.title.includes(String(planItem.year)) ? 0.05 : 0)),
           reason: directory
-            ? `${reason}; listing site, kept at low priority`
+            ? eligibleDirectoryLead
+              ? `${reason}; individual directory event lead queued for official-site resolution`
+              : `${reason}; generic directory/listing page kept at low priority`
             : `${reason}; ${provider} result for ${planItem.subject}/${planItem.country}/${planItem.year}`,
           hints: {
             title: result.title,
             snippet: result.snippet,
             discoveryProviders: [provider],
-            discoveryQuery: planItem.query,
+            discoveryQuery: provider === "serper" ? planItem.serperQuery : planItem.query,
+            directoryLeadEligible: eligibleDirectoryLead,
           },
         };
         seenCanonical.set(canonical, candidate);
@@ -350,7 +390,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           this.accounting.braveQueries += 1;
           const metric = metricFor("brave");
           metric.queriesIssued += 1;
-          const results = await braveSearch(item.query, perQuery, "low");
+          const results = await (this.options.braveClient ?? braveSearch)(item.query, perQuery, "low");
           this.accounting.braveRawResults += results.length;
           metric.rawResults += results.length;
           if (results.length === 0) this.accounting.braveZeroResultQueries += 1;
@@ -430,16 +470,11 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
         });
       for (const item of weakQueries) {
         if (context.signal?.aborted) break;
-        if (candidates.length >= context.maxCandidates) break;
-        if (this.accounting.braveStrongCandidates + this.accounting.serperStrongCandidates >= threshold) {
-          this.accounting.serperDecision += `; stopped early once the combined yield reached ${threshold}`;
-          break;
-        }
         try {
           this.accounting.serperQueries += 1;
           const metric = metricFor("serper");
           metric.queriesIssued += 1;
-          const results = await serperSearch(item.serperQuery, perQuery);
+          const results = await (this.options.serperClient ?? serperSearch)(item.serperQuery, perQuery);
           this.accounting.serperRawResults += results.length;
           metric.rawResults += results.length;
           // serperSearch returns [] when unconfigured and throws on a real failure, so an empty
@@ -478,3 +513,4 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
     return candidates.sort((left, right) => right.priority - left.priority).slice(0, context.maxCandidates);
   }
 }
+
