@@ -10,7 +10,7 @@
 // Deciding *when* to come here is not this module's job — see readPage.ts, which only reaches for
 // it once a direct fetch has failed or come back too thin, and only within a per-run cap.
 
-import { isJinaConfigured, jinaReadPage } from "../jinaReader";
+import { isJinaConfigured, jinaReadPageDetailed } from "../jinaReader";
 
 export interface JinaResult {
   ok: boolean;
@@ -78,8 +78,9 @@ export async function readWithJina(url: string): Promise<JinaResult> {
       error: process.env.DISCOVERY_JINA_ENABLED === "1" ? "reader_disabled" : "disabled",
     };
   }
-  const markdown = await jinaReadPage(url);
-  if (!markdown) return { ok: false, html: "", error: "reader_returned_nothing" };
+  const result = await jinaReadPageDetailed(url);
+  const markdown = result.markdown;
+  if (!markdown) return { ok: false, html: "", error: result.error || "reader_returned_nothing" };
   // Below this the reader has not really read anything either, and saying so is more useful than
   // handing back a document with three words in it.
   if (markdown.trim().length < 200) return { ok: false, html: "", error: "reader_returned_too_little" };
