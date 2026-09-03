@@ -26,35 +26,46 @@ export function hasJinaKey(): boolean {
   return !!process.env.JINA_API_KEY;
 }
 
-/** Reads a page as markdown via Jina's hosted reader. Returns null (never throws) on any failure,
- *  so a caller can simply fall through to the next route in the chain, exactly as it does for the
- *  browser and Firecrawl steps. */
-export async function jinaReadPage(pageUrl: string): Promise<string | null> {
-  if (!isJinaConfigured()) return null;
+export interface JinaReadResult {
+  markdown: string | null;
+  httpStatus: number | null;
+  error: string | null;
+}
+
+/** Diagnostic form used by discovery, where "nothing" must have an actionable reason. */
+export async function jinaReadPageDetailed(pageUrl: string): Promise<JinaReadResult> {
+  if (!isJinaConfigured()) return { markdown: null, httpStatus: null, error: "reader_disabled" };
 
   try {
     const headers: Record<string, string> = {
-      // Ask for the text/markdown form rather than the JSON envelope — it's what gets extracted.
       Accept: "text/plain",
-      // Tells the reader to render client-side content before returning, which is the whole
-      // reason this route exists rather than just refetching the same empty shell.
       "X-Return-Format": "markdown",
     };
-    if (process.env.JINA_API_KEY) {
-      headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`;
-    }
+    if (process.env.JINA_API_KEY) headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`;
 
     const res = await fetch(`https://r.jina.ai/${pageUrl}`, {
       headers,
       signal: AbortSignal.timeout(JINA_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { markdown: null, httpStatus: res.status, error: `reader_http_${res.status}` };
 
     const markdown = (await res.text()).trim();
-    return markdown || null;
-  } catch {
-    // A reader failure must never take down the extraction that asked for it — the caller still
-    // has the browser and Firecrawl routes to try.
-    return null;
+    return markdown
+      ? { markdown, httpStatus: res.status, error: null }
+      : { markdown: null, httpStatus: res.status, error: "reader_returned_nothing" };
+  } catch (error: any) {
+    const message = String(error?.name || error?.message || error);
+    return {
+      markdown: null,
+      httpStatus: null,
+      error: /timeout|abort/i.test(message) ? "reader_timeout" : `reader_transport_error:${message.slice(0, 80)}`,
+    };
   }
+}
+
+/** Reads a page as markdown via Jina's hosted reader. Returns null (never throws) on any failure,
+ *  so a caller can simply fall through to the next route in the chain, exactly as it does for the
+ *  browser and Firecrawl steps. */
+export async function jinaReadPage(pageUrl: string): Promise<string | null> {
+  return (await jinaReadPageDetailed(pageUrl)).markdown;
 }
