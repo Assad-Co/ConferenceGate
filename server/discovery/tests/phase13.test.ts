@@ -187,6 +187,77 @@ test("the priority year gets the larger share of queries, and the others still a
   assert.ok(planned.some((item) => item.year === 2028));
 });
 
+test("Serper receives a free-account-safe query while Brave keeps its precision operators", () => {
+  const [planned] = planSearchQueries({
+    targetYears: [2027],
+    topics: ["Artificial Intelligence"],
+    maxQueries: 1,
+  });
+  assert.match(planned.query, /-"top conferences"/);
+  assert.match(planned.query, /call for papers registration/);
+  assert.equal(planned.serperQuery, "Artificial Intelligence conference 2027 Germany");
+  assert.doesNotMatch(planned.serperQuery, /["+\-]|\b(?:site|inurl|intitle):|\bOR\b/);
+});
+
+test("a refused direct page is handed to Jina and recovered content reaches extraction", async () => {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(403, { "content-type": "text/html" });
+    res.end("Forbidden");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+  const previousFlag = process.env.DISCOVERY_JINA_ENABLED;
+  process.env.DISCOVERY_JINA_ENABLED = "1";
+
+  try {
+    const rescuedHtml = `<html><head><title>Global Water Congress 2027</title></head><body><main>${
+      "Global Water Congress 2027 meets in Berlin, Germany from 12 to 14 May 2027. ".repeat(12)
+    }</main></body></html>`;
+    const read = await readPage(`http://127.0.0.1:${port}/blocked`, {
+      urlGuard: localGuard,
+      budget: newReadBudget(1, 0),
+      jinaReader: async () => ({ ok: true, html: rescuedHtml, error: null }),
+    });
+    assert.equal(read.route, "jina");
+    assert.equal(read.recovered, true);
+    assert.match(read.html, /Global Water Congress 2027/);
+  } finally {
+    if (previousFlag === undefined) delete process.env.DISCOVERY_JINA_ENABLED;
+    else process.env.DISCOVERY_JINA_ENABLED = previousFlag;
+    server.close();
+    resetDomainLimits();
+  }
+});
+
+test("a failed Jina attempt retains its exact reason", async () => {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(429, { "content-type": "text/html" });
+    res.end("Slow down");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+  const previousFlag = process.env.DISCOVERY_JINA_ENABLED;
+  process.env.DISCOVERY_JINA_ENABLED = "1";
+
+  try {
+    const read = await readPage(`http://127.0.0.1:${port}/limited`, {
+      urlGuard: localGuard,
+      budget: newReadBudget(1, 0),
+      jinaReader: async () => ({ ok: false, html: "", error: "reader_http_429" }),
+    });
+    assert.equal(read.route, "none");
+    assert.equal(read.usedFallback, true);
+    assert.equal(read.fallbackFailureReason, "reader_http_429");
+  } finally {
+    if (previousFlag === undefined) delete process.env.DISCOVERY_JINA_ENABLED;
+    else process.env.DISCOVERY_JINA_ENABLED = previousFlag;
+    server.close();
+    resetDomainLimits();
+  }
+});
+
 // ---------------------------------------------------------------------------------------------
 // 4. Directory resolution
 // ---------------------------------------------------------------------------------------------
