@@ -22,6 +22,8 @@ export const DISCOVERY_TABLES = [
   "discovery_event_categories",
   "discovery_series",
   "discovery_event_changes",
+  "discovery_event_field_history",
+  "discovery_enrichment_runs",
   "discovery_review_queue",
 ] as const;
 
@@ -246,6 +248,49 @@ export async function initDiscoverySchema(): Promise<void> {
       detected_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Append-only field history. discovery_event_fields remains the active winning provenance;
+    -- this table preserves both sides whenever Phase 1.4 confirms, supersedes or rejects a
+    -- conflicting value, so an authoritative date correction never erases how we got there.
+    CREATE TABLE IF NOT EXISTS discovery_event_field_history (
+      id TEXT PRIMARY KEY,
+      enrichment_run_id TEXT,
+      event_id TEXT NOT NULL,
+      field TEXT NOT NULL,
+      old_value TEXT,
+      old_source_url TEXT,
+      old_source_classification TEXT,
+      new_value TEXT,
+      new_source_url TEXT NOT NULL,
+      new_source_classification TEXT NOT NULL,
+      decision TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_enrichment_runs (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'running',
+      records_examined INTEGER NOT NULL DEFAULT 0,
+      official_urls_before INTEGER NOT NULL DEFAULT 0,
+      official_urls_after INTEGER NOT NULL DEFAULT 0,
+      verified_countries_before INTEGER NOT NULL DEFAULT 0,
+      verified_countries_after INTEGER NOT NULL DEFAULT 0,
+      verified_dates_before INTEGER NOT NULL DEFAULT 0,
+      verified_dates_after INTEGER NOT NULL DEFAULT 0,
+      organizers_before INTEGER NOT NULL DEFAULT 0,
+      organizers_after INTEGER NOT NULL DEFAULT 0,
+      publish_ready INTEGER NOT NULL DEFAULT 0,
+      needs_enrichment INTEGER NOT NULL DEFAULT 0,
+      needs_review INTEGER NOT NULL DEFAULT 0,
+      conflicts_detected INTEGER NOT NULL DEFAULT 0,
+      conflicts_resolved INTEGER NOT NULL DEFAULT 0,
+      provider_usage TEXT NOT NULL DEFAULT '{}',
+      source_distribution TEXT NOT NULL DEFAULT '{}',
+      errors TEXT NOT NULL DEFAULT '[]',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+
     -- Anything the engine is not confident enough to act on by itself. Nothing is ever deleted
     -- because two titles looked alike; it lands here for a person to decide.
     CREATE TABLE IF NOT EXISTS discovery_review_queue (
@@ -319,6 +364,8 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_event_categories_event ON discovery_event_categories(event_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_categories_cat ON discovery_event_categories(category);
     CREATE INDEX IF NOT EXISTS idx_discovery_event_changes_event ON discovery_event_changes(event_id);
+    CREATE INDEX IF NOT EXISTS idx_discovery_field_history_event ON discovery_event_field_history(event_id);
+    CREATE INDEX IF NOT EXISTS idx_discovery_enrichment_started ON discovery_enrichment_runs(started_at);
     CREATE INDEX IF NOT EXISTS idx_discovery_review_status ON discovery_review_queue(status);
     CREATE INDEX IF NOT EXISTS idx_discovery_domains_next ON discovery_domains(next_crawl_at);
   `);
@@ -340,6 +387,10 @@ export async function initDiscoverySchema(): Promise<void> {
     "ALTER TABLE discovery_urls ADD COLUMN failure_class TEXT",
     // A URL the engine found as a better home for the same conference.
     "ALTER TABLE discovery_urls ADD COLUMN alternate_url TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN publish_readiness TEXT NOT NULL DEFAULT 'needs_enrichment'",
+    "ALTER TABLE discovery_events ADD COLUMN readiness_reasons TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE discovery_events ADD COLUMN official_source_verified_at TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN title_verified_at TEXT",
   ]) {
     try { await db.execute(statement); } catch (error: any) {
       if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
@@ -357,3 +408,4 @@ export async function discoverySchemaReady(): Promise<boolean> {
   const present = new Set(rows.map((r) => r.name));
   return DISCOVERY_TABLES.every((table) => present.has(table));
 }
+
