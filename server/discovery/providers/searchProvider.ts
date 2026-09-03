@@ -120,7 +120,10 @@ function subjectPhrases(): string[] {
 const EVENT_WORDS = ["conference", "congress", "symposium", "summit"];
 
 export interface PlannedQuery {
+  /** Brave supports advanced operators and keeps the precision-oriented form. */
   query: string;
+  /** Serper free accounts accept a plain keyword query, without quoted negatives/operators. */
+  serperQuery: string;
   subject: string;
   country: string;
   region: string;
@@ -181,7 +184,8 @@ export function planSearchQueries(context: {
     // Intent words bias towards a conference's own site; the negatives keep roundups and
     // directory pages out of results we are paying for.
     const query = `${subject} ${eventWord} ${year} ${country} call for papers registration -"top conferences" -"list of conferences" -"upcoming conferences"`;
-    planned.push({ query, subject, country, region, year });
+    const serperQuery = `${subject} ${eventWord} ${year} ${country}`;
+    planned.push({ query, serperQuery, subject, country, region, year });
   }
 
   return planned;
@@ -435,7 +439,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           this.accounting.serperQueries += 1;
           const metric = metricFor("serper");
           metric.queriesIssued += 1;
-          const results = await serperSearch(item.query, perQuery);
+          const results = await serperSearch(item.serperQuery, perQuery);
           this.accounting.serperRawResults += results.length;
           metric.rawResults += results.length;
           // serperSearch returns [] when unconfigured and throws on a real failure, so an empty
@@ -445,7 +449,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           const { added, strong } = absorb(results, "serper", item);
           this.accounting.serperCandidates += added;
           this.accounting.serperStrongCandidates += strong;
-          this.accounting.queriesExecuted.push({ provider: "serper", query: item.query, results: results.length, strong });
+          this.accounting.queriesExecuted.push({ provider: "serper", query: item.serperQuery, results: results.length, strong });
           this.options.logger?.log("search_results", {
             detail: `serper: ${item.subject} / ${item.country} / ${item.year}`,
             count: added,
