@@ -37,6 +37,8 @@ export interface PageRead {
   textLength: number;
   /** True when the direct fetch alone was too thin and the reader was tried. */
   usedFallback: boolean;
+  /** Why a hosted-reader attempt failed, kept separately from the direct-fetch failure. */
+  fallbackFailureReason: string | null;
   /** True when the fallback actually rescued a page the direct fetch could not deliver. */
   recovered: boolean;
   failureReason: string | null;
@@ -98,15 +100,20 @@ export { markdownToDocument } from "./jinaFetch";
  */
 export async function readPage(
   url: string,
-  options: FetchOptions & { budget: ReadBudget; allowFallback?: boolean } = { budget: newReadBudget(0) }
+  options: FetchOptions & {
+    budget: ReadBudget;
+    allowFallback?: boolean;
+    /** Test seam proving the cascade without reaching a third-party service. */
+    jinaReader?: typeof readWithJina;
+  } = { budget: newReadBudget(0) }
 ): Promise<PageRead> {
-  const { budget, allowFallback = true, ...fetchOptions } = options;
+  const { budget, allowFallback = true, jinaReader = readWithJina, ...fetchOptions } = options;
   const direct = await discoveryFetch(url, fetchOptions);
 
   if (direct.notModified) {
     return {
       route: "direct", html: "", direct, textLength: 0, usedFallback: false,
-      recovered: false, failureReason: null, failureClass: null, resolvedUrl: null,
+      recovered: false, failureReason: null, fallbackFailureReason: null, failureClass: null, resolvedUrl: null,
     };
   }
 
@@ -118,7 +125,7 @@ export async function readPage(
     budget.directUsable += 1;
     return {
       route: "direct", html: direct.body, direct, textLength: directText.length,
-      usedFallback: false, recovered: false, failureReason: null, failureClass: null, resolvedUrl: null,
+      usedFallback: false, recovered: false, failureReason: null, fallbackFailureReason: null, failureClass: null, resolvedUrl: null,
     };
   }
 
@@ -135,14 +142,17 @@ export async function readPage(
   budget.failureClasses[failureClass] = (budget.failureClasses[failureClass] || 0) + 1;
   const policy = failurePolicy(failureClass);
 
+  let jinaAttempted = false;
+  let jinaFailureReason: string | null = null;
   const asDirect = (reason: string | null): PageRead => ({
     route: directUsable ? "direct" : "none",
     html: directUsable ? direct.body : "",
     direct,
     textLength: directText.length,
-    usedFallback: false,
+    usedFallback: jinaAttempted,
     recovered: false,
     failureReason: directUsable ? null : reason,
+    fallbackFailureReason: jinaFailureReason,
     failureClass,
     resolvedUrl: null,
   });
@@ -162,16 +172,20 @@ export async function readPage(
   } else if (worthReader) {
     budget.jinaRemaining -= 1;
     budget.jinaUsed += 1;
-    const jina = await readWithJina(url);
+    jinaAttempted = true;
+    const jina = await jinaReader(url);
     if (jina.ok) {
       const text = pageText(jina.html, 30000);
       if (text.length >= MIN_EXTRACTABLE_TEXT_CHARS || text.length > directText.length) {
         budget.jinaRecovered += 1;
         return {
           route: "jina", html: jina.html, direct, textLength: text.length,
-          usedFallback: true, recovered: true, failureReason: null, failureClass, resolvedUrl: null,
+          usedFallback: true, recovered: true, failureReason: null, fallbackFailureReason: null, failureClass, resolvedUrl: null,
         };
       }
+      jinaFailureReason = "reader_returned_too_little_for_extraction";
+    } else {
+      jinaFailureReason = jina.error || "reader_returned_nothing";
     }
   }
 
@@ -198,6 +212,7 @@ export async function readPage(
         usedFallback: true,
         recovered: true,
         failureReason: null,
+        fallbackFailureReason: jinaFailureReason,
         failureClass,
         resolvedUrl: retry.finalUrl || alternate.url,
       };
