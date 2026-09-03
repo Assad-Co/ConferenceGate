@@ -28,6 +28,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
   readonly kind = "search" as const;
   readonly rateLimit = { requestsPerMinute: 30, maxConcurrent: 1 };
   readonly baseConfidence = 0.45;
+  readonly metrics: Record<string, { queriesIssued: number; rawResults: number; uniqueUrls: number; sharedUrls: number }> = {};
 
   constructor(private readonly options: SearchProviderOptions = {}) {}
 
@@ -69,11 +70,17 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
 
     const candidates: DiscoveryCandidate[] = [];
     const seen = new Set<string>();
-    for (const query of queries) {
+    queryLoop: for (const query of queries) {
       if (context.signal?.aborted) break;
       const results = await searchWebForConferenceFactsByProvider(query, perQuery);
       const counts = results.reduce<Record<string, number>>((a, r) => { const p = r.discoveryProvider || "unknown"; a[p] = (a[p] || 0) + 1; return a; }, {});
-      for (const [provider, count] of Object.entries(counts)) this.options.logger?.log("search_results", { detail: `${provider}: ${query}`, count });
+      for (const provider of ["brave", "serper"]) {
+        if (!counts[provider]) continue;
+        const metric = this.metrics[provider] ||= { queriesIssued: 0, rawResults: 0, uniqueUrls: 0, sharedUrls: 0 };
+        metric.queriesIssued += 1;
+        metric.rawResults += counts[provider];
+        this.options.logger?.log("search_results", { detail: `${provider}: ${query}`, count: counts[provider] });
+      }
       for (const result of results) {
         if (!result.link) continue;
         if (seen.has(result.link)) {
@@ -103,10 +110,13 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
           reason: `${reason}; web search result for "${query}"`,
           hints: { title: result.title, snippet: result.snippet, discoveryProviders: [result.discoveryProvider || "unknown"], discoveryQuery: query },
         });
-        if (candidates.length >= context.maxCandidates) return candidates;
+        if (candidates.length >= context.maxCandidates) break queryLoop;
       }
+    }
+    for (const provider of Object.keys(this.metrics)) {
+      this.metrics[provider].uniqueUrls = candidates.filter((candidate) => candidate.hints?.discoveryProviders?.includes(provider)).length;
+      this.metrics[provider].sharedUrls = candidates.filter((candidate) => (candidate.hints?.discoveryProviders?.length || 0) > 1 && candidate.hints?.discoveryProviders?.includes(provider)).length;
     }
     return candidates;
   }
 }
-
