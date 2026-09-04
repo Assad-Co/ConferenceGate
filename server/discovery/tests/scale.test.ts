@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { GENERIC_EVENT_PAGE_RE } from "../controlledPublish";
-import { topicsForBatch } from "../scale";
+import { assertScalePublishingDisabled, topicsForBatch } from "../scale";
 
 test("generic collection pages are blocked while individual event pages beneath them remain eligible", () => {
   assert.equal(GENERIC_EVENT_PAGE_RE.test(new URL("https://example.org/events").pathname), true);
@@ -17,3 +17,9 @@ test("successive production batches rotate through the category taxonomy", () =>
   assert.notDeepEqual(first, second);
   assert.equal(new Set([...first, ...second]).size, 12);
 });
+
+test("production scale fails closed when publishing is enabled", () => {
+  assert.doesNotThrow(() => assertScalePublishingDisabled(false));
+  assert.throws(() => assertScalePublishingDisabled(true), /Refusing inventory scaling while/);
+});
+

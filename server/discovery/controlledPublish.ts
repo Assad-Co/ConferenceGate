@@ -7,7 +7,7 @@ import { auditDiscoveredConferences, type AuditReport } from "./audit";
 import { isDirectoryHost } from "../braveSearch";
 import type { UrlGuard } from "./httpClient";
 import { canonicalizeUrl, normalizeNavigableUrl } from "./normalize";
-import { isEligibleOfficialSource } from "./sourceClassification";
+import { isEligibleOfficialSource, sourceAuthorityBlockReasons } from "./sourceClassification";
 
 export const GENERIC_EVENT_PAGE_RE = /\/(?:conferences?|events?|calendar|search|countries?|topics?|listing|browse)\/?$|\/(?:categor(?:y|ies)|country-listing|topic-listing)(?:\/|$)/i;
 
@@ -54,7 +54,10 @@ export async function auditPublishReady(options: { sample?: number; urlGuard?: U
     if (!record.pageReadable) reasons.push("official_page_unreadable");
     if (!row || row.publish_readiness !== "publish_ready") reasons.push("not_publish_ready");
     if (!officialVerified || !url || isDirectoryHost(host(url))) reasons.push("official_source_not_verified");
-    try { if (GENERIC_EVENT_PAGE_RE.test(new URL(url).pathname)) reasons.push("generic_page_url"); } catch { reasons.push("invalid_official_url"); }
+    try {
+      if (GENERIC_EVENT_PAGE_RE.test(new URL(url).pathname)) reasons.push("generic_page_url");
+      reasons.push(...sourceAuthorityBlockReasons({ pageUrl: url, title: row?.title, organizerUrl: row?.organizer_url }));
+    } catch { reasons.push("invalid_official_url"); }
     if (row?.open_review) reasons.push("open_review");
     const readinessReasons = (() => { try { return JSON.parse(row?.readiness_reasons || "[]"); } catch { return ["malformed_readiness_reasons"]; } })();
     if (readinessReasons.length) reasons.push("unresolved_readiness_reason");
@@ -86,3 +89,4 @@ export async function latestPassingPublicationAudit(): Promise<{ id: string; cre
   return dbGet(`SELECT id,created_at FROM discovery_publication_audits WHERE passed=1 AND sample_size>=10
     AND created_at >= datetime('now','-30 days') ORDER BY created_at DESC LIMIT 1`);
 }
+

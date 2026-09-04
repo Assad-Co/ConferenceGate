@@ -7,7 +7,7 @@ import { updateReadiness } from "./enrichment";
 import { canonicalizeUrl, normalizeNavigableUrl } from "./normalize";
 import {
   classifySource, isEligibleOfficialSource, sourceAuthorityBlockReasons,
-  type SourceClassification,
+  titleEvidenceScore, type SourceClassification,
 } from "./sourceClassification";
 import { getDomain } from "./sourceRegistry";
 import type { PublishReadiness } from "./types";
@@ -94,6 +94,7 @@ async function assess(event: EventRow, source: SourceRow): Promise<AssessedSourc
   const registry = await getDomain(host(url));
   const blockers = sourceAuthorityBlockReasons({ pageUrl: url, title: event.title,
     organizerUrl: raw.organizerUrl || event.organizer_url, registryType: registry?.source_type });
+  if (raw.title && titleEvidenceScore(event.title, raw.title) < 0.55) blockers.push("stored_title_not_supported");
   const recomputed = classifySource({ pageUrl: url, officialUrl: raw.officialUrl,
     organizerUrl: raw.organizerUrl || event.organizer_url, title: event.title, organizer: event.organizer,
     pageText: [raw.title, raw.description, source.classification_evidence].filter(Boolean).join(" "),
@@ -181,6 +182,9 @@ export async function runUrlRemediation(options: { limit?: number; eventIds?: st
       if (oldBlockers.includes("third_party_calendar") && (changed || !replacement)) calendars += 1;
       await dbRun(`UPDATE discovery_events SET official_url=?,official_source_verified_at=? WHERE id=?`,
         [newUrl, replacement ? (event.official_source_verified_at || new Date().toISOString()) : null, event.id]);
+      if (!replacement || oldBlockers.includes("stored_title_not_supported") || oldBlockers.includes("malformed_event_title")) {
+        await dbRun(`UPDATE discovery_events SET title_verified_at=NULL WHERE id=?`, [event.id]);
+      }
       if (replacement) {
         await dbRun(`INSERT INTO discovery_event_fields (id,event_id,field,value,source_url,source_domain,extraction_method,confidence,last_verified)
           VALUES (?,?,?,?,?,?,?, ?,datetime('now')) ON CONFLICT(event_id,field) DO UPDATE SET value=excluded.value,
@@ -212,3 +216,4 @@ export async function runUrlRemediation(options: { limit?: number; eventIds?: st
     throw error;
   }
 }
+

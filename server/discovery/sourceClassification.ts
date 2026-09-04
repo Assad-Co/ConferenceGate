@@ -1,4 +1,5 @@
 import type { SourceType } from "./types";
+import { normalizeTitle } from "./normalize";
 
 export const SOURCE_CLASSIFICATIONS = [
   "official_event_site", "organizer_site", "society_site", "university_host_site",
@@ -6,11 +7,12 @@ export const SOURCE_CLASSIFICATIONS = [
 ] as const;
 export type SourceClassification = (typeof SOURCE_CLASSIFICATIONS)[number];
 
-const DIRECTORY_HOST = /(?:conferencealert|conferenceindex|allconferencealert|internationalconferencealerts|conferencealerts|10times|eventbrite|waset|mainevent)\./i;
+const DIRECTORY_HOST = /(?:conferencealert|conferenceindex|allconferencealert|internationalconferencealerts|conferencealerts|conferencesked|10times|eventbrite|waset|mainevent)\./i;
 const NEWS_PATH = /\/(?:news|article|blog|press|media)(?:\/|$)/i;
 const EVENT_NAV = /\b(?:registration|register|programme|program|agenda|call for papers|submit|venue|speakers?)\b/gi;
 const GENERIC_PATH = /\/(?:search|browse|listing|listings|categor(?:y|ies)|topics?|countries?|all-events?|all-conferences?|conference-list|event-list)(?:\/|$)/i;
 const GENERIC_END_PATH = /\/(?:conferences|events|calendar|event-calendar|conference-calendar)\/?$/i;
+const GENERIC_NESTED_PATH = /\/(?:conferences?|events?)\/[^/?#]*(?:conferences|events)(?:[-_/]|$)|\/(?:calendar[-_]?of[-_]?)?(?:conferences|events)(?:[-_](?:in|by|for|20\d\d)\b)/i;
 const CALENDAR_PATH = /\/(?:[^/?#]*[-_])?(?:events?|conferences?)[-_]?calendar(?:\/|$)|\/(?:calendar)(?:\/|$)/i;
 const GENERIC_TITLE = /\b(?:top|best|upcoming|must[- ]attend)\b.{0,60}\bconferences?\b|\bconferences?\b.{0,60}\b(?:radar|list|roundup|calendar)\b|\blist of\b.{0,40}\bconferences?\b/i;
 const TRUSTED_OWNER_TYPES = new Set<SourceType>([
@@ -18,6 +20,34 @@ const TRUSTED_OWNER_TYPES = new Set<SourceType>([
   "scientific_organization", "medical_society", "engineering_society",
   "professional_association", "university",
 ]);
+
+/** A title that is itself a URL/path is extraction debris, never verified event identity. */
+export function isPlausibleEventTitle(value: string | null | undefined): boolean {
+  const title = String(value || "").trim();
+  if (title.length < 4 || title.length > 300) return false;
+  if (/^(?:https?:\/\/|www\.)\S+$/i.test(title)) return false;
+  if (/^[a-z0-9.-]+\.(?:com|org|net|info|io|edu|gov)(?:\/\S*)?$/i.test(title)) return false;
+  const tokens = normalizeTitle(title).split(/\s+/).filter(Boolean);
+  return tokens.length >= 2 || (tokens.length === 1 && /^[a-z][a-z0-9-]{3,}$/i.test(tokens[0]));
+}
+
+/**
+ * Symmetric Jaccard alone unfairly rejects an authoritative short title when the stored title
+ * merely has a publisher/organisation suffix. This score also accepts strong containment, but
+ * only after both sides have at least two meaningful title tokens.
+ */
+export function titleEvidenceScore(stored: string | null | undefined, evidence: string | null | undefined): number {
+  if (!isPlausibleEventTitle(stored) || !isPlausibleEventTitle(evidence)) return 0;
+  const a = new Set(normalizeTitle(String(stored)).split(/\s+/).filter(Boolean));
+  const b = new Set(normalizeTitle(String(evidence)).split(/\s+/).filter(Boolean));
+  let shared = 0;
+  for (const token of a) if (b.has(token)) shared += 1;
+  if (shared === 1 && a.size === 1 && b.size === 1) return 1;
+  if (shared < 2) return 0;
+  const jaccard = shared / (a.size + b.size - shared);
+  const containment = shared / Math.min(a.size, b.size);
+  return Math.max(jaccard, containment);
+}
 
 export function isAbsoluteHttpUrl(value: string | null | undefined): boolean {
   try { const url = new URL(value || ""); return url.protocol === "https:" || url.protocol === "http:"; }
@@ -34,7 +64,8 @@ export function sourceAuthorityBlockReasons(input: {
   const reasons: string[] = [];
   if (DIRECTORY_HOST.test(host) || input.registryType === "conference_directory") reasons.push("directory_source");
   if (NEWS_PATH.test(url.pathname)) reasons.push("article_or_news_page");
-  if (GENERIC_PATH.test(url.pathname) || GENERIC_END_PATH.test(url.pathname)) reasons.push("generic_collection_page");
+  if (GENERIC_PATH.test(url.pathname) || GENERIC_END_PATH.test(url.pathname) || GENERIC_NESTED_PATH.test(url.pathname)) reasons.push("generic_collection_page");
+  if (!isPlausibleEventTitle(input.title)) reasons.push("malformed_event_title");
   if (GENERIC_TITLE.test(input.title || "")) reasons.push("roundup_or_list_title");
   if (CALENDAR_PATH.test(url.pathname) && !organizerOwned) reasons.push("third_party_calendar");
   return [...new Set(reasons)];
@@ -87,3 +118,4 @@ export function isEligibleOfficialSource(input: {
 }): boolean {
   return isHighConfidenceOfficial(input.classification, input.confidence) && sourceAuthorityBlockReasons(input).length === 0;
 }
+

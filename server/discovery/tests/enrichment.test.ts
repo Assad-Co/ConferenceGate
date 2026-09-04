@@ -9,7 +9,10 @@ import { classifyPublishReadiness, decideEvidence } from "../enrichment";
 import { dbAll } from "../../db";
 import { initDiscoverySchema } from "../schema";
 import { canonicalizeUrl, normalizeNavigableUrl } from "../normalize";
-import { classifySource, isEligibleOfficialSource, sourceAuthorityBlockReasons } from "../sourceClassification";
+import {
+  classifySource, isEligibleOfficialSource, isPlausibleEventTitle,
+  sourceAuthorityBlockReasons, titleEvidenceScore,
+} from "../sourceClassification";
 
 const execFileAsync = promisify(execFile);
 
@@ -127,6 +130,17 @@ test("structural authority rules reject directories, roundups, generic collectio
     assert.ok(sourceAuthorityBlockReasons({ pageUrl: url, title: "Science Conference" }).includes("generic_collection_page"));
   }
   assert.ok(sourceAuthorityBlockReasons({ pageUrl: "https://vendor.example/events-calendar/real-conference-2028", title: "Real Conference 2028" }).includes("third_party_calendar"));
+  assert.ok(sourceAuthorityBlockReasons({ pageUrl: "https://example.test/calendar-of-conferences-in-australia", title: "Calendar of conferences in Australia and New Zealand" }).includes("generic_collection_page"));
+  assert.ok(sourceAuthorityBlockReasons({ pageUrl: "https://conferencesked.com/conferences/ai-conferences-2027", title: "AI conferences 2027" }).includes("directory_source"));
+  assert.ok(sourceAuthorityBlockReasons({ pageUrl: "https://example.test/events", title: "https://example.test/events" }).includes("malformed_event_title"));
+});
+
+test("title evidence permits an authoritative short title but rejects unrelated or URL-shaped titles", () => {
+  assert.equal(isPlausibleEventTitle("conferencesked.com/conferences/ai-conferences-2027"), false);
+  assert.equal(isPlausibleEventTitle("CPEEE 2026"), true);
+  assert.equal(titleEvidenceScore("CPEEE 2026", "CPEEE 2026"), 1);
+  assert.equal(titleEvidenceScore("2027 Ocean Decade Conference — GEO Blue Planet", "2027 Ocean Decade Conference"), 1);
+  assert.equal(titleEvidenceScore("Australian Energy Week 2027", "International Dental Congress 2027"), 0);
 });
 
 test("a valid organizer-owned individual conference URL remains eligible", () => {
@@ -142,7 +156,8 @@ test("URL remediation restores authoritative provenance, preserves history, and 
   const database = path.join(root, "scenario.sqlite");
   try {
     const { stdout } = await execFileAsync(process.execPath,
-      ["--import", "tsx", "server/discovery/tests/remediationScenario.ts"], {
+      ["--import", "data:text/javascript,if(!process.geteuid)process.geteuid=()=>0",
+        "--import", "tsx", "server/discovery/tests/remediationScenario.ts"], {
         cwd: process.cwd(), env: { ...process.env, NODE_ENV: "test", TEST_DATABASE_PATH: database,
           TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "", DISCOVERY_PUBLISH_TO_CONFERENCES: "0" },
       });
@@ -151,3 +166,4 @@ test("URL remediation restores authoritative provenance, preserves history, and 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+

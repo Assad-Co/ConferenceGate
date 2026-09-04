@@ -7,7 +7,7 @@ import { CATEGORY_RULES } from "./categories";
 import { runEnrichment } from "./enrichment";
 import { buildInventoryReport, type InventoryReport } from "./inventory";
 import { runDiscovery, type RunSummary } from "./pipeline";
-import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
+import { isPublishEnabled } from "./publish";
 
 const id = (prefix: string) => `${prefix}_${crypto.randomUUID().replace(/-/g, "")}`;
 async function acceptedCount(): Promise<number> {
@@ -27,7 +27,14 @@ export function topicsForBatch(batchNumber: number, width = 6): string[] {
   return Array.from({ length: Math.min(width, topics.length) }, (_, index) => topics[(start + index) % topics.length]);
 }
 
+export function assertScalePublishingDisabled(publishingEnabled = isPublishEnabled()): void {
+  if (publishingEnabled) {
+    throw new Error("Refusing inventory scaling while DISCOVERY_PUBLISH_TO_CONFERENCES is enabled.");
+  }
+}
+
 export async function runProductionScale(options: ScaleOptions = {}): Promise<ScaleResult> {
+  assertScalePublishingDisabled();
   const target = Math.max(1_000, options.targetAccepted ?? 1_000);
   const pages = Math.max(100, Math.min(options.batchPages ?? 500, 1_000));
   let scale = await dbGet<Record<string, any>>(`SELECT * FROM discovery_scale_runs WHERE status IN ('running','paused')
@@ -70,16 +77,12 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
       const enrichment = await runEnrichment({ runId: discovery.runId, limit: 2_000,
         maxJinaPages: options.maxJinaPages ?? 150, maxSearchQueries: options.maxSearchQueries ?? 48,
         timeBudgetMs: options.batchTimeBudgetMs ?? 30 * 60_000, quiet: options.quiet });
-      let published = 0;
-      if (isPublishEnabled()) {
-        published = (await publishDiscoveredConferences({ runId: discovery.runId, limit: 2_000 })).written;
-      }
       const after = await acceptedCount();
       noGrowth = after > before ? 0 : noGrowth + 1;
-      const metrics = { discovery: { ...discovery, events: undefined }, enrichment };
+      const metrics = { discovery: { ...discovery, events: undefined }, enrichment, publishingEnabled: false };
       await dbRun(`UPDATE discovery_scale_batches SET status='completed',discovery_run_id=?,enrichment_run_id=?,
         accepted_after=?,published=?,metrics=?,finished_at=datetime('now') WHERE id=?`,
-        [discovery.runId, enrichment.runId, after, published, JSON.stringify(metrics), batchId]);
+        [discovery.runId, enrichment.runId, after, 0, JSON.stringify(metrics), batchId]);
       batchNumber += 1; batches += 1;
       await dbRun(`UPDATE discovery_scale_runs SET next_batch=?,updated_at=datetime('now') WHERE id=?`, [batchNumber, scaleRunId]);
       if (after >= target) { stopReason = "target_reached"; break; }
@@ -97,3 +100,4 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
     [status, report.totalAccepted, stopReason, JSON.stringify(report), status, scaleRunId]);
   return { scaleRunId, status, stopReason, batches, report };
 }
+

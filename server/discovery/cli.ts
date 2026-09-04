@@ -113,7 +113,7 @@ const HELP = `Conference Gate — discovery engine
   scale    [--target 1000] [--batch-pages 500] [--max-batches 50]
            [--batch-time-budget-ms 1800000] [--max-search-queries 48]
                             Resume bounded production batches through discovery, run-scoped
-                            enrichment and audit-gated publication. AI remains disabled.
+                            enrichment, with AI and publication disabled.
   providers                 Show which discovery providers are available and why.
 `;
 
@@ -441,9 +441,9 @@ async function main(): Promise<void> {
 
     case "scale": {
       if (!process.env.TURSO_DATABASE_URL) throw new Error("Refusing scale run without durable TURSO_DATABASE_URL.");
-      if (!isPublishEnabled()) throw new Error(
-        "Refusing scale orchestration unless controlled publication is enabled for this process. " +
-        "Set DISCOVERY_PUBLISH_TO_CONFERENCES=1 after a passing publish-audit."
+      if (isPublishEnabled()) throw new Error(
+        "Refusing scale orchestration while publishing is enabled. " +
+        "Set DISCOVERY_PUBLISH_TO_CONFERENCES=0 for inventory growth."
       );
       const result = await runProductionScale({
         targetAccepted: numberFlag(flags.target, 1_000),
@@ -481,3 +481,4 @@ main()
     console.error(error?.stack || error?.message || error);
     process.exit(1);
   });
+

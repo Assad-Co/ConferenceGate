@@ -8,11 +8,11 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { isSerperConfigured, serperSearch } from "../serperSearch";
 import { titleSimilarity } from "./dedupe";
 import { extractFromHtml } from "./htmlExtract";
-import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl } from "./normalize";
+import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl, normalizeTitle } from "./normalize";
 import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
-import { classifySource, isEligibleOfficialSource, type SourceClassification } from "./sourceClassification";
+import { classifySource, isEligibleOfficialSource, titleEvidenceScore, type SourceClassification } from "./sourceClassification";
 import { getDomain, normalizeDomain } from "./sourceRegistry";
 import { extractStructuredEvents } from "./structuredData";
 import type { PublishReadiness, RawEventExtraction } from "./types";
@@ -23,6 +23,7 @@ const AUTHORITATIVE_CLASSES = new Set<SourceClassification>([
   "official_event_site", "organizer_site", "society_site", "university_host_site",
 ]);
 const ENRICHABLE_FIELDS = {
+  title: "title",
   official_url: "officialUrl",
   organizer: "organizer",
   start_date: "startDate",
@@ -222,6 +223,11 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
         conflictsDetected += applied.detected;
         conflictsResolved += applied.resolved;
         unresolvedConflict = applied.unresolved > 0;
+      } else if (event.publish_readiness === "publish_ready") {
+        // A readiness re-check that cannot reproduce title and source authority must fail closed.
+        // The record remains accepted and keeps all provenance; only the two current verification
+        // attestations are withdrawn so it is deterministically downgraded for later enrichment.
+        await dbRun(`UPDATE discovery_events SET title_verified_at=NULL,official_source_verified_at=NULL WHERE id=?`, [event.id]);
       }
       await updateReadiness(event.id, unresolvedConflict);
     }
@@ -306,7 +312,7 @@ async function readAllowed(url: string, budget: ReadBudget, robots: Map<string, 
   return read;
 }
 
-async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>, guard?: UrlGuard, provider = "existing_source"): Promise<VerifiedPage | null> {
+async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>, guard?: UrlGuard, provider = "existing_source", followDeclaredOfficial = true): Promise<VerifiedPage | null> {
   if (!url || isDirectoryHost(host(url))) return null;
   const read = await readAllowed(url, budget, robots, metrics, guard);
   if (!read) return null;
@@ -314,11 +320,19 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
   const structured = extractStructuredEvents(read.html, finalUrl);
   const structuredMatch = structured.events
     .filter((raw) => !!raw.title)
-    .sort((a, b) => titleSimilarity(b.title!, event.title) - titleSimilarity(a.title!, event.title))[0] || null;
-  const seed = structuredMatch && titleSimilarity(structuredMatch.title!, event.title) >= 0.55 ? structuredMatch : null;
+    .sort((a, b) => titleEvidenceScore(event.title, b.title!) - titleEvidenceScore(event.title, a.title!))[0] || null;
+  const seed = structuredMatch && titleEvidenceScore(event.title, structuredMatch.title!) >= 0.55 ? structuredMatch : null;
   const raw = extractFromHtml(read.html, finalUrl, { seed });
-  const identityScore = raw.title ? titleSimilarity(raw.title, event.title) : 0;
+  const identityScore = raw.title ? titleEvidenceScore(event.title, raw.title) : 0;
   if (!raw.title || identityScore < 0.55) return null;
+  const declaredOfficial = normalizeNavigableUrl(raw.officialUrl);
+  if (followDeclaredOfficial && declaredOfficial && host(declaredOfficial) !== host(finalUrl)) {
+    // A page that explicitly hands the event off to another domain is a lead, not the final
+    // authority. Replace the stale/third-party URL only after independently reading and matching
+    // the declared page; if that verification fails, retain neither claim as publish-ready.
+    if (isDirectoryHost(host(declaredOfficial))) return null;
+    return verifyPage(event, declaredOfficial, budget, robots, metrics, guard, "declared_official_handoff", false);
+  }
   const storedYear = Number(event.start_year || 0);
   const extractedYear = normalizeDates(raw).startYear;
   const sameKnownOfficial = [event.official_url, event.source_url]
@@ -368,6 +382,7 @@ function extractedValues(page: VerifiedPage): Partial<Record<EnrichableColumn, s
   const deadlines = normalizeDeadlines(raw, dates.startDate);
   const format = normalizeFormat(raw.formatText, raw.locationText);
   return {
+    title: raw.title,
     official_url: normalizeNavigableUrl(page.url),
     organizer: raw.organizer,
     start_date: dates.startDate,
@@ -417,6 +432,9 @@ async function applyVerifiedPage(runId: string, event: EventRow, page: VerifiedP
     if (decision.decision !== "confirm") {
       await dbRun(`UPDATE discovery_events SET ${column}=?, last_verified=datetime('now') WHERE id=?`, [incoming, event.id]);
       event[column] = incoming;
+      if (column === "title") {
+        await dbRun(`UPDATE discovery_events SET normalized_title=? WHERE id=?`, [normalizeTitle(incoming), event.id]);
+      }
       await dbRun(`INSERT INTO discovery_event_changes (id,event_id,change_type,field,old_value,new_value,source_url)
         VALUES (?,?,?,?,?,?,?)`, [id("dchg"), event.id,
         decision.decision === "supersede" && (column === "start_date" || column === "end_date")
@@ -466,7 +484,7 @@ export async function updateReadiness(eventId: string, unresolvedConflict: boole
   const review = await dbGet<{ n: number }>(`SELECT COUNT(*) n FROM discovery_review_queue WHERE status='open' AND (event_id=? OR candidate_event_id=?)`, [eventId, eventId]);
   const blocking = parseArray(event.quality_flags).filter((f) => ["inconsistent_dates", "broken_official_url", "end_before_start"].includes(f));
   const result = classifyPublishReadiness({
-    titleVerified: !!event.title_verified_at, startDate: event.start_date, startDateVerified: fields.has("startDate"),
+    titleVerified: !!event.title_verified_at && fields.has("title"), startDate: event.start_date, startDateVerified: fields.has("startDate"),
     countryVerified: fields.has("country"), explicitlyOnline: event.format === "online", formatVerified: fields.has("format"),
     officialSourceVerified: !!event.official_source_verified_at && !!matchingOfficial,
     officialUrlAbsolute: !!officialUrl,
@@ -512,3 +530,4 @@ export function formatEnrichmentReport(report: EnrichmentReport): string {
     ...(report.errors.length ? [`Errors: ${report.errors.join(" | ")}`] : []),
   ].join("\n");
 }
+

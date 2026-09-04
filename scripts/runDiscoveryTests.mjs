@@ -21,7 +21,13 @@ delete env.TURSO_AUTH_TOKEN;
 
 const child = spawn(
   process.execPath,
-  ["--import", "tsx", "--test", "--test-concurrency=1", ...testFiles],
+  [
+    // tsx identifies its temporary directory with geteuid() on Unix and os.userInfo() on
+    // Windows. Some locked-down Windows runners cannot service os.userInfo(); supply a stable,
+    // process-local test identity before tsx loads so isolation tests can still run.
+    "--import", "data:text/javascript,if(!process.geteuid)process.geteuid=()=>0",
+    "--import", "tsx", "--test", "--test-concurrency=1", ...testFiles,
+  ],
   { stdio: "inherit", env }
 );
 
@@ -32,3 +38,4 @@ const exitCode = await new Promise((resolve, reject) => {
 
 fs.rmSync(testRoot, { recursive: true, force: true });
 process.exitCode = exitCode;
+
