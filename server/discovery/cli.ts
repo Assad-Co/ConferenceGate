@@ -28,6 +28,7 @@ import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
+import { runUrlRemediation } from "./urlRemediation";
 import { SEED_DOMAINS } from "./sources.seed";
 import { listDomains, setDomainEnabled, upsertDomain } from "./sourceRegistry";
 
@@ -97,6 +98,9 @@ const HELP = `Conference Gate — discovery engine
                             Re-read a random publish_ready sample from verified official pages
                             and persist a pass/fail gate. A passing sample of at least 10 is
                             required before real publication.
+  remediate-urls [--limit 500]
+                            Reconstruct absolute official URLs from preserved authoritative
+                            provenance and reassess readiness. Never discovers or publishes.
   report                    Print the quality report.
   audit [--sample 20] [--out audit.txt]
                             Re-fetch a random sample of stored records from their source pages
@@ -391,6 +395,15 @@ async function main(): Promise<void> {
       });
       console.log(JSON.stringify(result, null, 2));
       if (!result.passed) process.exitCode = 2;
+      break;
+    }
+
+    case "remediate-urls": {
+      if (!process.env.TURSO_DATABASE_URL) throw new Error("Refusing production remediation without durable TURSO_DATABASE_URL.");
+      if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
+        throw new Error("Refusing remediation while DISCOVERY_PUBLISH_TO_CONFERENCES=1. Set it to 0 first.");
+      }
+      console.log(JSON.stringify(await runUrlRemediation({ limit: numberFlag(flags.limit, 500) }), null, 2));
       break;
     }
 

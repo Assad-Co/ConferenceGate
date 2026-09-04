@@ -380,3 +380,21 @@ export function canonicalizeUrl(url: string | null | undefined): string | null {
   const query = keptParams.length > 0 ? `?${keptParams.map(([k, v]) => `${k}=${v}`).join("&")}` : "";
   return `${host}${path}${query}`.toLowerCase();
 }
+
+/** A URL stored in a user-facing/navigation field. Unlike canonicalizeUrl, this preserves the
+ * scheme and can be fetched or opened. Identity keys and navigable values are intentionally
+ * different types of data. */
+export function normalizeNavigableUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    parsed.hash = "";
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (/^(?:utm_|fbclid|gclid|mc_|ref|source|campaign)/i.test(key)) parsed.searchParams.delete(key);
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}

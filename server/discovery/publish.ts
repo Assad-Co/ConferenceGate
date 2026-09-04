@@ -170,6 +170,7 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
         AND e.confidence_score >= ?
         AND e.title IS NOT NULL AND e.title <> ''
         AND e.official_url IS NOT NULL AND e.official_url <> ''
+        AND (e.official_url LIKE 'https://%' OR e.official_url LIKE 'http://%')
         AND (e.country IS NOT NULL OR e.format = 'online')
         AND (e.start_date IS NOT NULL OR e.start_year IS NOT NULL)
         AND NOT EXISTS (

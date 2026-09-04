@@ -27,6 +27,7 @@ export const DISCOVERY_TABLES = [
   "discovery_publication_audits",
   "discovery_scale_runs",
   "discovery_scale_batches",
+  "discovery_url_remediation_runs",
   "discovery_review_queue",
 ] as const;
 
@@ -334,6 +335,18 @@ export async function initDiscoverySchema(): Promise<void> {
       UNIQUE(scale_run_id, batch_number)
     );
 
+    CREATE TABLE IF NOT EXISTS discovery_url_remediation_runs (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'running',
+      records_examined INTEGER NOT NULL DEFAULT 0,
+      before_metrics TEXT NOT NULL DEFAULT '{}',
+      after_metrics TEXT NOT NULL DEFAULT '{}',
+      changes TEXT NOT NULL DEFAULT '{}',
+      errors TEXT NOT NULL DEFAULT '[]',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+
     -- Anything the engine is not confident enough to act on by itself. Nothing is ever deleted
     -- because two titles looked alike; it lands here for a person to decide.
     CREATE TABLE IF NOT EXISTS discovery_review_queue (
@@ -411,6 +424,7 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_enrichment_started ON discovery_enrichment_runs(started_at);
     CREATE INDEX IF NOT EXISTS idx_discovery_scale_status ON discovery_scale_runs(status, target_accepted);
     CREATE INDEX IF NOT EXISTS idx_discovery_scale_batches_run ON discovery_scale_batches(scale_run_id, batch_number);
+    CREATE INDEX IF NOT EXISTS idx_discovery_url_remediation_started ON discovery_url_remediation_runs(started_at);
     CREATE INDEX IF NOT EXISTS idx_discovery_review_status ON discovery_review_queue(status);
     CREATE INDEX IF NOT EXISTS idx_discovery_domains_next ON discovery_domains(next_crawl_at);
   `);

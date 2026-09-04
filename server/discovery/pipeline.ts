@@ -21,7 +21,7 @@ import { hashContent, isHtmlLike, setDomainCrawlDelay, type UrlGuard } from "./h
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { canonicalLink, documentTitle, parseHtml } from "./html";
 import { RunLogger } from "./logging";
-import { classifySource, isHighConfidenceOfficial } from "./sourceClassification";
+import { classifySource, isEligibleOfficialSource } from "./sourceClassification";
 import {
   canonicalizeUrl,
   cleanDescription,
@@ -32,6 +32,7 @@ import {
   normalizeEventType,
   normalizeFormat,
   normalizeLocation,
+  normalizeNavigableUrl,
 } from "./normalize";
 import { classifyFailure, failurePolicy, type FailureClass } from "./failureClass";
 import {
@@ -1237,10 +1238,11 @@ async function processPage(
   // A directory listing's own address is the source, and the organiser's site — when the page
   // names one — is the official URL (section 16).
   const parsedDoc = parseHtml(html);
-  const declaredOfficialUrl = raw.officialUrl || canonicalLink(parsedDoc, pageUrl);
+  const declaredOfficialUrl = normalizeNavigableUrl(raw.officialUrl || canonicalLink(parsedDoc, pageUrl));
   const sourceClass = classifySource({ pageUrl, officialUrl: declaredOfficialUrl, organizerUrl: raw.organizerUrl,
     title: raw.title, organizer: raw.organizer, pageText: text, registryType: input.trust.type });
-  const sourceIsOfficial = isHighConfidenceOfficial(sourceClass.classification, sourceClass.confidence);
+  const sourceIsOfficial = isEligibleOfficialSource({ pageUrl, title: raw.title, organizerUrl: raw.organizerUrl,
+    registryType: input.trust.type, classification: sourceClass.classification, confidence: sourceClass.confidence });
 
   // A directory sets `<link rel="canonical">` to ITSELF, and its JSON-LD `Event.url` often points
   // at its own listing too — so taking a declared URL at face value quietly promoted directory

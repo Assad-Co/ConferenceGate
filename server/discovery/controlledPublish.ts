@@ -6,6 +6,8 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { auditDiscoveredConferences, type AuditReport } from "./audit";
 import { isDirectoryHost } from "../braveSearch";
 import type { UrlGuard } from "./httpClient";
+import { canonicalizeUrl, normalizeNavigableUrl } from "./normalize";
+import { isEligibleOfficialSource } from "./sourceClassification";
 
 export const GENERIC_EVENT_PAGE_RE = /\/(?:conferences?|events?|calendar|search|countries?|topics?|listing|browse)\/?$|\/(?:categor(?:y|ies)|country-listing|topic-listing)(?:\/|$)/i;
 
@@ -32,21 +34,26 @@ export async function auditPublishReady(options: { sample?: number; urlGuard?: U
   });
   const rows = await dbAll<Record<string, any>>(
     `SELECT e.*, EXISTS(SELECT 1 FROM discovery_review_queue q WHERE q.status='open'
-       AND (q.event_id=e.id OR q.candidate_event_id=e.id)) open_review,
-       EXISTS(SELECT 1 FROM discovery_event_sources s WHERE s.event_id=e.id
-       AND s.is_official=1 AND s.classification_confidence>=0.8) official_verified
+       AND (q.event_id=e.id OR q.candidate_event_id=e.id)) open_review
      FROM discovery_events e WHERE e.id IN (${report.records.map(() => "?").join(",") || "NULL"})`,
     report.records.map((record) => record.eventId)
   );
+  const sources = await dbAll<Record<string, any>>(`SELECT event_id,source_url,source_classification,classification_confidence
+    FROM discovery_event_sources WHERE event_id IN (${report.records.map(() => "?").join(",") || "NULL"}) AND is_official=1`,
+    report.records.map((record) => record.eventId));
   const byId = new Map(rows.map((row) => [String(row.id), row]));
   const failures: PublicationAuditResult["failures"] = [];
   for (const record of report.records) {
     const row = byId.get(record.eventId);
     const reasons: string[] = [];
-    const url = String(row?.official_url || "");
+    const url = normalizeNavigableUrl(row?.official_url) || "";
+    const officialVerified = !!row && sources.some((source) => source.event_id === row.id
+      && canonicalizeUrl(source.source_url) === canonicalizeUrl(url)
+      && isEligibleOfficialSource({ pageUrl: source.source_url, title: row.title, organizerUrl: row.organizer_url,
+        classification: source.source_classification, confidence: Number(source.classification_confidence) }));
     if (!record.pageReadable) reasons.push("official_page_unreadable");
     if (!row || row.publish_readiness !== "publish_ready") reasons.push("not_publish_ready");
-    if (!row?.official_verified || !url || isDirectoryHost(host(url))) reasons.push("official_source_not_verified");
+    if (!officialVerified || !url || isDirectoryHost(host(url))) reasons.push("official_source_not_verified");
     try { if (GENERIC_EVENT_PAGE_RE.test(new URL(url).pathname)) reasons.push("generic_page_url"); } catch { reasons.push("invalid_official_url"); }
     if (row?.open_review) reasons.push("open_review");
     const readinessReasons = (() => { try { return JSON.parse(row?.readiness_reasons || "[]"); } catch { return ["malformed_readiness_reasons"]; } })();

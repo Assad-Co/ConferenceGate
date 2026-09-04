@@ -8,11 +8,11 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { isSerperConfigured, serperSearch } from "../serperSearch";
 import { titleSimilarity } from "./dedupe";
 import { extractFromHtml } from "./htmlExtract";
-import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation } from "./normalize";
+import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl } from "./normalize";
 import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
-import { classifySource, isHighConfidenceOfficial, type SourceClassification } from "./sourceClassification";
+import { classifySource, isEligibleOfficialSource, type SourceClassification } from "./sourceClassification";
 import { getDomain, normalizeDomain } from "./sourceRegistry";
 import { extractStructuredEvents } from "./structuredData";
 import type { PublishReadiness, RawEventExtraction } from "./types";
@@ -82,6 +82,7 @@ export interface ReadinessInput {
   explicitlyOnline: boolean;
   formatVerified: boolean;
   officialSourceVerified: boolean;
+  officialUrlAbsolute: boolean;
   openReview: boolean;
   unresolvedConflict: boolean;
   blockingQualityFlags?: string[];
@@ -96,6 +97,7 @@ export function classifyPublishReadiness(input: ReadinessInput): { readiness: Pu
   if (!input.startDateVerified || !futureStart) reasons.push("future_start_date_not_verified");
   if (!input.countryVerified && !(input.explicitlyOnline && input.formatVerified)) reasons.push("country_or_online_status_not_verified");
   if (!input.officialSourceVerified) reasons.push("official_source_not_verified");
+  if (!input.officialUrlAbsolute) reasons.push("official_url_not_absolute");
   if (input.openReview) reasons.push("open_review");
   if (input.unresolvedConflict) reasons.push("unresolved_authoritative_conflict");
   if ((input.blockingQualityFlags || []).length) reasons.push(...input.blockingQualityFlags!.map((f) => `quality:${f}`));
@@ -324,9 +326,10 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
     .some((known) => comparable(String(known)) === comparable(finalUrl));
   if (storedYear && extractedYear && storedYear !== extractedYear && !sameKnownOfficial) return null;
   const registry = await getDomain(host(finalUrl));
-  const source = classifySource({ pageUrl: finalUrl, officialUrl: finalUrl, organizerUrl: raw.organizerUrl,
+  const source = classifySource({ pageUrl: finalUrl, officialUrl: raw.officialUrl, organizerUrl: raw.organizerUrl,
     title: raw.title, organizer: raw.organizer, pageText: read.html, registryType: registry?.source_type });
-  if (!isHighConfidenceOfficial(source.classification, source.confidence)) return null;
+  if (!isEligibleOfficialSource({ pageUrl: finalUrl, title: raw.title, organizerUrl: raw.organizerUrl,
+    registryType: registry?.source_type, classification: source.classification, confidence: source.confidence })) return null;
   return { url: finalUrl, classification: source.classification, authority: source.confidence, extraction: raw,
     route: read.route, identityScore, provider, classificationEvidence: source.evidence };
 }
@@ -365,7 +368,7 @@ function extractedValues(page: VerifiedPage): Partial<Record<EnrichableColumn, s
   const deadlines = normalizeDeadlines(raw, dates.startDate);
   const format = normalizeFormat(raw.formatText, raw.locationText);
   return {
-    official_url: canonicalizeUrl(page.url) || page.url,
+    official_url: normalizeNavigableUrl(page.url),
     organizer: raw.organizer,
     start_date: dates.startDate,
     end_date: dates.endDate,
@@ -445,19 +448,28 @@ async function applyVerifiedPage(runId: string, event: EventRow, page: VerifiedP
   return { detected, resolved, unresolved };
 }
 
-async function updateReadiness(eventId: string, unresolvedConflict: boolean): Promise<void> {
+export async function updateReadiness(eventId: string, unresolvedConflict: boolean): Promise<void> {
   const event = await dbGet<Record<string, any>>(`SELECT * FROM discovery_events WHERE id=?`, [eventId]);
   if (!event) return;
   const verified = await dbAll<{ field: string }>(`SELECT f.field FROM discovery_event_fields f JOIN discovery_event_sources s
     ON s.event_id=f.event_id AND s.source_url=f.source_url WHERE f.event_id=? AND s.is_official=1
     AND s.classification_confidence>=0.8`, [eventId]);
   const fields = new Set(verified.map((r) => r.field));
+  const officialSources = await dbAll<Record<string, any>>(`SELECT source_url,source_classification,classification_confidence
+    FROM discovery_event_sources WHERE event_id=? AND is_official=1 AND classification_confidence>=0.8`, [eventId]);
+  const officialUrl = normalizeNavigableUrl(event.official_url);
+  const matchingOfficial = officialUrl && officialSources.some((source) =>
+    comparable(String(source.source_url)) === comparable(officialUrl) && isEligibleOfficialSource({
+      pageUrl: String(source.source_url), title: event.title, organizerUrl: event.organizer_url,
+      classification: source.source_classification, confidence: Number(source.classification_confidence),
+    }));
   const review = await dbGet<{ n: number }>(`SELECT COUNT(*) n FROM discovery_review_queue WHERE status='open' AND (event_id=? OR candidate_event_id=?)`, [eventId, eventId]);
   const blocking = parseArray(event.quality_flags).filter((f) => ["inconsistent_dates", "broken_official_url", "end_before_start"].includes(f));
   const result = classifyPublishReadiness({
     titleVerified: !!event.title_verified_at, startDate: event.start_date, startDateVerified: fields.has("startDate"),
     countryVerified: fields.has("country"), explicitlyOnline: event.format === "online", formatVerified: fields.has("format"),
-    officialSourceVerified: !!event.official_source_verified_at && !!event.official_url && !isDirectoryHost(host(event.official_url)),
+    officialSourceVerified: !!event.official_source_verified_at && !!matchingOfficial,
+    officialUrlAbsolute: !!officialUrl,
     openReview: Number(review?.n || 0) > 0, unresolvedConflict, blockingQualityFlags: blocking,
   });
   await dbRun(`UPDATE discovery_events SET publish_readiness=?,readiness_reasons=? WHERE id=?`, [result.readiness, JSON.stringify(result.reasons), eventId]);
