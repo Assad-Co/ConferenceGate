@@ -173,6 +173,14 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
         AND (e.official_url LIKE 'https://%' OR e.official_url LIKE 'http://%')
         AND (e.country IS NOT NULL OR e.format = 'online')
         AND (e.start_date IS NOT NULL OR e.start_year IS NOT NULL)
+        AND EXISTS (
+          SELECT 1 FROM discovery_event_sources s
+           WHERE s.event_id = e.id
+             AND s.is_official = 1
+             AND s.classification_confidence >= 0.8
+             AND s.source_classification IN ('official_event_site','organizer_site','society_site','university_host_site')
+             AND lower(rtrim(s.source_url,'/')) = lower(rtrim(e.official_url,'/'))
+        )
         AND NOT EXISTS (
           SELECT 1 FROM discovery_review_queue q
            WHERE q.status = 'open' AND (q.event_id = e.id OR q.candidate_event_id = e.id)

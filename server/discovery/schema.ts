@@ -455,6 +455,64 @@ export async function initDiscoverySchema(): Promise<void> {
       if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
     }
   }
+  // Readiness is cached, while reviews can be opened after enrichment has completed. Keep the
+  // safety-critical half of that relationship at the database boundary so no caller can leave an
+  // open review attached to a publish-ready event. The full readiness pass still supplies all
+  // other evidence-based reasons and preserves field provenance/history.
+  await db.executeMultiple(`
+    CREATE TRIGGER IF NOT EXISTS discovery_open_review_downgrades_event
+    AFTER INSERT ON discovery_review_queue
+    WHEN NEW.status = 'open'
+    BEGIN
+      UPDATE discovery_events
+         SET publish_readiness = 'needs_review',
+             readiness_reasons = json_insert(
+               CASE WHEN json_valid(readiness_reasons) THEN readiness_reasons ELSE '[]' END,
+               '$[#]', 'open_review'
+             )
+       WHERE (id = NEW.event_id OR id = NEW.candidate_event_id)
+         AND publish_readiness = 'publish_ready';
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS discovery_reopened_review_downgrades_event
+    AFTER UPDATE OF status, event_id, candidate_event_id ON discovery_review_queue
+    WHEN NEW.status = 'open'
+    BEGIN
+      UPDATE discovery_events
+         SET publish_readiness = 'needs_review',
+             readiness_reasons = json_insert(
+               CASE WHEN json_valid(readiness_reasons) THEN readiness_reasons ELSE '[]' END,
+               '$[#]', 'open_review'
+             )
+       WHERE (id = NEW.event_id OR id = NEW.candidate_event_id)
+         AND publish_readiness = 'publish_ready';
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS discovery_publish_ready_rejects_open_review
+    AFTER UPDATE OF publish_readiness ON discovery_events
+    WHEN NEW.publish_readiness = 'publish_ready'
+      AND EXISTS (
+        SELECT 1 FROM discovery_review_queue q
+         WHERE q.status = 'open' AND (q.event_id = NEW.id OR q.candidate_event_id = NEW.id)
+      )
+    BEGIN
+      UPDATE discovery_events
+         SET publish_readiness = 'needs_review',
+             readiness_reasons = json_insert(
+               CASE WHEN json_valid(readiness_reasons) THEN readiness_reasons ELSE '[]' END,
+               '$[#]', 'open_review'
+             )
+       WHERE id = NEW.id;
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS discovery_material_conflict_rejects_publish_ready
+    AFTER UPDATE OF publish_readiness, readiness_reasons ON discovery_events
+    WHEN NEW.publish_readiness = 'publish_ready'
+      AND instr(NEW.readiness_reasons, 'unresolved_authoritative_conflict') > 0
+    BEGIN
+      UPDATE discovery_events SET publish_readiness = 'needs_review' WHERE id = NEW.id;
+    END;
+  `);
   initialized = true;
 }
 

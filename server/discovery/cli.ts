@@ -18,7 +18,7 @@ import path from "path";
 import { auditDiscoveredConferences, formatAuditReport } from "./audit";
 import { diagnoseRun, formatDiagnosis } from "./diagnose";
 import { auditPublishReady } from "./controlledPublish";
-import { formatEnrichmentReport, runEnrichment } from "./enrichment";
+import { formatEnrichmentReport, reclassifyAllPublishReadiness, runEnrichment } from "./enrichment";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { buildInventoryReport } from "./inventory";
@@ -98,6 +98,8 @@ const HELP = `Conference Gate — discovery engine
                             Re-read a random publish_ready sample from verified official pages
                             and persist a pass/fail gate. A passing sample of at least 10 is
                             required before real publication.
+  reclassify-readiness      Recompute readiness for every accepted record from stored verified
+                            evidence, conflicts and open reviews. Performs no fetching or publishing.
   remediate-urls [--limit 500]
                             Reconstruct absolute official URLs from preserved authoritative
                             provenance and reassess readiness. Never discovers or publishes.
@@ -395,6 +397,17 @@ async function main(): Promise<void> {
       });
       console.log(JSON.stringify(result, null, 2));
       if (!result.passed) process.exitCode = 2;
+      break;
+    }
+
+    case "reclassify-readiness": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        throw new Error("Refusing production reclassification without durable TURSO_DATABASE_URL.");
+      }
+      if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
+        throw new Error("Refusing reclassification while DISCOVERY_PUBLISH_TO_CONFERENCES=1. Set it to 0 first.");
+      }
+      console.log(JSON.stringify(await reclassifyAllPublishReadiness(), null, 2));
       break;
     }
 

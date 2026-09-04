@@ -493,6 +493,121 @@ export async function updateReadiness(eventId: string, unresolvedConflict: boole
   await dbRun(`UPDATE discovery_events SET publish_readiness=?,readiness_reasons=? WHERE id=?`, [result.readiness, JSON.stringify(result.reasons), eventId]);
 }
 
+export interface ReadinessInvariantReport {
+  examined: number;
+  downgraded: number;
+  readiness: Record<PublishReadiness, number>;
+  violations: {
+    publishReadyWithOpenReview: number;
+    publishReadyWithUnresolvedMaterialConflict: number;
+    publishReadyWithInvalidOrNonAuthoritativeOfficialUrl: number;
+  };
+}
+
+/** Recompute cached readiness from stored evidence only; no fetching, deletion or publishing. */
+export async function reclassifyAllPublishReadiness(): Promise<ReadinessInvariantReport> {
+  const events = await dbAll<Record<string, any>>(`SELECT * FROM discovery_events
+    WHERE status IN ('validated','published','needs_review')`);
+  const verified = await dbAll<{ event_id: string; field: string }>(`SELECT f.event_id,f.field
+    FROM discovery_event_fields f JOIN discovery_event_sources s
+      ON s.event_id=f.event_id AND s.source_url=f.source_url
+    JOIN discovery_events e ON e.id=f.event_id
+    WHERE e.status IN ('validated','published','needs_review') AND s.is_official=1
+      AND s.classification_confidence>=0.8`);
+  const officialSources = await dbAll<Record<string, any>>(`SELECT s.event_id,s.source_url,
+      s.source_classification,s.classification_confidence
+    FROM discovery_event_sources s JOIN discovery_events e ON e.id=s.event_id
+    WHERE e.status IN ('validated','published','needs_review') AND s.is_official=1
+      AND s.classification_confidence>=0.8`);
+  const openReviews = await dbAll<{ event_id: string }>(`SELECT DISTINCT e.id event_id
+    FROM discovery_events e JOIN discovery_review_queue q
+      ON q.status='open' AND (q.event_id=e.id OR q.candidate_event_id=e.id)
+    WHERE e.status IN ('validated','published','needs_review')`);
+  const fieldsByEvent = new Map<string, Set<string>>();
+  for (const row of verified) {
+    const fields = fieldsByEvent.get(row.event_id) || new Set<string>();
+    fields.add(row.field);
+    fieldsByEvent.set(row.event_id, fields);
+  }
+  const sourcesByEvent = new Map<string, Record<string, any>[]>();
+  for (const source of officialSources) {
+    const sources = sourcesByEvent.get(String(source.event_id)) || [];
+    sources.push(source);
+    sourcesByEvent.set(String(source.event_id), sources);
+  }
+  const reviewIds = new Set(openReviews.map((row) => row.event_id));
+  let downgraded = 0;
+  for (const event of events) {
+    const fields = fieldsByEvent.get(String(event.id)) || new Set<string>();
+    const officialUrl = normalizeNavigableUrl(event.official_url);
+    const matchingOfficial = !!officialUrl && (sourcesByEvent.get(String(event.id)) || []).some((source) =>
+      comparable(String(source.source_url)) === comparable(officialUrl) && isEligibleOfficialSource({
+        pageUrl: String(source.source_url), title: event.title, organizerUrl: event.organizer_url,
+        classification: source.source_classification, confidence: Number(source.classification_confidence),
+      }));
+    const existingReasons = parseArray(event.readiness_reasons);
+    const blocking = parseArray(event.quality_flags)
+      .filter((flag) => ["inconsistent_dates", "broken_official_url", "end_before_start"].includes(flag));
+    const result = classifyPublishReadiness({
+      titleVerified: !!event.title_verified_at && fields.has("title"),
+      startDate: event.start_date,
+      startDateVerified: fields.has("startDate"),
+      countryVerified: fields.has("country"),
+      explicitlyOnline: event.format === "online",
+      formatVerified: fields.has("format"),
+      officialSourceVerified: !!event.official_source_verified_at && matchingOfficial,
+      officialUrlAbsolute: !!officialUrl,
+      openReview: reviewIds.has(String(event.id)),
+      unresolvedConflict: existingReasons.includes("unresolved_authoritative_conflict"),
+      blockingQualityFlags: blocking,
+    });
+    if (event.publish_readiness === "publish_ready" && result.readiness !== "publish_ready") downgraded += 1;
+    await dbRun(`UPDATE discovery_events SET publish_readiness=?,readiness_reasons=? WHERE id=?`,
+      [result.readiness, JSON.stringify(result.reasons), event.id]);
+  }
+  return publicationReadinessInvariantReport(events.length, downgraded);
+}
+
+export async function publicationReadinessInvariantReport(
+  examined = 0,
+  downgraded = 0,
+): Promise<ReadinessInvariantReport> {
+  const readinessRows = await dbAll<{ publish_readiness: PublishReadiness; count: number }>(`SELECT publish_readiness,
+    COUNT(*) count FROM discovery_events WHERE status IN ('validated','published','needs_review') GROUP BY publish_readiness`);
+  const readiness: Record<PublishReadiness, number> = { publish_ready: 0, needs_enrichment: 0, needs_review: 0 };
+  for (const row of readinessRows) readiness[row.publish_readiness] = Number(row.count);
+  const open = await dbGet<{ count: number }>(`SELECT COUNT(*) count FROM discovery_events e
+    WHERE e.publish_readiness='publish_ready' AND EXISTS (SELECT 1 FROM discovery_review_queue q
+      WHERE q.status='open' AND (q.event_id=e.id OR q.candidate_event_id=e.id))`);
+  const conflicts = await dbGet<{ count: number }>(`SELECT COUNT(*) count FROM discovery_events
+    WHERE publish_readiness='publish_ready' AND instr(readiness_reasons,'unresolved_authoritative_conflict')>0`);
+  const ready = await dbAll<Record<string, any>>(`SELECT id,title,organizer_url,official_url FROM discovery_events
+    WHERE publish_readiness='publish_ready' AND status IN ('validated','published','needs_review')`);
+  const readySources = await dbAll<Record<string, any>>(`SELECT s.event_id,s.source_url,s.source_classification,
+      s.classification_confidence FROM discovery_event_sources s JOIN discovery_events e ON e.id=s.event_id
+    WHERE e.publish_readiness='publish_ready' AND s.is_official=1 AND s.classification_confidence>=0.8`);
+  let invalidOfficial = 0;
+  for (const event of ready) {
+    const url = normalizeNavigableUrl(event.official_url);
+    const valid = !!url && readySources.some((source) => source.event_id === event.id
+      && comparable(String(source.source_url)) === comparable(url)
+      && isEligibleOfficialSource({ pageUrl: String(source.source_url), title: event.title,
+        organizerUrl: event.organizer_url, classification: source.source_classification,
+        confidence: Number(source.classification_confidence) }));
+    if (!valid) invalidOfficial += 1;
+  }
+  return {
+    examined,
+    downgraded,
+    readiness,
+    violations: {
+      publishReadyWithOpenReview: Number(open?.count || 0),
+      publishReadyWithUnresolvedMaterialConflict: Number(conflicts?.count || 0),
+      publishReadyWithInvalidOrNonAuthoritativeOfficialUrl: invalidOfficial,
+    },
+  };
+}
+
 async function sourceDistribution(): Promise<{ official: number; directory: number; other: number }> {
   const rows = await dbAll<{ bucket: string; count: number }>(`SELECT CASE
     WHEN EXISTS (SELECT 1 FROM discovery_event_sources s WHERE s.event_id=e.id AND s.is_official=1 AND s.classification_confidence>=0.8) THEN 'official'
