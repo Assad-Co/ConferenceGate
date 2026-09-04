@@ -21,7 +21,7 @@ export interface ScaleOptions {
 }
 export interface ScaleResult { scaleRunId: string; status: string; stopReason: string; batches: number; report: InventoryReport }
 
-export function topicsForBatch(batchNumber: number, width = 6): string[] {
+export function topicsForBatch(batchNumber: number, width = 7): string[] {
   const topics = CATEGORY_RULES.map((rule) => rule.category);
   const start = ((batchNumber - 1) * width) % topics.length;
   return Array.from({ length: Math.min(width, topics.length) }, (_, index) => topics[(start + index) % topics.length]);
@@ -70,10 +70,15 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
         targetYears: [2027, 2028, 2026], topics: topicsForBatch(batchNumber),
         maxPages: pages, maxCandidates: options.batchCandidates ?? 6_000,
         maxSearchQueries: options.maxSearchQueries ?? 48, maxJinaPages: options.maxJinaPages ?? 150,
+        enableSearchDiscovery: true,
         maxAlternateUrls: 150, maxCandidatesPerDomain: 25, domainConcurrency: 4,
         timeBudgetMs: options.batchTimeBudgetMs ?? 30 * 60_000, maxAiCalls: 0,
         allowAutoPublish: false, trigger: `production_scale:${scaleRunId}`, quiet: options.quiet,
       });
+      const searchQueries = (discovery.search?.braveQueries || 0) + (discovery.search?.serperQueries || 0);
+      if (searchQueries === 0) {
+        throw new Error("Scale batch issued zero Brave/Serper queries; refusing to label this candidate exhaustion.");
+      }
       const enrichment = await runEnrichment({ runId: discovery.runId, limit: 2_000,
         maxJinaPages: options.maxJinaPages ?? 150, maxSearchQueries: options.maxSearchQueries ?? 48,
         timeBudgetMs: options.batchTimeBudgetMs ?? 30 * 60_000, quiet: options.quiet });

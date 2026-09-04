@@ -78,6 +78,8 @@ export interface RunOptions {
   topics?: string[];
   /** Total search queries the run may spend across Brave and Serper together. */
   maxSearchQueries?: number;
+  /** Explicitly enable or disable paid search discovery for this run. */
+  enableSearchDiscovery?: boolean;
   maxCandidates?: number;
   /** Candidate pages attempted, including failed and unchanged fetches. The real cost ceiling. */
   maxPages?: number;
@@ -316,6 +318,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     });
     const searchProvider = new SearchDiscoveryProvider({
       logger,
+      enabled: options.enableSearchDiscovery,
       maxQueries: options.maxSearchQueries ?? 24,
     });
     const providers = [
@@ -1500,3 +1503,4 @@ function buildProvenance(
 }
 
 export { canonicalizeUrl, emptyRawExtraction };
+

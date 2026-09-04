@@ -12,10 +12,10 @@ test("generic collection pages are blocked while individual event pages beneath 
 test("successive production batches rotate through the category taxonomy", () => {
   const first = topicsForBatch(1);
   const second = topicsForBatch(2);
-  assert.equal(first.length, 6);
-  assert.equal(second.length, 6);
+  assert.equal(first.length, 7);
+  assert.equal(second.length, 7);
   assert.notDeepEqual(first, second);
-  assert.equal(new Set([...first, ...second]).size, 12);
+  assert.equal(new Set([...first, ...second]).size, 14);
 });
 
 test("production scale fails closed when publishing is enabled", () => {
