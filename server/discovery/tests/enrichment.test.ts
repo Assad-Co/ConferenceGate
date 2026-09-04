@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { classifyPublishReadiness, decideEvidence } from "../enrichment";
-import { dbAll } from "../../db";
+import { dbAll, dbGet, dbRun } from "../../db";
 import { initDiscoverySchema } from "../schema";
 import { canonicalizeUrl, normalizeNavigableUrl } from "../normalize";
 import {
@@ -28,6 +28,23 @@ test("Phase 1.4 schema is additive and exposes readiness plus append-only histor
   assert.ok(tables.some((table) => table.name === "discovery_scale_runs"));
   assert.ok(tables.some((table) => table.name === "discovery_scale_batches"));
   assert.ok(tables.some((table) => table.name === "discovery_url_remediation_runs"));
+});
+
+test("an open review makes and keeps publish_ready impossible at the database boundary", async () => {
+  const eventId = `trigger-review-${Date.now()}-${Math.random()}`;
+  await dbRun(`INSERT INTO discovery_events
+    (id,title,normalized_title,extraction_method,source_url,source_domain,publish_readiness)
+    VALUES (?,?,?,?,?,?,?)`, [eventId, "Trigger Safety Conference 2028", "trigger safety conference 2028",
+      "html", "https://official.example/2028", "official.example", "publish_ready"]);
+  await dbRun(`INSERT INTO discovery_review_queue (id,event_id,reason,status) VALUES (?,?,?,'open')`,
+    [`review-${eventId}`, eventId, "material_validation_conflict"]);
+  let row = await dbGet<{ publish_readiness: string; readiness_reasons: string }>(
+    `SELECT publish_readiness,readiness_reasons FROM discovery_events WHERE id=?`, [eventId]);
+  assert.equal(row?.publish_readiness, "needs_review");
+  assert.ok(JSON.parse(row?.readiness_reasons || "[]").includes("open_review"));
+  await dbRun(`UPDATE discovery_events SET publish_readiness='publish_ready',readiness_reasons='[]' WHERE id=?`, [eventId]);
+  row = await dbGet(`SELECT publish_readiness,readiness_reasons FROM discovery_events WHERE id=?`, [eventId]);
+  assert.equal(row?.publish_readiness, "needs_review");
 });
 
 test("directory or other lower-trust evidence never overwrites an authoritative value", () => {
