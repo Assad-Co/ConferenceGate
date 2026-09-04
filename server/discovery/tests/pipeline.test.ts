@@ -332,6 +332,8 @@ test("a second pass over an unchanged web does no work", async () => {
     trigger: "test-rerun",
   });
   assert.equal(second.created, 0, "nothing new is created from a web that has not changed");
-  assert.equal(second.pagesFetched, 0, "every page answers 304 and is skipped");
-  assert.ok(second.pagesUnchanged > 0);
+  assert.equal(second.pagesFetched, 0, "no unchanged page is extracted again");
+  assert.ok(second.pagesUnchanged + second.scheduledUrlsSkipped > 0);
+  assert.equal(second.pagesAttempted, second.pagesUnchanged,
+    "a URL whose recheck time has not arrived consumes no page-attempt budget");
 });

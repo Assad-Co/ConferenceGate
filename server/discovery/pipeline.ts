@@ -165,6 +165,8 @@ export interface RunSummary {
   /** Candidates skipped because this run had already read that exact page — usually a site
    *  directory resolution reached first. Also not an attempt. */
   alreadyReadThisRun: number;
+  /** Known URLs whose persisted recheck time has not arrived; they consume no page budget. */
+  scheduledUrlsSkipped: number;
   /** Every fetch failure, by class — the taxonomy, not one number. */
   failureClasses: Record<string, number>;
   /** The same, per domain, so a bad host is visible rather than averaged away. */
@@ -282,6 +284,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
     stopReason: null,
     skippedForDomainRefusal: 0,
     alreadyReadThisRun: 0,
+    scheduledUrlsSkipped: 0,
     failureClasses: {},
     failuresByDomain: {},
     circuitBrokenDomains: [],
@@ -499,6 +502,15 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       // workers, and a claim made after the await would be too late to prevent anything.
       processedUrls.add(candidateCanonical);
 
+      // Production batches repeatedly generate the same valuable matrix cells. A URL already
+      // checked and not yet due must not consume the next batch's page budget merely because a
+      // search engine returned it again.
+      const previous = await getUrlState(candidate.url);
+      if (previous?.next_check_at && Date.parse(previous.next_check_at) > Date.now()) {
+        summary.scheduledUrlsSkipped += 1;
+        return;
+      }
+
       if (breaker.isOpen(candidate.sourceDomain)) {
         // Counted separately, not as a terminal outcome: no request was made, so this is not an
         // attempt, and folding it in would break the reconciliation invariant that every attempt
@@ -539,7 +551,6 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       }
       const trust = domainTrust.get(candidate.sourceDomain)!;
 
-      const previous = await getUrlState(candidate.url);
       const read = await readPage(candidate.url, {
         etag: previous?.etag ?? null,
         lastModified: previous?.last_modified ?? null,
@@ -1099,6 +1110,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
         diversity: summary.diversity,
         skippedForDomainRefusal: summary.skippedForDomainRefusal,
         alreadyReadThisRun: summary.alreadyReadThisRun,
+        scheduledUrlsSkipped: summary.scheduledUrlsSkipped,
         concurrency: summary.concurrency,
         stopReason: summary.stopReason,
         qualityByProvider: Object.fromEntries(Object.entries(summary.qualityByProvider).map(([provider, q]) => [provider, {
@@ -1486,4 +1498,3 @@ function buildProvenance(
 }
 
 export { canonicalizeUrl, emptyRawExtraction };
-

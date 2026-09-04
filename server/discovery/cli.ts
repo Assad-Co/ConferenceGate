@@ -17,14 +17,17 @@ import fs from "fs";
 import path from "path";
 import { auditDiscoveredConferences, formatAuditReport } from "./audit";
 import { diagnoseRun, formatDiagnosis } from "./diagnose";
+import { auditPublishReady } from "./controlledPublish";
 import { formatEnrichmentReport, runEnrichment } from "./enrichment";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
+import { buildInventoryReport } from "./inventory";
 import { runDiscovery } from "./pipeline";
 import { providerStatus } from "./providers";
 import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
+import { runProductionScale } from "./scale";
 import { SEED_DOMAINS } from "./sources.seed";
 import { listDomains, setDomainEnabled, upsertDomain } from "./sourceRegistry";
 
@@ -89,6 +92,11 @@ const HELP = `Conference Gate — discovery engine
   diagnose [--run <id>]     Break a run's fetch failures down by class and by domain, and say
                             what each class implies. Defaults to the most recent run.
   metrics                   Print database metrics as JSON.
+  inventory                 Print the production inventory/checkpoint metrics as JSON.
+  publish-audit [--sample 10]
+                            Re-read a random publish_ready sample from verified official pages
+                            and persist a pass/fail gate. A passing sample of at least 10 is
+                            required before real publication.
   report                    Print the quality report.
   audit [--sample 20] [--out audit.txt]
                             Re-fetch a random sample of stored records from their source pages
@@ -98,6 +106,10 @@ const HELP = `Conference Gate — discovery engine
   publish  [--dry-run] [--limit 200]
                             Write qualifying records into extracted_conferences. Requires
                             DISCOVERY_PUBLISH_TO_CONFERENCES=1 for a real (non-dry) run.
+  scale    [--target 1000] [--batch-pages 500] [--max-batches 50]
+           [--batch-time-budget-ms 1800000] [--max-search-queries 48]
+                            Resume bounded production batches through discovery, run-scoped
+                            enrichment and audit-gated publication. AI remains disabled.
   providers                 Show which discovery providers are available and why.
 `;
 
@@ -365,6 +377,23 @@ async function main(): Promise<void> {
       break;
     }
 
+    case "inventory": {
+      console.log(JSON.stringify(await buildInventoryReport(
+        typeof flags["scale-run-id"] === "string" ? flags["scale-run-id"] : undefined
+      ), null, 2));
+      break;
+    }
+
+    case "publish-audit": {
+      const result = await auditPublishReady({
+        sample: numberFlag(flags.sample, 10),
+        onProgress: (done, total, title) => console.error(`  [${done}/${total}] auditing ${title.slice(0, 70)}`),
+      });
+      console.log(JSON.stringify(result, null, 2));
+      if (!result.passed) process.exitCode = 2;
+      break;
+    }
+
     case "report": {
       console.log(formatQualityReport(await buildQualityReport()));
       break;
@@ -397,6 +426,26 @@ async function main(): Promise<void> {
       break;
     }
 
+    case "scale": {
+      if (!process.env.TURSO_DATABASE_URL) throw new Error("Refusing scale run without durable TURSO_DATABASE_URL.");
+      if (!isPublishEnabled()) throw new Error(
+        "Refusing scale orchestration unless controlled publication is enabled for this process. " +
+        "Set DISCOVERY_PUBLISH_TO_CONFERENCES=1 after a passing publish-audit."
+      );
+      const result = await runProductionScale({
+        targetAccepted: numberFlag(flags.target, 1_000),
+        batchPages: numberFlag(flags["batch-pages"], 500),
+        batchCandidates: numberFlag(flags["batch-candidates"], 6_000),
+        maxBatches: numberFlag(flags["max-batches"], 50),
+        batchTimeBudgetMs: numberFlag(flags["batch-time-budget-ms"], 30 * 60_000),
+        maxSearchQueries: numberFlag(flags["max-search-queries"], 48),
+        maxJinaPages: numberFlag(flags["max-jina-pages"], 150),
+        quiet: flags.quiet === true,
+      });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
     case "providers": {
       for (const provider of providerStatus()) {
         console.log(
@@ -419,4 +468,3 @@ main()
     console.error(error?.stack || error?.message || error);
     process.exit(1);
   });
-

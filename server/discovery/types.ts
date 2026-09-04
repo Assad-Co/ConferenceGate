@@ -337,4 +337,3 @@ export interface DiscoveryProvider {
   readonly baseConfidence: number;
   discover(context: DiscoveryContext): Promise<DiscoveryCandidate[]>;
 }
-

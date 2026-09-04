@@ -233,18 +233,25 @@ export interface AuditOptions {
   urlGuard?: UrlGuard;
   maxJinaPages?: number;
   onProgress?: (done: number, total: number, title: string) => void;
+  publishReadiness?: string;
+  eventIds?: string[];
+  /** Publication audits must re-read the verified official URL, not the original discovery lead. */
+  preferOfficialSource?: boolean;
 }
 
 export async function auditDiscoveredConferences(options: AuditOptions = {}): Promise<AuditReport> {
   const sample = Math.max(1, Math.min(options.sample ?? 20, 200));
   const statuses = options.statuses ?? ["validated", "published", "needs_review"];
   const placeholders = statuses.map(() => "?").join(", ");
+  const readinessFilter = options.publishReadiness ? " AND publish_readiness = ?" : "";
+  const ids = options.eventIds?.filter(Boolean) ?? [];
+  const idFilter = ids.length ? ` AND id IN (${ids.map(() => "?").join(",")})` : "";
 
   // RANDOM() rather than a fixed ordering: an audit of the twenty most confident records would
   // flatter the engine, which is the opposite of the point.
   const rows = await dbAll<Record<string, any>>(
-    `SELECT * FROM discovery_events WHERE status IN (${placeholders}) ORDER BY RANDOM() LIMIT ?`,
-    [...statuses, sample]
+    `SELECT * FROM discovery_events WHERE status IN (${placeholders})${readinessFilter}${idFilter} ORDER BY RANDOM() LIMIT ?`,
+    [...statuses, ...(options.publishReadiness ? [options.publishReadiness] : []), ...ids, sample]
   );
 
   const budget = newReadBudget(options.maxJinaPages ?? sample);
@@ -259,7 +266,8 @@ export async function auditDiscoveredConferences(options: AuditOptions = {}): Pr
     );
     const storedCategory = categories[0]?.category ?? row.primary_category ?? null;
 
-    const read = await readPage(String(row.source_url), { budget, urlGuard: options.urlGuard });
+    const auditUrl = String(options.preferOfficialSource && row.official_url ? row.official_url : row.source_url);
+    const read = await readPage(auditUrl, { budget, urlGuard: options.urlGuard });
     const pageReadable = !!read.html;
     const text = pageReadable ? pageText(read.html, 40000) : "";
 
@@ -276,8 +284,8 @@ export async function auditDiscoveredConferences(options: AuditOptions = {}): Pr
     let reOfficialUrl: string | null = null;
 
     if (pageReadable) {
-      const structured = extractStructuredEvents(read.html, String(row.source_url));
-      const raw = extractFromHtml(read.html, String(row.source_url), { seed: structured.events[0] ?? null });
+      const structured = extractStructuredEvents(read.html, auditUrl);
+      const raw = extractFromHtml(read.html, auditUrl, { seed: structured.events[0] ?? null });
       reTitle = raw.title;
       reDates = normalizeDates(raw);
       reLocation = normalizeLocation(raw);
@@ -285,7 +293,7 @@ export async function auditDiscoveredConferences(options: AuditOptions = {}): Pr
       reEventType = normalizeEventType(raw.eventTypeText, raw.title, raw.schemaType).eventType;
       reOrganizer = raw.organizer;
       reAbstractDeadline = normalizeDeadlines(raw, reDates.startDate).abstractDeadline;
-      reOfficialUrl = raw.officialUrl || String(row.source_url);
+      reOfficialUrl = raw.officialUrl || auditUrl;
       reCategory =
         classifyCategories({
           title: raw.title,
@@ -313,8 +321,8 @@ export async function auditDiscoveredConferences(options: AuditOptions = {}): Pr
     records.push({
       eventId: String(row.id),
       title: String(row.title),
-      sourceUrl: String(row.source_url),
-      sourceDomain: String(row.source_domain),
+      sourceUrl: auditUrl,
+      sourceDomain: (() => { try { return new URL(auditUrl).hostname; } catch { return String(row.source_domain); } })(),
       extractionMethod: String(row.extraction_method),
       confidenceScore: Number(row.confidence_score),
       reReadRoute: read.route,

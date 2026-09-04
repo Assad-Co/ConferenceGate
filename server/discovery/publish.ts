@@ -16,6 +16,7 @@
 //      URL, and must not be sitting in the review queue.
 
 import { dbGet, dbRun } from "../db";
+import { latestPassingPublicationAudit } from "./controlledPublish";
 
 export interface PublishOptions {
   /** Statuses eligible for publication. */
@@ -24,6 +25,10 @@ export interface PublishOptions {
   minConfidence?: number;
   /** Report what would be written without writing it. */
   dryRun?: boolean;
+  /** Restrict publication to events attributed to one discovery batch. */
+  runId?: string;
+  /** Tests may disable the production audit gate explicitly; production defaults to required. */
+  requirePassingAudit?: boolean;
 }
 
 export interface PublishResult {
@@ -151,15 +156,21 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
   const statuses = options.statuses ?? ["published", "validated"];
   const minConfidence = options.minConfidence ?? 0.7;
   const placeholders = statuses.map(() => "?").join(", ");
+  if (!options.dryRun && options.requirePassingAudit !== false && !(await latestPassingPublicationAudit())) {
+    throw new Error("Refusing publication: no passing 10-record publish_ready audit exists from the last 30 days.");
+  }
+  const runJoin = options.runId
+    ? " JOIN discovery_run_events re ON re.event_id=e.id AND re.run_id=?"
+    : "";
 
   const rows = await dbAll<Record<string, any>>(
-    `SELECT e.* FROM discovery_events e
+    `SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN (${placeholders})
         AND e.publish_readiness = 'publish_ready'
         AND e.confidence_score >= ?
         AND e.title IS NOT NULL AND e.title <> ''
         AND e.official_url IS NOT NULL AND e.official_url <> ''
-        AND e.country IS NOT NULL
+        AND (e.country IS NOT NULL OR e.format = 'online')
         AND (e.start_date IS NOT NULL OR e.start_year IS NOT NULL)
         AND NOT EXISTS (
           SELECT 1 FROM discovery_review_queue q
@@ -167,7 +178,7 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
         )
       ORDER BY e.confidence_score DESC
       LIMIT ?`,
-    [...statuses, minConfidence, options.limit ?? 500]
+    [...(options.runId ? [options.runId] : []), ...statuses, minConfidence, options.limit ?? 500]
   );
 
   const result: PublishResult = {
@@ -223,4 +234,3 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
 
   return result;
 }
-

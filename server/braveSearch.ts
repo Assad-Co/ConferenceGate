@@ -220,11 +220,10 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     `SELECT source_url, overview, call_for_papers, program_agenda, keynote_speakers,
               technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing,
               community, extraction_metadata, updated_at
-       FROM extracted_conferences
+      FROM extracted_conferences
       WHERE overview IS NOT NULL
         AND overview <> '{}'
-      ORDER BY updated_at DESC
-      LIMIT 500`
+      ORDER BY updated_at DESC`
   );
 
   const stopWords = new Set([
@@ -558,21 +557,14 @@ export async function searchConferences(
     return cached.data;
   }
 
+  // Phase 1.5 separates customer search from inventory acquisition. A normal search is now a
+  // database read only: it is instant, deterministic, and can never spend provider quota or turn
+  // one customer's query into an uncontrolled crawl. Brave/Serper remain available to the
+  // backend discovery and enrichment paths above/below this function.
+  void priority;
+  void force;
   const prepared = (await searchPreparedConferences(query)).filter(isLikelyOfficialConferencePage);
-  let candidates: LiveSearchResult[] = [];
-  try {
-    candidates = (
-      await providerSearch(toConferenceQuery(query), 20, priority)
-    ).filter((result) => isLikelyOfficialConferencePage(result));
-  } catch (error) {
-    // A provider plan limit must not empty Discover when Conference Gate already has relevant,
-    // official conference records. Only surface the provider error when no prepared result can help.
-    if (prepared.length === 0) throw error;
-  }
-
-  // Prepared records come first: they open instantly and cost no external-search quota. The same
-  // identity/date deduplication still prevents a cached event and its live result appearing twice.
-  const results = deduplicateUpcomingConferences([...prepared, ...candidates]);
+  const results = deduplicateUpcomingConferences(prepared);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -677,4 +669,3 @@ braveSearchRouter.get(
     }
   })
 );
-

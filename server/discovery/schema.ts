@@ -24,6 +24,9 @@ export const DISCOVERY_TABLES = [
   "discovery_event_changes",
   "discovery_event_field_history",
   "discovery_enrichment_runs",
+  "discovery_publication_audits",
+  "discovery_scale_runs",
+  "discovery_scale_batches",
   "discovery_review_queue",
 ] as const;
 
@@ -291,6 +294,46 @@ export async function initDiscoverySchema(): Promise<void> {
       finished_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS discovery_publication_audits (
+      id TEXT PRIMARY KEY,
+      sample_size INTEGER NOT NULL,
+      passed INTEGER NOT NULL,
+      audited_event_ids TEXT NOT NULL DEFAULT '[]',
+      failures TEXT NOT NULL DEFAULT '[]',
+      report TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_scale_runs (
+      id TEXT PRIMARY KEY,
+      target_accepted INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      next_batch INTEGER NOT NULL DEFAULT 1,
+      accepted_at_start INTEGER NOT NULL,
+      accepted_at_finish INTEGER,
+      stop_reason TEXT,
+      checkpoint_report TEXT,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_scale_batches (
+      id TEXT PRIMARY KEY,
+      scale_run_id TEXT NOT NULL,
+      batch_number INTEGER NOT NULL,
+      discovery_run_id TEXT,
+      enrichment_run_id TEXT,
+      status TEXT NOT NULL DEFAULT 'running',
+      accepted_before INTEGER NOT NULL,
+      accepted_after INTEGER,
+      published INTEGER NOT NULL DEFAULT 0,
+      metrics TEXT NOT NULL DEFAULT '{}',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT,
+      UNIQUE(scale_run_id, batch_number)
+    );
+
     -- Anything the engine is not confident enough to act on by itself. Nothing is ever deleted
     -- because two titles looked alike; it lands here for a person to decide.
     CREATE TABLE IF NOT EXISTS discovery_review_queue (
@@ -366,6 +409,8 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_event_changes_event ON discovery_event_changes(event_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_field_history_event ON discovery_event_field_history(event_id);
     CREATE INDEX IF NOT EXISTS idx_discovery_enrichment_started ON discovery_enrichment_runs(started_at);
+    CREATE INDEX IF NOT EXISTS idx_discovery_scale_status ON discovery_scale_runs(status, target_accepted);
+    CREATE INDEX IF NOT EXISTS idx_discovery_scale_batches_run ON discovery_scale_batches(scale_run_id, batch_number);
     CREATE INDEX IF NOT EXISTS idx_discovery_review_status ON discovery_review_queue(status);
     CREATE INDEX IF NOT EXISTS idx_discovery_domains_next ON discovery_domains(next_crawl_at);
   `);
@@ -408,4 +453,3 @@ export async function discoverySchemaReady(): Promise<boolean> {
   const present = new Set(rows.map((r) => r.name));
   return DISCOVERY_TABLES.every((table) => present.has(table));
 }
-

@@ -12,6 +12,9 @@ test("Phase 1.4 schema is additive and exposes readiness plus append-only histor
   const tables = await dbAll<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table'");
   assert.ok(tables.some((table) => table.name === "discovery_event_field_history"));
   assert.ok(tables.some((table) => table.name === "discovery_enrichment_runs"));
+  assert.ok(tables.some((table) => table.name === "discovery_publication_audits"));
+  assert.ok(tables.some((table) => table.name === "discovery_scale_runs"));
+  assert.ok(tables.some((table) => table.name === "discovery_scale_batches"));
 });
 
 test("directory or other lower-trust evidence never overwrites an authoritative value", () => {
@@ -91,4 +94,3 @@ test("verified online format may replace country for an online-only conference",
     now: new Date("2026-09-03T00:00:00Z"),
   }).readiness, "publish_ready");
 });
-

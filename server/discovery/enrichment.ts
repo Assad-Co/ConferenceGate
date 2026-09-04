@@ -114,6 +114,8 @@ export interface EnrichmentOptions {
   timeBudgetMs?: number;
   urlGuard?: UrlGuard;
   quiet?: boolean;
+  /** Restrict a batch pass to events attributed to one discovery run. */
+  runId?: string;
 }
 
 export interface EnrichmentReport {
@@ -191,8 +193,13 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     [runId, before.official, before.countries, before.dates, before.organizers]);
 
   try {
-    const rows = await dbAll<EventRow>(`SELECT * FROM discovery_events WHERE status IN ('validated','published','needs_review')
-      ORDER BY confidence_score DESC, date_discovered ASC LIMIT ?`, [limit]);
+    const runJoin = options.runId
+      ? " JOIN discovery_run_events re ON re.event_id=e.id AND re.run_id=?"
+      : "";
+    const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
+      WHERE e.status IN ('validated','published','needs_review')
+      ORDER BY e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
+      [...(options.runId ? [options.runId] : []), limit]);
     for (const event of rows) {
       if (Date.now() >= deadline) { timedOut = true; break; }
       examined += 1;
@@ -493,4 +500,3 @@ export function formatEnrichmentReport(report: EnrichmentReport): string {
     ...(report.errors.length ? [`Errors: ${report.errors.join(" | ")}`] : []),
   ].join("\n");
 }
-
