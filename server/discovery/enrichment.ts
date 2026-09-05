@@ -119,6 +119,8 @@ export interface EnrichmentOptions {
   quiet?: boolean;
   /** Restrict a batch pass to events attributed to one discovery run. */
   runId?: string;
+  /** Prefer a durable readiness backlog instead of repeatedly re-reading already-ready rows. */
+  readiness?: PublishReadiness[];
 }
 
 export interface EnrichmentReport {
@@ -199,10 +201,15 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     const runJoin = options.runId
       ? " JOIN discovery_run_events re ON re.event_id=e.id AND re.run_id=?"
       : "";
+    const readinessFilter = options.readiness?.length ? options.readiness : null;
+    const readinessClause = readinessFilter
+      ? ` AND e.publish_readiness IN (${readinessFilter.map(() => "?").join(",")})`
+      : "";
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
-      ORDER BY e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
-      [...(options.runId ? [options.runId] : []), limit]);
+      ${readinessClause}
+      ORDER BY e.last_verified IS NOT NULL, e.last_verified ASC, e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
+      [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
     for (const event of rows) {
       if (Date.now() >= deadline) { timedOut = true; break; }
       examined += 1;

@@ -28,6 +28,8 @@ import {
   type DomainInput,
 } from "./sourceRegistry";
 import { SOURCE_TYPES, type SourceType } from "./types";
+import { buildOperationalStatus } from "./operations";
+import { withPipelineLease } from "./automation";
 
 export const discoveryRouter = Router();
 
@@ -259,12 +261,20 @@ discoveryRouter.get(
 // Mutating routes — signed in AND holding the admin token.
 // ---------------------------------------------------------------------------------------------
 
+discoveryRouter.get(
+  "/operations",
+  ...adminOnly,
+  asyncHandler(async (_req: AuthedRequest, res: Response) => {
+    res.json(await buildOperationalStatus());
+  })
+);
+
 discoveryRouter.post(
   "/run",
   ...adminOnly,
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const body = req.body || {};
-    const summary = await runDiscovery({
+    const summary = await withPipelineLease("api_discovery", () => runDiscovery({
       targetYears: parseYears(body.years),
       domains: Array.isArray(body.domains) ? body.domains.map(String).slice(0, 50) : undefined,
       topics: Array.isArray(body.topics) ? body.topics.map(String).slice(0, 20) : undefined,
@@ -275,7 +285,7 @@ discoveryRouter.post(
       allowAutoPublish: body.allowAutoPublish === true,
       trigger: "api",
       quiet: false,
-    });
+    }));
     // The in-memory event list is dropped from the response: it duplicates what /events already
     // serves and would make a run reply megabytes long.
     const { events, ...rest } = summary;
@@ -350,11 +360,11 @@ discoveryRouter.post(
           "Publishing into extracted_conferences is disabled. Set DISCOVERY_PUBLISH_TO_CONFERENCES=1 to enable it.",
       });
     }
-    const result = await publishDiscoveredConferences({
+    const result = await withPipelineLease("api_publication", () => publishDiscoveredConferences({
       dryRun,
       limit: Math.min(Number(req.body?.limit) || 200, 2000),
       minConfidence: req.body?.minConfidence === undefined ? undefined : Number(req.body.minConfidence),
-    });
+    }));
     res.json({ dryRun, result });
   })
 );
