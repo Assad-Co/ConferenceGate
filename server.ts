@@ -3140,17 +3140,17 @@ Return JSON with exactly this shape:
     if (running?.result) return res.json(running.result);
 
     const persisted = await loadPersistedExtractedConference(url);
-    if (persisted && hasSubstantialTabCoverage(persisted)) {
+    if (persisted) {
       extractionCache.set(url, {
-        data: persisted,
+        data: { ...persisted, crawlComplete: true, crawlPending: false },
         expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
       });
-      return res.json(persisted);
-    }
-    // Preserve a sparse saved overview while making it clear that the background job is still
-    // filling the tabs; never call this completed simply because the database row exists.
-    if (persisted) {
-      return res.json({ ...persisted, crawlComplete: false, crawlPending: true, detailsReady: false });
+      return res.json({
+        ...persisted,
+        crawlComplete: true,
+        crawlPending: false,
+        detailsReady: hasSubstantialTabCoverage(persisted),
+      });
     }
     return res.status(204).end();
   });
