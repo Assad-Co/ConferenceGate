@@ -2319,14 +2319,17 @@ Return JSON with exactly this shape:
 
   // Completed extractions are already stored in SQLite. Reuse a fresh stored result after a
   // process restart or deployment instead of making the visitor wait through the same crawl again.
-  async function loadPersistedExtractedConference(sourceUrl: string): Promise<any | null> {
+  async function loadPersistedExtractedConference(
+    sourceUrl: string,
+    requireFreshCurrentSchema = true
+  ): Promise<any | null> {
     const row = await dbGet<any>(
       `SELECT overview, call_for_papers, program_agenda, keynote_speakers,
               technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing,
               community, extraction_metadata, updated_at
          FROM extracted_conferences
         WHERE source_url = ?
-          AND updated_at >= datetime('now', '-6 hours')
+          ${requireFreshCurrentSchema ? "AND updated_at >= datetime('now', '-6 hours')" : ""}
         LIMIT 1`,
       [sourceUrl]
     );
@@ -2337,7 +2340,7 @@ Return JSON with exactly this shape:
       try { return JSON.parse(value); } catch { return fallback; }
     };
     const metadata = parseStored(row.extraction_metadata, {});
-    if (metadata.schema_version !== UPCOMING_EXTRACTION_SCHEMA_VERSION) return null;
+    if (requireFreshCurrentSchema && metadata.schema_version !== UPCOMING_EXTRACTION_SCHEMA_VERSION) return null;
     return {
       overview: parseStored(row.overview, {}),
       call_for_papers: parseStored(row.call_for_papers, {}),
@@ -3139,7 +3142,7 @@ Return JSON with exactly this shape:
     const running = crawlJobs.get(url);
     if (running?.result) return res.json(running.result);
 
-    const persisted = await loadPersistedExtractedConference(url);
+    const persisted = await loadPersistedExtractedConference(url, false);
     if (persisted) {
       extractionCache.set(url, {
         data: { ...persisted, crawlComplete: true, crawlPending: false },
