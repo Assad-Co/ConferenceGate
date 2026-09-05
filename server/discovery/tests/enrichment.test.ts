@@ -28,6 +28,8 @@ test("Phase 1.4 schema is additive and exposes readiness plus append-only histor
   assert.ok(tables.some((table) => table.name === "discovery_scale_runs"));
   assert.ok(tables.some((table) => table.name === "discovery_scale_batches"));
   assert.ok(tables.some((table) => table.name === "discovery_url_remediation_runs"));
+  assert.ok(tables.some((table) => table.name === "discovery_automation_runs"));
+  assert.ok(tables.some((table) => table.name === "discovery_pipeline_locks"));
 });
 
 test("an open review makes and keeps publish_ready impossible at the database boundary", async () => {
