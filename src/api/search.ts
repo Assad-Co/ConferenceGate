@@ -51,26 +51,10 @@ export async function searchConferenceDirectories(
   }
 }
 
-/**
- * Queues the visible live results for background extraction. This is deliberately fire-and-forget:
- * Discover stays responsive while the server's small worker pool fills the persistent cache.
- */
+/** @deprecated Customer search is stored-data-only. Inventory preparation belongs to the
+ * background discovery/enrichment workflow and must never be triggered by a visitor. */
 export function prefetchConferenceDetails(results: LiveSearchResult[]): void {
-  const conferences = results
-    .slice(0, 8)
-    .map((result) => ({ url: result.link, title: result.title }))
-    .filter((item) => item.url);
-
-  if (conferences.length === 0) return;
-  fetch('/api/ai/extract-conference/prefetch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ conferences }),
-    keepalive: true,
-  }).catch(() => {
-    // Prefetch is only an optimization. Opening the detail page retains a safe on-demand fallback.
-  });
+  void results;
 }
 
 export interface AgendaSessionExtract {
@@ -365,18 +349,14 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
   };
 }
 
-// Fetches the live search result's own page and asks the AI assistant to pull out only what's
-// explicitly stated there — never invents details. Falls back to an honest "nothing extracted"
-// shape (rather than throwing) whenever extraction can't run, so the UI can render the same
-// honest-empty-state pattern used everywhere else instead of a hard error.
+// Customer detail pages are a stored-data read. Missing fields stay missing: opening a result
+// must never start an external fetch, provider search, browser session, or AI extraction.
 export async function extractConferenceDetails(
   url: string,
-  title: string,
-  focusTab?: string
+  _title: string,
+  _focusTab?: string
 ): Promise<ExtractedConferenceDetails> {
   try {
-    // Opening a card first asks only for already-prepared data. This request does not crawl and
-    // usually returns from memory or the persistent database in a few milliseconds.
     const cachedRes = await fetch(
       `/api/ai/extract-conference/cached?url=${encodeURIComponent(url)}`,
       {
@@ -386,31 +366,13 @@ export async function extractConferenceDetails(
     );
     if (cachedRes.ok && cachedRes.status !== 204) {
       const cachedData = await cachedRes.json().catch(() => null);
-      if (cachedData?.extracted === true || cachedData?.crawlComplete === false) {
+      if (cachedData?.extracted === true) {
         return normalizeTabbedExtraction(cachedData);
       }
     }
-
-    // Safe fallback for a newly discovered or lower-ranked conference that has not been prepared
-    // yet. The server still answers with the first snapshot and finishes the crawl in background.
-    const res = await fetch('/api/ai/extract-conference', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ url, title, focusTab }),
-      // Backstops the server's own deadline for answering with a first snapshot. The server no
-      // longer holds this request open for the whole site — it replies as soon as the first round
-      // of pages is read and keeps crawling in the background — so this only needs to cover that
-      // first-response deadline (~15s) plus a safety margin.
-      signal: AbortSignal.timeout(25000),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return EMPTY_EXTRACTION;
-    }
-    return normalizeTabbedExtraction(data);
+    return { ...EMPTY_EXTRACTION, crawlComplete: true };
   } catch {
-    return EMPTY_EXTRACTION;
+    return { ...EMPTY_EXTRACTION, crawlComplete: true };
   }
 }
 
