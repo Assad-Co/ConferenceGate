@@ -218,13 +218,19 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     extraction_metadata: string;
     updated_at: string;
   }>(
-    `SELECT source_url, overview, call_for_papers, program_agenda, keynote_speakers,
-              technical_committee, sponsors_exhibitors, venue_accommodation, fees_pricing,
-              community, extraction_metadata, updated_at
-      FROM extracted_conferences
-      WHERE overview IS NOT NULL
-        AND overview <> '{}'
-      ORDER BY updated_at DESC`
+    `SELECT ec.source_url, ec.overview, ec.call_for_papers, ec.program_agenda,
+              ec.keynote_speakers, ec.technical_committee, ec.sponsors_exhibitors,
+              ec.venue_accommodation, ec.fees_pricing, ec.community,
+              ec.extraction_metadata, ec.updated_at
+       FROM extracted_conferences ec
+       JOIN discovery_events de
+         ON de.id = json_extract(ec.extraction_metadata, '$.discovery_event_id')
+      WHERE json_extract(ec.extraction_metadata, '$.origin') = 'discovery_engine'
+        AND de.status = 'published'
+        AND de.publish_readiness = 'publish_ready'
+        AND ec.overview IS NOT NULL
+        AND ec.overview <> '{}'
+      ORDER BY ec.updated_at DESC`
   );
 
   const ranked: Array<{ result: LiveSearchResult; score: number }> = [];
