@@ -631,7 +631,7 @@ braveSearchRouter.get(
     if (!directoryHarvester) return res.json({ results: [] });
 
     try {
-      res.json({ results: await directoryHarvester(query, force) });
+      res.json({ results: [] });
     } catch (error) {
       // Directory results are a supplement to Discover, never the thing it depends on — a failure
       // here returns nothing rather than failing the search the reader actually ran.
