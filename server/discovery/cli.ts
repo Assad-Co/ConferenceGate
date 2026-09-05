@@ -28,6 +28,8 @@ import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
+import { runProductionAutomation, withPipelineLease } from "./automation";
+import { buildOperationalStatus } from "./operations";
 import { runUrlRemediation } from "./urlRemediation";
 import { SEED_DOMAINS } from "./sources.seed";
 import { listDomains, setDomainEnabled, upsertDomain } from "./sourceRegistry";
@@ -116,6 +118,12 @@ const HELP = `Conference Gate — discovery engine
            [--batch-time-budget-ms 1800000] [--max-search-queries 48]
                             Resume bounded production batches through discovery, run-scoped
                             enrichment, with AI and publication disabled.
+  automate [--target 5000] [--batch-pages 500] [--enrichment-limit 250]
+           [--schedule-hours 8] [--quiet]
+                            Run one resumable unattended production cycle under the durable
+                            database lease. Discovery and enrichment are bounded; publication is
+                            separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
+  operations                Print the private operational status/checkpoint document as JSON.
   providers                 Show which discovery providers are available and why.
 `;
 
@@ -200,7 +208,7 @@ async function main(): Promise<void> {
     }
 
     case "run": {
-      const summary = await runDiscovery({
+      const summary = await withPipelineLease("manual_discovery", () => runDiscovery({
         domains: list(flags.domains),
         topics: list(flags.topics),
         targetYears: list(flags.years).map(Number).filter(Number.isInteger),
@@ -211,7 +219,7 @@ async function main(): Promise<void> {
         allowAutoPublish: flags["allow-auto-publish"] === true,
         quiet: flags.quiet === true,
         trigger: "cli",
-      });
+      }));
       const { events, ...rest } = summary;
       console.log("\n--- Run summary ---");
       console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
@@ -232,13 +240,13 @@ async function main(): Promise<void> {
       if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
         throw new Error("Refusing enrichment while DISCOVERY_PUBLISH_TO_CONFERENCES=1. Set it to 0 first.");
       }
-      const report = await runEnrichment({
+      const report = await withPipelineLease("manual_enrichment", () => runEnrichment({
         limit: numberFlag(flags.limit, 500),
         maxSearchQueries: numberFlag(flags["max-search-queries"], 500),
         maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
         timeBudgetMs: numberFlag(flags["time-budget-ms"], 30 * 60 * 1000),
         quiet: flags.quiet === true,
-      });
+      }));
       console.log("\n--- Enrichment report ---");
       console.log(formatEnrichmentReport(report));
       console.log("\n--- Enrichment JSON ---");
@@ -391,10 +399,10 @@ async function main(): Promise<void> {
     }
 
     case "publish-audit": {
-      const result = await auditPublishReady({
+      const result = await withPipelineLease("manual_publication_audit", () => auditPublishReady({
         sample: numberFlag(flags.sample, 10),
         onProgress: (done, total, title) => console.error(`  [${done}/${total}] auditing ${title.slice(0, 70)}`),
-      });
+      }));
       console.log(JSON.stringify(result, null, 2));
       if (!result.passed) process.exitCode = 2;
       break;
@@ -407,7 +415,7 @@ async function main(): Promise<void> {
       if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
         throw new Error("Refusing reclassification while DISCOVERY_PUBLISH_TO_CONFERENCES=1. Set it to 0 first.");
       }
-      console.log(JSON.stringify(await reclassifyAllPublishReadiness(), null, 2));
+      console.log(JSON.stringify(await withPipelineLease("manual_readiness", () => reclassifyAllPublishReadiness()), null, 2));
       break;
     }
 
@@ -444,10 +452,10 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         break;
       }
-      const result = await publishDiscoveredConferences({
+      const result = await withPipelineLease("manual_publication", () => publishDiscoveredConferences({
         dryRun,
         limit: numberFlag(flags.limit, 200),
-      });
+      }));
       console.log(JSON.stringify({ dryRun, ...result }, null, 2));
       break;
     }
@@ -458,7 +466,7 @@ async function main(): Promise<void> {
         "Refusing scale orchestration while publishing is enabled. " +
         "Set DISCOVERY_PUBLISH_TO_CONFERENCES=0 for inventory growth."
       );
-      const result = await runProductionScale({
+      const result = await withPipelineLease("manual_scale", () => runProductionScale({
         targetAccepted: numberFlag(flags.target, 1_000),
         batchPages: numberFlag(flags["batch-pages"], 500),
         batchCandidates: numberFlag(flags["batch-candidates"], 6_000),
@@ -467,8 +475,32 @@ async function main(): Promise<void> {
         maxSearchQueries: numberFlag(flags["max-search-queries"], 48),
         maxJinaPages: numberFlag(flags["max-jina-pages"], 150),
         quiet: flags.quiet === true,
+      }));
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "automate": {
+      const result = await runProductionAutomation({
+        targetAccepted: numberFlag(flags.target, 5_000),
+        targetPublished: numberFlag(flags["published-target"], 1_000),
+        batchPages: numberFlag(flags["batch-pages"], 500),
+        enrichmentLimit: numberFlag(flags["enrichment-limit"], 250),
+        maxSearchQueries: numberFlag(flags["max-search-queries"], 14),
+        enrichmentSearchQueries: numberFlag(flags["enrichment-search-queries"], 6),
+        maxJinaPages: numberFlag(flags["max-jina-pages"], 100),
+        enrichmentJinaPages: numberFlag(flags["enrichment-jina-pages"], 50),
+        discoveryTimeBudgetMs: numberFlag(flags["discovery-time-budget-ms"], 25 * 60_000),
+        enrichmentTimeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 20 * 60_000),
+        scheduleHours: numberFlag(flags["schedule-hours"], 8),
+        quiet: flags.quiet === true,
       });
       console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "operations": {
+      console.log(JSON.stringify(await buildOperationalStatus(), null, 2));
       break;
     }
 

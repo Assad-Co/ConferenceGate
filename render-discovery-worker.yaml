@@ -70,14 +70,12 @@ services:
     runtime: node
     plan: starter
     branch: main
-    # 03:00 UTC on Mondays. Weekly suits Phase 1: conference pages change slowly, the engine
-    # skips anything unchanged, and a weekly cadence keeps provider spend predictable.
-    schedule: "0 3 * * 1"
+    # Three bounded cycles per day. At 14 discovery and 6 enrichment searches per cycle this caps
+    # scheduled search demand near 1,800 queries/month before provider-specific early stopping.
+    # The database lease prevents overlap; persisted scale state resumes after restart.
+    schedule: "17 */8 * * *"
     buildCommand: npm install
-    # Phase 1: the full benchmark, so each run leaves behind a preflight, a run summary, a quality
-    # report, a CSV and a field audit. Switch to `run` once the benchmark has been signed off:
-    #   npm run discovery -- run --years 2026,2027,2028 --max-pages 400
-    startCommand: npm run discovery -- phase1 --out /tmp/phase1 --max-pages 400 --sample 20
+    startCommand: npm run automation
     envVars:
       - key: NODE_ENV
         value: production
@@ -105,12 +103,10 @@ services:
       # Raises the reader's rate limit. It works without a key, just slowly.
       - key: JINA_API_KEY
         sync: false
-      # Only needed if you enable the capped AI fallback with --max-ai-calls.
-      - key: GEMINI_API_KEY
-        sync: false
-      # Deliberately absent: DISCOVERY_PUBLISH_TO_CONFERENCES.
-      # Until it is set to "1", discovered conferences stay in the discovery_* tables and reach no
-      # user. Do not add it here until the audit has been reviewed and signed off.
+      # The general/manual publishing flag remains absent. This narrower permit is consumed only
+      # inside the locked automation cycle, after reclassification and a fresh 10-record audit.
+      - key: CONFERENCEGATE_AUTOMATION_PUBLICATION
+        value: "1"
       # A browser is neither needed nor wanted on the worker: the engine reads HTML directly and
       # falls back to the hosted reader, so skip the postinstall download entirely.
       - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD

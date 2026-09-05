@@ -28,6 +28,11 @@ export const DISCOVERY_TABLES = [
   "discovery_scale_runs",
   "discovery_scale_batches",
   "discovery_url_remediation_runs",
+  "discovery_pipeline_locks",
+  "discovery_automation_runs",
+  "discovery_automation_state",
+  "discovery_quality_checkpoints",
+  "discovery_daily_reports",
   "discovery_review_queue",
 ] as const;
 
@@ -347,6 +352,68 @@ export async function initDiscoverySchema(): Promise<void> {
       finished_at TEXT
     );
 
+    -- Durable orchestration state. The lease is database-owned, so two Render invocations cannot
+    -- both become the heavy worker; a killed process becomes recoverable after lease_expires_at.
+    CREATE TABLE IF NOT EXISTS discovery_pipeline_locks (
+      name TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      stage TEXT NOT NULL,
+      acquired_at TEXT NOT NULL,
+      heartbeat_at TEXT NOT NULL,
+      lease_expires_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_automation_runs (
+      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      stage TEXT NOT NULL DEFAULT 'starting',
+      accepted_before INTEGER NOT NULL DEFAULT 0,
+      accepted_after INTEGER,
+      published_before INTEGER NOT NULL DEFAULT 0,
+      published_after INTEGER,
+      discovery_scale_run_id TEXT,
+      enrichment_run_id TEXT,
+      publication_audit_id TEXT,
+      publication_result TEXT,
+      provider_usage TEXT NOT NULL DEFAULT '{}',
+      error TEXT,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_automation_state (
+      id INTEGER PRIMARY KEY CHECK(id=1),
+      status TEXT NOT NULL DEFAULT 'idle',
+      current_stage TEXT NOT NULL DEFAULT 'idle',
+      current_run_id TEXT,
+      last_discovery_at TEXT,
+      last_enrichment_at TEXT,
+      last_publication_at TEXT,
+      last_success_at TEXT,
+      next_scheduled_at TEXT,
+      last_failure TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    INSERT OR IGNORE INTO discovery_automation_state (id) VALUES (1);
+
+    CREATE TABLE IF NOT EXISTS discovery_quality_checkpoints (
+      target_accepted INTEGER PRIMARY KEY,
+      accepted_at_capture INTEGER NOT NULL,
+      report TEXT NOT NULL,
+      enrichment_coverage TEXT NOT NULL,
+      audit_report TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS discovery_daily_reports (
+      report_date TEXT PRIMARY KEY,
+      report TEXT NOT NULL,
+      enrichment_coverage TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Anything the engine is not confident enough to act on by itself. Nothing is ever deleted
     -- because two titles looked alike; it lands here for a person to decide.
     CREATE TABLE IF NOT EXISTS discovery_review_queue (
@@ -425,6 +492,7 @@ export async function initDiscoverySchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_discovery_scale_status ON discovery_scale_runs(status, target_accepted);
     CREATE INDEX IF NOT EXISTS idx_discovery_scale_batches_run ON discovery_scale_batches(scale_run_id, batch_number);
     CREATE INDEX IF NOT EXISTS idx_discovery_url_remediation_started ON discovery_url_remediation_runs(started_at);
+    CREATE INDEX IF NOT EXISTS idx_discovery_automation_started ON discovery_automation_runs(started_at);
     CREATE INDEX IF NOT EXISTS idx_discovery_review_status ON discovery_review_queue(status);
     CREATE INDEX IF NOT EXISTS idx_discovery_domains_next ON discovery_domains(next_crawl_at);
   `);
