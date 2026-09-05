@@ -64,6 +64,14 @@ services:
       - key: JINA_API_KEY
         sync: false
 
+      # NOT set, deliberately. The three legacy live-crawl routes
+      # (POST /api/ai/extract-conference, /prefetch, /focus) answer 404 unless this operator token
+      # is present on the request, so with it unset they are simply off and no customer — signed in
+      # or anonymous — can start a crawl, a provider request or a model call. Set it only for a
+      # deliberate hand-preparation of one conference, and unset it afterwards.
+      # - key: DISCOVERY_ADMIN_TOKEN
+      #   sync: false
+
   # ---- The discovery worker. Crawls, extracts, stores. Serves no traffic.
   - type: cron
     name: conferencegate-discovery

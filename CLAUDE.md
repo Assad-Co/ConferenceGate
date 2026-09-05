@@ -73,7 +73,12 @@ can't be pointed at a local test server. Don't weaken it — extract the pieces 
 ## The conference discovery engine
 
 `server/discovery/` finds conferences on its own, rather than waiting for someone to paste a URL
-into Discover. It is backend-only: it added no frontend file and changed none.
+into Discover. It is backend-only in the sense that matters — no layout, styling or navigation
+changed — but it is no longer true that it touched no frontend file: moving customer search and the
+detail page onto stored records only meant removing the on-demand crawl calls from
+`src/api/search.ts`, `src/components/DiscoveryEngine.tsx` and
+`src/components/ExternalConferenceDetail.tsx`, and rewording the three labels that promised a live
+read.
 
 Same rule as the extraction pipeline above, applied at every stage: a field the source did not
 state is `null`, and everything stored carries its provenance — which page supplied it, whether
@@ -94,6 +99,20 @@ Two things are guarded rather than merely configured:
   into `extracted_conferences` — which is what makes it visible in Discover — needs
   `DISCOVERY_PUBLISH_TO_CONFERENCES=1`, never overwrites an existing row, and only takes records
   that have a title, a date, a country, a real official URL and nothing open in the review queue.
+
+  The unattended worker has its own narrower permit, `CONFERENCEGATE_AUTOMATION_PUBLICATION=1`,
+  which does not widen anything: automation refuses to start at all while the general flag is on,
+  and its publication stage still runs behind readiness reclassification, a fresh ten-record audit
+  of randomly sampled `publish_ready` records, and the same eligibility SQL. A record that fails
+  that audit is moved to `needs_review` with an open review row, which every later reclassification
+  re-reads — so one bad conference stops itself, not the queue behind it.
+
+- **Customer traffic never starts a crawl.** Discover and the detail page read stored records only.
+  The three routes that can still crawl — `POST /api/ai/extract-conference`, its `/prefetch` and
+  its `/focus` — are closed by `server/internalCrawlAccess.ts` and answer 404 unless the request
+  carries `DISCOVERY_ADMIN_TOKEN`, which production leaves unset. The read-only `/cached` and
+  `/status` routes stay open because they only return what is already stored. If you add a route
+  that fetches, extracts or calls a model on a visitor's behalf, it belongs behind that same guard.
 
 Deduplication merges on strong agreement, queues the middle ground for review, and leaves weak
 matches alone. It never deletes a record because two titles looked alike.

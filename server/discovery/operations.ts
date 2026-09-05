@@ -8,7 +8,7 @@ function json(value: unknown, fallback: any = null): any {
 }
 
 export async function buildOperationalStatus(targetAccepted = 5_000, targetPublished = 1_000) {
-  const [inventory, state, lock, lastDiscovery, lastEnrichment, lastAutomation, lastAudit, checkpoint, daily, providerRows] = await Promise.all([
+  const [inventory, state, lock, lastDiscovery, lastEnrichment, lastAutomation, lastAudit, checkpoint, daily, providerRows, providerErrorRows] = await Promise.all([
     buildInventoryReport(),
     dbGet<Record<string, any>>("SELECT * FROM discovery_automation_state WHERE id=1"),
     dbGet<Record<string, any>>("SELECT * FROM discovery_pipeline_locks WHERE name='production_data_pipeline'"),
@@ -21,6 +21,13 @@ export async function buildOperationalStatus(targetAccepted = 5_000, targetPubli
     dbAll<Record<string, any>>(`SELECT provider,SUM(queries_issued) queries,SUM(raw_results) results,
       SUM(accepted_events) accepted,SUM(queries_failed) errors FROM discovery_run_providers
       WHERE created_at>=datetime('now','-1 day') GROUP BY provider`),
+    // A provider failure count says something went wrong; only the message says what. Brave
+    // answering 14 queries with 0 results is a quota, a token or a plan problem, and those three
+    // need three different fixes — so the stored text is surfaced here rather than leaving an
+    // operator to hand-write SQL against Turso to read it.
+    dbAll<Record<string, any>>(`SELECT provider,errors,created_at FROM discovery_run_providers
+      WHERE created_at>=datetime('now','-1 day') AND errors IS NOT NULL AND errors NOT IN ('[]','')
+      ORDER BY created_at DESC LIMIT 10`),
   ]);
   const lockExpires = lock?.lease_expires_at ? Date.parse(lock.lease_expires_at) : NaN;
   const lockActive = Number.isFinite(lockExpires) && lockExpires > Date.now();
@@ -52,6 +59,9 @@ export async function buildOperationalStatus(targetAccepted = 5_000, targetPubli
       publicationAudit: lastAudit ? { ...lastAudit, passed: !!lastAudit.passed, failures: json(lastAudit.failures, []) } : null,
     },
     providerUsageLast24Hours: providerRows,
+    providerErrorsLast24Hours: providerErrorRows.map((row) => ({
+      provider: row.provider, at: row.created_at, messages: json(row.errors, []),
+    })),
     aiCalls: inventory.aiCalls,
     latestQualityCheckpoint: checkpoint ? {
       targetAccepted: checkpoint.target_accepted, acceptedAtCapture: checkpoint.accepted_at_capture,

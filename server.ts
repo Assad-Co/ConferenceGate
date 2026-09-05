@@ -31,6 +31,7 @@ import {
   SelfReportedAttendanceRow,
 } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
+import { requireInternalCrawlAuthorization } from "./server/internalCrawlAccess";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { jinaReadPage, isJinaConfigured, hasJinaKey } from "./server/jinaReader";
@@ -3098,7 +3099,7 @@ Return JSON with exactly this shape:
     }
   };
 
-  app.post("/api/ai/extract-conference/prefetch", (req, res) => {
+  app.post("/api/ai/extract-conference/prefetch", requireInternalCrawlAuthorization, (req, res) => {
     const rawItems = Array.isArray(req.body?.conferences) ? req.body.conferences : [];
     const accepted: ConferencePrefetchItem[] = [];
 
@@ -3158,7 +3159,7 @@ Return JSON with exactly this shape:
     return res.status(204).end();
   });
 
-  app.post("/api/ai/extract-conference", async (req, res) => {
+  app.post("/api/ai/extract-conference", requireInternalCrawlAuthorization, async (req, res) => {
     try {
       const { url, title, focusTab } = req.body;
       if (typeof url !== "string" || !url.trim()) {
@@ -3205,7 +3206,7 @@ Return JSON with exactly this shape:
   // Fast lane for the tab the visitor actually opened. It reads at most two likely section
   // pages and is independent of the full-site crawl, so Fees/Speakers/etc. do not wait behind
   // dozens of unrelated pages.
-  app.post("/api/ai/extract-conference/focus", async (req, res) => {
+  app.post("/api/ai/extract-conference/focus", requireInternalCrawlAuthorization, async (req, res) => {
     try {
       const { url, title, focusTab } = req.body;
       if (typeof url !== "string" || !url.trim()) return res.status(400).json({ error: "url is required" });
