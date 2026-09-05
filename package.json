@@ -12,6 +12,7 @@
     "postinstall": "node scripts/installBrowser.mjs",
     "install:browser": "playwright-core install chromium",
     "discovery": "tsx server/discovery/cli.ts",
+    "automation": "tsx server/discovery/cli.ts automate --target 5000 --batch-pages 500 --enrichment-limit 250 --max-search-queries 14 --enrichment-search-queries 6 --max-jina-pages 100 --enrichment-jina-pages 50 --schedule-hours 8 --quiet",
     "test:discovery": "node scripts/runDiscoveryTests.mjs"
   },
   "dependencies": {
