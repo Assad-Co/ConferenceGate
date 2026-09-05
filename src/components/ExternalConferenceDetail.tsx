@@ -22,8 +22,6 @@ import {
   LiveSearchResult,
   ExtractedConferenceDetails,
   extractConferenceDetails,
-  fetchConferenceCrawlStatus,
-  fetchFocusedConferenceSection,
 } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
@@ -318,84 +316,22 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     };
   }, []);
 
-  // A selected tab gets its own two-page fast lane. Stop the selected-tab spinner after seven
-  // seconds even if the site is unusually slow; the full crawl keeps improving the data behind it.
-  useEffect(() => {
-    // Wait for the instant cache lookup before starting any focused read. A completed prepared
-    // record already contains the whole crawl, so opening or changing tabs must not fetch again.
-    if (
-      loading ||
-      data?.crawlComplete ||
-      activeTab === 'overview' ||
-      activeTab === 'community' ||
-      requestedFastTabsRef.current.has(activeTab)
-    ) return;
-    const requestedTab = activeTab;
-    requestedFastTabsRef.current.add(requestedTab);
-    const settle = () => {
-      if (!mountedRef.current) return;
-      setFastCheckedTabs((previous) => ({ ...previous, [requestedTab]: true }));
-    };
-    const timer = setTimeout(settle, 7000);
-
-    fetchFocusedConferenceSection(result.link, result.title, requestedTab)
-      .then((focused) => {
-        if (focused && mountedRef.current) {
-          setData((current) => mergeFocusedSection(current, focused, requestedTab));
-        }
-      })
-      .finally(() => {
-        clearTimeout(timer);
-        settle();
-      });
-  }, [activeTab, result.link, result.title, loading, data?.crawlComplete]);
-
-  // The server answers with whatever the first round of pages found and keeps reading the rest of
-  // the site in the background, so the first response is a starting point rather than the finished
-  // article. Polling here is what lets a section that was empty a moment ago fill in on its own
-  // instead of the reader having to reload and hope.
+  // Opening a published conference reads its stored Conference Gate record once. Missing fields
+  // remain honest empty states and never start a customer-triggered crawl or AI request.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setData(null);
     setPollGaveUp(false);
 
-    const POLL_INTERVAL_MS = 800;
-    // The server's own crawl budget is 70s of page-fetching (server.ts CRAWL_TIME_BUDGET_MS),
-    // plus real time afterward for AI extraction on whatever it read — a poll ceiling shorter
-    // than that gives up before the crawl the server is actually running could ever finish.
-    // 130s clears that with headroom rather than abandoning a crawl still legitimately in flight.
-    const POLL_CEILING_MS = 62000;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const pollUntilComplete = (startedAt: number) => {
-      timer = setTimeout(async () => {
-        if (cancelled) return;
-        const update = await fetchConferenceCrawlStatus(result.link, activeTabRef.current);
-        if (cancelled) return;
-        if (update) setData(update);
-        if (update?.crawlComplete) return;
-        // Stop once we've waited longer than any real crawl should take — a poll that never
-        // terminates would keep hitting the server forever. This is a genuine give-up, not a
-        // finish, so it's tracked separately rather than left indistinguishable from success.
-        if (Date.now() - startedAt < POLL_CEILING_MS) {
-          pollUntilComplete(startedAt);
-        } else {
-          setPollGaveUp(true);
-        }
-      }, POLL_INTERVAL_MS);
-    };
-
     extractConferenceDetails(result.link, result.title, activeTabRef.current).then((extracted) => {
       if (cancelled) return;
       setData(extracted);
       setLoading(false);
-      if (extracted.extracted && !extracted.crawlComplete) pollUntilComplete(Date.now());
     });
 
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
     };
   }, [result.link, result.title]);
 
@@ -409,18 +345,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
   // only true while polling is actually still happening. Once it's given up, say so and point at
   // reloading, rather than spinning forever over a check that has already stopped.
-  const checkingOrGaveUp = (checkingText: string) =>
-    pollGaveUp || fastCheckedTabs[activeTab] ? (
-      <EmptyExtractState
-        message="No information for this section has been found yet. The background crawl will add it automatically if the official site publishes it."
-        sourceUrl={result.link}
-      />
-    ) : (
-      <div className="py-12 flex items-center justify-center gap-2 text-xs text-blue-700">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        {checkingText}
-      </div>
-    );
+  const checkingOrGaveUp = (_checkingText: string) => (
+    <EmptyExtractState
+      message="This information is not available in the stored Conference Gate record yet."
+      sourceUrl={result.link}
+    />
+  );
 
   const submissionLink = data?.submissionUrl || result.link;
   const upcomingImportantDates = (data?.importantDates || []).filter(
@@ -628,7 +558,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-xs text-slate-400 font-semibold">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Reading the source page for real details...
+            Loading stored conference details...
           </div>
         ) : (
           <>

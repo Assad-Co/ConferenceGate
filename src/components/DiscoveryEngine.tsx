@@ -23,8 +23,6 @@ import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } 
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
 import {
   searchConferencesOnTheWeb,
-  searchConferenceDirectories,
-  prefetchConferenceDetails,
   LiveSearchResult,
 } from '../api/search';
 import { ExternalDetailTab } from './ExternalConferenceDetail';
@@ -464,21 +462,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // filters would be silently skipped by that same-key guard below.
   const [manualRetryCount, setManualRetryCount] = useState(0);
   const lastHandledRetryCountRef = useRef(0);
-  const prefetchedConferenceUrlsRef = useRef(new Set<string>());
-
-  // Start preparing likely selections while the visitor is still reading Discover. The first two
-  // cards are warmed as soon as progressive search results arrive; once search settles, the first
-  // eight visible cards are queued. The server enforces a two-crawl concurrency limit.
-  useEffect(() => {
-    if (!webResults?.length) return;
-    const visibleCandidates = webResults.slice(0, webSearchLoading ? 2 : 8);
-    const newCandidates = visibleCandidates.filter(
-      (result) => !prefetchedConferenceUrlsRef.current.has(result.link)
-    );
-    if (newCandidates.length === 0) return;
-    newCandidates.forEach((result) => prefetchedConferenceUrlsRef.current.add(result.link));
-    prefetchConferenceDetails(newCandidates);
-  }, [webResults, webSearchLoading]);
 
   useEffect(() => {
     const trimmed = submittedSearchTerm.trim();
@@ -564,19 +547,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             return results;
           })
         );
-
-        // Conference directories, read once for the whole search rather than once per region.
-        // They list smaller and regional events exhaustively, which is exactly what a search
-        // engine's ranking leaves out. Never allowed to fail the search: searchConferenceDirectories
-        // resolves to [] on any error.
-        if (trimmed) {
-          searches.push(
-            searchConferenceDirectories(trimmed, isManualRetry).then((results) => {
-              if (lastWebQueryRef.current === cacheKey) absorb(results);
-              return results;
-            })
-          );
-        }
 
         Promise.allSettled(searches)
           .then((outcomes) => {
@@ -1205,7 +1175,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                           : 'bg-blue-50 border-blue-200 text-blue-700'
                       }`}>
-                        {result.prepared ? 'Conference details ready' : 'Preparing conference details'}
+                        {result.prepared ? 'Stored conference details' : 'Stored details available'}
                       </span>
                       {(
                         [
