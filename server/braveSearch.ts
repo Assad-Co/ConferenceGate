@@ -237,6 +237,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     .replace(/[^a-z0-9]+/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 1 && !stopWords.has(token) && !/^20\d{2}$/.test(token));
+  const queryYears = Array.from(query.matchAll(/\b20\d{2}\b/g), (match) => match[0]);
 
   const ranked: Array<{ result: LiveSearchResult; score: number }> = [];
   for (const row of rows) {
@@ -256,14 +257,23 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         : "";
     if (!title) continue;
 
+    const country = String(overview.country || "").toLowerCase();
+    const regionLabels = [
+      /\b(bahrain|cyprus|egypt|iran|iraq|israel|jordan|kuwait|lebanon|oman|palestine|qatar|saudi arabia|syria|turkey|türkiye|united arab emirates|yemen)\b/.test(country) ? "middle east" : "",
+      /\b(albania|andorra|austria|belarus|belgium|bosnia|bulgaria|croatia|cyprus|czech|denmark|estonia|finland|france|germany|greece|hungary|iceland|ireland|italy|kosovo|latvia|liechtenstein|lithuania|luxembourg|malta|moldova|monaco|montenegro|netherlands|north macedonia|norway|poland|portugal|romania|san marino|serbia|slovakia|slovenia|spain|sweden|switzerland|turkey|türkiye|ukraine|united kingdom)\b/.test(country) ? "europe" : "",
+    ];
     const haystack = [
       title,
       overview.acronym,
       overview.description,
+      overview.dates_text,
+      overview.start_date,
+      overview.end_date,
       overview.city,
       overview.country,
       overview.format,
       overview.organizer,
+      ...regionLabels,
       ...(Array.isArray(overview.topics) ? overview.topics : []),
     ]
       .filter((value) => typeof value === "string")
@@ -271,8 +281,18 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       .toLowerCase();
 
     const normalizedTitle = title.toLowerCase();
-    const matchedTokens = queryTokens.filter((token) => haystack.includes(token));
-    if (queryTokens.length > 0 && matchedTokens.length === 0) continue;
+    const eventDateEvidence = [title, overview.dates_text, overview.start_date, overview.end_date]
+      .filter((value) => typeof value === "string")
+      .join(" ");
+    if (queryYears.length > 0 && !queryYears.some((year) => eventDateEvidence.includes(year))) continue;
+
+    const tokenMatches = (token: string) => {
+      if (token === "ai") return /\bai\b|artificial intelligence|machine learning/.test(haystack);
+      if (token === "medical") return /\bmedical\b|\bmedicine\b|\bhealth(?:care)?\b|\bclinical\b/.test(haystack);
+      return haystack.includes(token);
+    };
+    const matchedTokens = queryTokens.filter(tokenMatches);
+    if (queryTokens.length > 0 && matchedTokens.length !== queryTokens.length) continue;
 
     let host = "";
     try {
