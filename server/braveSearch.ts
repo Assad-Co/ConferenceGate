@@ -2,6 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "./asyncHandler";
 import { isSerperConfigured, serperSearch } from "./serperSearch";
 import { dbAll } from "./db";
+import { scoreStoredConferenceRecord } from "./storedConferenceSearch";
 
 export interface LiveSearchResult {
   title: string;
@@ -226,19 +227,6 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       ORDER BY updated_at DESC`
   );
 
-  const stopWords = new Set([
-    "conference", "conferences", "official", "website", "registration", "program", "speakers",
-    "from", "until", "upcoming", "current", "and", "the", "in", "of", "for", "worldwide",
-    "january", "february", "march", "april", "may", "june", "july", "august",
-    "september", "october", "november", "december",
-  ]);
-  const queryTokens = query
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .split(/\s+/)
-    .filter((token) => token.length > 1 && !stopWords.has(token) && !/^20\d{2}$/.test(token));
-  const queryYears = Array.from(query.matchAll(/\b20\d{2}\b/g), (match) => match[0]);
-
   const ranked: Array<{ result: LiveSearchResult; score: number }> = [];
   for (const row of rows) {
     let overview: Record<string, any>;
@@ -262,38 +250,6 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       /\b(bahrain|cyprus|egypt|iran|iraq|israel|jordan|kuwait|lebanon|oman|palestine|qatar|saudi arabia|syria|turkey|türkiye|united arab emirates|yemen)\b/.test(country) ? "middle east" : "",
       /\b(albania|andorra|austria|belarus|belgium|bosnia|bulgaria|croatia|cyprus|czech|denmark|estonia|finland|france|germany|greece|hungary|iceland|ireland|italy|kosovo|latvia|liechtenstein|lithuania|luxembourg|malta|moldova|monaco|montenegro|netherlands|north macedonia|norway|poland|portugal|romania|san marino|serbia|slovakia|slovenia|spain|sweden|switzerland|turkey|türkiye|ukraine|united kingdom)\b/.test(country) ? "europe" : "",
     ];
-    const haystack = [
-      title,
-      overview.acronym,
-      overview.description,
-      overview.dates_text,
-      overview.start_date,
-      overview.end_date,
-      overview.city,
-      overview.country,
-      overview.format,
-      overview.organizer,
-      ...regionLabels,
-      ...(Array.isArray(overview.topics) ? overview.topics : []),
-    ]
-      .filter((value) => typeof value === "string")
-      .join(" ")
-      .toLowerCase();
-
-    const normalizedTitle = title.toLowerCase();
-    const eventDateEvidence = [title, overview.dates_text, overview.start_date, overview.end_date]
-      .filter((value) => typeof value === "string")
-      .join(" ");
-    if (queryYears.length > 0 && !queryYears.some((year) => eventDateEvidence.includes(year))) continue;
-
-    const tokenMatches = (token: string) => {
-      if (token === "ai") return /\bai\b|artificial intelligence|machine learning/.test(haystack);
-      if (token === "medical") return /\bmedical\b|\bmedicine\b|\bhealth(?:care)?\b|\bclinical\b/.test(haystack);
-      return haystack.includes(token);
-    };
-    const matchedTokens = queryTokens.filter(tokenMatches);
-    if (queryTokens.length > 0 && matchedTokens.length !== queryTokens.length) continue;
-
     let host = "";
     try {
       host = new URL(row.source_url).hostname.replace(/^www\./, "");
@@ -329,9 +285,27 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     const pagesCrawled = Number(metadata.pages_crawled) || 0;
     const detailsReady = populatedSections >= 3 && (pagesCrawled >= 3 || populatedSections >= 5);
 
-    let score = matchedTokens.length * 100;
-    if (queryTokens.some((token) => normalizedTitle.includes(token))) score += 300;
-    if (queryTokens.length > 0 && matchedTokens.length === queryTokens.length) score += 200;
+    const score = scoreStoredConferenceRecord(query, {
+      title,
+      acronym: overview.acronym ?? overview.short_title,
+      topics: overview.topics,
+      categories: overview.categories ?? overview.category,
+      keywords: overview.keywords,
+      description: overview.description ?? overview.overview,
+      organizer: [overview.organizer, overview.society, overview.institution],
+      location: [overview.city, overview.country, overview.region, overview.venue, overview.format, ...regionLabels],
+      dates: [overview.dates_text, overview.start_date, overview.end_date, overview.important_dates],
+      officialUrl: row.source_url,
+      callForPapers: sections[0],
+      programAgenda: sections[1],
+      keynoteSpeakers: sections[2],
+      technicalCommittee: sections[3],
+      sponsorsExhibitors: sections[4],
+      venueAccommodation: sections[5],
+      feesPricing: sections[6],
+      community: sections[7],
+    });
+    if (score === null) continue;
     ranked.push({
       score,
       result: {
