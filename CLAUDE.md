@@ -143,6 +143,23 @@ speakers page simply means no speakers. And **a deep field can never make a conf
 publishable**: these columns are not readiness inputs and not audited, so an unreadable sponsors
 page leaves an otherwise valid record exactly as publishable as it was.
 
+A deep page must also belong to *this* event (`eventIdentity.ts`), and the rule is asymmetric on
+purpose. Where the conference owns its domain, a subpage proves nothing — `/speakers` on
+`inted2027.org` is INTED's speakers page and demanding it repeat the acronym would discard most
+real pages. Where the event lives under a path (a platform like emedevents.com, a society site with
+a hundred other things on it), silence is a rejection: a candidate must sit under the event's own
+path or name the event in its URL, title, heading or breadcrumb. And a page stating a year that is
+not the event's is refused everywhere — that single rule is what stops one edition's programme
+being filed under another's, which a production sample did before the guard existed.
+
+Precision beats coverage here, because a wrong speaker is worse than no speaker. Names are filtered
+by vocabulary rather than shape ("Premium Profile" and "Live Webinars" are structurally identical to
+a real name, so only words separate them), nothing is read from page furniture — nav, buttons,
+promos, cookie bars — and a sponsor needs evidence it is an organisation: a logo, a link to its own
+site, an organisation marker, or a plain list entry that survives every negative filter. Each of
+those rules exists because a real record stored something it should not have; the regression tests
+name the conference each one came from.
+
 What is stored is what the page said. A role comes from the heading that introduced the person
 ("Keynote Speakers" above a list makes them keynotes; a bare list of names has no role at all). An
 affiliation is kept only when the site separated it out as its own field or the text names an

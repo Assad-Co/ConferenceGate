@@ -27,6 +27,7 @@ import {
   mergeDeepExtractions, sameDomainLinks, type DeepSection, type DeepSectionExtraction,
   type SectionPageCandidate,
 } from "./deepSections";
+import { candidateUrlBelongsToEvent, pageBelongsToEvent, type EventIdentity } from "./eventIdentity";
 import { canonicalizeUrl } from "./normalize";
 
 /** How the five sections map onto storage: a column, and the provenance field name beside it. */
@@ -64,17 +65,25 @@ export interface CollectDeepSectionsOptions {
   sections?: readonly DeepSection[];
   /** Lets the caller's time budget stop this mid-conference. */
   outOfTime?: () => boolean;
+  /**
+   * Who this conference is, so a page belonging to a different event cannot contribute to it.
+   * Omitted only where there is no record to identify — every production path supplies it.
+   */
+  identity?: EventIdentity | null;
 }
 
 /** What happened to one candidate subpage, so "nothing was read" can always be explained. */
 export type DeepCandidateOutcome =
-  | "read" | "robots_disallowed" | "fetch_failed" | "already_seen" | "page_budget" | "out_of_time";
+  | "read" | "robots_disallowed" | "fetch_failed" | "already_seen" | "page_budget" | "out_of_time"
+  | "different_event_url" | "different_event_page";
 
 export interface DeepCandidateTrace {
   url: string;
   section: DeepSection;
   evidence: string;
   outcome: DeepCandidateOutcome;
+  /** For a rejection, exactly which rule rejected it. */
+  detail?: string;
 }
 
 export interface DeepSectionsCollected {
@@ -112,8 +121,9 @@ export async function collectDeepSections(options: CollectDeepSectionsOptions): 
   });
 
   const traced: DeepCandidateTrace[] = [];
-  const note = (candidate: SectionPageCandidate, outcome: DeepCandidateOutcome) =>
-    traced.push({ url: candidate.url, section: candidate.section, evidence: candidate.evidence, outcome });
+  const note = (candidate: SectionPageCandidate, outcome: DeepCandidateOutcome, detail?: string) =>
+    traced.push({ url: candidate.url, section: candidate.section, evidence: candidate.evidence, outcome, detail });
+  const identity = options.identity ?? null;
 
   for (const candidate of candidates) {
     if (pagesRead.length > maxPages) { note(candidate, "page_budget"); continue; }
@@ -121,15 +131,32 @@ export async function collectDeepSections(options: CollectDeepSectionsOptions): 
     const key = canonicalizeUrl(candidate.url) || candidate.url;
     if (seen.has(key)) { note(candidate, "already_seen"); continue; }
     seen.add(key);
+
+    // Cheapest check first: a URL that cannot belong to this event costs no fetch to reject.
+    if (identity) {
+      const verdict = candidateUrlBelongsToEvent(identity, candidate.url);
+      if (!verdict.ok) { note(candidate, "different_event_url", verdict.reason); continue; }
+    }
+
     pagesAttempted += 1;
     const read = await options.read(candidate.url);
     if (!read || "unreadable" in read || !read.html) {
       note(candidate, read && "unreadable" in read ? read.unreadable : "fetch_failed");
       continue;
     }
+    const landedUrl = read.url || candidate.url;
+
+    // What the page actually says about which event it belongs to. A URL can look right and the
+    // page still be another edition's — which is exactly how a 2026 workshop's programme reached
+    // a 2027 conference — so the page gets its own say before a word of it is kept.
+    if (identity) {
+      const verdict = pageBelongsToEvent(identity, landedUrl, read.html);
+      if (!verdict.ok) { note(candidate, "different_event_page", verdict.reason); continue; }
+    }
+
     note(candidate, "read");
-    parts.push(extractDeepSections(read.html, read.url || candidate.url));
-    pagesRead.push(read.url || candidate.url);
+    parts.push(extractDeepSections(read.html, landedUrl));
+    pagesRead.push(landedUrl);
   }
 
   const extraction = mergeDeepExtractions(parts);

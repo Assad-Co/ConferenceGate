@@ -12,6 +12,7 @@ import {
   collectDeepSections, deepSectionsMissing, storeDeepSections, type DeepCandidateTrace,
 } from "./deepEnrichment";
 import type { DeepSection } from "./deepSections";
+import { eventIdentityFrom } from "./eventIdentity";
 import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl, normalizeTitle } from "./normalize";
 import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
@@ -175,6 +176,8 @@ export interface DeepTraceEntry {
   sectionsMissingBefore: DeepSection[];
   sectionsFilled: DeepSection[];
   provenance: Partial<Record<DeepSection, string>>;
+  /** Who this record is, as the identity guard sees it. Null when it has no usable official URL. */
+  identity: { acronym: string | null; year: number | null; pathPrefix: string; sharedHost: boolean } | null;
   skipReason: string | null;
 }
 
@@ -420,6 +423,7 @@ async function enrichDeepSections(input: {
     sectionsMissingBefore: deepSectionsMissing(event),
     sectionsFilled: [],
     provenance: {},
+    identity: null,
     skipReason: null,
   };
 
@@ -458,11 +462,21 @@ async function enrichDeepSections(input: {
   entry.officialUrl = officialUrl;
   entry.officialPageRead = true;
 
+  // Built from the resolved official URL rather than the stored one: the path this event actually
+  // occupies is what decides whether a sibling page on the same host belongs to it.
+  const identity = eventIdentityFrom({
+    title: event.title, acronym: event.acronym, start_year: event.start_year, official_url: officialUrl,
+  });
+  entry.identity = identity
+    ? { acronym: identity.acronym, year: identity.year, pathPrefix: identity.pathPrefix, sharedHost: identity.sharedHost }
+    : null;
+
   const collected = await collectDeepSections({
     officialUrl,
     officialHtml: officialHtml!,
     maxPages: input.maxDeepPages,
     sections: entry.sectionsMissingBefore,
+    identity,
     outOfTime: () => Date.now() >= input.deadline,
     read: async (url) => {
       // `readAllowed` answers null for a disallowed path and for an unreadable one alike; the
@@ -488,9 +502,13 @@ async function enrichDeepSections(input: {
   entry.sectionsFilled = stored.filled;
   entry.provenance = stored.provenance;
   if (stored.filled.length === 0) {
+    const rejectedForIdentity = collected.candidates.filter(
+      (candidate) => candidate.outcome === "different_event_url" || candidate.outcome === "different_event_page");
     entry.skipReason = collected.candidates.length === 0
       ? (collected.sameDomainLinks === 0 ? "official_page_links_to_no_same_domain_pages" : "no_link_matched_a_deep_section")
-      : "pages_read_but_stated_nothing_extractable";
+      : rejectedForIdentity.length === collected.candidates.length
+        ? "every_candidate_belonged_to_a_different_event"
+        : "pages_read_but_stated_nothing_extractable";
   }
   return entry;
 }
@@ -883,12 +901,17 @@ export function formatDeepTrace(entries: DeepTraceEntry[]): string {
     lines.push(entry.title || entry.eventId);
     lines.push(`  official URL      ${entry.officialUrl || "(none stored)"}`);
     lines.push(`  authoritative     ${entry.officialPageSource}${entry.officialPageRead ? ", page read" : ", page not read"}`);
+    if (entry.identity) {
+      lines.push(`  identity          acronym=${entry.identity.acronym || "-"} year=${entry.identity.year ?? "-"} ` +
+        `path=${entry.identity.pathPrefix} ${entry.identity.sharedHost ? "(shared host: pages must name the event)" : "(own domain)"}`);
+    }
     lines.push(`  sections missing  ${entry.sectionsMissingBefore.join(", ") || "(none)"}`);
     lines.push(`  same-domain links ${entry.sameDomainLinks}`);
     if (entry.matchedCandidates.length) {
       lines.push("  matched candidates");
       for (const candidate of entry.matchedCandidates) {
-        lines.push(`    [${candidate.outcome}] ${candidate.section}: ${candidate.url}  (${candidate.evidence})`);
+        lines.push(`    [${candidate.outcome}] ${candidate.section}: ${candidate.url}` +
+          `  (${candidate.evidence}${candidate.detail ? `; ${candidate.detail}` : ""})`);
       }
     } else {
       lines.push("  matched candidates (none)");

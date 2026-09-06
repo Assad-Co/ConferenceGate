@@ -17,8 +17,9 @@ import {
 } from "../deepEnrichment";
 import {
   extractDeepSections, findSectionPages, looksLikeAffiliation, looksLikePersonName,
-  sectionForHeading, speakerRoleFromHeading, tierFromHeading,
+  looksLikeSponsorName, looksLikeUiText, sectionForHeading, speakerRoleFromHeading, tierFromHeading,
 } from "../deepSections";
+import { candidateUrlBelongsToEvent, eventIdentityFrom, pageBelongsToEvent } from "../eventIdentity";
 
 // The SSRF guard blocks loopback, as it should. Fixture tests inject their own guard rather than
 // weakening it, and it doubles as a hard stop on any test reaching a real host.
@@ -672,5 +673,243 @@ test("a sample takes the least-verified records first unless a readiness backlog
     assert.deepEqual(filtered.map((row) => row.id), [ids[0]], "--readiness reaches the verified records");
   } finally {
     for (const id of ids) await forgetEvent(id);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Precision: every case below is a real false positive from a production sample
+//
+// The rule these enforce is that an empty section beats a wrong one. Each test names the record it
+// came from, because a regression here is not an abstract quality slip — it is a conference page
+// asserting something its organiser never published.
+// ---------------------------------------------------------------------------------------------
+
+test("ACGME: \"Premium Profile\" is a badge, not a speaker", () => {
+  const { speakers } = extractDeepSections(`<html><body>
+    <h2>Speakers</h2>
+    <div class="speaker-card">
+      <h3 class="speaker-name">Rosa Villanueva</h3>
+      <p class="affiliation">Johns Hopkins University</p>
+      <a class="btn btn-premium" href="/upgrade">Premium Profile</a>
+    </div>
+    <div class="speaker-card"><a href="/pricing">Premium Profile</a></div>
+    <ul><li><a href="/opportunities">Speaker Opportunities</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/register">Register</a></li></ul>
+    </body></html>`, "https://www.acgme.org/meetings/annual-conference/speakers");
+
+  assert.deepEqual(speakers.map((speaker) => speaker.name), ["Rosa Villanueva"]);
+});
+
+test("ACGME: \"Live Webinars\" is a navigation item, not a committee member", () => {
+  const { committee } = extractDeepSections(`<html><body>
+    <h2>Planning Committee</h2>
+    <ul>
+      <li>Ayesha Rahman, Emory University School of Medicine</li>
+      <li><a href="/webinars">Live Webinars</a></li>
+      <li><a href="/membership">Membership Options</a></li>
+      <li><a href="/newsletter">Newsletter Signup</a></li>
+    </ul></body></html>`, "https://www.acgme.org/meetings/annual-conference/committee");
+
+  assert.deepEqual(committee.map((member) => member.name), ["Ayesha Rahman"]);
+  assert.equal(committee[0].org, "Emory University School of Medicine");
+});
+
+test("Global AI: \"Contact Us Today\" is a call to action, not a sponsor", () => {
+  const { sponsors } = extractDeepSections(`<html><body>
+    <h2>Our Sponsors</h2>
+    <div><a href="https://tensorworks.example"><img src="/l/tw.png" alt="TensorWorks logo"></a></div>
+    <p><a href="/contact">Contact Us Today</a></p>
+    <p><a href="/sponsorship">Become a Sponsor</a></p>
+    <p><a href="/brochure.html">Download the sponsorship brochure</a></p>
+    </body></html>`, "https://globalaisummit.example/sponsors");
+
+  assert.deepEqual(sponsors.map((sponsor) => sponsor.name), ["TensorWorks"]);
+});
+
+test("INTED: \"INTED Coffee Break\" is a programme item, not a sponsor", () => {
+  const { sponsors } = extractDeepSections(`<html><body>
+    <h2>Sponsors and Exhibitors</h2>
+    <ul>
+      <li>Iberia Robotics S.L.</li>
+      <li>INTED Coffee Break</li>
+      <li>Welcome Reception</li>
+      <li>Networking Lunch</li>
+    </ul></body></html>`, "https://inted2027.example/sponsors");
+
+  assert.deepEqual(sponsors.map((sponsor) => sponsor.name), ["Iberia Robotics S.L."]);
+});
+
+test("a sponsor needs to look like an organisation, not merely sit in the right block", () => {
+  // A same-site link with no logo, no outbound target and no organisation marker is navigation.
+  const { sponsors } = extractDeepSections(`<html><body>
+    <h2>Partners</h2>
+    <a href="/about">About the organisers</a>
+    <a href="https://meridian.example">Meridian Diagnostics Ltd</a>
+    </body></html>`, "https://conf.example/partners");
+  assert.deepEqual(sponsors.map((sponsor) => sponsor.name), ["Meridian Diagnostics Ltd"]);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Event identity
+// ---------------------------------------------------------------------------------------------
+
+test("SNMMI 2027 never takes a programme from a 2026 workshop on the same platform", () => {
+  const identity = eventIdentityFrom({
+    title: "SNMMI 2027 Annual Meeting", acronym: "SNMMI", start_year: 2027,
+    official_url: "https://www.emedevents.com/c/medical-conferences-2027/snmmi-annual-meeting-2027",
+  })!;
+  assert.ok(identity.sharedHost, "an event living under a path does not own the host");
+
+  // The other event's URL is rejected before a fetch is even spent.
+  const other = candidateUrlBelongsToEvent(identity,
+    "https://www.emedevents.com/c/medical-conferences-2026/advanced-cme-workshop-2026/program");
+  assert.equal(other.ok, false);
+
+  // And if a URL somehow looked plausible, the page's own year settles it.
+  const page = pageBelongsToEvent(identity, "https://www.emedevents.com/c/x/program",
+    `<html><head><title>Advanced CME Workshop 2026 — Program</title></head>
+     <body><h1>Advanced CME Workshop 2026</h1></body></html>`);
+  assert.equal(page.ok, false);
+  assert.match(page.reason, /2026.*not.*2027/);
+
+  // The event's own subpage passes on both counts.
+  const own = candidateUrlBelongsToEvent(identity,
+    "https://www.emedevents.com/c/medical-conferences-2027/snmmi-annual-meeting-2027/speakers");
+  assert.equal(own.ok, true);
+  assert.equal(pageBelongsToEvent(identity,
+    "https://www.emedevents.com/c/medical-conferences-2027/snmmi-annual-meeting-2027/speakers",
+    `<html><head><title>SNMMI 2027 Annual Meeting — Speakers</title></head><body><h1>Speakers</h1></body></html>`
+  ).ok, true);
+});
+
+test("site-wide platform pages never populate an event's deep fields", () => {
+  const identity = eventIdentityFrom({
+    title: "SNMMI 2027 Annual Meeting", acronym: "SNMMI", start_year: 2027,
+    official_url: "https://www.emedevents.com/c/medical-conferences-2027/snmmi-annual-meeting-2027",
+  })!;
+  for (const url of [
+    "https://www.emedevents.com/medical-organizers",
+    "https://www.emedevents.com/medical-conference-speaker-opportunities",
+    "https://www.emedevents.com/newsletter",
+    "https://www.emedevents.com/webinars",
+  ]) {
+    const verdict = candidateUrlBelongsToEvent(identity, url);
+    assert.equal(verdict.ok, false, `${url} must not be read for this conference`);
+  }
+});
+
+test("a conference that owns its domain keeps its own organisers page", () => {
+  // The platform rule must not cost real data: /organisers on emedevents.com is a directory of
+  // everybody's organisers, and on inted2027.example it is this conference's committee.
+  const own = eventIdentityFrom({
+    title: "INTED 2027", acronym: "INTED", start_year: 2027, official_url: "https://inted2027.example/",
+  })!;
+  assert.equal(candidateUrlBelongsToEvent(own, "https://inted2027.example/organisers").ok, true);
+  const platform = eventIdentityFrom({
+    title: "SNMMI 2027 Annual Meeting", acronym: "SNMMI", start_year: 2027,
+    official_url: "https://www.emedevents.com/c/conferences-2027/snmmi-2027",
+  })!;
+  assert.equal(candidateUrlBelongsToEvent(platform, "https://www.emedevents.com/organizers").ok, false);
+  // And a sign-up page is nobody's conference data, on either kind of host.
+  assert.equal(candidateUrlBelongsToEvent(own, "https://inted2027.example/newsletter").ok, false);
+});
+
+test("a conference that owns its domain keeps subpages that name nothing", () => {
+  // The other half of the guard: demanding an acronym on every page would throw away most real
+  // speakers pages, which say only "Speakers".
+  const identity = eventIdentityFrom({
+    title: "INTED 2027", acronym: "INTED", start_year: 2027, official_url: "https://inted2027.example/",
+  })!;
+  assert.equal(identity.sharedHost, false);
+  assert.equal(candidateUrlBelongsToEvent(identity, "https://inted2027.example/speakers").ok, true);
+  assert.equal(pageBelongsToEvent(identity, "https://inted2027.example/speakers",
+    "<html><head><title>Speakers</title></head><body><h1>Speakers</h1></body></html>").ok, true);
+  // Even on its own domain, a page announcing another year is refused.
+  assert.equal(pageBelongsToEvent(identity, "https://inted2027.example/archive/2024/speakers",
+    "<html><head><title>INTED 2024 Speakers</title></head><body><h1>INTED 2024</h1></body></html>").ok, false);
+});
+
+test("on a shared host a page must name the event to contribute", () => {
+  const identity = eventIdentityFrom({
+    title: "Annual Educational Conference", acronym: "ACGME", start_year: 2027,
+    official_url: "https://www.acgme.org/meetings/annual-educational-conference",
+  })!;
+  assert.ok(identity.sharedHost);
+  assert.equal(pageBelongsToEvent(identity, "https://www.acgme.org/webinars",
+    "<html><head><title>Live Webinars</title></head><body><h1>Live Webinars</h1></body></html>").ok, false);
+  assert.equal(pageBelongsToEvent(identity,
+    "https://www.acgme.org/meetings/annual-educational-conference/speakers",
+    "<html><head><title>Speakers</title></head><body><h1>Speakers</h1></body></html>").ok, true);
+});
+
+test("on a platform host, only the event's own pages are read — end to end", async () => {
+  // The SNMMI case as the pipeline actually meets it: one host, several events, and site-wide
+  // pages that belong to none of them. The official page links to all three.
+  const pages: Record<string, string> = {
+    "/c/2027/photonics-congress-2027": `<html><head><title>Photonics Congress 2027</title></head><body>
+      <h1>Photonics Congress 2027</h1>
+      <a href="/c/2027/photonics-congress-2027/speakers">Speakers</a>
+      <a href="/c/2026/advanced-cme-workshop-2026/program">Program</a>
+      <a href="/medical-organizers">Organizers</a>
+      <a href="/medical-conference-speaker-opportunities">Speaker Opportunities</a></body></html>`,
+    "/c/2027/photonics-congress-2027/speakers": `<html><head><title>Speakers</title></head><body>
+      <h2>Keynote Speakers</h2>
+      <div class="speaker"><h3 class="speaker-name">Helena Vasquez</h3>
+      <p class="affiliation">Universidad Politecnica de Madrid</p></div></body></html>`,
+    "/c/2026/advanced-cme-workshop-2026/program": `<html><head><title>Advanced CME Workshop 2026</title></head>
+      <body><h1>Advanced CME Workshop 2026</h1>
+      <table><tr><th>Time</th><th>Session</th></tr>
+      <tr><td>09:00 - 10:00</td><td>Contrast agent safety</td></tr></table></body></html>`,
+    "/medical-organizers": `<html><head><title>Medical Organizers</title></head><body>
+      <h2>Organizers</h2><ul><li>Global CME Partners</li></ul></body></html>`,
+    "/medical-conference-speaker-opportunities": `<html><head><title>Speaker Opportunities</title></head>
+      <body><h2>Speakers</h2><ul><li>Premium Profile</li></ul></body></html>`,
+  };
+  const server = http.createServer((req, res) => {
+    const key = (req.url || "/").split("?")[0].replace(/\/$/, "");
+    if (!pages[key]) { res.writeHead(404); res.end("<html><body>Not found</body></html>"); return; }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(pages[key]);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${(server.address() as any).port}`;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  try {
+    const officialUrl = `${origin}/c/2027/photonics-congress-2027`;
+    const identity = eventIdentityFrom({
+      title: "Photonics Congress 2027", acronym: null, start_year: 2027, official_url: officialUrl,
+    })!;
+    const landing = await readPage(officialUrl, {
+      budget: newReadBudget(0, 0), urlGuard: localGuard, timeoutMs: 5_000,
+      allowAlternateUrls: false, minTextChars: 0,
+    });
+
+    const collected = await collectDeepSections({
+      officialUrl, officialHtml: landing.html, maxPages: 6, identity,
+      read: async (url) => {
+        const read = await readPage(url, {
+          budget: newReadBudget(0, 0), urlGuard: localGuard, timeoutMs: 5_000,
+          allowAlternateUrls: false, minTextChars: 0,
+        });
+        return read.html ? { html: read.html, url } : { unreadable: "fetch_failed" as const };
+      },
+    });
+
+    const outcome = (needle: string) =>
+      collected.candidates.find((candidate) => candidate.url.includes(needle))?.outcome;
+    assert.equal(outcome("photonics-congress-2027/speakers"), "read");
+    assert.equal(outcome("advanced-cme-workshop-2026"), "different_event_url",
+      "another event's programme page is rejected before it is even fetched");
+    assert.equal(outcome("medical-organizers"), "different_event_url");
+    assert.equal(outcome("speaker-opportunities"), "different_event_url");
+
+    assert.deepEqual(collected.extraction.speakers.map((speaker) => speaker.name), ["Helena Vasquez"]);
+    assert.equal(collected.extraction.program, null, "no programme is better than another event's");
+    assert.deepEqual(collected.extraction.sponsors, []);
+    assert.equal(collected.extraction.speakers[0].source_url, `${origin}/c/2027/photonics-congress-2027/speakers`);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });

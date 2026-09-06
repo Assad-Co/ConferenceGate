@@ -246,6 +246,45 @@ const ORG_MARKER = new RegExp(
   "i"
 );
 
+/**
+ * Words that make a phrase interface copy rather than a name, matched whole-token.
+ *
+ * A production sample stored "Premium Profile" and "Live Webinars" as speakers and "Contact Us
+ * Today" as a sponsor. Every one of them is two or three capitalised words with no digits and no
+ * organisation marker — structurally identical to "Amara Okafor". Structure cannot separate them;
+ * only vocabulary can. Deliberately absent from this list: words that are also real surnames
+ * (Free, Book, Page, Price, Best, Young, Moore, Green, Long, Rich, May, March, Hall, Bell), which
+ * is why matching is on whole tokens and never on substrings.
+ */
+const UI_MARKETING_TOKEN = new Set([
+  "premium", "profile", "profiles", "webinar", "webinars", "login", "logout", "signin", "signup",
+  "register", "registration", "subscribe", "subscription", "newsletter", "download", "downloads",
+  "upload", "click", "learn", "more", "view", "browse", "search", "filter", "menu", "home",
+  "contact", "faq", "faqs", "help", "support", "pricing", "plans", "membership", "member",
+  "members", "join", "apply", "submit", "submission", "abstract", "abstracts", "deadline",
+  "deadlines", "opportunity", "opportunities", "sponsorship", "sponsor", "sponsors", "sponsored",
+  "exhibit", "exhibitor", "exhibitors", "partner", "partners", "brochure", "ticket", "tickets",
+  "agenda", "schedule", "programme", "program", "session", "sessions", "workshop", "workshops",
+  "course", "courses", "credits", "cme", "ceu", "live", "online", "virtual", "hybrid", "today",
+  "now", "here", "us", "our", "your", "read", "show", "watch", "listen", "explore", "discover",
+  "get", "start", "request", "enquire", "inquire", "demo", "trial", "upgrade", "buy", "shop",
+  "cart", "checkout", "terms", "privacy", "policy", "cookie", "cookies", "disclaimer", "sitemap",
+  "copyright", "reserved", "advertisement", "advertise", "featured", "popular", "trending",
+  "latest", "upcoming", "archive", "gallery", "photos", "videos", "blog", "news", "press",
+  "careers", "jobs", "account", "dashboard", "settings", "notifications", "email", "directions",
+  "accommodation", "venue", "booth", "coffee", "break", "lunch", "dinner", "reception",
+  "networking", "welcome", "opening", "closing", "gala", "excursion", "keynote", "plenary",
+  "poster", "panel", "tutorial", "symposium", "congress", "conference", "meeting", "summit",
+  "forum", "expo", "exhibition", "speaker", "speakers", "committee", "committees", "organizer",
+  "organizers", "organiser", "organisers",
+]);
+
+/** True when any whole word of a phrase is interface or marketing vocabulary. */
+export function looksLikeUiText(value: string | null | undefined): boolean {
+  const tokens = String(value ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return tokens.some((token) => UI_MARKETING_TOKEN.has(token));
+}
+
 const NON_PERSON_PHRASE = new RegExp(
   "\\b(?:sponsors?|exhibitors?|partners?|committees?|programme?|program|agenda|schedule|speakers?|keynotes?|" +
   "register|registration|submit|submission|home|about|contact|news|venue|accommodation|travel|gallery|" +
@@ -266,6 +305,7 @@ export function looksLikePersonName(value: string | null | undefined): boolean {
   if (/\d/.test(raw)) return false;
   if (/[@/|©®™]|https?:/i.test(raw)) return false;
   if (NON_PERSON_PHRASE.test(raw)) return false;
+  if (looksLikeUiText(raw)) return false;
   if (ORG_MARKER.test(raw)) return false;
 
   const tokens = raw.split(/\s+/).filter((token) => !HONORIFIC.test(token) && !NAME_SUFFIX.test(token));
@@ -410,6 +450,27 @@ function directTextParts(node: HtmlNode): Array<{ node: HtmlNode; text: string }
     if (text) parts.push({ node: child, text });
   }
   return parts;
+}
+
+/** Page furniture: navigation, buttons, promos, cookie bars. Nothing in here is conference data. */
+const CHROME_TAG = new Set(["nav", "header", "footer", "aside", "button", "form", "select", "option"]);
+const CHROME_CLASS = /\b(?:nav|navbar|navigation|menu|breadcrumb|btn|button|cta|banner|promo|advert|ads?|sidebar|widget|cookie|consent|modal|popup|overlay|toolbar|pagination|social|share|subscribe|newsletter|search|filter|login|signup|header|footer)\b/;
+
+/**
+ * Whether a node sits inside page furniture rather than content.
+ *
+ * The second half of the "Premium Profile" fix: that text was a badge on a card, and a badge lives
+ * in a button or a promo block. Vocabulary catches the words we can predict; this catches the ones
+ * we cannot, by refusing to read anything the page itself marked as interface.
+ */
+export function insideChrome(node: HtmlNode): boolean {
+  for (let current: HtmlNode | null = node; current; current = current.parent) {
+    if (current.type !== "element") continue;
+    if (CHROME_TAG.has(current.tag)) return true;
+    if (CHROME_CLASS.test(`${attr(current, "class") || ""} ${attr(current, "id") || ""}`.toLowerCase())) return true;
+    if ((attr(current, "role") || "").toLowerCase() === "navigation") return true;
+  }
+  return false;
 }
 
 function classOf(node: HtmlNode): string {
@@ -616,18 +677,18 @@ export function peopleFromNodes(nodes: HtmlNode[], pageUrl: string): RawPerson[]
   const claim = (node: HtmlNode) => { for (const inner of walk(node)) consumed.add(inner); };
 
   for (const node of nodes) {
-    if (consumed.has(node) || node.type !== "element") continue;
+    if (consumed.has(node) || node.type !== "element" || insideChrome(node)) continue;
     if (node.tag === "table") { found.push(...peopleFromTable(node, pageUrl)); claim(node); continue; }
     if (node.tag === "dl") { found.push(...peopleFromDefinitionList(node, pageUrl)); claim(node); continue; }
   }
   for (const node of nodes) {
-    if (consumed.has(node) || node.type !== "element") continue;
+    if (consumed.has(node) || node.type !== "element" || insideChrome(node)) continue;
     if (!PERSON_CONTAINER.test(classOf(node))) continue;
     const person = personFromCard(node, pageUrl);
     if (person) { found.push(person); claim(node); }
   }
   for (const node of nodes) {
-    if (consumed.has(node) || node.type !== "element") continue;
+    if (consumed.has(node) || node.type !== "element" || insideChrome(node)) continue;
     if (!["li", "p", "figcaption", "td"].includes(node.tag)) continue;
     const person = personFromLine(textOf(node), node, pageUrl) || personFromCard(node, pageUrl);
     if (person) { found.push(person); claim(node); }
@@ -710,21 +771,55 @@ export function sponsorClassificationFromHeading(heading: string): "sponsor" | "
 
 const NON_SPONSOR_NAME = /^(?:home|about|contact|contact\s+us|register|registration|sponsors?|exhibitors?|partners?|sponsorship|become\s+an?\s+\w+|read\s+more|view\s+all|learn\s+more|more\s+info|download|logo|image|back|next|previous|click\s+here)$/i;
 
-/** Organisations named under a sponsor/exhibitor/partner heading. */
+/** A call to action, not a company: "Contact Us Today", "Become a Sponsor", "Download the pack". */
+const SPONSOR_CTA = /^(?:contact|learn|become|download|join|register|sponsor|view|get|request|see|find|explore|discover|apply|submit|enquire|inquire|buy|start|read|click|subscribe|watch|reserve|order|call|email|visit|check|browse|show|add|try|support)\b/i;
+
+/**
+ * Whether a string can be stored as a sponsoring organisation's name.
+ *
+ * Three real false positives motivate every clause: "Contact Us Today" (a button), "INTED Coffee
+ * Break" (a programme item sitting in the sponsors block), and assorted navigation labels. An
+ * organisation marker overrides the vocabulary veto, because "Expo Systems Ltd" is a real company
+ * whose name happens to contain a word this file otherwise treats as interface copy.
+ */
+export function looksLikeSponsorName(value: string | null | undefined): boolean {
+  const name = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 120) return false;
+  if (/^\d+$/.test(name)) return false;
+  if (NON_SPONSOR_NAME.test(name)) return false;
+  if (SPONSOR_CTA.test(name)) return false;
+  if (name.split(/\s+/).length > 8) return false;
+  // No trailing-period rule: "Iberia Robotics S.L." and "Acme Inc." end in one, and a sentence is
+  // already excluded by the word cap and the vocabulary below.
+  if (/[!?]$/.test(name)) return false;
+  return ORG_MARKER.test(name) || !looksLikeUiText(name);
+}
+
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; }
+}
+
+/**
+ * Organisations named under a sponsor/exhibitor/partner heading.
+ *
+ * A name needs evidence that it IS an organisation, not merely that it sat in the right block: a
+ * logo, a link to its own site, an organisation marker in the name, or — for sites that simply
+ * list sponsors as text — a list or table item that survives every negative filter above.
+ */
 function sponsorsFromNodes(
   nodes: HtmlNode[], pageUrl: string, classification: "sponsor" | "exhibitor" | "partner", tier: string | null
 ): SponsorEntry[] {
   const found: SponsorEntry[] = [];
+  const pageHost = hostOf(pageUrl);
   const push = (name: string | null, logoUrl: string | null) => {
     const cleaned = clean(name, 120);
-    if (!cleaned || cleaned.length < 2 || NON_SPONSOR_NAME.test(cleaned)) return;
-    if (/^\d+$/.test(cleaned)) return;
+    if (!cleaned || !looksLikeSponsorName(cleaned)) return;
     found.push({ name: cleaned, tier, classification, logoUrl, source_url: pageUrl });
   };
 
   const seenNodes = new Set<HtmlNode>();
   for (const node of nodes) {
-    if (node.type !== "element" || seenNodes.has(node)) continue;
+    if (node.type !== "element" || seenNodes.has(node) || insideChrome(node)) continue;
     if (node.tag === "img") {
       const alt = clean(attr(node, "alt"), 120);
       // "Acme Corp logo" names a sponsor; a bare "logo" names nothing.
@@ -738,18 +833,25 @@ function sponsorsFromNodes(
       const alt = img ? clean(attr(img, "alt"), 120) : null;
       const fromAlt = alt ? alt.replace(/\s*\b(logo|logotype|banner|image)\b\s*$/i, "").trim() : null;
       const name = fromAlt || clean(attr(node, "title"), 120) || clean(textOf(node), 120);
-      push(name, img ? absoluteUrl(attr(img, "src") || attr(img, "data-src"), pageUrl) : null);
+      const href = absoluteUrl(attr(node, "href"), pageUrl);
+      const outbound = !!href && !!pageHost && hostOf(href) !== pageHost;
+      // A logo, or a link to the organisation's own site. A link back into this same site is a
+      // navigation item until something else says otherwise.
+      if (img || outbound || (name && ORG_MARKER.test(name))) {
+        push(name, img ? absoluteUrl(attr(img, "src") || attr(img, "data-src"), pageUrl) : null);
+      }
       for (const inner of walk(node)) seenNodes.add(inner);
       continue;
     }
   }
-  // Plain text lists, for sites that name sponsors without linking them.
+  // Sites that list sponsors as plain text. Kept, because plenty do — but only from a genuine list
+  // or table item, and only when nothing above recognised it as furniture or a programme entry.
   for (const node of nodes) {
-    if (node.type !== "element" || seenNodes.has(node)) continue;
-    if (!["li", "td", "figcaption", "p"].includes(node.tag)) continue;
+    if (node.type !== "element" || seenNodes.has(node) || insideChrome(node)) continue;
+    if (!["li", "td", "figcaption"].includes(node.tag)) continue;
     if (byTag(node, "a", "img").length > 0) continue;
     const text = clean(textOf(node), 120);
-    if (!text || text.split(/\s+/).length > 12) continue;
+    if (!text || text.split(/\s+/).length > 8) continue;
     push(text, null);
     for (const inner of walk(node)) seenNodes.add(inner);
   }
