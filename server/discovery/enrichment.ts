@@ -8,7 +8,9 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { isSerperConfigured, serperSearch } from "../serperSearch";
 import { titleSimilarity } from "./dedupe";
 import { extractFromHtml } from "./htmlExtract";
-import { collectDeepSections, deepSectionsMissing, storeDeepSections } from "./deepEnrichment";
+import {
+  collectDeepSections, deepSectionsMissing, storeDeepSections, type DeepCandidateTrace,
+} from "./deepEnrichment";
 import type { DeepSection } from "./deepSections";
 import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl, normalizeTitle } from "./normalize";
 import { findOfficialCandidates } from "./officialResolution";
@@ -129,6 +131,8 @@ export interface EnrichmentOptions {
    * because enrichment already has it.
    */
   maxDeepPagesPerEvent?: number;
+  /** Record, per conference, why deep pages were or were not read. Diagnostic only. */
+  trace?: boolean;
 }
 
 export interface EnrichmentReport {
@@ -144,9 +148,34 @@ export interface EnrichmentReport {
   conflicts: { detected: number; resolved: number };
   /** How many accepted records hold each deep section, before and after this pass. */
   deepSections: Record<DeepSection, { before: number; after: number }>;
+  /** Present only when `trace` was requested: one entry per record examined. */
+  deepTrace?: DeepTraceEntry[];
   providerUsage: Record<string, number>;
   errors: string[];
   runtimeMs: number;
+}
+
+/**
+ * Why one conference did or did not have its deep sections read.
+ *
+ * Exists because "deepPagesRead: 0" is not a diagnosis. There are five different reasons a record
+ * reads no subpages — no authoritative page, an unreadable one, a page that links nowhere, links
+ * that match no section, or every section already stored — and they call for different responses.
+ */
+export interface DeepTraceEntry {
+  eventId: string;
+  title: string;
+  officialUrl: string | null;
+  /** Where the authoritative page came from: this run's verification, or stored evidence. */
+  officialPageSource: "verified_this_run" | "stored_verification" | "none";
+  officialPageRead: boolean;
+  sameDomainLinks: number;
+  matchedCandidates: DeepCandidateTrace[];
+  selectedUrls: string[];
+  sectionsMissingBefore: DeepSection[];
+  sectionsFilled: DeepSection[];
+  provenance: Partial<Record<DeepSection, string>>;
+  skipReason: string | null;
 }
 
 interface EventRow extends Record<string, any> { id: string; title: string; source_url: string }
@@ -233,6 +262,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
   let timedOut = false;
   const robotsCache = new Map<string, RobotsPolicy>();
   const maxDeepPages = Math.max(0, options.maxDeepPagesPerEvent ?? 4);
+  const deepTrace: DeepTraceEntry[] = [];
   const before = await snapshot();
   const deepBefore = await deepSnapshot();
 
@@ -273,38 +303,28 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
         conflictsDetected += applied.detected;
         conflictsResolved += applied.resolved;
         unresolvedConflict = applied.unresolved > 0;
-        // Deep sections come last and are allowed to fail. Nothing below this line can change the
-        // record's readiness, and an exception here must not lose the verification above it.
-        try {
-          const missing = deepSectionsMissing(event);
-          if (missing.length > 0 && Date.now() < deadline) {
-            const collected = await collectDeepSections({
-              officialUrl: verified.url,
-              officialHtml: verified.html,
-              maxPages: maxDeepPages,
-              sections: missing,
-              outOfTime: () => Date.now() >= deadline,
-              read: async (url) => {
-                const read = await readAllowed(url, budget, robotsCache, metrics, options.urlGuard, true);
-                if (!read?.html) return null;
-                metrics.deepPagesRead += 1;
-                return { html: read.html, url: read.resolvedUrl || read.direct.finalUrl || url };
-              },
-            });
-            const stored = await storeDeepSections({
-              eventId: event.id, event, extraction: collected.extraction, officialUrl: verified.url, runId,
-            });
-            metrics.deepSectionsFilled += stored.filled.length;
-          }
-        } catch (error: any) {
-          errors.push(`deep sections for ${event.id}: ${String(error?.message || error).slice(0, 200)}`);
-        }
       } else if (event.publish_readiness === "publish_ready") {
         // A readiness re-check that cannot reproduce title and source authority must fail closed.
         // The record remains accepted and keeps all provenance; only the two current verification
         // attestations are withdrawn so it is deterministically downgraded for later enrichment.
         await dbRun(`UPDATE discovery_events SET title_verified_at=NULL,official_source_verified_at=NULL WHERE id=?`, [event.id]);
       }
+
+      // Deep sections come last and are allowed to fail. Nothing here can change the record's
+      // readiness, and an exception must not lose the verification above it. Deliberately outside
+      // the `verified` branch: a conference whose authoritative page was established in an earlier
+      // run still has one, and gating on this run re-verifying it meant the whole pass never ran
+      // for exactly the records most likely to have deep pages worth reading.
+      try {
+        const entry = await enrichDeepSections({
+          runId, event, verified, budget, robots: robotsCache, metrics,
+          guard: options.urlGuard, maxDeepPages, deadline,
+        });
+        if (options.trace) deepTrace.push(entry);
+      } catch (error: any) {
+        errors.push(`deep sections for ${event.id}: ${String(error?.message || error).slice(0, 200)}`);
+      }
+
       await updateReadiness(event.id, unresolvedConflict);
     }
     const after = await snapshot();
@@ -324,6 +344,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       readiness, sourceDistribution: distribution,
       conflicts: { detected: conflictsDetected, resolved: conflictsResolved },
       deepSections: deepSectionReport(deepBefore, await deepSnapshot()),
+      ...(options.trace ? { deepTrace } : {}),
       providerUsage: { ...metrics, jinaAttempts: budget.jinaUsed, jinaRecoveries: budget.jinaRecovered },
       errors, runtimeMs: Date.now() - started,
     };
@@ -344,6 +365,134 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     await finishRun(report);
     throw error;
   }
+}
+
+/**
+ * The conference's authoritative official page, as established by an earlier run.
+ *
+ * Same test the readiness classifier applies: `official_source_verified_at` is set, `official_url`
+ * is absolute, and an official source row with at least 0.8 confidence names that exact URL and
+ * still passes the authority rules. Nothing weaker qualifies — a deep section must never be read
+ * from a page this engine has not established as the organiser's own.
+ */
+async function storedAuthoritativeOfficialUrl(event: EventRow): Promise<string | null> {
+  if (!event.official_source_verified_at) return null;
+  const officialUrl = normalizeNavigableUrl(event.official_url);
+  if (!officialUrl) return null;
+  const sources = await dbAll<Record<string, any>>(
+    `SELECT source_url,source_classification,classification_confidence FROM discovery_event_sources
+      WHERE event_id=? AND is_official=1 AND classification_confidence>=0.8`, [event.id]);
+  const matching = sources.some((source) =>
+    comparable(String(source.source_url)) === comparable(officialUrl) && isEligibleOfficialSource({
+      pageUrl: String(source.source_url), title: event.title, organizerUrl: event.organizer_url,
+      classification: source.source_classification, confidence: Number(source.classification_confidence),
+    }));
+  return matching ? officialUrl : null;
+}
+
+/**
+ * Reads and stores the deep sections for one conference, and says what happened either way.
+ *
+ * The page it works from is this run's freshly verified one when there is one, and otherwise the
+ * page an earlier run established. Both are authoritative by the same test; neither is guessed at.
+ */
+async function enrichDeepSections(input: {
+  runId: string;
+  event: EventRow;
+  verified: VerifiedPage | null;
+  budget: ReadBudget;
+  robots: Map<string, RobotsPolicy>;
+  metrics: Record<string, number>;
+  guard?: UrlGuard;
+  maxDeepPages: number;
+  deadline: number;
+}): Promise<DeepTraceEntry> {
+  const { event, verified, metrics } = input;
+  const entry: DeepTraceEntry = {
+    eventId: String(event.id),
+    title: String(event.title || "").slice(0, 120),
+    officialUrl: normalizeNavigableUrl(event.official_url),
+    officialPageSource: "none",
+    officialPageRead: false,
+    sameDomainLinks: 0,
+    matchedCandidates: [],
+    selectedUrls: [],
+    sectionsMissingBefore: deepSectionsMissing(event),
+    sectionsFilled: [],
+    provenance: {},
+    skipReason: null,
+  };
+
+  if (entry.sectionsMissingBefore.length === 0) {
+    entry.skipReason = "all_sections_already_stored";
+    return entry;
+  }
+  if (Date.now() >= input.deadline) {
+    entry.skipReason = "out_of_time";
+    return entry;
+  }
+
+  let officialUrl: string | null = null;
+  let officialHtml: string | null = null;
+  if (verified) {
+    officialUrl = verified.url;
+    officialHtml = verified.html;
+    entry.officialPageSource = "verified_this_run";
+  } else {
+    const stored = await storedAuthoritativeOfficialUrl(event);
+    if (!stored) {
+      entry.skipReason = "no_authoritative_official_page";
+      return entry;
+    }
+    entry.officialPageSource = "stored_verification";
+    officialUrl = stored;
+    const read = await readAllowed(stored, input.budget, input.robots, metrics, input.guard, true);
+    if (!read?.html) {
+      entry.skipReason = "official_page_unreadable";
+      return entry;
+    }
+    officialHtml = read.html;
+    officialUrl = read.resolvedUrl || read.direct.finalUrl || stored;
+  }
+
+  entry.officialUrl = officialUrl;
+  entry.officialPageRead = true;
+
+  const collected = await collectDeepSections({
+    officialUrl,
+    officialHtml: officialHtml!,
+    maxPages: input.maxDeepPages,
+    sections: entry.sectionsMissingBefore,
+    outOfTime: () => Date.now() >= input.deadline,
+    read: async (url) => {
+      // `readAllowed` answers null for a disallowed path and for an unreadable one alike; the
+      // robots counter is what separates them, and the trace needs that distinction because a
+      // robots refusal is final and a fetch failure is not.
+      const disallowedBefore = metrics.robotsDisallowed;
+      const read = await readAllowed(url, input.budget, input.robots, metrics, input.guard, true);
+      if (!read?.html) {
+        return { unreadable: metrics.robotsDisallowed > disallowedBefore ? "robots_disallowed" : "fetch_failed" };
+      }
+      metrics.deepPagesRead += 1;
+      return { html: read.html, url: read.resolvedUrl || read.direct.finalUrl || url };
+    },
+  });
+  entry.sameDomainLinks = collected.sameDomainLinks;
+  entry.matchedCandidates = collected.candidates;
+  entry.selectedUrls = collected.pagesRead.filter((url) => url !== officialUrl);
+
+  const stored = await storeDeepSections({
+    eventId: String(event.id), event, extraction: collected.extraction, officialUrl, runId: input.runId,
+  });
+  metrics.deepSectionsFilled += stored.filled.length;
+  entry.sectionsFilled = stored.filled;
+  entry.provenance = stored.provenance;
+  if (stored.filled.length === 0) {
+    entry.skipReason = collected.candidates.length === 0
+      ? (collected.sameDomainLinks === 0 ? "official_page_links_to_no_same_domain_pages" : "no_link_matched_a_deep_section")
+      : "pages_read_but_stated_nothing_extractable";
+  }
+  return entry;
 }
 
 async function verifyExistingSources(event: EventRow, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>, guard?: UrlGuard): Promise<VerifiedPage | null> {
@@ -375,8 +524,10 @@ async function verifyExistingSources(event: EventRow, budget: ReadBudget, robots
 /**
  * `deep` marks a read of one named subpage rather than a search for the conference itself, and it
  * changes two things. A landing page with under 200 characters of prose has told us nothing and is
- * rightly discarded, but a sponsors page is a grid of logos whose names live in `alt` attributes,
- * so the floor drops and the extractor decides whether the markup said anything. And the
+ * rightly discarded, but a sponsors page is a grid of logos whose names live in `alt` attributes
+ * and a committee page can be a table of nothing but names — there is no prose floor low enough to
+ * be safe, so there is none at all. A successful HTML response is handed to the extractor, which
+ * decides whether the markup actually said anything; an empty page simply yields nothing. And the
  * alternate-URL stage is switched off: substituting the site root for a missing /speakers would
  * file the homepage's contents under a page that never stated them.
  */
@@ -398,12 +549,12 @@ async function readAllowed(
     // A deep read is for one named page. If /speakers is gone, the answer is that this conference
     // has no readable speakers page — not the site root wearing its name.
     allowAlternateUrls: !deep,
-    minTextChars: deep ? 40 : undefined,
+    minTextChars: deep ? 0 : undefined,
   });
   metrics.directAttempts += 1;
   if (read.direct.ok) metrics.directSuccesses += 1;
   if (budget.jinaUsed > jinaBefore && read.route === "jina") metrics.jinaSuccesses += 1;
-  if (!read.html || read.textLength < (deep ? 40 : 200)) { metrics.pagesUnreadable += 1; return null; }
+  if (!read.html || (!deep && read.textLength < 200)) { metrics.pagesUnreadable += 1; return null; }
   return read;
 }
 
@@ -722,6 +873,36 @@ async function finishRun(report: EnrichmentReport): Promise<void> {
       report.organizers.after, report.readiness.publish_ready, report.readiness.needs_enrichment, report.readiness.needs_review,
       report.conflicts.detected, report.conflicts.resolved, JSON.stringify(report.providerUsage), JSON.stringify(report.sourceDistribution),
       JSON.stringify(report.errors), report.runId]);
+}
+
+/** The per-conference answer to "why did this read no deep pages". */
+export function formatDeepTrace(entries: DeepTraceEntry[]): string {
+  if (entries.length === 0) return "No records examined.";
+  const lines: string[] = [];
+  for (const entry of entries) {
+    lines.push(entry.title || entry.eventId);
+    lines.push(`  official URL      ${entry.officialUrl || "(none stored)"}`);
+    lines.push(`  authoritative     ${entry.officialPageSource}${entry.officialPageRead ? ", page read" : ", page not read"}`);
+    lines.push(`  sections missing  ${entry.sectionsMissingBefore.join(", ") || "(none)"}`);
+    lines.push(`  same-domain links ${entry.sameDomainLinks}`);
+    if (entry.matchedCandidates.length) {
+      lines.push("  matched candidates");
+      for (const candidate of entry.matchedCandidates) {
+        lines.push(`    [${candidate.outcome}] ${candidate.section}: ${candidate.url}  (${candidate.evidence})`);
+      }
+    } else {
+      lines.push("  matched candidates (none)");
+    }
+    lines.push(`  pages read        ${entry.selectedUrls.length ? entry.selectedUrls.join(", ") : "(none beyond the official page)"}`);
+    if (entry.sectionsFilled.length) {
+      for (const section of entry.sectionsFilled) {
+        lines.push(`  filled ${section.padEnd(10)} source: ${entry.provenance[section]}`);
+      }
+    }
+    if (entry.skipReason) lines.push(`  skip reason       ${entry.skipReason}`);
+    lines.push("");
+  }
+  return lines.join("\n");
 }
 
 export function formatEnrichmentReport(report: EnrichmentReport): string {

@@ -428,7 +428,7 @@ test("a missing section page is never quietly replaced by the site root", async 
 
     const refused = await readPage(`${origin}/speakers`, {
       budget: newReadBudget(0, 10), urlGuard: localGuard, timeoutMs: 5_000,
-      allowAlternateUrls: false, minTextChars: 40,
+      allowAlternateUrls: false, minTextChars: 0,
     });
     assert.notEqual(refused.route, "alternate_url");
     assert.equal(refused.html, "", "a deep read of a dead page returns nothing, not another page");
@@ -452,9 +452,11 @@ test("a terse sponsors page is read rather than judged too thin", async () => {
       budget: newReadBudget(0, 0), urlGuard: localGuard, timeoutMs: 5_000, allowAlternateUrls: false,
     });
     assert.ok(shallow.textLength < 500, "logo grids carry almost no prose");
+    // Zero, not a small number: a logo grid's whole content is in `alt` attributes, and any prose
+    // floor at all would reject some real sponsors page. This mirrors what the deep pass passes.
     const deep = await readPage(`${origin}/sponsors`, {
       budget: newReadBudget(0, 0), urlGuard: localGuard, timeoutMs: 5_000,
-      allowAlternateUrls: false, minTextChars: 40,
+      allowAlternateUrls: false, minTextChars: 0,
     });
     assert.equal(deep.route, "direct");
     const { sponsors } = extractDeepSections(deep.html, `${origin}/sponsors`);
@@ -531,4 +533,144 @@ test("already-published conferences have their empty tabs filled, and other peop
 
   await dbRun("DELETE FROM extracted_conferences WHERE source_url IN (?,?)", [ours, theirs]);
   await forgetEvent(eventId);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Why a real production sample read nothing
+//
+// Two defects produce exactly "deepPagesRead: 0, no errors". Both are reproduced here, because a
+// green fixture run proved nothing about either of them: the fixture conference verified cleanly
+// in the same pass, which is the one case both defects leave working.
+// ---------------------------------------------------------------------------------------------
+
+test("a conference verified by an EARLIER run still has its deep pages read", async () => {
+  // The production shape: the record was verified before, so `official_source_verified_at` and an
+  // authoritative source row are stored — but this run's re-verification does not reproduce it,
+  // because the landing page now leads with a different title. The deep pass used to sit inside
+  // `if (verified)`, so it never ran, silently, for exactly these records.
+  await initDiscoverySchema();
+  const pages: Record<string, string> = {
+    "/": `<html><head><title>Site under maintenance</title></head><body>
+      <h1>Site under maintenance</h1>
+      <p>${"We are updating this website and will be back shortly. ".repeat(12)}</p>
+      <nav><a href="/speakers">Speakers</a><a href="/sponsors">Sponsors</a></nav></body></html>`,
+    "/speakers": `<html><body><h2>Keynote Speakers</h2>
+      <div class="speaker"><h3 class="speaker-name">Priya Raghunathan</h3>
+      <p class="affiliation">Indian Institute of Science</p></div></body></html>`,
+    "/sponsors": `<html><body><h2>Gold Sponsors</h2>
+      <a href="https://vidyut.example"><img src="/v.png" alt="Vidyut Semiconductors logo"></a></body></html>`,
+  };
+  const server = http.createServer((req, res) => {
+    const key = (req.url || "/").split("?")[0].replace(/\/$/, "") || "/";
+    if (!pages[key]) { res.writeHead(404); res.end("<html><body>Not found</body></html>"); return; }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(pages[key]);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${(server.address() as any).port}`;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+
+  const eventId = `deep-prior-run-${Date.now()}`;
+  const runId = `deep-prior-run-batch-${Date.now()}`;
+  try {
+    await dbRun(`INSERT INTO discovery_events
+      (id,title,normalized_title,extraction_method,source_url,source_domain,official_url,status,
+       start_date,start_year,country,format,confidence_score,publish_readiness,official_source_verified_at,title_verified_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`,
+      [eventId, "Bangalore Semiconductor Summit 2027", "bangalore semiconductor summit 2027", "html",
+        `${origin}/`, "127.0.0.1", `${origin}/`, "validated", "2027-11-02", 2027, "India",
+        "in_person", 0.6, "publish_ready"]);
+    await dbRun(`INSERT INTO discovery_event_sources
+      (id,event_id,source_url,source_domain,source_type,source_classification,classification_confidence,extraction_method,is_official)
+      VALUES (?,?,?,?,?,?,?,?,1)`,
+      [`src-${eventId}`, eventId, `${origin}/`, "127.0.0.1", "official_website", "official_event_site", 0.92, "html"]);
+    await dbRun(`INSERT INTO discovery_run_events (run_id,event_id,outcome,validation_status,provider,source_url)
+      VALUES (?,?,?,?,?,?)`, [runId, eventId, "accepted", "validated", "test", `${origin}/`]);
+
+    const report = await runEnrichment({
+      runId, limit: 5, maxSearchQueries: 0, maxJinaPages: 0, maxDeepPagesPerEvent: 4,
+      timeBudgetMs: 60_000, urlGuard: localGuard, quiet: true, trace: true,
+    });
+
+    const entry = report.deepTrace?.find((row) => row.eventId === eventId);
+    assert.ok(entry, "the trace has an entry for every record examined");
+    assert.equal(entry!.officialPageSource, "stored_verification",
+      "the page this run could not re-verify is still the one an earlier run established");
+    assert.equal(entry!.sameDomainLinks, 2);
+    assert.deepEqual(entry!.matchedCandidates.map((candidate) => candidate.outcome), ["read", "read"]);
+    assert.equal(entry!.selectedUrls.length, 2);
+    assert.deepEqual(entry!.sectionsFilled.sort(), ["speakers", "sponsors"]);
+    assert.equal(entry!.provenance.speakers, `${origin}/speakers`);
+
+    const after = await dbGet<Record<string, any>>("SELECT * FROM discovery_events WHERE id=?", [eventId]);
+    assert.equal(JSON.parse(after!.keynote_speakers)[0].name, "Priya Raghunathan");
+    assert.equal(JSON.parse(after!.sponsors_exhibitors)[0].tier, "Gold");
+  } finally {
+    await forgetEvent(eventId);
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("a record with no authoritative page reads nothing, and the trace says exactly that", async () => {
+  // The other half of the production result, and it is correct behaviour rather than a bug: a
+  // never-verified backlog record has no page this engine trusts, so it gets no deep read. What
+  // was missing was any way to tell this apart from a wiring failure.
+  await initDiscoverySchema();
+  const eventId = `deep-unverified-${Date.now()}`;
+  const runId = `deep-unverified-batch-${Date.now()}`;
+  try {
+    await dbRun(`INSERT INTO discovery_events
+      (id,title,normalized_title,extraction_method,source_url,source_domain,status,publish_readiness,confidence_score)
+      VALUES (?,?,?,?,?,?,?,?,?)`,
+      [eventId, "Unverified Backlog Conference 2027", "unverified backlog conference 2027", "html",
+        "https://never-verified.example/listing", "never-verified.example", "validated", "needs_enrichment", 0.4]);
+    await dbRun(`INSERT INTO discovery_run_events (run_id,event_id,outcome,validation_status,provider,source_url)
+      VALUES (?,?,?,?,?,?)`, [runId, eventId, "accepted", "validated", "test", "https://never-verified.example/listing"]);
+
+    const report = await runEnrichment({
+      runId, limit: 5, maxSearchQueries: 0, maxJinaPages: 0, maxDeepPagesPerEvent: 4,
+      timeBudgetMs: 30_000, urlGuard: localGuard, quiet: true, trace: true,
+    });
+
+    const entry = report.deepTrace?.find((row) => row.eventId === eventId);
+    assert.ok(entry);
+    assert.equal(entry!.officialPageSource, "none");
+    assert.equal(entry!.skipReason, "no_authoritative_official_page");
+    assert.deepEqual(entry!.sectionsFilled, [], "no authoritative page means no deep data, by design");
+    assert.equal(report.providerUsage.deepPagesRead, 0);
+  } finally {
+    await forgetEvent(eventId);
+  }
+});
+
+test("a sample takes the least-verified records first unless a readiness backlog is named", async () => {
+  // Why `enrich --limit 5` sampled records that could not verify: the ordering is
+  // least-recently-verified first, which is right for working a backlog and wrong for a sample.
+  await initDiscoverySchema();
+  const stamp = Date.now();
+  const ids = [`order-fresh-${stamp}`, `order-never-${stamp}`];
+  try {
+    await dbRun(`INSERT INTO discovery_events
+      (id,title,normalized_title,extraction_method,source_url,source_domain,status,publish_readiness,confidence_score,last_verified)
+      VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))`,
+      [ids[0], "Ordering Verified Congress 2027", "ordering verified congress 2027", "html",
+        "https://ordering.example/a", "ordering.example", "validated", "publish_ready", 0.99]);
+    await dbRun(`INSERT INTO discovery_events
+      (id,title,normalized_title,extraction_method,source_url,source_domain,status,publish_readiness,confidence_score)
+      VALUES (?,?,?,?,?,?,?,?,?)`,
+      [ids[1], "Ordering Unverified Congress 2027", "ordering unverified congress 2027", "html",
+        "https://ordering.example/b", "ordering.example", "validated", "needs_enrichment", 0.01]);
+
+    const order = await dbAll<{ id: string }>(
+      `SELECT id FROM discovery_events WHERE id IN (?,?)
+        ORDER BY last_verified IS NOT NULL, last_verified ASC, confidence_score DESC`, ids);
+    assert.equal(order[0].id, ids[1], "a never-verified record outranks a freshly verified one");
+
+    const filtered = await dbAll<{ id: string }>(
+      `SELECT id FROM discovery_events WHERE id IN (?,?) AND publish_readiness IN ('publish_ready')
+        ORDER BY last_verified IS NOT NULL, last_verified ASC, confidence_score DESC`, ids);
+    assert.deepEqual(filtered.map((row) => row.id), [ids[0]], "--readiness reaches the verified records");
+  } finally {
+    for (const id of ids) await forgetEvent(id);
+  }
 });

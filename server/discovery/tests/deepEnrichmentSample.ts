@@ -147,6 +147,7 @@ async function main(): Promise<void> {
   const { runEnrichment } = await import("../enrichment");
   const { configureDomainLimits } = await import("../httpClient");
   const { buildDeepCoverageReport, formatDeepCoverageReport } = await import("../deepEnrichment");
+  const { formatDeepTrace } = await import("../enrichment");
 
   const server = http.createServer((req, res) => {
     const origin = `http://127.0.0.1:${(server.address() as any).port}`;
@@ -197,13 +198,16 @@ async function main(): Promise<void> {
 
     const report = await runEnrichment({
       runId, limit: SITES.length, maxSearchQueries: 0, maxJinaPages: 0,
-      maxDeepPagesPerEvent: 6, timeBudgetMs: 120_000, urlGuard, quiet: true,
+      maxDeepPagesPerEvent: 6, timeBudgetMs: 120_000, urlGuard, quiet: true, trace: true,
     });
 
     console.log(`\nEnrichment ${report.status}: ${report.totalRecordsExamined} records examined, ` +
       `${report.providerUsage.deepPagesRead} subpages read, ` +
       `${report.providerUsage.robotsDisallowed} skipped for robots.txt, ` +
       `AI calls 0 (the pass has no model dependency).\n`);
+
+    console.log("--- Deep-section trace (the same output `enrich --trace` prints) ---");
+    console.log(formatDeepTrace(report.deepTrace || []));
 
     console.log(formatDeepCoverageReport(await buildDeepCoverageReport({ limit: 10 })));
 

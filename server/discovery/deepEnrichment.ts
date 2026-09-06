@@ -24,7 +24,8 @@ import crypto from "crypto";
 import { dbRun } from "../db";
 import {
   DEEP_SECTIONS, deepSectionPopulated, emptyDeepExtraction, extractDeepSections, findSectionPages,
-  mergeDeepExtractions, type DeepSection, type DeepSectionExtraction,
+  mergeDeepExtractions, sameDomainLinks, type DeepSection, type DeepSectionExtraction,
+  type SectionPageCandidate,
 } from "./deepSections";
 import { canonicalizeUrl } from "./normalize";
 
@@ -43,12 +44,20 @@ export interface DeepPageRead {
   url: string;
 }
 
+/** A read that did not happen, and why. "robots said no" and "the page 404s" are different
+ *  answers with different responses, and collapsing them into one loses the diagnosis. */
+export interface DeepPageUnread {
+  unreadable: "robots_disallowed" | "fetch_failed";
+}
+
+export type DeepPageReadResult = DeepPageRead | DeepPageUnread | null;
+
 export interface CollectDeepSectionsOptions {
   /** The verified official page: its HTML is already in hand, and its links are the map. */
   officialUrl: string;
   officialHtml: string;
   /** Reads one URL through the caller's robots-, budget- and guard-aware reader. */
-  read: (url: string) => Promise<DeepPageRead | null>;
+  read: (url: string) => Promise<DeepPageReadResult>;
   /** Subpages to read beyond the official page itself. */
   maxPages?: number;
   /** Only chase pages for sections still empty, so a re-run costs almost nothing. */
@@ -57,11 +66,26 @@ export interface CollectDeepSectionsOptions {
   outOfTime?: () => boolean;
 }
 
+/** What happened to one candidate subpage, so "nothing was read" can always be explained. */
+export type DeepCandidateOutcome =
+  | "read" | "robots_disallowed" | "fetch_failed" | "already_seen" | "page_budget" | "out_of_time";
+
+export interface DeepCandidateTrace {
+  url: string;
+  section: DeepSection;
+  evidence: string;
+  outcome: DeepCandidateOutcome;
+}
+
 export interface DeepSectionsCollected {
   extraction: DeepSectionExtraction;
   pagesRead: string[];
   pagesAttempted: number;
   populated: DeepSection[];
+  /** Every same-domain page the official page links to, for telling "linked nowhere useful" from
+   *  "linked nowhere at all" — a JavaScript-rendered shell reports zero. */
+  sameDomainLinks: number;
+  candidates: DeepCandidateTrace[];
 }
 
 /**
@@ -87,22 +111,31 @@ export async function collectDeepSections(options: CollectDeepSectionsOptions): 
     perSection: 2, sections: wanted,
   });
 
+  const traced: DeepCandidateTrace[] = [];
+  const note = (candidate: SectionPageCandidate, outcome: DeepCandidateOutcome) =>
+    traced.push({ url: candidate.url, section: candidate.section, evidence: candidate.evidence, outcome });
+
   for (const candidate of candidates) {
-    if (pagesRead.length > maxPages) break;
-    if (options.outOfTime?.()) break;
+    if (pagesRead.length > maxPages) { note(candidate, "page_budget"); continue; }
+    if (options.outOfTime?.()) { note(candidate, "out_of_time"); continue; }
     const key = canonicalizeUrl(candidate.url) || candidate.url;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) { note(candidate, "already_seen"); continue; }
     seen.add(key);
     pagesAttempted += 1;
     const read = await options.read(candidate.url);
-    if (!read?.html) continue;
+    if (!read || "unreadable" in read || !read.html) {
+      note(candidate, read && "unreadable" in read ? read.unreadable : "fetch_failed");
+      continue;
+    }
+    note(candidate, "read");
     parts.push(extractDeepSections(read.html, read.url || candidate.url));
     pagesRead.push(read.url || candidate.url);
   }
 
   const extraction = mergeDeepExtractions(parts);
   return {
-    extraction, pagesRead, pagesAttempted,
+    extraction, pagesRead, pagesAttempted, candidates: traced,
+    sameDomainLinks: sameDomainLinks(options.officialHtml, options.officialUrl).length,
     populated: DEEP_SECTIONS.filter((section) => deepSectionPopulated(extraction, section)),
   };
 }
@@ -214,7 +247,10 @@ export async function storeDeepSections(input: {
 }
 
 export function emptyDeepResult(): DeepSectionsCollected {
-  return { extraction: emptyDeepExtraction(), pagesRead: [], pagesAttempted: 0, populated: [] };
+  return {
+    extraction: emptyDeepExtraction(), pagesRead: [], pagesAttempted: 0, populated: [],
+    sameDomainLinks: 0, candidates: [],
+  };
 }
 
 // ---------------------------------------------------------------------------------------------

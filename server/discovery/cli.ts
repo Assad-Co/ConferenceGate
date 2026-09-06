@@ -18,7 +18,10 @@ import path from "path";
 import { auditDiscoveredConferences, formatAuditReport } from "./audit";
 import { diagnoseRun, formatDiagnosis } from "./diagnose";
 import { auditPublishReady } from "./controlledPublish";
-import { formatEnrichmentReport, reclassifyAllPublishReadiness, runEnrichment } from "./enrichment";
+import {
+  formatDeepTrace, formatEnrichmentReport, reclassifyAllPublishReadiness, runEnrichment,
+} from "./enrichment";
+import type { PublishReadiness } from "./types";
 import { buildQualityReport, formatQualityReport, writeEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { buildInventoryReport } from "./inventory";
@@ -90,10 +93,15 @@ const HELP = `Conference Gate — discovery engine
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
   enrich   [--limit 500] [--max-search-queries 500] [--max-jina-pages 200]
-           [--max-deep-pages 4] [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
+           [--max-deep-pages 4] [--readiness publish_ready] [--trace]
+           [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
                             Verify accepted records against first-party pages, preserve field
                             provenance/history, enrich supported fields and classify publication
                             readiness. Does not discover new events and never publishes.
+                            --readiness picks which backlog to work; without it records come
+                            least-recently-verified first, which for a small sample means the
+                            records least likely to have an authoritative page yet. --trace prints,
+                            per conference, why deep pages were or were not read.
   diagnose [--run <id>]     Break a run's fetch failures down by class and by domain, and say
                             what each class implies. Defaults to the most recent run.
   metrics                   Print database metrics as JSON.
@@ -251,11 +259,21 @@ async function main(): Promise<void> {
         maxSearchQueries: numberFlag(flags["max-search-queries"], 500),
         maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
         maxDeepPagesPerEvent: Number(flags["max-deep-pages"] ?? 4),
+        // Records are otherwise taken least-recently-verified first, which is the right order for
+        // working a backlog and the wrong one for a sample: those records are precisely the ones
+        // with no authoritative page yet, so a five-record sample can legitimately read nothing.
+        readiness: list(flags.readiness).filter((value): value is PublishReadiness =>
+          value === "publish_ready" || value === "needs_enrichment" || value === "needs_review"),
+        trace: flags.trace === true,
         timeBudgetMs: numberFlag(flags["time-budget-ms"], 30 * 60 * 1000),
         quiet: flags.quiet === true,
       }));
       console.log("\n--- Enrichment report ---");
       console.log(formatEnrichmentReport(report));
+      if (report.deepTrace) {
+        console.log("\n--- Deep-section trace ---");
+        console.log(formatDeepTrace(report.deepTrace));
+      }
       console.log("\n--- Enrichment JSON ---");
       console.log(JSON.stringify(report, null, 2));
       if (report.status === "failed") process.exitCode = 2;

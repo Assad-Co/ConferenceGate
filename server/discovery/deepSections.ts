@@ -131,6 +131,34 @@ const SECTION_LINK_PATTERNS: Record<DeepSection, RegExp> = {
 /** Extensions a section page never has. A PDF programme is real, but this pass reads HTML only. */
 const NON_HTML_EXTENSION = /\.(pdf|docx?|pptx?|xlsx?|zip|ics|jpe?g|png|gif|svg|webp|mp4|mp3)$/i;
 
+/**
+ * Every distinct same-domain page this one links to.
+ *
+ * Exported for the diagnostic: "no deep pages were read" has two very different causes — the page
+ * linked nowhere useful, or it linked nowhere at all — and only a count separates them. A
+ * JavaScript-rendered site whose direct fetch returns an empty shell reports zero here, which is
+ * the answer, not a mystery.
+ */
+export function sameDomainLinks(html: string, pageUrl: string): string[] {
+  let origin: URL;
+  try { origin = new URL(pageUrl); } catch { return []; }
+  const root = parseHtml(html);
+  const found = new Set<string>();
+  for (const anchor of byTag(root, "a")) {
+    const href = attr(anchor, "href");
+    if (!href || /^(mailto:|tel:|javascript:|#)/i.test(href.trim())) continue;
+    const absolute = absoluteUrl(href, pageUrl);
+    if (!absolute) continue;
+    try {
+      const target = new URL(absolute);
+      if (target.hostname.replace(/^www\./, "") !== origin.hostname.replace(/^www\./, "")) continue;
+      if (NON_HTML_EXTENSION.test(target.pathname)) continue;
+      found.add(canonicalizeUrl(target.href) || target.href);
+    } catch { continue; }
+  }
+  return [...found];
+}
+
 export interface SectionPageCandidate {
   url: string;
   section: DeepSection;
