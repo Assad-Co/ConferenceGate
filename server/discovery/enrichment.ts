@@ -8,6 +8,8 @@ import { dbAll, dbGet, dbRun } from "../db";
 import { isSerperConfigured, serperSearch } from "../serperSearch";
 import { titleSimilarity } from "./dedupe";
 import { extractFromHtml } from "./htmlExtract";
+import { collectDeepSections, deepSectionsMissing, storeDeepSections } from "./deepEnrichment";
+import type { DeepSection } from "./deepSections";
 import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl, normalizeTitle } from "./normalize";
 import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
@@ -121,6 +123,12 @@ export interface EnrichmentOptions {
   runId?: string;
   /** Prefer a durable readiness backlog instead of repeatedly re-reading already-ready rows. */
   readiness?: PublishReadiness[];
+  /**
+   * Subpages per conference the deep pass may read for programme, speakers, committee, sponsors
+   * and community. Zero turns the pass off entirely; the landing page is still read either way,
+   * because enrichment already has it.
+   */
+  maxDeepPagesPerEvent?: number;
 }
 
 export interface EnrichmentReport {
@@ -134,6 +142,8 @@ export interface EnrichmentReport {
   readiness: Record<PublishReadiness, number>;
   sourceDistribution: { official: number; directory: number; other: number };
   conflicts: { detected: number; resolved: number };
+  /** How many accepted records hold each deep section, before and after this pass. */
+  deepSections: Record<DeepSection, { before: number; after: number }>;
   providerUsage: Record<string, number>;
   errors: string[];
   runtimeMs: number;
@@ -142,6 +152,9 @@ export interface EnrichmentReport {
 interface EventRow extends Record<string, any> { id: string; title: string; source_url: string }
 interface VerifiedPage {
   url: string;
+  /** Kept so the deep pass can read this page's own sections and follow its links without
+   *  fetching it a second time. */
+  html: string;
   classification: SourceClassification;
   authority: number;
   extraction: RawEventExtraction;
@@ -171,6 +184,34 @@ async function snapshot(): Promise<{ official: number; countries: number; dates:
   return { official: Number(row?.official || 0), countries: Number(row?.countries || 0), dates: Number(row?.dates || 0), organizers: Number(row?.organizers || 0) };
 }
 
+/** How many accepted records currently hold each deep section. */
+async function deepSnapshot(): Promise<Record<DeepSection, number>> {
+  const row = await dbGet<Record<string, number>>(`SELECT
+      SUM(program_agenda IS NOT NULL AND program_agenda NOT IN ('','[]','{}')) program,
+      SUM(keynote_speakers IS NOT NULL AND keynote_speakers NOT IN ('','[]','{}')) speakers,
+      SUM(technical_committee IS NOT NULL AND technical_committee NOT IN ('','[]','{}')) committee,
+      SUM(sponsors_exhibitors IS NOT NULL AND sponsors_exhibitors NOT IN ('','[]','{}')) sponsors,
+      SUM(community IS NOT NULL AND community NOT IN ('','[]','{}')) community
+    FROM discovery_events WHERE status IN ('validated','published','needs_review')`);
+  return {
+    program: Number(row?.program || 0), speakers: Number(row?.speakers || 0),
+    committee: Number(row?.committee || 0), sponsors: Number(row?.sponsors || 0),
+    community: Number(row?.community || 0),
+  };
+}
+
+function deepSectionReport(
+  before: Record<DeepSection, number>, after: Record<DeepSection, number>
+): Record<DeepSection, { before: number; after: number }> {
+  return {
+    program: { before: before.program, after: after.program },
+    speakers: { before: before.speakers, after: after.speakers },
+    committee: { before: before.committee, after: after.committee },
+    sponsors: { before: before.sponsors, after: after.sponsors },
+    community: { before: before.community, after: after.community },
+  };
+}
+
 export async function runEnrichment(options: EnrichmentOptions = {}): Promise<EnrichmentReport> {
   const started = Date.now();
   const runId = id("denr");
@@ -182,7 +223,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     braveQueries: 0, braveResults: 0, braveErrors: 0, serperQueries: 0, serperResults: 0,
     serperErrors: 0, directAttempts: 0, directSuccesses: 0, jinaAttempts: 0,
     jinaSuccesses: 0, jinaRecoveries: 0, robotsDisallowed: 0, pagesUnreadable: 0,
-    directoryLeads: 0, directoryResolutions: 0,
+    directoryLeads: 0, directoryResolutions: 0, deepPagesRead: 0, deepSectionsFilled: 0,
   };
   const errors: string[] = [];
   let conflictsDetected = 0;
@@ -191,7 +232,9 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
   let searchUsed = 0;
   let timedOut = false;
   const robotsCache = new Map<string, RobotsPolicy>();
+  const maxDeepPages = Math.max(0, options.maxDeepPagesPerEvent ?? 4);
   const before = await snapshot();
+  const deepBefore = await deepSnapshot();
 
   await dbRun(`INSERT INTO discovery_enrichment_runs (id, official_urls_before, verified_countries_before,
     verified_dates_before, organizers_before) VALUES (?, ?, ?, ?, ?)`,
@@ -230,6 +273,32 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
         conflictsDetected += applied.detected;
         conflictsResolved += applied.resolved;
         unresolvedConflict = applied.unresolved > 0;
+        // Deep sections come last and are allowed to fail. Nothing below this line can change the
+        // record's readiness, and an exception here must not lose the verification above it.
+        try {
+          const missing = deepSectionsMissing(event);
+          if (missing.length > 0 && Date.now() < deadline) {
+            const collected = await collectDeepSections({
+              officialUrl: verified.url,
+              officialHtml: verified.html,
+              maxPages: maxDeepPages,
+              sections: missing,
+              outOfTime: () => Date.now() >= deadline,
+              read: async (url) => {
+                const read = await readAllowed(url, budget, robotsCache, metrics, options.urlGuard, true);
+                if (!read?.html) return null;
+                metrics.deepPagesRead += 1;
+                return { html: read.html, url: read.resolvedUrl || read.direct.finalUrl || url };
+              },
+            });
+            const stored = await storeDeepSections({
+              eventId: event.id, event, extraction: collected.extraction, officialUrl: verified.url, runId,
+            });
+            metrics.deepSectionsFilled += stored.filled.length;
+          }
+        } catch (error: any) {
+          errors.push(`deep sections for ${event.id}: ${String(error?.message || error).slice(0, 200)}`);
+        }
       } else if (event.publish_readiness === "publish_ready") {
         // A readiness re-check that cannot reproduce title and source authority must fail closed.
         // The record remains accepted and keeps all provenance; only the two current verification
@@ -254,6 +323,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       organizers: { before: before.organizers, after: after.organizers },
       readiness, sourceDistribution: distribution,
       conflicts: { detected: conflictsDetected, resolved: conflictsResolved },
+      deepSections: deepSectionReport(deepBefore, await deepSnapshot()),
       providerUsage: { ...metrics, jinaAttempts: budget.jinaUsed, jinaRecoveries: budget.jinaRecovered },
       errors, runtimeMs: Date.now() - started,
     };
@@ -268,6 +338,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       verifiedDates: { before: before.dates, after: after.dates }, organizers: { before: before.organizers, after: after.organizers },
       readiness: { publish_ready: 0, needs_enrichment: 0, needs_review: 0 },
       sourceDistribution: await sourceDistribution(), conflicts: { detected: conflictsDetected, resolved: conflictsResolved },
+      deepSections: deepSectionReport(deepBefore, await deepSnapshot()),
       providerUsage: metrics, errors, runtimeMs: Date.now() - started,
     };
     await finishRun(report);
@@ -301,7 +372,18 @@ async function verifyExistingSources(event: EventRow, budget: ReadBudget, robots
   return null;
 }
 
-async function readAllowed(url: string, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>, guard?: UrlGuard) {
+/**
+ * `deep` marks a read of one named subpage rather than a search for the conference itself, and it
+ * changes two things. A landing page with under 200 characters of prose has told us nothing and is
+ * rightly discarded, but a sponsors page is a grid of logos whose names live in `alt` attributes,
+ * so the floor drops and the extractor decides whether the markup said anything. And the
+ * alternate-URL stage is switched off: substituting the site root for a missing /speakers would
+ * file the homepage's contents under a page that never stated them.
+ */
+async function readAllowed(
+  url: string, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>,
+  guard?: UrlGuard, deep = false
+) {
   const domain = host(url);
   if (!domain) return null;
   let policy = robots.get(domain);
@@ -311,11 +393,17 @@ async function readAllowed(url: string, budget: ReadBudget, robots: Map<string, 
   }
   if (!isPathAllowed(policy, url)) { metrics.robotsDisallowed += 1; return null; }
   const jinaBefore = budget.jinaUsed;
-  const read = await readPage(url, { budget, allowFallback: true, urlGuard: guard, timeoutMs: 15_000 });
+  const read = await readPage(url, {
+    budget, allowFallback: true, urlGuard: guard, timeoutMs: 15_000,
+    // A deep read is for one named page. If /speakers is gone, the answer is that this conference
+    // has no readable speakers page — not the site root wearing its name.
+    allowAlternateUrls: !deep,
+    minTextChars: deep ? 40 : undefined,
+  });
   metrics.directAttempts += 1;
   if (read.direct.ok) metrics.directSuccesses += 1;
   if (budget.jinaUsed > jinaBefore && read.route === "jina") metrics.jinaSuccesses += 1;
-  if (!read.html || read.textLength < 200) { metrics.pagesUnreadable += 1; return null; }
+  if (!read.html || read.textLength < (deep ? 40 : 200)) { metrics.pagesUnreadable += 1; return null; }
   return read;
 }
 
@@ -351,8 +439,8 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
     title: raw.title, organizer: raw.organizer, pageText: read.html, registryType: registry?.source_type });
   if (!isEligibleOfficialSource({ pageUrl: finalUrl, title: raw.title, organizerUrl: raw.organizerUrl,
     registryType: registry?.source_type, classification: source.classification, confidence: source.confidence })) return null;
-  return { url: finalUrl, classification: source.classification, authority: source.confidence, extraction: raw,
-    route: read.route, identityScore, provider, classificationEvidence: source.evidence };
+  return { url: finalUrl, html: read.html, classification: source.classification, authority: source.confidence,
+    extraction: raw, route: read.route, identityScore, provider, classificationEvidence: source.evidence };
 }
 
 async function searchForOfficial(event: EventRow, remaining: number, metrics: Record<string, number>): Promise<{ queries: number; results: LiveSearchResult[] }> {
@@ -647,6 +735,9 @@ export function formatEnrichmentReport(report: EnrichmentReport): string {
     `Readiness: publish_ready=${report.readiness.publish_ready}, needs_enrichment=${report.readiness.needs_enrichment}, needs_review=${report.readiness.needs_review}`,
     `Sources: official=${report.sourceDistribution.official}, directory=${report.sourceDistribution.directory}, other=${report.sourceDistribution.other}`,
     `Conflicts: detected=${report.conflicts.detected}, resolved=${report.conflicts.resolved}`,
+    `Deep sections: ${(Object.keys(report.deepSections) as Array<keyof typeof report.deepSections>)
+      .map((section) => `${section} ${report.deepSections[section].before}->${report.deepSections[section].after}`)
+      .join(", ")}`,
     `Provider usage: ${JSON.stringify(report.providerUsage)}`,
     `Runtime: ${(report.runtimeMs / 1000).toFixed(1)}s`,
     ...(report.errors.length ? [`Errors: ${report.errors.join(" | ")}`] : []),

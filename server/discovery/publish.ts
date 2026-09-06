@@ -17,6 +17,8 @@
 
 import { dbGet, dbRun } from "../db";
 import { latestPassingPublicationAudit } from "./controlledPublish";
+import { DEEP_SECTION_STORAGE, storedSectionIsEmpty } from "./deepEnrichment";
+import { DEEP_SECTIONS } from "./deepSections";
 
 export interface PublishOptions {
   /** Statuses eligible for publication. */
@@ -37,6 +39,8 @@ export interface PublishResult {
   skippedExisting: number;
   skippedIneligible: number;
   urls: string[];
+  /** Empty tabs filled in on conferences this engine had already published. */
+  sectionsBackfilled?: number;
 }
 
 export function isPublishEnabled(): boolean {
@@ -95,13 +99,18 @@ export function toExtractedConferenceRecord(row: Record<string, any>): Record<st
     },
   };
 
+  // The deep sections, when enrichment managed to read them from the organiser's own pages. They
+  // are stored in exactly the shape `extracted_conferences` already holds and the detail tabs
+  // already render, so a populated section reaches the UI without a line of frontend change. A
+  // section nobody published stays at its empty default rather than becoming a plausible guess.
+  const deep = deepSectionPayloads(row);
   return {
     overview: JSON.stringify(overview),
     call_for_papers: JSON.stringify(callForPapers),
-    program_agenda: JSON.stringify({ sessions: [] }),
-    keynote_speakers: JSON.stringify([]),
-    technical_committee: JSON.stringify([]),
-    sponsors_exhibitors: JSON.stringify([]),
+    program_agenda: deep.program_agenda ?? JSON.stringify({ sessions: [] }),
+    keynote_speakers: deep.keynote_speakers ?? JSON.stringify([]),
+    technical_committee: deep.technical_committee ?? JSON.stringify([]),
+    sponsors_exhibitors: deep.sponsors_exhibitors ?? JSON.stringify([]),
     venue_accommodation: JSON.stringify({
       venue_name: row.venue,
       address: row.venue_address,
@@ -117,7 +126,7 @@ export function toExtractedConferenceRecord(row: Record<string, any>): Record<st
       early_bird_deadline: row.early_bird_deadline,
       source_url: row.source_url,
     }),
-    community: JSON.stringify({ social_media: [] }),
+    community: deep.community ?? JSON.stringify({ social_media: [] }),
     extraction_metadata: JSON.stringify({
       // "success" is what the app's prepared-conference search requires to consider a row usable;
       // `origin` and `confidence` say plainly that this came from discovery rather than from a
@@ -126,19 +135,51 @@ export function toExtractedConferenceRecord(row: Record<string, any>): Record<st
       origin: "discovery_engine",
       discovery_event_id: row.id,
       schema_version: "discovery-1",
-      pages_crawled: 1,
-      source_urls: [row.source_url],
+      pages_crawled: deep.sourceUrls.length || 1,
+      source_urls: [row.source_url, ...deep.sourceUrls.filter((url) => url !== row.source_url)],
       confidence: row.confidence_score,
       extraction_method: row.extraction_method,
       quality_flags: safeParseArray(row.quality_flags),
       conflicts: [],
-      missing_sections: [
-        "program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors",
-      ],
+      // Say which tabs are genuinely empty, rather than declaring all four missing regardless.
+      missing_sections: ["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors"]
+        .filter((column) => !deep[column as keyof DeepSectionPayloads]),
       pages_failed: [],
       crawl_complete: true,
     }),
   };
+}
+
+interface DeepSectionPayloads {
+  program_agenda: string | null;
+  keynote_speakers: string | null;
+  technical_committee: string | null;
+  sponsors_exhibitors: string | null;
+  community: string | null;
+  /** Every page the stored sections name, so the published record says where each tab came from. */
+  sourceUrls: string[];
+}
+
+/** Reads the stored deep sections off a discovery row, keeping every source URL they carry. */
+function deepSectionPayloads(row: Record<string, any>): DeepSectionPayloads {
+  const payloads: Record<string, string | null> = {
+    program_agenda: null, keynote_speakers: null, technical_committee: null,
+    sponsors_exhibitors: null, community: null,
+  };
+  const sourceUrls = new Set<string>();
+  for (const section of DEEP_SECTIONS) {
+    const { column } = DEEP_SECTION_STORAGE[section];
+    const stored = row[column];
+    if (storedSectionIsEmpty(stored)) { payloads[column] = null; continue; }
+    payloads[column] = typeof stored === "string" ? stored : JSON.stringify(stored);
+    try {
+      const parsed = JSON.parse(payloads[column]!);
+      for (const item of Array.isArray(parsed) ? parsed : [parsed]) {
+        if (item && typeof item === "object" && typeof item.source_url === "string") sourceUrls.add(item.source_url);
+      }
+    } catch { /* a malformed stored section simply contributes no provenance */ }
+  }
+  return { ...(payloads as unknown as Omit<DeepSectionPayloads, "sourceUrls">), sourceUrls: [...sourceUrls] };
 }
 
 function safeParseArray(value: unknown): string[] {
@@ -149,6 +190,36 @@ function safeParseArray(value: unknown): string[] {
   } catch {
     return [];
   }
+}
+
+/** True only for a row this engine published; anything else is somebody else's record. */
+function isDiscoveryEngineRow(existing: Record<string, any>): boolean {
+  try {
+    return JSON.parse(String(existing.extraction_metadata || "{}"))?.origin === "discovery_engine";
+  } catch {
+    return false;
+  }
+}
+
+/** Fills the empty deep sections of an already-published row. Returns how many it filled. */
+async function backfillDeepSections(existing: Record<string, any>, row: Record<string, any>): Promise<number> {
+  if (!isDiscoveryEngineRow(existing)) return 0;
+  const deep = deepSectionPayloads(row);
+  const updates: Array<[string, string]> = [];
+  for (const section of DEEP_SECTIONS) {
+    const { column } = DEEP_SECTION_STORAGE[section];
+    const payload = deep[column as keyof DeepSectionPayloads];
+    if (typeof payload !== "string") continue;
+    if (!storedSectionIsEmpty(existing[column])) continue;
+    updates.push([column, payload]);
+  }
+  if (updates.length === 0) return 0;
+  await dbRun(
+    `UPDATE extracted_conferences SET ${updates.map(([column]) => `${column}=?`).join(", ")},
+       updated_at=datetime('now') WHERE source_url=?`,
+    [...updates.map(([, payload]) => payload), existing.source_url]
+  );
+  return updates.length;
 }
 
 export async function publishDiscoveredConferences(options: PublishOptions = {}): Promise<PublishResult> {
@@ -196,16 +267,26 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
     skippedExisting: 0,
     skippedIneligible: 0,
     urls: [],
+    sectionsBackfilled: 0,
   };
 
   for (const row of rows) {
     const sourceUrl = row.official_url as string;
-    const existing = await dbGet<{ source_url: string }>(
-      "SELECT source_url FROM extracted_conferences WHERE source_url = ?",
+    const existing = await dbGet<Record<string, any>>(
+      `SELECT source_url, program_agenda, keynote_speakers, technical_committee, sponsors_exhibitors,
+              community, extraction_metadata
+         FROM extracted_conferences WHERE source_url = ?`,
       [sourceUrl]
     );
     if (existing) {
       result.skippedExisting += 1;
+      // The row is already published and already passed every gate above; the conference is not
+      // in question. What is in question is whether its tabs are still empty because enrichment
+      // had not yet read the organiser's programme and speakers pages when it was written. Fill
+      // only the sections that are empty, only on rows this engine wrote itself, and never
+      // overwrite anything — a conference the app crawled for itself keeps its own record, which
+      // is the same rule the insert below has always followed.
+      if (!options.dryRun) result.sectionsBackfilled = (result.sectionsBackfilled ?? 0) + await backfillDeepSections(existing, row);
       continue;
     }
     if (options.dryRun) {

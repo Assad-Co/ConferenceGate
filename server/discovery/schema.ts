@@ -518,6 +518,17 @@ export async function initDiscoverySchema(): Promise<void> {
     "ALTER TABLE discovery_events ADD COLUMN readiness_reasons TEXT NOT NULL DEFAULT '[]'",
     "ALTER TABLE discovery_events ADD COLUMN official_source_verified_at TEXT",
     "ALTER TABLE discovery_events ADD COLUMN title_verified_at TEXT",
+    // The deep sections, stored as the same JSON the detail tabs already render, each carrying the
+    // page that stated it. They are read from the organiser's own subpages — /program, /speakers,
+    // /committee, /sponsors — which is where conferences actually publish them and which the
+    // landing-page-only enrichment never saw. Nothing here participates in publication readiness:
+    // an unreadable speakers page must leave an otherwise valid conference exactly as publishable.
+    "ALTER TABLE discovery_events ADD COLUMN program_agenda TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN keynote_speakers TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN technical_committee TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN sponsors_exhibitors TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN community TEXT",
+    "ALTER TABLE discovery_events ADD COLUMN deep_sections_verified_at TEXT",
   ]) {
     try { await db.execute(statement); } catch (error: any) {
       if (!/duplicate column name/i.test(String(error?.message || error))) throw error;

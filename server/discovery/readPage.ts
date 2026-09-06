@@ -97,17 +97,32 @@ export { markdownToDocument } from "./jinaFetch";
  *
  * `allowFallback` lets the caller withhold the paid stages for pages it does not care enough
  * about — a low-priority candidate is not worth a reader call.
+ *
+ * `allowAlternateUrls` and `minTextChars` exist for callers reading a *specific* page rather than
+ * looking for a conference. Stage 3 answers "this deep link is dead, where else does this event
+ * live" — which is right when the URL is a stale event page and catastrophic when it is
+ * `/speakers`, because the site root is not the speakers page and everything read from it would
+ * be filed under a source that never said it. Such a caller also wants a lower thinness floor:
+ * a sponsors page is a grid of logos whose names live in `alt` attributes, and judging it by
+ * prose length declares a perfectly good page a failure and then substitutes another one.
  */
 export async function readPage(
   url: string,
   options: FetchOptions & {
     budget: ReadBudget;
     allowFallback?: boolean;
+    /** Whether a different URL on the same site may stand in for this one. */
+    allowAlternateUrls?: boolean;
+    /** Below this much extracted text the direct read is treated as too thin to use. */
+    minTextChars?: number;
     /** Test seam proving the cascade without reaching a third-party service. */
     jinaReader?: typeof readWithJina;
   } = { budget: newReadBudget(0) }
 ): Promise<PageRead> {
-  const { budget, allowFallback = true, jinaReader = readWithJina, ...fetchOptions } = options;
+  const {
+    budget, allowFallback = true, allowAlternateUrls = true,
+    minTextChars = MIN_EXTRACTABLE_TEXT_CHARS, jinaReader = readWithJina, ...fetchOptions
+  } = options;
   const direct = await discoveryFetch(url, fetchOptions);
 
   if (direct.notModified) {
@@ -121,7 +136,7 @@ export async function readPage(
   const directText = directUsable ? pageText(direct.body, 30000) : "";
   budget.directReads += 1;
 
-  if (directUsable && directText.length >= MIN_EXTRACTABLE_TEXT_CHARS) {
+  if (directUsable && directText.length >= minTextChars) {
     budget.directUsable += 1;
     return {
       route: "direct", html: direct.body, direct, textLength: directText.length,
@@ -190,7 +205,7 @@ export async function readPage(
   }
 
   // ---- Stage 3: a different URL for the same conference.
-  if (allowFallback && policy.tryAlternateUrl && budget.alternateRemaining > 0 && !direct.blockedByLocalPolicy) {
+  if (allowAlternateUrls && allowFallback && policy.tryAlternateUrl && budget.alternateRemaining > 0 && !direct.blockedByLocalPolicy) {
     for (const alternate of alternateUrlsFor(url, failureClass).slice(0, MAX_ALTERNATES_PER_URL)) {
       if (budget.alternateRemaining <= 0) break;
       budget.alternateRemaining -= 1;

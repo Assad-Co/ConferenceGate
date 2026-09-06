@@ -29,6 +29,8 @@ import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
 import { runProductionAutomation, withPipelineLease } from "./automation";
+import { buildDeepCoverageReport, formatDeepCoverageReport } from "./deepEnrichment";
+import { DEEP_SECTIONS } from "./deepSections";
 import { buildOperationalStatus } from "./operations";
 import { runUrlRemediation } from "./urlRemediation";
 import { SEED_DOMAINS } from "./sources.seed";
@@ -88,7 +90,7 @@ const HELP = `Conference Gate — discovery engine
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
   enrich   [--limit 500] [--max-search-queries 500] [--max-jina-pages 200]
-           [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
+           [--max-deep-pages 4] [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
                             Verify accepted records against first-party pages, preserve field
                             provenance/history, enrich supported fields and classify publication
                             readiness. Does not discover new events and never publishes.
@@ -123,6 +125,10 @@ const HELP = `Conference Gate — discovery engine
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
+  deep-coverage [--limit 20] [--section speakers]
+                            Which accepted conferences hold programme, speaker, committee, sponsor
+                            and community data, and which page of the organiser's site stated each.
+                            Reads stored records only: no fetching, no provider calls, no writes.
   operations                Print the private operational status/checkpoint document as JSON.
   providers                 Show which discovery providers are available and why.
 `;
@@ -244,6 +250,7 @@ async function main(): Promise<void> {
         limit: numberFlag(flags.limit, 500),
         maxSearchQueries: numberFlag(flags["max-search-queries"], 500),
         maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
+        maxDeepPagesPerEvent: Number(flags["max-deep-pages"] ?? 4),
         timeBudgetMs: numberFlag(flags["time-budget-ms"], 30 * 60 * 1000),
         quiet: flags.quiet === true,
       }));
@@ -496,6 +503,16 @@ async function main(): Promise<void> {
         quiet: flags.quiet === true,
       });
       console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "deep-coverage": {
+      const section = typeof flags.section === "string" ? flags.section : undefined;
+      const report = await buildDeepCoverageReport({
+        limit: numberFlag(flags.limit, 20),
+        section: DEEP_SECTIONS.find((name) => name === section),
+      });
+      console.log(formatDeepCoverageReport(report));
       break;
     }
 

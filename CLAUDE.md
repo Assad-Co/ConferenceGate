@@ -129,6 +129,26 @@ becomes a separate source, and a listing is never promoted to official (it sets 
 to itself, so a declared URL is only trusted from a page already believed authoritative or when it
 points off-host).
 
+The deep sections — programme, speakers, committee, sponsors, community — come from the pages that
+actually carry them, which are almost never the homepage. After enrichment verifies a conference's
+official page, `deepEnrichment.ts` follows that page's own same-domain links to `/program`,
+`/speakers`, `/committee`, `/sponsors` and reads each with `deepSections.ts`: schema.org first
+(`performer`, `sponsor`, `subEvent`), then labelled HTML. No model, ever.
+
+Two rules are load-bearing there. **A deep read never accepts a substitute page**: the reading
+cascade's alternate-URL stage answers "this event URL is dead, try the site root", which is right
+when hunting a conference and catastrophic for `/speakers`, because the homepage's contents would
+be stored under a page that never said them — so `allowAlternateUrls: false`, and a missing
+speakers page simply means no speakers. And **a deep field can never make a conference less
+publishable**: these columns are not readiness inputs and not audited, so an unreadable sponsors
+page leaves an otherwise valid record exactly as publishable as it was.
+
+What is stored is what the page said. A role comes from the heading that introduced the person
+("Keynote Speakers" above a list makes them keynotes; a bare list of names has no role at all). An
+affiliation is kept only when the site separated it out as its own field or the text names an
+organisation — never from mere adjacency. A block headed "Organised by" can never yield a sponsor,
+and a block headed "Attendees" can never yield a speaker.
+
 `region` on a discovered event is the state or province a page stated. The world region is
 `world_region`, derived from the validated country by table lookup — never asked of a page, never
 inferred by a model, and null when the country did not resolve.
@@ -145,7 +165,10 @@ share one Turso database; `phase1` refuses to start without `TURSO_DATABASE_URL`
 results to a container-local file nothing can read.
 
 Tests are fixture-backed and need no network: `npm run test:discovery`. Fixtures pass
-`maxJinaPages: 0` so no test can reach a third-party service or spend anyone's quota. There is also a full
+`maxJinaPages: 0` so no test can reach a third-party service or spend anyone's quota.
+`npx tsx server/discovery/tests/deepEnrichmentSample.ts` is the deep-section equivalent: three
+fixture conferences in three markup styles, through the real enrichment pass, printing which field
+came from which page. There is also a full
 end-to-end rehearsal against a local eleven-site fixture web
 (`npx tsx server/discovery/tests/phase1Rehearsal.ts --out <dir>`), which exercises robots
 compliance, all four markup styles, cross-domain deduplication and the unchanged-page skip in one
