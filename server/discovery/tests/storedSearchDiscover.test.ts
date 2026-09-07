@@ -179,3 +179,35 @@ test("Discover sends the typed search term to the stored search, unmodified", ()
   assert.doesNotMatch(source, /biasSuffix/, "filter chips must not be concatenated into the search query");
   assert.doesNotMatch(source, /globalScope/, "'worldwide' must not be appended to a stored-database search");
 });
+
+test("the landing page shows stored conferences before anyone types", async () => {
+  await seed();
+  try {
+    const { browseStoredConferences } = await import("../../braveSearch");
+    const browse = await browseStoredConferences(60);
+    assert.ok(browse.length >= SEEDS.length - 1,
+      `browsing must return the catalogue, got ${browse.length}`);
+
+    // Soonest upcoming first, so a visitor sees what is actually next.
+    const dated = browse.map((result) => result.startDate).filter(Boolean) as string[];
+    assert.deepEqual([...dated], [...dated].sort(), "browse is ordered by soonest start date");
+
+    // The placeholder phrase the page used to send finds nothing, which is why browsing exists.
+    const placeholder = await titlesFor(`upcoming academic and technical conferences ${new Date().getFullYear()}`);
+    assert.equal(placeholder.length, 0);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("browsing runs no provider call and matches no query", async () => {
+  await seed();
+  try {
+    const { browseStoredConferences } = await import("../../braveSearch");
+    const first = await browseStoredConferences(5);
+    assert.equal(first.length, 5, "the browse limit is respected");
+    assert.ok(first.every((result) => result.link.startsWith("https://")));
+  } finally {
+    await cleanup();
+  }
+});

@@ -477,9 +477,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     // asked for conferences whose text contains "october" and "2026" and a page of real matches
     // came back empty. The filters below still narrow the Conference Gate catalog, where the dates
     // and places are structured fields rather than words to be guessed at.
-    const baseQuery =
-      trimmed || `upcoming academic and technical conferences ${new Date().getFullYear()}`;
-    const effectiveQueries = [baseQuery];
+    // Empty means browse. The placeholder phrase this used to send was matched token-by-token
+    // against every stored record, so the landing page asked for conferences containing the words
+    // "academic" and "technical" and the current year, and showed nothing.
+    const effectiveQueries = [trimmed];
     const cacheKey = effectiveQueries[0];
 
     const handle = setTimeout(

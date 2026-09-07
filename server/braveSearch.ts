@@ -15,6 +15,8 @@ export interface LiveSearchResult {
   prepared?: boolean;
   /** External provider that produced this result. */
   discoveryProvider?: "brave" | "serper";
+  /** Stored start date, when the record has one. Used to order the browse view. */
+  startDate?: string | null;
 }
 
 interface CacheEntry {
@@ -325,6 +327,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         thumbnail: null,
         favicon: null,
         prepared: detailsReady,
+        startDate: typeof overview.start_date === "string" ? overview.start_date : null,
       },
     });
   }
@@ -635,6 +638,38 @@ export async function searchWebForConferenceFactsByProvider(query: string, count
   return batches.flat();
 }
 
+/**
+ * The Discover landing page: stored published conferences, soonest first.
+ *
+ * A visitor who has typed nothing is browsing, not searching. Sending a phrase like "upcoming
+ * academic and technical conferences 2026" through the stored matcher asks for records whose text
+ * contains "academic" AND "technical" AND "2026" — which is why the page opened empty against a
+ * database full of conferences. Browsing has no query to match, so it does not run the matcher.
+ */
+export async function browseStoredConferences(limit = 60): Promise<LiveSearchResult[]> {
+  const cacheKey = `browse:${limit}`;
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  const rows = await searchPreparedConferences("");
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const withDates = rows.map((result) => {
+    const parsed = Date.parse(String(result.startDate || ""));
+    return { result, time: Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY };
+  });
+  // Soonest upcoming first; a record whose date has passed or was never stated goes last rather
+  // than being dropped, because a missing date is not evidence the conference is over.
+  const upcoming = withDates.filter((entry) => entry.time >= startOfToday.getTime() && Number.isFinite(entry.time));
+  const rest = withDates.filter((entry) => !(entry.time >= startOfToday.getTime() && Number.isFinite(entry.time)));
+  upcoming.sort((left, right) => left.time - right.time);
+  const results = deduplicateStoredConferences(
+    [...upcoming, ...rest].map((entry) => entry.result)).slice(0, Math.max(1, Math.min(limit, 200)));
+
+  cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
+  return results;
+}
+
 export const braveSearchRouter = Router();
 
 // The directory harvest needs the AI client, which lives in server.ts's closure. Rather than
@@ -675,6 +710,10 @@ braveSearchRouter.get(
   "/conferences",
   asyncHandler(async (req, res) => {
     const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    // Nothing typed: hand back the stored catalogue rather than an empty page.
+    if (req.query.browse === "true") {
+      return res.json({ results: await browseStoredConferences(Number(req.query.limit) || 60) });
+    }
     // Discover's default (nothing-typed) view fires several background subject searches at once
     // and marks them low priority so a person's actual typed search always jumps the queue ahead
     // of them, rather than waiting behind background work whose results may already be moot.

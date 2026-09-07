@@ -16,7 +16,10 @@ export async function searchConferencesOnTheWeb(
 ): Promise<LiveSearchResult[]> {
   const priorityParam = priority === 'low' ? '&priority=low' : '';
   const forceParam = force ? '&force=true' : '';
-  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}${priorityParam}${forceParam}`, {
+  // Nothing typed is a browse, not a search: the server returns the stored catalogue directly
+  // rather than trying to match a placeholder phrase against every record.
+  const browseParam = query.trim() ? '' : '&browse=true';
+  const res = await fetch(`/api/search/conferences?q=${encodeURIComponent(query)}${priorityParam}${forceParam}${browseParam}`, {
     credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
