@@ -49,6 +49,9 @@ import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
 import {
   OrganizationDiscoveryProvider, type OrganizationHarvestStats,
 } from "./providers/organizationProvider";
+import {
+  DIRECTORY_SOURCES, DirectoryDiscoveryProvider, type DirectoryIngestStats,
+} from "./providers/directoryProvider";
 import { getDomain, newId, recordCrawlSuccess, TRUST_BY_SOURCE_TYPE } from "./sourceRegistry";
 import {
   eventIdForUrl,
@@ -117,6 +120,12 @@ export interface RunOptions {
    * would spend page budget nobody asked for. `organizationsOnly` implies it.
    */
   enableOrganizationHarvest?: boolean;
+  /** Seed from conference directories. Off unless asked for, like the organisation harvest. */
+  enableDirectoryIngest?: boolean;
+  /** Directory source keys to run; defaults to all of them. */
+  directorySources?: string[];
+  /** Listing pages fetched per directory source. */
+  maxDirectoryListings?: number;
   /** Stop once this many conferences have been accepted. 0 means "use the page budget". */
   acceptedTarget?: number;
   /** Candidates any one domain may contribute, so a single large site cannot crowd out the rest. */
@@ -181,6 +190,8 @@ export interface RunSummary {
   providers: Array<{ name: string; enabled: boolean; reason: string | null; candidates: number }>;
   /** What the organisation harvest actually did, per society. */
   organizationHarvest?: OrganizationHarvestStats;
+  /** What each directory source was allowed to give, and what it gave. */
+  directoryIngest?: DirectoryIngestStats;
   /** Queries spent and candidates gained, per search engine. Null when search was not used. */
   search: SearchAccounting | null;
   /** How many domains were in play, how many were read at once, and how long reading took. */
@@ -356,9 +367,21 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       onlyDomains: options.organizationDomains,
       maxPagesPerDomain: options.maxOrganizationPagesPerDomain,
     });
+    const directoryProvider = new DirectoryDiscoveryProvider({
+      logger,
+      urlGuard: options.urlGuard,
+      scheme: options.scheme,
+      maxListingsPerSource: options.maxDirectoryListings ?? 25,
+      sources: options.directorySources?.length
+        ? DIRECTORY_SOURCES.filter((source) => options.directorySources!.includes(source.key))
+        : undefined,
+    });
+    if (options.enableDirectoryIngest) summary.directoryIngest = directoryProvider.stats;
+
     const providers = options.organizationsOnly
       ? [organizationProvider]
       : [
+        ...(options.enableDirectoryIngest ? [directoryProvider] : []),
         ...(options.enableOrganizationHarvest ? [organizationProvider] : []),
         sitemapProvider,
         searchProvider,

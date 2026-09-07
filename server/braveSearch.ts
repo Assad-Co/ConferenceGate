@@ -349,6 +349,10 @@ const LISTING_SNIPPET_RE =
 const PLURAL_CONFERENCES_RE = /\bconferences\b/i;
 
 const DIRECTORY_DOMAINS = new Set([
+  // Seed sources for discovery, and directories for every other purpose: a listing host is never
+  // promoted to a conference's authoritative site, whatever it says about itself.
+  "conflists.com",
+  "iconf.org",
   "10times.com",
   "allevents.in",
   "allconferencealert.com",

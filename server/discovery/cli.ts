@@ -144,6 +144,14 @@ const HELP = `Conference Gate — discovery engine
                             www/event subdomains, then its feed. --orgs names the organisations to
                             test; without it the registry's due domains are used, capped by
                             --max-org-domains. Publishing stays off.
+  ingest [--sources conflists,iconf] [--listings 25] [--max-pages 600]
+         [--years 2026,2027,2028] [--search-queries 0] [--allow-local-db] [--quiet]
+                            Seed from conference directories, and optionally Serper. Each source is
+                            gated on its own robots.txt BEFORE any listing is requested: a blanket
+                            disallow or an HTTP 401/403 skips that source and records why, leaving
+                            the gap to Serper. Every candidate is marked a directory lead, so the
+                            existing resolution finds the conference's own site and the listing host
+                            is never treated as authoritative. --search-queries turns Serper on.
   organizations             Print the registry's size and its regional/type breakdown.
   field-coverage [--sample 20] [--published]
                             Percentage of accepted (or published) conferences holding each of the
@@ -545,6 +553,38 @@ async function main(): Promise<void> {
         quiet: flags.quiet === true,
       });
       console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "ingest": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error("TURSO_DATABASE_URL is not set. Pass --allow-local-db only for a throwaway local run.");
+        process.exitCode = 3;
+        break;
+      }
+      const summary = await withPipelineLease("directory_ingest", () => runDiscovery({
+        targetYears: list(flags.years).map(Number).filter(Number.isInteger),
+        enableDirectoryIngest: true,
+        directorySources: list(flags.sources),
+        maxDirectoryListings: numberFlag(flags.listings, 25),
+        maxPages: numberFlag(flags["max-pages"], 600),
+        maxCandidates: numberFlag(flags["max-candidates"], 5000),
+        maxSearchQueries: Number(flags["search-queries"] ?? 0),
+        maxAiCalls: 0,
+        allowAutoPublish: false,
+        trigger: "directory_ingest",
+        quiet: flags.quiet === true,
+      }));
+      console.log("\n--- Source access ---");
+      for (const source of summary.directoryIngest?.sources ?? []) {
+        console.log(`  ${source.source.padEnd(12)} ${source.outcome.padEnd(24)} ${source.candidates} candidates` +
+          ` from ${source.listingsFetched} listings`);
+        console.log(`      ${source.detail}`);
+        for (const error of source.errors.slice(0, 3)) console.log(`      error: ${error}`);
+      }
+      const { events, ...rest } = summary;
+      console.log("\n--- Ingest summary ---");
+      console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
       break;
     }
 
