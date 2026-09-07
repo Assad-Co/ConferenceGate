@@ -65,17 +65,22 @@ test("direct tsx dry-run cannot exit 0 with no plan while a database promise is 
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(out), `Silent success without plan:\n${result.stdout}\n${result.stderr}`);
   const plan = JSON.parse(fs.readFileSync(out, "utf8"));
-  assert.equal(plan.summary.acceptedScanned, 7);
+  assert.equal(plan.summary.totalAcceptedInventory, 7);
+  assert.equal(plan.summary.actuallyScanned, 1);
   assert.equal(plan.summary.conferencesWithDeepData, 1);
   assert.equal(plan.summary.itemsScanned, 1);
   assert.equal(plan.summary.REVIEW, 1);
   assert.equal(plan.summary.aiCalls, 0);
   assert.deepEqual(fs.readFileSync(database), before, "source database must remain byte-for-byte unchanged");
-  for (const label of ["Accepted conferences scanned: 7", "Conferences containing deep data: 1",
+  for (const label of ["Total accepted inventory: 7", "Conferences actually scanned: 1", "Conferences containing deep data: 1",
     "Items scanned: 1", "KEEP: 0", "REMOVE: 0", "REVIEW: 1", "Counts by section:",
     "Affected conferences: 1", "Removal reasons:", "PRODUCTION ROWS MODIFIED: 0", out]) {
     assert.ok(result.stdout.includes(label), `Missing terminal summary: ${label}\n${result.stdout}`);
   }
+  const originalPlan = fs.readFileSync(out, "utf8");
+  const resumed = run(database, out, preload);
+  assert.equal(resumed.status, 0, resumed.stderr);
+  assert.equal(fs.readFileSync(out, "utf8"), originalPlan, "completed CLI rerun must keep the same reviewed plan");
 });
 
 test("direct tsx dry-run reports plan-generation failure and exits nonzero", async () => {

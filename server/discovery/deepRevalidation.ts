@@ -10,11 +10,12 @@ import { candidateUrlBelongsToEvent, eventIdentityFrom, pageBelongsToEvent, page
 export const ACCEPTED = "status IN ('validated','published','needs_review')";
 export const digest = (value: unknown) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 export function rulesDigest(): string {
-  return digest(["deepRevalidation.ts", "deepSections.ts", "eventIdentity.ts", "deepEnrichment.ts"].map(
+  return digest(["deepRevalidation.ts", "deepCleanupScan.ts", "deepSections.ts", "eventIdentity.ts", "deepEnrichment.ts"].map(
     name => fs.readFileSync(new URL(name, import.meta.url), "utf8").replace(/\r\n/g, "\n")));
 }
 export type Row = Record<string, any>;
-export type Reader = (url: string) => Promise<{ url: string; html: string } | null>;
+export type Reader = (url: string, signal?: AbortSignal) => Promise<{ url: string; html: string } | null>;
+export interface StoredSnapshot { event: Row; fields: Row[]; published: Row[] }
 export interface Item {
   path: string; kind: string; value: any; sourceUrl: string | null;
 }
@@ -34,6 +35,7 @@ export interface EventPlan {
 export interface Plan {
   version: 1; rules: string; createdAt: string; inventoryHash: string;
   events: EventPlan[]; summary: Row;
+  inventoryIds?: string[];
 }
 export function identityHash(event: Row): string {
   return digest([event.id, event.title, event.acronym, event.start_year, event.start_date, event.official_url]);
@@ -183,22 +185,25 @@ export async function acceptedIds(): Promise<string[]> {
 }
 
 export async function buildPlan(read: Reader, options: { batchSize?: number; maxRefillPages?: number;
+  snapshots?: StoredSnapshot[];
   progress?: (scanned: number, total: number) => void } = {}): Promise<Plan> {
-  const ids = await acceptedIds();
+  const ids = options.snapshots ? options.snapshots.map(s => String(s.event.id)) : await acceptedIds();
   const summary: Row = { acceptedScanned: 0, conferencesWithDeepData: 0, itemsScanned: 0,
     KEEP: 0, REMOVE: 0, REVIEW: 0, affectedConferences: 0, protected: [], representativeRemovals: [], refillItems: 0, aiCalls: 0,
     sections: Object.fromEntries(DEEP_SECTIONS.map(s => [s, { scanned: 0, KEEP: 0, REMOVE: 0, REVIEW: 0 }])) };
   const plan: Plan = { version: 1, rules: rulesDigest(), createdAt: new Date().toISOString(),
     inventoryHash: digest(ids), events: [], summary };
   const batchSize = Math.max(1, Math.min(options.batchSize || 50, 100));
-  const hasPublished = (await dbAll("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_conferences'")).length > 0;
+  const hasPublished = options.snapshots ? false : (await dbAll("SELECT name FROM sqlite_master WHERE type='table' AND name='extracted_conferences'")).length > 0;
   for (let offset = 0; offset < ids.length; offset += batchSize) {
     const batch = ids.slice(offset, offset + batchSize);
-    const rows = await dbAll<Row>(`SELECT * FROM discovery_events WHERE ${ACCEPTED} AND id IN (${batch.map(() => "?")}) ORDER BY id`, batch);
+    const rows = options.snapshots ? options.snapshots.slice(offset, offset + batchSize).map(s => s.event) :
+      await dbAll<Row>(`SELECT * FROM discovery_events WHERE ${ACCEPTED} AND id IN (${batch.map(() => "?")}) ORDER BY id`, batch);
     if (rows.length !== batch.length) throw new Error("Accepted inventory changed during dry-run; retry.");
     for (const event of rows) {
-      const fields = await dbAll<Row>("SELECT * FROM discovery_event_fields WHERE event_id=?", [event.id]);
-      const published = hasPublished ? await dbAll<Row>(`SELECT * FROM extracted_conferences
+      const snapshot = options.snapshots?.find(s => s.event.id === event.id);
+      const fields = snapshot ? snapshot.fields : await dbAll<Row>("SELECT * FROM discovery_event_fields WHERE event_id=?", [event.id]);
+      const published = snapshot ? snapshot.published : hasPublished ? await dbAll<Row>(`SELECT * FROM extracted_conferences
         WHERE json_valid(extraction_metadata) AND json_extract(extraction_metadata,'$.origin')='discovery_engine'
         AND json_extract(extraction_metadata,'$.discovery_event_id')=?`, [event.id]) : [];
       const record: EventPlan = { id: event.id, title: event.title, identityHash: identityHash(event), changes: [] };
@@ -230,7 +235,7 @@ export async function buildPlan(read: Reader, options: { batchSize?: number; max
           // Divergent published data has no reliable field-level ownership. Never infer that a
           // manual edit belongs to discovery merely from metadata on the containing record.
           if (target.table === "extracted_conferences" && items(section, before).length &&
-              digest(parse(before)) !== digest(parse(event[column])) && digest(parse(before)) !== digest(parse(provenance?.value))) {
+              digest(parse(before)) !== digest(parse(event[column])) && digest(parse(before)) !== digest(parse(provenance?.value ?? null))) {
             const unresolved = items(section, before, provenance?.source_url || null).map(item => ({ ...item, verdict: "REVIEW", reason: "published_field_ownership_unresolved" }));
             for (const d of unresolved) { summary.itemsScanned++; summary.REVIEW++; summary.sections[section].scanned++; summary.sections[section].REVIEW++; }
             summary.protected.push({ eventId: event.id, title: event.title, section, table: target.table,
@@ -251,7 +256,7 @@ export async function buildPlan(read: Reader, options: { batchSize?: number; max
           }
           let kept: Item[] = decisions.filter(d => d.verdict === "KEEP");
           const rejected = new Set(decisions.filter(d => d.verdict !== "KEEP").map(itemKey));
-          if (!kept.length && identity?.year && (options.maxRefillPages ?? 4) > 0) {
+          if (!kept.length && identity?.year && (options.maxRefillPages ?? 0) > 0) {
             const official = await cached(identity.officialUrl);
             if (official && !strictUrl(identity, official.url) && strictPage(identity, official.url, official.html)) {
               const pages = [official.url, ...findSectionPages(official.html, official.url, { sections: [section], perSection: 2 }).map(p => p.url)]
@@ -287,7 +292,7 @@ export async function buildPlan(read: Reader, options: { batchSize?: number; max
       options.progress?.(summary.acceptedScanned, ids.length);
     }
   }
-  if (digest(await acceptedIds()) !== plan.inventoryHash) throw new Error("Accepted inventory changed during dry-run; retry.");
+  if (!options.snapshots && digest(await acceptedIds()) !== plan.inventoryHash) throw new Error("Accepted inventory changed during dry-run; retry.");
   summary.cleanlinessCanBeCertified = summary.protected.length === 0;
   summary.protectedConferenceCount = new Set(summary.protected.map((p: Row) => p.eventId)).size;
   return plan;

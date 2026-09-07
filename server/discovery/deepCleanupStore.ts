@@ -27,8 +27,10 @@ async function initCleanupSchema(): Promise<void> {
 }
 function validatePlan(plan: Plan): void {
   if (plan.version !== 1 || plan.rules !== rulesDigest()) throw new Error("Plan uses different rules; generate a new dry-run.");
+  const inventoryIds = plan.inventoryIds || plan.events.map(e => e.id).sort();
   if (!Array.isArray(plan.events) || plan.events.length !== new Set(plan.events.map(e => e.id)).size ||
-      digest(plan.events.map(e => e.id).sort()) !== plan.inventoryHash) throw new Error("Invalid or incomplete inventory plan.");
+      inventoryIds.length !== new Set(inventoryIds).size || digest(inventoryIds) !== plan.inventoryHash ||
+      plan.events.some(e => !inventoryIds.includes(e.id))) throw new Error("Invalid or incomplete inventory plan.");
   for (const event of plan.events) {
     const seen = new Set<string>();
     for (const change of event.changes) {

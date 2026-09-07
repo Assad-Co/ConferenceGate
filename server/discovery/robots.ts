@@ -153,12 +153,13 @@ export function isPathAllowed(policy: RobotsPolicy, url: string): boolean {
 
 export async function fetchRobots(
   origin: string,
-  options: { urlGuard?: UrlGuard; timeoutMs?: number } = {}
+  options: { urlGuard?: UrlGuard; timeoutMs?: number; signal?: AbortSignal } = {}
 ): Promise<RobotsPolicy> {
   const result = await discoveryFetch(`${origin.replace(/\/$/, "")}/robots.txt`, {
     accept: "text/plain,*/*;q=0.8",
     urlGuard: options.urlGuard,
     timeoutMs: options.timeoutMs,
+    signal: options.signal,
   });
 
   if (result.blockedByLocalPolicy) {

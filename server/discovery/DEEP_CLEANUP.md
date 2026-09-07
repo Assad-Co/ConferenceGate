@@ -8,14 +8,28 @@ publication state, permits and customer routes are never updated.
 ## First: dry-run only, on the Render worker
 
 ```sh
-npx tsx server/discovery/deepCleanupCli.ts dry-run --out /tmp/deep-cleanup-plan.json --batch-size 50
+npx tsx server/discovery/deepCleanupCli.ts dry-run --out /tmp/deep-cleanup-stored-plan.json --batch-size 50 --verify-sources 0 --resume 1
 ```
 
 Requires the worker's existing `TURSO_DATABASE_URL` and auth configuration. There is no local
 database fallback. This separate entry point never calls the normal schema initializer, takes
-no database lock and executes only SELECTs. It reads public source pages through the existing
-SSRF/redirect guard, robots policy and rate-limited HTTP reader. No alternate URL or paid fallback
-can substitute for the stored source. Failure to read a page becomes REVIEW, not KEEP.
+no database lock and executes only SELECTs. It first selects conferences with nonempty deep
+data, including active field provenance and linked discovery-owned published copies. Empty
+conferences are skipped immediately. The full accepted inventory is retained as a manifest,
+but only conferences with stored data are scanned. This is not an enrichment pass.
+
+Default mode uses stored values and provenance only: **zero source-page requests**. Existing
+deterministic identity, boilerplate and item rules remain unchanged. Items that require fresh
+source evidence are REVIEW (`source_verification_not_requested`), never assumed to be KEEP.
+As before, REVIEW removals are only proposals; do not approve them without inspecting the plan.
+
+Optional `--verify-sources 1` verifies only the exact URLs attached to stored data, using the
+existing SSRF/redirect guard, robots policy and rate-limited HTTP reader. It never follows
+section links, refills empty sections, substitutes another URL, uses a paid fallback or AI.
+Default deadlines are `--record-timeout-ms 15000 --network-timeout-ms 5000`; caps are 60 seconds
+per record and the record deadline per network read. Timeout produces REVIEW and processing
+continues. Requests receive cancellation signals. Database batch reads have a 30-second deadline;
+a database outage exits nonzero and retains completed local checkpoints.
 
 The command prints counts, representative decisions with IDs/titles/source URLs, the SHA-256
 of the complete plan, and the proposed run ID. The JSON file contains every conference and every
@@ -23,10 +37,24 @@ item decision, full before/after section payloads, current provenance and propos
 It includes active provenance values that differ from the conference column. Counts include
 separate stored copies in discovery, published records and divergent field provenance.
 
-Download and retain the plan before a Render restart: `/tmp` is ephemeral. The file is sensitive
+Progress prints `Scanned N/XX conferences with deep data` and running KEEP/REMOVE/REVIEW totals.
+The final summary distinguishes total accepted inventory, deep-data inventory and actual scans,
+and prints `PRODUCTION ROWS MODIFIED: 0` only after successfully creating the completed plan.
+
+Progress is atomically checkpointed locally after every conference, by default at
+`/tmp/deep-cleanup-stored-plan.json.checkpoint.json`. Repeat the exact command to resume;
+completed records are checked for changed stored data and never re-fetched or double-counted.
+An unchanged completed rerun returns the same plan/hash without rewriting it. Inventory,
+options, rules or completed-record changes require a fresh checkpoint/output path.
+Use `--checkpoint PATH` for a different location, or `--max-records 50` to pause after 50 new
+records. A deliberate pause exits nonzero with a resume message and no misleading final plan.
+
+Download and retain the plan and checkpoint before a container restart: `/tmp` is ephemeral.
+For automatic recovery across container replacements, choose an existing persistent-disk path
+with `--checkpoint`; this tool does not configure a disk or change cron. The files are sensitive
 operational data and must not be published on a public endpoint. Dry-run refuses to overwrite
-an existing plan. Use a different output filename for another run. An interrupted dry-run can
-be rerun safely; it has no database checkpoint or partial database writes.
+a different existing plan. Use a different output filename for another run. It has no database
+checkpoint or partial database writes.
 
 Inspect **REMOVE and REVIEW**, replacement data, and `summary.protected`. REVIEW items with
 uncertain source/precision are proposed for removal. Explicit manual sections, mixed manual
@@ -35,9 +63,9 @@ listed as exceptions. A divergent published section is not assumed to be discove
 because the containing record originated in discovery. Such exceptions prevent an unconditional
 claim that all stored data is clean; resolve ownership separately and rerun the dry-run.
 
-Empty sections are rebuilt in the dry-run plan through the current hardened extractor, with
-event identity validation on the official page and each subpage. All retained properties must
-be supported by fresh extraction. Rejected items cannot be reintroduced by that plan's refill.
+Empty sections are not rebuilt by this cleanup dry-run. `--refill-pages` may only be zero.
+Any later enrichment remains a separate action. With optional source verification, all retained
+properties must still be supported by the unchanged hardened extraction and identity rules.
 Per-item provenance is stored on objects; primitive tracks/community values use an `item_sources`
 map keyed by the item's path. Empty sections remain optional enrichment.
 
@@ -47,7 +75,7 @@ Substitute the exact SHA-256 printed by the reviewed dry-run; restore the unchan
 at the specified path if Render restarted. Do not regenerate a different file under an old hash.
 
 ```sh
-npx tsx server/discovery/deepCleanupCli.ts write --plan /tmp/deep-cleanup-plan.json --approve REVIEWED_SHA256 --batch-size 50
+npx tsx server/discovery/deepCleanupCli.ts write --plan /tmp/deep-cleanup-stored-plan.json --approve REVIEWED_SHA256 --batch-size 50
 ```
 
 The hash is an explicit operator acknowledgement, not an authentication mechanism. Use only
