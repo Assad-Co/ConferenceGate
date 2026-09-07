@@ -5,7 +5,8 @@ import path from "node:path";
 import { closeDb } from "../db";
 import { digest, type Plan, type Reader } from "./deepRevalidation";
 import { buildStoredDeepPlan } from "./deepCleanupScan";
-import { applyPlan, restoreRun } from "./deepCleanupStore";
+import { restoreRun } from "./deepCleanupStore";
+import { backupControlled, writeControlled, auditControlled, restoreControlled } from "./deepCleanupControlled";
 import { fetchRobots, isPathAllowed } from "./robots";
 import { readPage, newReadBudget } from "./readPage";
 import { isSafeExternalUrl } from "../urlSafety";
@@ -67,7 +68,7 @@ export function cleanupReader(networkTimeoutMs = 5000): Reader {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.shift();
-  const allowed: Record<string, string[]> = { "dry-run": ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records", "review-plan"], write: ["plan", "approve", "batch-size", "max-events"], restore: ["run", "max-events"] };
+  const allowed: Record<string, string[]> = { "dry-run": ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records", "review-plan"], backup: ["plan", "run"], "controlled-write": ["run", "batch-size"], "verify-cleanup": ["run"], "controlled-restore": ["run"], write: ["plan", "approve", "batch-size", "max-events"], restore: ["run", "max-events"] };
   if (!mode || !allowed[mode]) throw new Error("Usage: deepCleanupCli.ts dry-run --out plan.json | write --plan plan.json --approve SHA256 | restore --run RUN_ID");
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i += 2) {
@@ -109,11 +110,16 @@ async function main(): Promise<void> {
       if (digest(JSON.parse(fs.readFileSync(outputPath, "utf8"))) !== digest(plan)) throw new Error("Output file contains a different plan; use a new output path.");
     } else fs.writeFileSync(outputPath, JSON.stringify(plan, null, 2), { flag: "wx" });
     printDryRunSummary(plan, outputPath);
+  } else if (mode === "backup") {
+    if (!flags.plan || !flags.run) throw new Error("--plan and --run are required. A missing approved file must be recreated by dry-run and reviewed before backup/write.");
+    console.log(JSON.stringify(await backupControlled(JSON.parse(fs.readFileSync(flags.plan, "utf8")), flags.run), null, 2));
+  } else if (["controlled-write", "verify-cleanup", "controlled-restore"].includes(mode)) {
+    if (!flags.run) throw new Error("--run is required.");
+    const result = mode === "controlled-write" ? await writeControlled(flags.run, {batchSize:number("batch-size",10)}) :
+      mode === "verify-cleanup" ? await auditControlled(flags.run) : await restoreControlled(flags.run);
+    console.log(JSON.stringify(result, null, 2));
   } else if (mode === "write") {
-    if (!flags.plan || !flags.approve) throw new Error("--plan and --approve are required after dry-run review.");
-    const plan = JSON.parse(fs.readFileSync(flags.plan, "utf8")) as Plan;
-    console.log(JSON.stringify(await applyPlan(plan, flags.approve, { batchSize: number("batch-size", 50),
-      maxEvents: number("max-events", Number.MAX_SAFE_INTEGER), progress: n => { if (n % 10 === 0) console.error(`Checkpointed ${n} conferences`); } }), null, 2));
+    throw new Error("Legacy write is disabled: it could remove REVIEW items. Use backup then controlled-write.");
   } else {
     if (!flags.run) throw new Error("--run is required.");
     console.log(JSON.stringify(await restoreRun(flags.run, { maxEvents: number("max-events", Number.MAX_SAFE_INTEGER) }), null, 2));

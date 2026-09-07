@@ -50,7 +50,11 @@ async function fence(tx: any, owner: string): Promise<void> {
   if (result.rowsAffected !== 1) throw new Error("Pipeline lease lost; cleanup stopped before any write.");
 }
 const get = async (tx: any, sql: string, args: any[]) => (await tx.execute({ sql, args })).rows[0] as Row | undefined;
+type ControlledChange = Change & { preservedFieldAfter?: Row | null };
+const changesStoredData = (c: Change): boolean => Object.hasOwn(c, "preservedFieldAfter") ?
+  c.before !== c.after || !fieldEqual(c.fieldBefore, (c as ControlledChange).preservedFieldAfter) : needsChange(c);
 function fieldAfter(change: Change, eventId: string, at: string): Row | null {
+  if (Object.hasOwn(change, "preservedFieldAfter")) return (change as ControlledChange).preservedFieldAfter!;
   if (change.after === null) return null;
   const source = Object.values(change.sources)[0];
   if (!source) throw new Error("Refusing payload without exact provenance.");
@@ -84,7 +88,7 @@ async function assertTarget(tx: any, change: Change, expected: string | null): P
 }
 
 export async function applyPlan(plan: Plan, approvedHash: string,
-  options: { batchSize?: number; maxEvents?: number; progress?: (done: number) => void } = {}): Promise<Row> {
+  options: { batchSize?: number; maxEvents?: number; progress?: (done: number) => void; beforeEvent?: (tx: any, eventId: string) => Promise<void> } = {}): Promise<Row> {
   validatePlan(plan);
   const hash = digest(plan);
   if (approvedHash !== hash) throw new Error("Approval must exactly match the reviewed plan SHA-256.");
@@ -122,10 +126,11 @@ export async function applyPlan(plan: Plan, approvedHash: string,
         const tx = await db.transaction("write");
         try {
           await fence(tx, owner);
+          await options.beforeEvent?.(tx, event.id);
           const current = await get(tx, `SELECT * FROM discovery_events WHERE id=? AND ${ACCEPTED}`, [event.id]);
           if (!current || identityHash(current) !== event.identityHash) throw new Error(`Event ${event.id} changed identity or left accepted inventory.`);
           for (const change of event.changes) await assertTarget(tx, change, change.before);
-          for (const change of event.changes.filter(needsChange)) {
+          for (const change of event.changes.filter(changesStoredData)) {
             await assertTarget(tx, change, change.before);
             const at = new Date().toISOString();
             const field = change.table === "discovery_events" ? fieldAfter(change, event.id, at) : null;
@@ -175,7 +180,7 @@ export async function restoreRun(runId: string, options: { maxEvents?: number } 
           const event = await get(tx, `SELECT * FROM discovery_events WHERE id=? AND ${ACCEPTED}`, [checkpoint.event_id]);
           if (!event || identityHash(event) !== JSON.parse(checkpoint.plan).identityHash) throw new Error("Restore event identity/status changed; manual review required.");
           const audits = (await tx.execute({ sql: "SELECT * FROM discovery_deep_cleanup_audit WHERE run_id=? AND event_id=?", args: [runId, checkpoint.event_id] })).rows as Row[];
-          if (audits.length !== JSON.parse(checkpoint.plan).changes.filter(needsChange).length) throw new Error("Incomplete audit backup; restore stopped.");
+          if (audits.length !== JSON.parse(checkpoint.plan).changes.filter(changesStoredData).length) throw new Error("Incomplete audit backup; restore stopped.");
           for (const audit of audits) {
             const change: Change = { table: audit.target_table, key: audit.target_key, section: audit.section,
               before: audit.before_json, after: audit.after_json, metadataBefore: audit.metadata_before, decisions: [], sources: {}, fieldBefore: null };
