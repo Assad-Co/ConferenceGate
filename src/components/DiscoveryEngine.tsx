@@ -597,7 +597,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               Explore Academic & Technical Conferences
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Real conferences created through Conference Gate, plus individual official conference websites found live.
+              Discover current and upcoming academic and technical conferences worldwide.
             </p>
           </div>
         </div>
@@ -1078,11 +1078,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                {submittedSearchTerm.trim() ? `Live Web Results for "${submittedSearchTerm.trim()}"` : 'Live Web Results'}
+                Conference Results
               </h3>
               <p className="text-[11px] text-slate-500">
-                Only current and upcoming individual conference websites are shown. Old editions, duplicates,
-                directories, calendars, and multi-conference lists are excluded.
+                Current and upcoming conferences available in ConferenceGate.
               </p>
             </div>
           </div>
@@ -1093,7 +1092,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${webSearchLoading ? 'animate-spin' : ''}`} />
-            {webSearchLoading ? 'Searching...' : 'Search Again'}
+            {webSearchLoading ? 'Searching...' : 'Refresh Results'}
           </button>
         </div>
 
