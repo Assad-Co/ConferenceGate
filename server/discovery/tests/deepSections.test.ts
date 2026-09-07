@@ -388,6 +388,9 @@ test("a populated section is never replaced by a thinner read", async () => {
       "https://guard.example/", "guard.example",
       JSON.stringify([{ name: "Existing Speaker", source_url: "https://guard.example/speakers" }])]);
 
+  // Verified, so it is a real "do not replace this" case rather than a held section.
+  await dbRun(`INSERT OR REPLACE INTO discovery_deep_section_verifications (event_id,section,source_url)
+    VALUES (?,?,?)`, [eventId, "speakers", "https://guard.example/speakers"]);
   const event = await dbGet<Record<string, any>>("SELECT * FROM discovery_events WHERE id=?", [eventId]);
   const stored = await storeDeepSections({
     eventId, event: event!, officialUrl: "https://guard.example/",
@@ -478,7 +481,7 @@ test("a published record carries the deep sections in the shape the detail tabs 
     keynote_speakers: JSON.stringify([{ name: "Nadia Farouk", org: "Cairo University", role: "Keynote", source_url: "https://shape.example/speakers" }]),
     program_agenda: JSON.stringify({ sessions: [{ title: "Opening", time: "09:00", track: "Main", source_url: "https://shape.example/program" }], tracks: ["Main"], important_dates: [], source_url: "https://shape.example/program" }),
     sponsors_exhibitors: JSON.stringify([{ name: "Delta Optics", tier: "Gold", classification: "sponsor", source_url: "https://shape.example/sponsors" }]),
-  });
+  }, ["speakers", "program", "sponsors"]);
 
   // The tab reader takes speakers from `keynote_speakers`, sessions from `program_agenda.sessions`
   // and sponsors from `sponsors_exhibitors`; these are those keys, filled.
@@ -513,6 +516,9 @@ test("already-published conferences have their empty tabs filled, and other peop
     (id,event_id,source_url,source_domain,source_type,source_classification,classification_confidence,extraction_method,is_official)
     VALUES (?,?,?,?,?,?,?,?,1)`,
     [`src-${eventId}`, eventId, ours, "backfill-ours.example", "official_website", "official_event_site", 0.95, "html"]);
+  // The speakers section was read and confirmed, so it is publishable.
+  await dbRun(`INSERT OR REPLACE INTO discovery_deep_section_verifications (event_id,section,source_url)
+    VALUES (?,?,?)`, [eventId, "speakers", `${ours}speakers`]);
 
   // One row this engine published with empty tabs, and one row it did not own at all.
   await dbRun(`INSERT INTO extracted_conferences (source_url, overview, keynote_speakers, extraction_metadata, updated_at)

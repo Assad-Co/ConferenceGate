@@ -9,7 +9,8 @@ import { isSerperConfigured, serperSearch } from "../serperSearch";
 import { titleSimilarity } from "./dedupe";
 import { extractFromHtml } from "./htmlExtract";
 import {
-  collectDeepSections, deepSectionsMissing, storeDeepSections, type DeepCandidateTrace,
+  collectDeepSections, deepSectionsToRead, storeDeepSections, verifiedDeepSections,
+  type DeepCandidateTrace,
 } from "./deepEnrichment";
 import type { DeepSection } from "./deepSections";
 import { eventIdentityFrom } from "./eventIdentity";
@@ -432,7 +433,7 @@ async function enrichDeepSections(input: {
     sameDomainLinks: 0,
     matchedCandidates: [],
     selectedUrls: [],
-    sectionsMissingBefore: deepSectionsMissing(event),
+    sectionsMissingBefore: deepSectionsToRead(event, await verifiedDeepSections(String(event.id))),
     sectionsFilled: [],
     provenance: {},
     identity: null,

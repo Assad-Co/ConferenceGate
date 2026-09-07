@@ -24,6 +24,11 @@ async function seedPublished(id: string, url: string, deep: Record<string, strin
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, "Sync Congress 2027", "sync congress 2027", "html", url, "sync.example", url,
       "published", "publish_ready", 0.9, deep.keynote_speakers ?? null, deep.program_agenda ?? null]);
+  for (const [column, section] of [["keynote_speakers", "speakers"], ["program_agenda", "program"]] as const) {
+    if (!deep[column]) continue;
+    await dbRun(`INSERT OR REPLACE INTO discovery_deep_section_verifications (event_id,section,source_url)
+      VALUES (?,?,?)`, [id, section, `${url}speakers`]);
+  }
 }
 
 test("a published conference's stored sections reach its detail record without a publication run", async () => {

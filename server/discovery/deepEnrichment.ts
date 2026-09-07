@@ -219,6 +219,33 @@ export function deepSectionsMissing(event: Record<string, any>): DeepSection[] {
   return DEEP_SECTIONS.filter((section) => storedSectionIsEmpty(event[DEEP_SECTION_STORAGE[section].column]));
 }
 
+/** Sections read from an authoritative page under the current hardened rules. */
+export async function verifiedDeepSections(eventId: string): Promise<Set<DeepSection>> {
+  const { dbAll } = await import("../db");
+  const rows = await dbAll<{ section: string }>(
+    "SELECT section FROM discovery_deep_section_verifications WHERE event_id=?", [eventId]);
+  return new Set(rows.map((row) => row.section).filter(
+    (section): section is DeepSection => (DEEP_SECTIONS as readonly string[]).includes(section)));
+}
+
+/**
+ * Sections the enrichment pass should read.
+ *
+ * Empty, or holding items no hardened read has confirmed. The second case is the point: a section
+ * carrying historical items looks full, and treating it as done is what left uncertain data sitting
+ * where verified data should be. It is held instead — the items stay in storage, out of sight of a
+ * customer, until a real read either replaces them or fails and leaves the section empty.
+ */
+export function deepSectionsToRead(event: Record<string, any>, verified: Set<DeepSection>): DeepSection[] {
+  return DEEP_SECTIONS.filter((section) =>
+    storedSectionIsEmpty(event[DEEP_SECTION_STORAGE[section].column]) || !verified.has(section));
+}
+
+/** A stored section nobody has verified: kept, hidden, and re-readable. */
+export function deepSectionIsHeld(event: Record<string, any>, section: DeepSection, verified: Set<DeepSection>): boolean {
+  return !storedSectionIsEmpty(event[DEEP_SECTION_STORAGE[section].column]) && !verified.has(section);
+}
+
 const id = (prefix: string) => `${prefix}_${crypto.randomUUID().replace(/-/g, "")}`;
 
 export interface StoredDeepSections {
@@ -243,12 +270,23 @@ export async function storeDeepSections(input: {
   const filled: DeepSection[] = [];
   const provenance: Partial<Record<DeepSection, string>> = {};
 
+  const verified = await verifiedDeepSections(input.eventId);
   for (const section of DEEP_SECTIONS) {
     const { column, field } = DEEP_SECTION_STORAGE[section];
     const payload = serializeDeepSection(section, input.extraction);
     if (!payload) continue;
-    if (!storedSectionIsEmpty(input.event[column])) continue;
+    // A verified section is left alone, as before: a thinner re-read must not cost us a richer one.
+    // A HELD section is different — its items were never confirmed under these rules, so this read
+    // is the thing that decides what the section says. The old payload is archived first.
+    const held = deepSectionIsHeld(input.event, section, verified);
+    if (!storedSectionIsEmpty(input.event[column]) && !held) continue;
     const sourceUrl = deepSectionSourceUrl(section, input.extraction, input.officialUrl);
+    if (held) {
+      await dbRun(`INSERT INTO discovery_event_changes (id,event_id,change_type,field,old_value,new_value,source_url)
+        VALUES (?,?,?,?,?,?,?)`,
+        [id("dchg"), input.eventId, "held_deep_section_replaced_by_verified_read", field,
+          String(input.event[column]).slice(0, 4000), payload.slice(0, 4000), sourceUrl]);
+    }
     let sourceDomain = "";
     try { sourceDomain = new URL(sourceUrl).hostname.replace(/^www\./, ""); } catch { /* keep empty */ }
 
@@ -266,7 +304,15 @@ export async function storeDeepSections(input: {
       VALUES (?,?,?,?,?,?,?)`,
       [id("dchg"), input.eventId, "deep_section_enrichment", field, null, payload.slice(0, 4000), sourceUrl]);
 
+    // The ledger entry is what makes this section customer-visible, and only a read that reached
+    // this line can write one.
+    await dbRun(`INSERT INTO discovery_deep_section_verifications (event_id,section,source_url,verified_at)
+      VALUES (?,?,?,datetime('now')) ON CONFLICT(event_id,section) DO UPDATE SET
+      source_url=excluded.source_url, verified_at=excluded.verified_at`,
+      [input.eventId, section, sourceUrl]);
+
     input.event[column] = payload;
+    verified.add(section);
     filled.push(section);
     provenance[section] = sourceUrl;
   }

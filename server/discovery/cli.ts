@@ -140,8 +140,12 @@ const HELP = `Conference Gate — discovery engine
                             nine detail fields, plus a per-conference sample of what is present and
                             what is missing. Stored rows only: no fetching, no writes.
   sync-deep-tabs [--dry-run] [--limit 500]
-                            Copy stored deep sections onto published rows still missing them.
-                            Publishes nothing and touches no record this engine did not write.
+                            Reconcile what customers see with the verification ledger: deliver the
+                            sections a hardened read confirmed, and withdraw the ones it has not.
+                            Withdrawn items stay in discovery storage untouched; only their
+                            visibility changes. Publishes nothing, changes no readiness, and edits
+                            no record this engine did not write. --dry-run reports both counts
+                            without writing.
   deep-coverage [--limit 20] [--section speakers]
                             Which accepted conferences hold programme, speaker, committee, sponsor
                             and community data, and which page of the organiser's site stated each.

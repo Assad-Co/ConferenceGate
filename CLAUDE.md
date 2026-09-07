@@ -152,6 +152,15 @@ path or name the event in its URL, title, heading or breadcrumb. And a page stat
 not the event's is refused everywhere — that single rule is what stops one edition's programme
 being filed under another's, which a production sample did before the guard existed.
 
+A deep section reaches a customer only once a hardened read has confirmed it. That is what
+`discovery_deep_section_verifications` records, and only `storeDeepSections` writes to it — no
+reclassification, migration or report can promote a section into view. A section holding items
+nobody confirmed is *held*: the items stay in discovery storage exactly as they are, the published
+payload omits them, and the enrichment pass treats the section as still to be read. A read that
+succeeds replaces the held items and archives them to `discovery_event_changes`; a read that finds
+nothing leaves the section empty and the held items hidden. This is why historical items a cleanup
+could not decide on are neither deleted nor shown.
+
 Precision beats coverage here, because a wrong speaker is worse than no speaker. Names are filtered
 by vocabulary rather than shape ("Premium Profile" and "Live Webinars" are structurally identical to
 a real name, so only words separate them), nothing is read from page furniture — nav, buttons,

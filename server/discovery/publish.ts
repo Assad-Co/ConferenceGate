@@ -17,7 +17,7 @@
 
 import { dbGet, dbRun } from "../db";
 import { latestPassingPublicationAudit } from "./controlledPublish";
-import { DEEP_SECTION_STORAGE, storedSectionIsEmpty } from "./deepEnrichment";
+import { DEEP_SECTION_STORAGE, storedSectionIsEmpty, verifiedDeepSections } from "./deepEnrichment";
 import { DEEP_SECTIONS } from "./deepSections";
 
 export interface PublishOptions {
@@ -52,7 +52,9 @@ export function isPublishEnabled(): boolean {
  *  Only sections discovery actually knows about are filled. The others stay at their empty
  *  defaults, so the app can tell "this conference has no sponsor list on file" from "we read a
  *  page and it listed no sponsors" — the same distinction the rest of the app is careful about. */
-export function toExtractedConferenceRecord(row: Record<string, any>): Record<string, string> {
+export function toExtractedConferenceRecord(
+  row: Record<string, any>, verifiedSections: Iterable<string> = []
+): Record<string, string> {
   const topics = safeParseArray(row.topics);
   const importantDates = [
     { label: "Abstract submission deadline", date: row.abstract_deadline, isDeadline: true },
@@ -103,7 +105,7 @@ export function toExtractedConferenceRecord(row: Record<string, any>): Record<st
   // are stored in exactly the shape `extracted_conferences` already holds and the detail tabs
   // already render, so a populated section reaches the UI without a line of frontend change. A
   // section nobody published stays at its empty default rather than becoming a plausible guess.
-  const deep = deepSectionPayloads(row);
+  const deep = deepSectionPayloads(row, new Set(verifiedSections));
   return {
     overview: JSON.stringify(overview),
     call_for_papers: JSON.stringify(callForPapers),
@@ -160,8 +162,15 @@ interface DeepSectionPayloads {
   sourceUrls: string[];
 }
 
-/** Reads the stored deep sections off a discovery row, keeping every source URL they carry. */
-function deepSectionPayloads(row: Record<string, any>): DeepSectionPayloads {
+/**
+ * Reads the stored deep sections off a discovery row, keeping every source URL they carry.
+ *
+ * `verified` is the ledger of sections a hardened read has actually confirmed. A section missing
+ * from it is HELD: its items stay in discovery storage and are simply not part of what a customer
+ * is shown. An empty set therefore publishes nothing deep at all, which is the safe direction for
+ * any caller that has not looked the ledger up.
+ */
+function deepSectionPayloads(row: Record<string, any>, verified: Set<string>): DeepSectionPayloads {
   const payloads: Record<string, string | null> = {
     program_agenda: null, keynote_speakers: null, technical_committee: null,
     sponsors_exhibitors: null, community: null,
@@ -170,7 +179,7 @@ function deepSectionPayloads(row: Record<string, any>): DeepSectionPayloads {
   for (const section of DEEP_SECTIONS) {
     const { column } = DEEP_SECTION_STORAGE[section];
     const stored = row[column];
-    if (storedSectionIsEmpty(stored)) { payloads[column] = null; continue; }
+    if (storedSectionIsEmpty(stored) || !verified.has(section)) { payloads[column] = null; continue; }
     payloads[column] = typeof stored === "string" ? stored : JSON.stringify(stored);
     try {
       const parsed = JSON.parse(payloads[column]!);
@@ -202,9 +211,11 @@ function isDiscoveryEngineRow(existing: Record<string, any>): boolean {
 }
 
 /** Fills the empty deep sections of an already-published row. Returns how many it filled. */
-async function backfillDeepSections(existing: Record<string, any>, row: Record<string, any>): Promise<number> {
+async function backfillDeepSections(
+  existing: Record<string, any>, row: Record<string, any>, verified: Set<string>
+): Promise<number> {
   if (!isDiscoveryEngineRow(existing)) return 0;
-  const deep = deepSectionPayloads(row);
+  const deep = deepSectionPayloads(row, verified);
   const updates: Array<[string, string]> = [];
   for (const section of DEEP_SECTIONS) {
     const { column } = DEEP_SECTION_STORAGE[section];
@@ -227,7 +238,9 @@ export interface DeepSectionSyncResult {
   updatedRecords: number;
   sectionsFilled: number;
   dryRun: boolean;
-  filled: Array<{ sourceUrl: string; sections: string[] }>;
+  /** Sections withheld from a published row because no hardened read has confirmed them. */
+  sectionsHeld: number;
+  filled: Array<{ sourceUrl: string; sections: string[]; held: string[] }>;
 }
 
 /**
@@ -253,13 +266,13 @@ export async function syncPublishedDeepSections(
   await initDb();
   const limit = Math.max(1, Math.min(options.limit ?? 500, 5000));
   const result: DeepSectionSyncResult = {
-    examined: 0, updatedRecords: 0, sectionsFilled: 0, dryRun: !!options.dryRun, filled: [],
+    examined: 0, updatedRecords: 0, sectionsFilled: 0, sectionsHeld: 0, dryRun: !!options.dryRun, filled: [],
   };
 
   // Only rows this engine wrote, only where the discovery record actually holds something the
   // published row does not.
   const rows = await dbAll<Record<string, any>>(
-    `SELECT ec.source_url, ec.program_agenda, ec.keynote_speakers, ec.technical_committee,
+    `SELECT ec.source_url, e.id AS event_id, ec.program_agenda, ec.keynote_speakers, ec.technical_committee,
             ec.sponsors_exhibitors, ec.community, ec.extraction_metadata,
             e.program_agenda AS e_program_agenda, e.keynote_speakers AS e_keynote_speakers,
             e.technical_committee AS e_technical_committee,
@@ -273,27 +286,59 @@ export async function syncPublishedDeepSections(
     [limit]
   );
 
+  const EMPTY_SECTION: Record<string, string> = {
+    program_agenda: JSON.stringify({ sessions: [] }),
+    keynote_speakers: JSON.stringify([]),
+    technical_committee: JSON.stringify([]),
+    sponsors_exhibitors: JSON.stringify([]),
+    community: JSON.stringify({ social_media: [] }),
+  };
+
   for (const row of rows) {
     result.examined += 1;
+    const eventId = String(row.event_id || "");
+    const verified = await verifiedDeepSections(eventId);
     const stored: Record<string, any> = {};
     for (const section of DEEP_SECTIONS) {
       const { column } = DEEP_SECTION_STORAGE[section];
       stored[column] = row[`e_${column}`];
     }
+
     const sections = DEEP_SECTIONS.filter((section) => {
       const { column } = DEEP_SECTION_STORAGE[section];
-      return !storedSectionIsEmpty(stored[column]) && storedSectionIsEmpty(row[column]);
+      return verified.has(section) && !storedSectionIsEmpty(stored[column]) && storedSectionIsEmpty(row[column]);
     });
-    if (sections.length === 0) continue;
+    // A section on the published row that no hardened read has confirmed. The items stay in
+    // discovery storage untouched; what changes is only that a customer stops being shown them
+    // until a read either confirms them or replaces them.
+    const held = DEEP_SECTIONS.filter((section) => {
+      const { column } = DEEP_SECTION_STORAGE[section];
+      return !verified.has(section) && !storedSectionIsEmpty(row[column]);
+    });
+    if (sections.length === 0 && held.length === 0) continue;
+
     if (!options.dryRun) {
-      const filled = await backfillDeepSections(row, stored);
-      if (filled === 0) continue;
-      result.sectionsFilled += filled;
+      let changed = 0;
+      if (sections.length > 0) changed += await backfillDeepSections(row, stored, verified);
+      if (held.length > 0) {
+        await dbRun(
+          `UPDATE extracted_conferences SET ${held.map((section) => `${DEEP_SECTION_STORAGE[section].column}=?`).join(", ")},
+             updated_at=datetime('now') WHERE source_url=?`,
+          [...held.map((section) => EMPTY_SECTION[DEEP_SECTION_STORAGE[section].column]), row.source_url]
+        );
+        changed += held.length;
+      }
+      if (changed === 0) continue;
+      result.sectionsFilled += sections.length;
+      result.sectionsHeld += held.length;
     } else {
       result.sectionsFilled += sections.length;
+      result.sectionsHeld += held.length;
     }
     result.updatedRecords += 1;
-    if (result.filled.length < 20) result.filled.push({ sourceUrl: String(row.source_url), sections: [...sections] });
+    if (result.filled.length < 20) {
+      result.filled.push({ sourceUrl: String(row.source_url), sections: [...sections], held: [...held] });
+    }
   }
   return result;
 }
@@ -362,7 +407,10 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
       // only the sections that are empty, only on rows this engine wrote itself, and never
       // overwrite anything — a conference the app crawled for itself keeps its own record, which
       // is the same rule the insert below has always followed.
-      if (!options.dryRun) result.sectionsBackfilled = (result.sectionsBackfilled ?? 0) + await backfillDeepSections(existing, row);
+      if (!options.dryRun) {
+        result.sectionsBackfilled = (result.sectionsBackfilled ?? 0)
+          + await backfillDeepSections(existing, row, await verifiedDeepSections(String(row.id)));
+      }
       continue;
     }
     if (options.dryRun) {
@@ -371,7 +419,7 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
       continue;
     }
 
-    const record = toExtractedConferenceRecord(row);
+    const record = toExtractedConferenceRecord(row, await verifiedDeepSections(String(row.id)));
     await dbRun(
       `INSERT INTO extracted_conferences (
          source_url, overview, call_for_papers, program_agenda, keynote_speakers,

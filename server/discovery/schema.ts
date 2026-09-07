@@ -34,6 +34,7 @@ export const DISCOVERY_TABLES = [
   "discovery_quality_checkpoints",
   "discovery_daily_reports",
   "discovery_review_queue",
+  "discovery_deep_section_verifications",
 ] as const;
 
 let initialized = false;
@@ -338,6 +339,19 @@ export async function initDiscoverySchema(): Promise<void> {
       started_at TEXT NOT NULL DEFAULT (datetime('now')),
       finished_at TEXT,
       UNIQUE(scale_run_id, batch_number)
+    );
+
+    -- Which deep sections have been read from an authoritative page under the CURRENT hardened
+    -- rules. A section with no row here is held: its stored items stay exactly where they are, but
+    -- they do not reach a customer and the enrichment pass treats the section as still to be read.
+    -- The row is written only by a real hardened read, which is what makes promotion from "held"
+    -- to "verified" impossible to do by reclassification, by a migration, or by accident.
+    CREATE TABLE IF NOT EXISTS discovery_deep_section_verifications (
+      event_id TEXT NOT NULL,
+      section TEXT NOT NULL,
+      source_url TEXT NOT NULL,
+      verified_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (event_id, section)
     );
 
     CREATE TABLE IF NOT EXISTS discovery_url_remediation_runs (
