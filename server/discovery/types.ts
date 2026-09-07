@@ -122,6 +122,11 @@ export interface DiscoveryCandidate {
     title?: string | null;
     snippet?: string | null;
     lastModified?: string | null;
+    /** The society whose own page announced this conference, carried from the registry so the
+     *  record keeps its organisation's identity rather than only its domain. */
+    organization?: string | null;
+    organizationAcronym?: string | null;
+    organizationDomain?: string | null;
     discoveryProviders?: string[];
     discoveryQuery?: string | null;
     /** Search evidence that this directory URL is one event detail, never a generic listing. */

@@ -143,6 +143,15 @@ export interface EnrichmentOptions {
    * up at the back of a queue they never reached.
    */
   missingDeepSectionsOnly?: boolean;
+  /**
+   * Conferences worked on at once.
+   *
+   * This is a ceiling on the engine, not a relaxation of politeness: `httpClient` still allows one
+   * request at a time to a given domain and still holds the minimum interval and any `Crawl-delay`
+   * between them. Two conferences on the same site therefore queue behind each other exactly as
+   * before; what overlaps is work on different sites, which is where the time was going.
+   */
+  conferenceConcurrency?: number;
 }
 
 export interface EnrichmentReport {
@@ -299,8 +308,11 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       ${readinessClause}${deepClause}
       ORDER BY e.last_verified IS NOT NULL, e.last_verified ASC, e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
       [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
-    for (const event of rows) {
-      if (Date.now() >= deadline) { timedOut = true; break; }
+    const concurrency = Math.max(1, Math.min(
+      options.conferenceConcurrency ?? Number(process.env.DISCOVERY_GLOBAL_CONCURRENCY || 4), 16));
+    let cursor = 0;
+
+    const processEvent = async (event: EventRow): Promise<void> => {
       examined += 1;
       if (!options.quiet) console.error(`[${examined}/${rows.length}] verifying ${event.title.slice(0, 80)}`);
       let unresolvedConflict = false;
@@ -342,7 +354,24 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       }
 
       await updateReadiness(event.id, unresolvedConflict);
-    }
+    };
+
+    // The same worker-pool shape the crawl pipeline already uses: a shared cursor, N workers, and
+    // one bad conference taking down neither its worker nor the run.
+    const worker = async (): Promise<void> => {
+      while (true) {
+        if (Date.now() >= deadline) { timedOut = true; return; }
+        const event = rows[cursor++];
+        if (!event) return;
+        try {
+          await processEvent(event);
+        } catch (error: any) {
+          errors.push(`${event.id}: ${String(error?.message || error).slice(0, 200)}`);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, rows.length || 1) }, () => worker()));
+
     const after = await snapshot();
     const readinessRows = await dbAll<{ publish_readiness: PublishReadiness; count: number }>(
       `SELECT publish_readiness, COUNT(*) count FROM discovery_events WHERE status IN ('validated','published','needs_review') GROUP BY publish_readiness`

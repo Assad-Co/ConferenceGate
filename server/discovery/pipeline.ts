@@ -46,6 +46,9 @@ import { limitPerDomain } from "./sitemaps";
 import { allProviders } from "./providers";
 import { SearchDiscoveryProvider, type SearchAccounting } from "./providers/searchProvider";
 import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
+import {
+  OrganizationDiscoveryProvider, type OrganizationHarvestStats,
+} from "./providers/organizationProvider";
 import { getDomain, newId, recordCrawlSuccess, TRUST_BY_SOURCE_TYPE } from "./sourceRegistry";
 import {
   eventIdForUrl,
@@ -94,6 +97,8 @@ export interface RunOptions {
   /** How many DIFFERENT domains may be read at once. Each domain is still read one request at a
    *  time, at its own polite interval — this only stops one slow site holding up the others. */
   domainConcurrency?: number;
+  /** Registry organisations harvested in one run. */
+  maxOrganizationDomains?: number;
   /** Stop once this many conferences have been accepted. 0 means "use the page budget". */
   acceptedTarget?: number;
   /** Candidates any one domain may contribute, so a single large site cannot crowd out the rest. */
@@ -156,6 +161,8 @@ export interface RunSummary {
    *  blocked us". */
   egressBlockedDomains: string[];
   providers: Array<{ name: string; enabled: boolean; reason: string | null; candidates: number }>;
+  /** What the organisation harvest actually did, per society. */
+  organizationHarvest?: OrganizationHarvestStats;
   /** Queries spent and candidates gained, per search engine. Null when search was not used. */
   search: SearchAccounting | null;
   /** How many domains were in play, how many were read at once, and how long reading took. */
@@ -321,12 +328,22 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       enabled: options.enableSearchDiscovery,
       maxQueries: options.maxSearchQueries ?? 24,
     });
+    // Organisation first: a society's own events index costs no quota and carries its identity.
+    const organizationProvider = new OrganizationDiscoveryProvider({
+      logger,
+      urlGuard: options.urlGuard,
+      scheme: options.scheme,
+      ignoreSchedule: !!options.domains?.length,
+      maxDomains: options.maxOrganizationDomains ?? 40,
+    });
     const providers = [
+      organizationProvider,
       sitemapProvider,
       searchProvider,
       ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
     ];
 
+    summary.organizationHarvest = organizationProvider.stats;
     const candidates: DiscoveryCandidate[] = [];
     for (const provider of providers) {
       const enabled = provider.isEnabled();
@@ -1333,7 +1350,10 @@ async function processPage(
     format,
     eventType,
     originalEventType,
-    organizer: raw.organizer,
+    // The page's own statement wins. When it names no organiser, the society whose events index
+    // announced this conference is used instead — that is the domain's own publication, not a
+    // guess, and it is what lets a search for "AAPG" reach the conferences AAPG announced.
+    organizer: raw.organizer || candidate.hints?.organization || null,
     organizerUrl: raw.organizerUrl,
     officialUrl,
     registrationUrl: raw.registrationUrl,

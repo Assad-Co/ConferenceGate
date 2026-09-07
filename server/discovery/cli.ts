@@ -38,7 +38,7 @@ import {
 import { DEEP_SECTIONS } from "./deepSections";
 import { buildOperationalStatus } from "./operations";
 import { runUrlRemediation } from "./urlRemediation";
-import { SEED_DOMAINS } from "./sources.seed";
+import { SEED_DOMAINS, seedBreakdown } from "./sources.seed";
 import { listDomains, setDomainEnabled, upsertDomain } from "./sourceRegistry";
 
 interface Args {
@@ -135,6 +135,13 @@ const HELP = `Conference Gate — discovery engine
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
+  harvest [--max-org-domains 10] [--max-pages 120] [--years 2026,2027,2028]
+          [--max-search-queries 0] [--allow-local-db] [--quiet]
+                            Organisation-first harvest: read each registry society's robots.txt,
+                            feed and events index, and hand what it announces to the ordinary
+                            pipeline. Bounded by --max-org-domains; --max-search-queries 0 keeps it
+                            free of provider spend. Publishing stays off.
+  organizations             Print the registry's size and its regional/type breakdown.
   field-coverage [--sample 20] [--published]
                             Percentage of accepted (or published) conferences holding each of the
                             nine detail fields, plus a per-conference sample of what is present and
@@ -535,6 +542,43 @@ async function main(): Promise<void> {
         quiet: flags.quiet === true,
       });
       console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "organizations": {
+      const breakdown = seedBreakdown();
+      console.log(`Registry seeds: ${breakdown.total}`);
+      console.log("\nBy region:");
+      for (const [region, count] of Object.entries(breakdown.byRegion).sort((a, b) => b[1] - a[1])) {
+        console.log(`  ${region.padEnd(16)} ${count}`);
+      }
+      console.log("\nBy type:");
+      for (const [type, count] of Object.entries(breakdown.byType).sort((a, b) => b[1] - a[1])) {
+        console.log(`  ${type.padEnd(26)} ${count}`);
+      }
+      break;
+    }
+
+    case "harvest": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error("TURSO_DATABASE_URL is not set. Pass --allow-local-db only for a throwaway local run.");
+        process.exitCode = 3;
+        break;
+      }
+      for (const domain of SEED_DOMAINS) await upsertDomain(domain);
+      const summary = await withPipelineLease("organization_harvest", () => runDiscovery({
+        targetYears: list(flags.years).map(Number).filter(Number.isInteger),
+        maxOrganizationDomains: numberFlag(flags["max-org-domains"], 10),
+        maxPages: numberFlag(flags["max-pages"], 120),
+        maxSearchQueries: Number(flags["max-search-queries"] ?? 0),
+        maxAiCalls: 0,
+        allowAutoPublish: false,
+        trigger: "organization_harvest",
+        quiet: flags.quiet === true,
+      }));
+      const { events, ...rest } = summary;
+      console.log("\n--- Harvest summary ---");
+      console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
       break;
     }
 
