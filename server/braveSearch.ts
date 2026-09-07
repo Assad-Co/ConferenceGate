@@ -511,6 +511,29 @@ function conferenceIdentity(title: string): string {
 // exclusion; the second is unknown timing, not proof of anything, and per the same rule
 // looksOutdated already follows ("never exclude purely for lacking a date"), unknown-timing
 // results are kept — just ranked after ones we could actually confirm are upcoming.
+/**
+ * De-duplicates published records without judging them.
+ *
+ * One conference can hold two rows (an alternate URL, a re-publication), and showing it twice is
+ * noise. Two different conferences from one organiser are not noise, which is why there is no
+ * per-host cap here: "IEEE" must return every IEEE conference, not the most recently updated one.
+ */
+function deduplicateStoredConferences(results: LiveSearchResult[]): LiveSearchResult[] {
+  const seenLinks = new Set<string>();
+  const seenIdentities = new Set<string>();
+  const unique: LiveSearchResult[] = [];
+  for (const result of results) {
+    const link = result.link.trim().toLowerCase().replace(/\/+$/, "");
+    if (link && seenLinks.has(link)) continue;
+    const identity = conferenceIdentity(result.title);
+    if (identity && seenIdentities.has(identity)) continue;
+    if (link) seenLinks.add(link);
+    if (identity) seenIdentities.add(identity);
+    unique.push(result);
+  }
+  return unique;
+}
+
 function deduplicateUpcomingConferences(results: LiveSearchResult[]): LiveSearchResult[] {
   const dated: Array<{ result: LiveSearchResult; time: number }> = [];
   const undated: LiveSearchResult[] = [];
@@ -563,8 +586,15 @@ export async function searchConferences(
   // backend discovery and enrichment paths above/below this function.
   void priority;
   void force;
-  const prepared = (await searchPreparedConferences(query)).filter(isLikelyOfficialConferencePage);
-  const results = deduplicateUpcomingConferences(prepared);
+  // The stored records are NOT re-screened here, and that is the point. `isLikelyOfficialConference
+  // Page`, `looksOutdated` and the one-result-per-host rule exist to sift a search engine's output:
+  // they read a snippet's prose because that is all a search engine gives you. Applied to Conference
+  // Gate's own published records they threw away real conferences for saying "conferences" in a
+  // description, for mentioning a previous edition's date, and for being the second event a single
+  // organiser runs. Every record reaching this point has already passed the publication gate — an
+  // authoritative first-party source, a verified title, date and country, and a sampled audit — so
+  // guessing again from its description can only lose data it cannot improve.
+  const results = deduplicateStoredConferences(await searchPreparedConferences(query));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;

@@ -75,7 +75,10 @@ function liveResultFitsDateWindow(
   startMonth: string,
   endMonth: string
 ): boolean {
-  const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
+  // Title only. A stored record's snippet is its own description, and "building on our March 2026
+  // meeting" is not evidence that a 2027 conference is out of range — reading it as such is what
+  // hid genuine results. An archived edition still announces its year in its title.
+  const text = `${result.title || ''}`.toLowerCase();
   const yearMatches = [...text.matchAll(/\b(20\d{2})\b/g)];
   if (yearMatches.length === 0) return true;
 
@@ -456,7 +459,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [webSearchLoading, setWebSearchLoading] = useState(false);
   const [webSearchError, setWebSearchError] = useState<string | null>(null);
   const lastWebQueryRef = useRef<string | null>(null);
-  // Bumped by the "Search Again" button to force a genuine retry even when every filter is
+  // Bumped by the "Refresh Results" button to force a genuine retry even when every filter is
   // unchanged — a failed (or successful) search already marks its own cache key as already
   // handled via lastWebQueryRef, so without tracking this separately a retry click with identical
   // filters would be silently skipped by that same-key guard below.
@@ -465,48 +468,24 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   useEffect(() => {
     const trimmed = submittedSearchTerm.trim();
-    // Live results do not arrive with normalized filter fields, so every selected filter is sent
-    // to the search engine itself. Conference Gate catalog records are filtered exactly above;
-    // live results are strongly biased by the same date, place, country, and format choices.
-    let dateBias = '';
-    if (effectiveStartMonth) {
-      const [year, month] = effectiveStartMonth.split('-').map(Number);
-      const name = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
-      dateBias += ` from ${name} ${year}`;
-    }
-    if (endAtMonth) {
-      const [year, month] = endAtMonth.split('-').map(Number);
-      const name = new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' });
-      dateBias += ` until ${name} ${year}`;
-    }
-    const locationBias = locationFilter.trim() ? ` in ${locationFilter.trim()}` : '';
-    const countryBias = countryFilter.trim() ? ` ${countryFilter.trim()}` : '';
-    const formatBias = formatFilter ? ` ${formatFilter} conference` : '';
-    const timingBias =
-      timingFilter === 'one-day' ? ' one day' :
-      timingFilter === 'multi-day' ? ' multi day' :
-      timingFilter === 'weekend' ? ' weekend' :
-      timingFilter === 'weekday' ? ' weekday' : '';
-    // Live results carry no structured registration price to filter on — a search snippet's
-    // dollar figure, if it even mentions one, is free text we'd have to guess-parse — so a chosen
-    // range is biased into the query itself rather than applied as a real filter.
-    const priceBias = priceFilterActive ? ` ${formatPrice(priceMin)}-${formatPrice(priceMax)}` : '';
-    const biasSuffix = dateBias + locationBias + countryBias + formatBias + timingBias + priceBias;
-    // Exactly one provider query per explicit search. Already-extracted Conference Gate records
-    // are returned by the server first and do not consume external search quota.
+    // The search term is sent exactly as typed, and nothing is appended to it.
+    //
+    // The selected filters used to be rendered into the query as prose — " from October 2026",
+    // " in Lisbon", " weekend", a price range — because a search engine has no filter fields and
+    // will happily take the hint. The stored search is not a search engine: it requires every
+    // meaningful word of the query to appear somewhere in the record, so " from October 2026"
+    // asked for conferences whose text contains "october" and "2026" and a page of real matches
+    // came back empty. The filters below still narrow the Conference Gate catalog, where the dates
+    // and places are structured fields rather than words to be guessed at.
     const baseQuery =
       trimmed || `upcoming academic and technical conferences ${new Date().getFullYear()}`;
-    // A topic without a selected country/city is explicitly global. The server expands it across
-    // conferences, conventions, congresses, symposia, summits, workshops, and scientific meetings.
-    const globalScope =
-      !locationFilter.trim() && !countryFilter.trim() ? ' worldwide' : '';
-    const effectiveQueries = [baseQuery + globalScope + biasSuffix];
+    const effectiveQueries = [baseQuery];
     const cacheKey = effectiveQueries[0];
 
     const handle = setTimeout(
       () => {
         const sameQueryAsLastTime = lastWebQueryRef.current === cacheKey;
-        // A click on "Search Again" bumps manualRetryCount without changing any filter, so the
+        // A click on "Refresh Results" bumps manualRetryCount without changing any filter, so the
         // cache key comes out identical to last time — this is what tells a genuine retry apart
         // from an incidental extra effect run, and what asks the server for a truly fresh search
         // instead of replaying its own hourly-cached answer for that same query text.
@@ -602,7 +581,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         </div>
 
-        {/* Search and filters shared by Conference Gate records and Live Web Search. */}
+        {/* Search and filters shared by Conference Gate records and stored conference results. */}
         <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
           <form
             onSubmit={(event) => {
@@ -883,8 +862,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         (searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter || priceFilterActive) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
             <p className="text-xs text-slate-500">
-              No Conference Gate conferences match the selected filters. Live Web Search below is still checking
-              the wider web with the same choices.
+              No Conference Gate conferences match the selected filters. Conference Results below
+              show the matching stored ConferenceGate conferences.
             </p>
           </div>
         )}
@@ -1069,7 +1048,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         </div>
       )}
 
-      {/* Live Web Results */}
+      {/* Conference Results — stored, published ConferenceGate records only. */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
