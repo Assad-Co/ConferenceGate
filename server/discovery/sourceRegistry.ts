@@ -13,6 +13,10 @@ import { dbAll, dbGet, dbRun } from "../db";
 import type { SourceType } from "./types";
 
 export interface DomainRow {
+  /** The events page a previous run proved productive, and how it was found. */
+  event_hub_url?: string | null;
+  event_hub_type?: string | null;
+  event_hub_found_at?: string | null;
   domain: string;
   source_name: string;
   source_type: SourceType;
@@ -139,6 +143,20 @@ export async function selectDomainsDueForCrawl(limit: number): Promise<DomainRow
       ORDER BY (last_successful_crawl IS NULL) DESC, trust_score DESC, next_crawl_at ASC
       LIMIT ?`,
     [limit]
+  );
+}
+
+/**
+ * Remembers where an organisation's conferences were found.
+ *
+ * Probing a dozen conventional paths is how the first visit finds a hub; doing it again every
+ * cycle is waste. Once one answers, the next run goes straight to it.
+ */
+export async function rememberEventHub(domain: string, url: string, type: string): Promise<void> {
+  await dbRun(
+    `UPDATE discovery_domains SET event_hub_url=?, event_hub_type=?, event_hub_found_at=datetime('now')
+      WHERE domain=?`,
+    [url, type, normalizeDomain(domain)]
   );
 }
 

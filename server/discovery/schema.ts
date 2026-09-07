@@ -543,6 +543,11 @@ export async function initDiscoverySchema(): Promise<void> {
     "ALTER TABLE discovery_events ADD COLUMN sponsors_exhibitors TEXT",
     "ALTER TABLE discovery_events ADD COLUMN community TEXT",
     "ALTER TABLE discovery_events ADD COLUMN deep_sections_verified_at TEXT",
+    // Where an organisation's conferences were actually found last time, so the next run goes
+    // straight there instead of probing a dozen conventional paths that may not exist.
+    "ALTER TABLE discovery_domains ADD COLUMN event_hub_url TEXT",
+    "ALTER TABLE discovery_domains ADD COLUMN event_hub_type TEXT",
+    "ALTER TABLE discovery_domains ADD COLUMN event_hub_found_at TEXT",
   ]) {
     try { await db.execute(statement); } catch (error: any) {
       if (!/duplicate column name/i.test(String(error?.message || error))) throw error;

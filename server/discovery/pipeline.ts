@@ -99,6 +99,24 @@ export interface RunOptions {
   domainConcurrency?: number;
   /** Registry organisations harvested in one run. */
   maxOrganizationDomains?: number;
+  /** Harvest exactly these registry domains, for a measured test of named organisations. */
+  organizationDomains?: string[];
+  /** Pages fetched per organisation during the harvest. */
+  maxOrganizationPagesPerDomain?: number;
+  /**
+   * Run the organisation harvest alone.
+   *
+   * Without it the sitemap provider walks its own selection of the registry and the search provider
+   * spends its query budget, so a run bounded to ten organisations still visits far more domains
+   * than ten and the measurement means nothing.
+   */
+  organizationsOnly?: boolean;
+  /**
+   * Include the organisation harvest in an ordinary run. Off by default: harvesting a society's
+   * pages is a deliberate, separately budgeted activity, and switching it on inside every crawl
+   * would spend page budget nobody asked for. `organizationsOnly` implies it.
+   */
+  enableOrganizationHarvest?: boolean;
   /** Stop once this many conferences have been accepted. 0 means "use the page budget". */
   acceptedTarget?: number;
   /** Candidates any one domain may contribute, so a single large site cannot crowd out the rest. */
@@ -335,13 +353,17 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       scheme: options.scheme,
       ignoreSchedule: !!options.domains?.length,
       maxDomains: options.maxOrganizationDomains ?? 40,
+      onlyDomains: options.organizationDomains,
+      maxPagesPerDomain: options.maxOrganizationPagesPerDomain,
     });
-    const providers = [
-      organizationProvider,
-      sitemapProvider,
-      searchProvider,
-      ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
-    ];
+    const providers = options.organizationsOnly
+      ? [organizationProvider]
+      : [
+        ...(options.enableOrganizationHarvest ? [organizationProvider] : []),
+        sitemapProvider,
+        searchProvider,
+        ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
+      ];
 
     summary.organizationHarvest = organizationProvider.stats;
     const candidates: DiscoveryCandidate[] = [];

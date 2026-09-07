@@ -135,12 +135,15 @@ const HELP = `Conference Gate — discovery engine
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
-  harvest [--max-org-domains 10] [--max-pages 120] [--years 2026,2027,2028]
-          [--max-search-queries 0] [--allow-local-db] [--quiet]
-                            Organisation-first harvest: read each registry society's robots.txt,
-                            feed and events index, and hand what it announces to the ordinary
-                            pipeline. Bounded by --max-org-domains; --max-search-queries 0 keeps it
-                            free of provider spend. Publishing stays off.
+  harvest [--orgs aapg.org,spe.org] [--max-org-domains 10] [--max-pages 120]
+          [--org-pages 10] [--years 2026,2027,2028] [--allow-local-db] [--quiet]
+                            Organisation-first harvest, and ONLY that: the sitemap and search
+                            providers are switched off so the run visits exactly the organisations
+                            asked for and spends nothing on search. Reads each society's robots.txt,
+                            its event sitemaps, a hub it found last time, its events index across
+                            www/event subdomains, then its feed. --orgs names the organisations to
+                            test; without it the registry's due domains are used, capped by
+                            --max-org-domains. Publishing stays off.
   organizations             Print the registry's size and its regional/type breakdown.
   field-coverage [--sample 20] [--published]
                             Percentage of accepted (or published) conferences holding each of the
@@ -566,17 +569,33 @@ async function main(): Promise<void> {
         break;
       }
       for (const domain of SEED_DOMAINS) await upsertDomain(domain);
+      const orgs = list(flags.orgs);
       const summary = await withPipelineLease("organization_harvest", () => runDiscovery({
         targetYears: list(flags.years).map(Number).filter(Number.isInteger),
-        maxOrganizationDomains: numberFlag(flags["max-org-domains"], 10),
+        organizationsOnly: true,
+        organizationDomains: orgs.length ? orgs : undefined,
+        maxOrganizationDomains: orgs.length ? orgs.length : numberFlag(flags["max-org-domains"], 10),
+        maxOrganizationPagesPerDomain: numberFlag(flags["org-pages"], 10),
         maxPages: numberFlag(flags["max-pages"], 120),
-        maxSearchQueries: Number(flags["max-search-queries"] ?? 0),
+        maxSearchQueries: 0,
         maxAiCalls: 0,
         allowAutoPublish: false,
         trigger: "organization_harvest",
         quiet: flags.quiet === true,
       }));
       const { events, ...rest } = summary;
+      console.log("\n--- Per organisation ---");
+      for (const row of summary.organizationHarvest?.perDomain ?? []) {
+        console.log(`  ${row.organization.slice(0, 44).padEnd(46)} ${String(row.candidates).padStart(4)} candidates` +
+          `  ${String(row.pages).padStart(2)} pages  via ${row.sourceType ?? "-"}  (${row.note})`);
+        if (row.sourceUrl) console.log(`      source: ${row.sourceUrl}`);
+        for (const error of row.errors) console.log(`      error:  ${error}`);
+      }
+      console.log("\n--- Sample candidates ---");
+      for (const event of events.slice(0, 15)) {
+        console.log(`  ${String(event.title).slice(0, 80)}`);
+        console.log(`      ${event.officialUrl || event.sourceUrl}`);
+      }
       console.log("\n--- Harvest summary ---");
       console.log(JSON.stringify({ ...rest, eventsAccepted: events.length }, null, 2));
       break;

@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import test from "node:test";
 import {
-  OrganizationDiscoveryProvider, conferenceLinksFrom, feedEntries, feedUrlsFrom, organizationAcronym,
+  OrganizationDiscoveryProvider, candidateHosts, conferenceLinksFrom, feedEntries, feedUrlsFrom,
+  organizationAcronym, scoreSitemapDocument, scoreSitemapEntry,
 } from "../providers/organizationProvider";
 import { SEED_DOMAINS, seedBreakdown } from "../sources.seed";
 import { configureDomainLimits } from "../httpClient";
@@ -94,13 +95,136 @@ test("harvesting a society reads its own pages and keeps its identity on every c
     const candidates = await provider.discover({ targetYears: [2027] } as any);
     const urls = candidates.map((candidate) => candidate.url);
 
-    assert.ok(urls.some((url) => url.includes("energy-congress-2027")), "the feed's conference is found");
     assert.ok(urls.some((url) => url.includes("annual-meeting-2027")), "the index's conference is found");
     assert.ok(!urls.some((url) => url.includes("/membership")), "navigation is not a candidate");
     assert.ok(candidates.every((candidate) => candidate.hints?.organization === "Society of Example Engineers"),
       "every candidate carries the organisation that announced it");
-    assert.ok(provider.stats.pagesFetched > 0 && provider.stats.feedsRead >= 1 && provider.stats.indexesRead >= 1);
+    // The index answered, so the feed is not probed: feeds are the fallback, not the first stop.
+    assert.ok(provider.stats.pagesFetched > 0 && provider.stats.indexesRead >= 1);
+    assert.equal(provider.stats.perDomain[0].sourceType, "hub");
     assert.equal(provider.stats.domainsAttempted, 1);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("a sitemap is read before any page is fetched, and its event URLs are scored first", () => {
+  // The production trace showed societies whose sitemaps hold hundreds of URLs while their home
+  // page answers 403. Scoring happens on the URL, before the request.
+  assert.ok(scoreSitemapDocument("https://eage.org/sitemap-events.xml")
+    > scoreSitemapDocument("https://eage.org/sitemap-posts.xml"));
+  assert.equal(scoreSitemapDocument("https://aiaa.org/sitemap-image.xml"), -1, "an image sitemap is not read");
+
+  assert.equal(scoreSitemapEntry("https://sepm.org/about/staff", [2027]), null, "not an event URL");
+  assert.equal(scoreSitemapEntry("https://sepm.org/logo.png", [2027]), null);
+  const event = scoreSitemapEntry("https://sepm.org/events/annual-conference-2027", [2027]);
+  const older = scoreSitemapEntry("https://sepm.org/events/annual-conference-2019", [2027]);
+  assert.ok(event !== null && older !== null && event > older, "the target year outranks an old edition");
+});
+
+test("event subdomains and www are tried, so a blocked root does not end the organisation", () => {
+  assert.deepEqual(candidateHosts("aapg.org"),
+    ["aapg.org", "www.aapg.org", "events.aapg.org", "meetings.aapg.org", "conferences.aapg.org"]);
+  assert.deepEqual(candidateHosts("www.seg.org").slice(0, 2), ["seg.org", "www.seg.org"]);
+});
+
+test("a society whose home page is blocked still yields its conferences", async () => {
+  // AAPG, SEG and AGU all reported home_unreadable in production. A 403 on / says nothing about
+  // whether /events answers, and the harvest must not conclude otherwise.
+  const pages: Record<string, string> = {
+    "/robots.txt": "User-agent: *\nAllow: /\n",
+    "/events": `<html><body><h2>Upcoming Conferences</h2><ul>
+      <li><a href="/events/annual-convention-2027">Annual Convention 2027</a></li>
+      <li><a href="/about">About us</a></li></ul></body></html>`,
+  };
+  const server = http.createServer((req, res) => {
+    const key = (req.url || "/").split("?")[0].replace(/\/$/, "") || "/";
+    if (key === "/") { res.writeHead(403); res.end("Forbidden"); return; }
+    if (!pages[key]) { res.writeHead(404); res.end("not found"); return; }
+    res.writeHead(200, { "content-type": key.endsWith(".txt") ? "text/plain" : "text/html" });
+    res.end(pages[key]);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as any).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+  try {
+    const provider = new OrganizationDiscoveryProvider({
+      urlGuard: localGuard, scheme: "http", maxPagesPerDomain: 10,
+      domains: [{ domain: `127.0.0.1:${port}`, source_name: "Blocked Root Society",
+        source_type: "professional_society", enabled: 1 } as any],
+    });
+    const candidates = await provider.discover({ targetYears: [2027] } as any);
+    assert.ok(candidates.some((candidate) => candidate.url.includes("annual-convention-2027")),
+      "the events index is reached even though the home page refused");
+    const row = provider.stats.perDomain[0];
+    assert.match(row.note, /^harvested_via_/, `note should record how it was harvested, got ${row.note}`);
+    assert.ok(row.sourceUrl?.includes("/events"));
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("the events index is reached before the page budget is spent probing for feeds", async () => {
+  // The original order probed /feed, /rss, /rss.xml, /atom.xml first and exhausted a six-page
+  // budget before ever asking for /events. That is why most societies returned nothing.
+  let requested: string[] = [];
+  const server = http.createServer((req, res) => {
+    const key = (req.url || "/").split("?")[0].replace(/\/$/, "") || "/";
+    requested.push(key);
+    if (key === "/robots.txt") { res.writeHead(200, { "content-type": "text/plain" }); res.end("User-agent: *\nAllow: /\n"); return; }
+    if (key === "/events") {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(`<html><body><a href="/events/congress-2027">World Congress 2027</a></body></html>`);
+      return;
+    }
+    res.writeHead(404); res.end("not found");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as any).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+  try {
+    const provider = new OrganizationDiscoveryProvider({
+      urlGuard: localGuard, scheme: "http", maxPagesPerDomain: 6,
+      domains: [{ domain: `127.0.0.1:${port}`, source_name: "Feedless Society",
+        source_type: "professional_society", enabled: 1 } as any],
+    });
+    const candidates = await provider.discover({ targetYears: [2027] } as any);
+    assert.ok(candidates.some((candidate) => candidate.url.includes("congress-2027")));
+    assert.ok(!requested.some((path) => /^\/(rss|atom|feed)/.test(path)),
+      `no budget is spent guessing feed paths, requested: ${requested.join(", ")}`);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("a feed is used when the society publishes no events index", async () => {
+  const pages: Record<string, string> = {
+    "/robots.txt": "User-agent: *\nAllow: /\n",
+    "/": `<html><head><link rel="alternate" type="application/rss+xml" href="/events.rss"></head>
+      <body><h1>Feed Only Society</h1></body></html>`,
+    "/events.rss": `<rss><channel>
+      <item><title>Example Energy Congress 2027</title><link>/events/energy-congress-2027</link></item>
+      </channel></rss>`,
+  };
+  const server = http.createServer((req, res) => {
+    const key = (req.url || "/").split("?")[0].replace(/\/$/, "") || "/";
+    if (!pages[key]) { res.writeHead(404); res.end("not found"); return; }
+    res.writeHead(200, { "content-type": key.endsWith(".rss") ? "application/rss+xml" : "text/html" });
+    res.end(pages[key]);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as any).port;
+  configureDomainLimits("127.0.0.1", { minIntervalMs: 0, maxConcurrent: 4 });
+  try {
+    const provider = new OrganizationDiscoveryProvider({
+      urlGuard: localGuard, scheme: "http", maxPagesPerDomain: 12,
+      domains: [{ domain: `127.0.0.1:${port}`, source_name: "Feed Only Society",
+        source_type: "professional_society", enabled: 1 } as any],
+    });
+    const candidates = await provider.discover({ targetYears: [2027] } as any);
+    assert.ok(candidates.some((candidate) => candidate.url.includes("energy-congress-2027")));
+    assert.equal(provider.stats.feedsRead, 1);
+    assert.equal(provider.stats.perDomain[0].sourceType, "feed");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
