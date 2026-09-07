@@ -2,6 +2,7 @@
 import "../env";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { closeDb } from "../db";
 import { digest, type Plan, type Reader } from "./deepRevalidation";
 import { buildStoredDeepPlan } from "./deepCleanupScan";
@@ -68,12 +69,23 @@ export function cleanupReader(networkTimeoutMs = 5000): Reader {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.shift();
-  const allowed: Record<string, string[]> = { "dry-run": ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records", "review-plan"], backup: ["plan", "run"], "controlled-write": ["run", "batch-size"], "verify-cleanup": ["run"], "controlled-restore": ["run"], write: ["plan", "approve", "batch-size", "max-events"], restore: ["run", "max-events"] };
-  if (!mode || !allowed[mode]) throw new Error("Usage: deepCleanupCli.ts dry-run --out plan.json | write --plan plan.json --approve SHA256 | restore --run RUN_ID");
+  const commands: Record<string, { flags: string[]; usage: string }> = {
+    "dry-run": { flags: ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records", "review-plan"], usage: "dry-run --out PLAN.json" },
+    backup: { flags: ["plan", "run"], usage: "backup --plan PLAN.json --run RUN_ID" },
+    "controlled-write": { flags: ["run", "batch-size"], usage: "controlled-write --run RUN_ID --batch-size 10" },
+    "verify-cleanup": { flags: ["run"], usage: "verify-cleanup --run RUN_ID" },
+    "controlled-restore": { flags: ["run"], usage: "controlled-restore --run RUN_ID" },
+    write: { flags: ["plan", "approve", "batch-size", "max-events"], usage: "write (disabled; use backup then controlled-write)" },
+    restore: { flags: ["run", "max-events"], usage: "restore --run LEGACY_RUN_ID" },
+  };
+  const usage = "Usage: deepCleanupCli.ts COMMAND\n" + Object.values(commands).map(c => "  " + c.usage).join("\n");
+  if (mode === "--help" || mode === "-h" || mode === "help") { console.log(usage); return; }
+  if (!mode || !Object.hasOwn(commands, mode)) throw new Error(usage);
+  console.error(`Deep-cleanup CLI command: ${mode}\nCLI entrypoint: ${fileURLToPath(import.meta.url)}`);
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i].replace(/^--/, "");
-    if (!args[i].startsWith("--") || !allowed[mode].includes(key) || !args[i + 1] || args[i + 1].startsWith("--") || flags[key]) throw new Error(`Invalid flag ${args[i]}`);
+    if (!args[i].startsWith("--") || !commands[mode].flags.includes(key) || !args[i + 1] || args[i + 1].startsWith("--") || flags[key]) throw new Error(`Invalid flag ${args[i]}`);
     flags[key] = args[i + 1];
   }
   const number = (key: string, fallback: number, min = 1) => {

@@ -32,12 +32,15 @@ async function fixture(name: string) {
   return database;
 }
 function run(database: string, out: string, preload?: string) {
+  return runCommand(database, ["dry-run", "--out", out, "--batch-size", "50"], preload);
+}
+function runCommand(database: string, args: string[], preload?: string) {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "test", TEST_DATABASE_PATH: database,
     NODE_OPTIONS: `--require ${JSON.stringify(shimPath)}` };
   delete env.TURSO_DATABASE_URL; delete env.TURSO_AUTH_TOKEN;
   return spawnSync(process.execPath, ["--import", shim, "node_modules/tsx/dist/cli.mjs",
     "--import", shim, ...(preload ? ["--import", pathToFileURL(preload).href] : []),
-    "server/discovery/deepCleanupCli.ts", "dry-run", "--out", out, "--batch-size", "50"],
+    "server/discovery/deepCleanupCli.ts", ...args],
   { env, encoding: "utf8", timeout: 20000 });
 }
 
@@ -81,6 +84,75 @@ test("direct tsx dry-run cannot exit 0 with no plan while a database promise is 
   const resumed = run(database, out, preload);
   assert.equal(resumed.status, 0, resumed.stderr);
   assert.equal(fs.readFileSync(out, "utf8"), originalPlan, "completed CLI rerun must keep the same reviewed plan");
+});
+
+test("direct tsx help lists all controlled commands without requiring a database", () => {
+  const result = runCommand(path.join(root,"unused.db"),["--help"]);
+  assert.equal(result.status,0,result.stderr);
+  for (const command of ["backup","controlled-write","verify-cleanup","controlled-restore"])
+    assert.ok(result.stdout.includes(command),result.stdout);
+});
+
+for (const command of ["backup","controlled-write","verify-cleanup","controlled-restore"]) {
+  test(`direct tsx recognizes ${command} and reaches its required-argument guard`, () => {
+    const result=runCommand(path.join(root,"unused-command.db"),[command]);
+    assert.notEqual(result.status,0);
+    assert.match(result.stderr,command === "backup" ? /--plan and --run are required/ : /--run is required/);
+    assert.ok(!result.stderr.includes("Usage:"),result.stderr);
+    assert.ok(result.stderr.includes(`Deep-cleanup CLI command: ${command}`));
+    assert.ok(result.stderr.includes("CLI entrypoint:"));
+  });
+}
+
+test("actual tsx backup, controlled-write, verify-cleanup and controlled-restore complete with 514 REMOVE and 1281 REVIEW", () => {
+  const database=path.join(root,"controlled-commands.db");
+  const env:NodeJS.ProcessEnv={...process.env,NODE_ENV:"test",TEST_DATABASE_PATH:database,NODE_OPTIONS:`--require ${JSON.stringify(shimPath)}`};
+  delete env.TURSO_DATABASE_URL; delete env.TURSO_AUTH_TOKEN;
+  const seed=path.join(root,"seed-controlled.ts");
+  fs.writeFileSync(seed,`
+    import {db,initDb,closeDb} from '../server/db';
+    import {initDiscoverySchema} from '../server/discovery/schema';
+    await initDb(); await initDiscoverySchema();
+    for(let offset=0;offset<1104;offset+=50) await db.batch(Array.from({length:Math.min(50,1104-offset)},(_,j)=> {
+      const i=offset+j;
+      const values=i<61?Array.from({length:1795},(_,n)=>n).filter(n=>n%61===i).map(n=>n<514?
+        {name:'Premium Profile',source_url:'https://cli-controlled.example/speakers'}:{name:'Uncertain person '+n}):[];
+      return {sql:'INSERT INTO discovery_events(id,title,normalized_title,start_year,official_url,source_url,source_domain,status,keynote_speakers) VALUES (?,?,?,?,?,?,?,?,?)',
+        args:['cli-'+String(i).padStart(4,'0'),'Optical Science Congress 2027','optical science',2027,
+          'https://cli-controlled.example/','https://cli-controlled.example/'+i,'cli-controlled.example','validated',values.length?JSON.stringify(values):null]};
+    }),'write');
+    closeDb();
+  `);
+  const setup=spawnSync(process.execPath,["--import",shim,"--import","tsx",seed],{env,encoding:"utf8",timeout:20000});
+  assert.equal(setup.status,0,setup.stderr);
+  const networkGuard=path.join(root,"no-network.mjs");
+  fs.writeFileSync(networkGuard,"globalThis.fetch = async () => { throw new Error('Network/AI forbidden in controlled CLI test'); };");
+  const plan=path.join(root,"controlled-plan.json");
+  const dry=runCommand(database,["dry-run","--out",plan],networkGuard);
+  assert.equal(dry.status,0,dry.stderr);
+  assert.match(dry.stdout,/REMOVE: 514/); assert.match(dry.stdout,/REVIEW: 1281/);
+  const commands=[
+    ["backup","--plan",plan,"--run","cli-controlled"],
+    ["controlled-write","--run","cli-controlled","--batch-size","10"],
+    ["verify-cleanup","--run","cli-controlled"],
+    ["controlled-restore","--run","cli-controlled"],
+  ];
+  for (const args of commands) {
+    const result=runCommand(database,args,networkGuard);
+    assert.equal(result.error,undefined);
+    assert.equal(result.status,0,`${args[0]} failed: ${result.stdout}\n${result.stderr}`);
+    if(args[0]==="backup") {
+      assert.match(result.stdout,/"removals": 514/);
+      fs.unlinkSync(plan); // Subsequent commands must use the durable backup, never /tmp input.
+    }
+    if(args[0]==="verify-cleanup") {
+      assert.match(result.stdout,/"targetedItemsRemoved": 514/);
+      assert.match(result.stdout,/"remainingReview": 1281/);
+      assert.match(result.stdout,/"reviewItemsIntentionallyRemoved": 0/);
+    }
+    if(args[0]==="controlled-restore") assert.match(result.stdout,/"fullRestorationVerified": true/);
+    assert.match(result.stdout,/"aiCalls": 0/);
+  }
 });
 
 test("direct tsx dry-run reports plan-generation failure and exits nonzero", async () => {
