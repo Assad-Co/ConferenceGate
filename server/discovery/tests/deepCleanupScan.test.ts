@@ -109,3 +109,49 @@ test("local checkpoints resume without repeated reads or double-counting and rej
     await clean();
   }
 });
+
+test("REVIEW-plan verification pins prior conferences, preserves settled decisions and resumes safely", async () => {
+  await seed("review-a"); await seed("review-b");
+  await dbRun("UPDATE discovery_events SET keynote_speakers=? WHERE id=?", [member.replace("/speakers", "/pending"), prefix + "review-b"]);
+  const file = path.resolve(`.review-scan-checkpoint-${process.pid}.json`);
+  try {
+    const original = await buildStoredDeepPlan(async () => { throw new Error("offline"); });
+    const settled = original.events.find(e => e.id === prefix + "review-a")!.changes.find(c => c.section === "speakers")!;
+    // A settled decision must never be sent for verification, even if its source is reachable.
+    settled.decisions[0].verdict = "REMOVE"; settled.decisions[0].reason = "prior_removal";
+    original.summary.REVIEW--; original.summary.REMOVE++;
+    original.summary.sections.speakers.REVIEW--; original.summary.sections.speakers.REMOVE++;
+    await seed("review-new-outside-scope");
+    const seen: string[] = [];
+    const read = async (url: string) => { seen.push(url); return { url, html: "<title>OSC 2027</title><h2>Keynote Speakers</h2><ul><li>Amara Okafor</li></ul>" }; };
+    const options = { reviewPlan: original, verifySources: true, checkpointPath: file, resume: true };
+    await db.execute("PRAGMA query_only=ON");
+    let verified;
+    try { verified = await buildStoredDeepPlan(read, options); }
+    finally { await db.execute("PRAGMA query_only=OFF"); }
+    assert.deepEqual(seen, [`${source}/pending`]);
+    assert.equal(verified.events.length, original.events.length);
+    assert.ok(!verified.events.some(e => e.id === prefix + "review-new-outside-scope"));
+    assert.deepEqual(verified.events.find(e => e.id === prefix + "review-a")!.changes.find(c => c.section === "speakers")!.decisions, settled.decisions);
+    assert.equal(verified.events.find(e => e.id === prefix + "review-b")!.changes.find(c => c.section === "speakers")!.decisions[0].verdict, "KEEP");
+    assert.equal(verified.summary.inputPlanHash, digest(original));
+    const again = await buildStoredDeepPlan(read, options);
+    assert.equal(digest(again), digest(verified)); assert.equal(seen.length, 1);
+    await dbRun("UPDATE discovery_events SET keynote_speakers=? WHERE id=?", [member.replace("Amara", "Nadia"), prefix + "review-b"]);
+    await assert.rejects(buildStoredDeepPlan(read, options), /Stored deep data changed/);
+  } finally { if (fs.existsSync(file)) fs.unlinkSync(file); await clean(); }
+});
+
+test("REVIEW-plan network failures remain REVIEW and verified absence becomes REMOVE", async () => {
+  await seed("review-errors"); await seed("review-absent");
+  await dbRun("UPDATE discovery_events SET keynote_speakers=? WHERE id=?", [member.replace("/speakers", "/absent"), prefix + "review-absent"]);
+  try {
+    const original = await buildStoredDeepPlan(async () => null);
+    const result = await buildStoredDeepPlan(async url => {
+      if (url.endsWith("speakers")) throw new Error("source offline");
+      return { url, html: "<title>OSC 2027</title><h1>OSC 2027</h1><h2>Keynote Speakers</h2><ul><li>Lars Henriksen</li></ul>" };
+    }, { reviewPlan: original, verifySources: true, networkTimeoutMs: 30, recordTimeoutMs: 200 });
+    assert.equal(result.events.find(e => e.id === prefix + "review-errors")!.changes.find(c => c.section === "speakers")!.decisions[0].verdict, "REVIEW");
+    assert.equal(result.events.find(e => e.id === prefix + "review-absent")!.changes.find(c => c.section === "speakers")!.decisions[0].verdict, "REMOVE");
+  } finally { await clean(); }
+});

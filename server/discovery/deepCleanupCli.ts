@@ -67,7 +67,7 @@ export function cleanupReader(networkTimeoutMs = 5000): Reader {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.shift();
-  const allowed: Record<string, string[]> = { "dry-run": ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records"], write: ["plan", "approve", "batch-size", "max-events"], restore: ["run", "max-events"] };
+  const allowed: Record<string, string[]> = { "dry-run": ["out", "batch-size", "refill-pages", "verify-sources", "record-timeout-ms", "network-timeout-ms", "checkpoint", "resume", "max-records", "review-plan"], write: ["plan", "approve", "batch-size", "max-events"], restore: ["run", "max-events"] };
   if (!mode || !allowed[mode]) throw new Error("Usage: deepCleanupCli.ts dry-run --out plan.json | write --plan plan.json --approve SHA256 | restore --run RUN_ID");
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i += 2) {
@@ -91,9 +91,12 @@ async function main(): Promise<void> {
     const resume = number("resume", 1, 0);
     if (verify > 1 || resume > 1) throw new Error("--verify-sources and --resume must be 0 or 1.");
     const networkTimeoutMs = number("network-timeout-ms", 5000);
+    if (flags["review-plan"] && [outputPath, checkpointPath].includes(path.resolve(flags["review-plan"]))) throw new Error("Use separate output/checkpoint paths from the input REVIEW plan.");
+    const reviewPlan = flags["review-plan"] ? JSON.parse(fs.readFileSync(flags["review-plan"], "utf8")) as Plan : undefined;
     console.log(`Starting deep-section dry-run (${verify ? "stored source verification" : "stored data only; no web crawling"}). Output: ${outputPath}\nCheckpoint: ${checkpointPath}`);
     const plan = await buildStoredDeepPlan(cleanupReader(networkTimeoutMs), {
       batchSize: number("batch-size", 50), verifySources: verify === 1,
+      reviewPlan,
       networkTimeoutMs, recordTimeoutMs: number("record-timeout-ms", 15000),
       checkpointPath, resume: resume === 1, maxRecords: number("max-records", Number.MAX_SAFE_INTEGER),
       progress: summary => {

@@ -4,8 +4,8 @@ import fs from "node:fs";
 import { dbAll } from "../db";
 import { DEEP_SECTIONS } from "./deepSections";
 import { DEEP_SECTION_STORAGE } from "./deepEnrichment";
-import { ACCEPTED, acceptedIds, buildPlan, digest, items, rulesDigest,
-  type Plan, type Reader, type Row, type StoredSnapshot } from "./deepRevalidation";
+import { ACCEPTED, acceptedIds, buildPlan, digest, identityHash, items, rulesDigest,
+  type EventPlan, type Plan, type Reader, type Row, type StoredSnapshot } from "./deepRevalidation";
 
 class Deadline extends Error {}
 export async function bounded<T>(work: Promise<T>, ms: number, onTimeout = () => {}): Promise<T> {
@@ -63,6 +63,7 @@ interface Checkpoint {
 export interface ScanOptions {
   batchSize?: number; recordTimeoutMs?: number; networkTimeoutMs?: number;
   verifySources?: boolean; checkpointPath?: string; resume?: boolean; maxRecords?: number;
+  reviewPlan?: Plan;
   progress?: (summary: Row) => void;
 }
 function inputHash(snapshot: StoredSnapshot): string {
@@ -91,7 +92,7 @@ function save(file: string, checkpoint: Checkpoint): void {
   try { fs.writeFileSync(fd, JSON.stringify(checkpoint)); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
   fs.renameSync(temporary, file);
 }
-async function scanRecord(snapshot: StoredSnapshot, read: Reader, options: Required<Pick<ScanOptions,"verifySources"|"recordTimeoutMs"|"networkTimeoutMs">>): Promise<Plan> {
+async function scanRecord(snapshot: StoredSnapshot, read: Reader, options: Required<Pick<ScanOptions,"verifySources"|"recordTimeoutMs"|"networkTimeoutMs">>, reviewEvent?: EventPlan): Promise<Plan> {
   const controller = new AbortController();
   const cache = new Map<string, ReturnType<Reader>>();
   const timeoutUrls = new Set<string>();
@@ -112,13 +113,13 @@ async function scanRecord(snapshot: StoredSnapshot, read: Reader, options: Requi
   let recordTimeout = false;
   let plan: Plan;
   try {
-    plan = await bounded(buildPlan(limited, { snapshots: [snapshot], maxRefillPages: 0 }), options.recordTimeoutMs, () => controller.abort());
+    plan = await bounded(buildPlan(limited, { snapshots: [snapshot], maxRefillPages: 0, reviewEvent }), options.recordTimeoutMs, () => controller.abort());
   } catch (error) {
     if (!(error instanceof Deadline)) throw error;
     recordTimeout = true;
     // Same validators, now with unavailable evidence. Unsupported items become REVIEW;
     // deterministic stored-value removals and manual protections still apply unchanged.
-    plan = await buildPlan(async () => null, { snapshots: [snapshot], maxRefillPages: 0 });
+    plan = await buildPlan(async () => null, { snapshots: [snapshot], maxRefillPages: 0, reviewEvent });
   } finally { controller.abort(); }
   const reason = (url: string | null) => recordTimeout ? "record_timeout" : timeoutUrls.has(url || "") ? "source_verification_timeout" :
     !options.verifySources ? "source_verification_not_requested" : "source_unreadable";
@@ -130,6 +131,22 @@ async function scanRecord(snapshot: StoredSnapshot, read: Reader, options: Requi
   return plan;
 }
 
+function checkReviewSnapshot(snapshot: StoredSnapshot, previous: EventPlan): void {
+  if (previous.identityHash !== identityHash(snapshot.event)) throw new Error(`Event identity changed for ${previous.id}; generate a fresh stored-only plan.`);
+  for (const change of previous.changes) {
+    const row = change.table === "discovery_events" ? snapshot.event : snapshot.published.find(p => p.source_url === change.key);
+    if (!row || (row[DEEP_SECTION_STORAGE[change.section].column] ?? null) !== change.before ||
+        (change.table === "extracted_conferences" && row.extraction_metadata !== change.metadataBefore)) {
+      throw new Error(`Stored deep data changed for ${previous.id}; generate a fresh stored-only plan.`);
+    }
+    if (change.table === "discovery_events") {
+      const field = snapshot.fields.find(f => f.field === DEEP_SECTION_STORAGE[change.section].field) || null;
+      const ordered = (value: Row | null) => value && Object.keys(value).sort().map(k => [k,value[k]]);
+      if (digest(ordered(field)) !== digest(ordered(change.fieldBefore))) throw new Error(`Stored provenance changed for ${previous.id}; generate a fresh stored-only plan.`);
+    }
+  }
+}
+
 export async function buildStoredDeepPlan(read: Reader, options: ScanOptions = {}): Promise<Plan> {
   const batchSize = Math.max(1, Math.min(options.batchSize ?? 50, 100));
   const recordTimeoutMs = Math.max(1, Math.min(options.recordTimeoutMs ?? 15000, 60000));
@@ -137,9 +154,19 @@ export async function buildStoredDeepPlan(read: Reader, options: ScanOptions = {
   const databaseTimeoutMs = 30000;
   // Filter before loading any conference payload or requesting source evidence.
   const inventory = await bounded(deepInventory(), databaseTimeoutMs);
+  const currentDeepCount = inventory.ids.length;
   const inventoryIds = await bounded(acceptedIds(), databaseTimeoutMs);
+  const reviewPlan = options.reviewPlan;
+  if (reviewPlan) {
+    if (!options.verifySources || reviewPlan.version !== 1 || !Array.isArray(reviewPlan.events) ||
+        reviewPlan.events.length !== new Set(reviewPlan.events.map(e => e.id)).size ||
+        reviewPlan.summary.actuallyScanned !== reviewPlan.events.length) throw new Error("A completed stored-only plan and --verify-sources 1 are required.");
+    const selected = reviewPlan.events.map(e => e.id).sort();
+    if (selected.some(id => !inventory.ids.includes(id))) throw new Error("A REVIEW-plan conference left accepted/deep inventory; create a fresh stored-only plan.");
+    inventory.ids = selected; // Never include a newly populated conference outside the input plan.
+  }
   const rules = rulesDigest();
-  const manifest = digest([rules, inventoryIds, inventory.ids, !!options.verifySources, recordTimeoutMs, networkTimeoutMs]);
+  const manifest = digest([rules, inventoryIds, inventory.ids, !!options.verifySources, recordTimeoutMs, networkTimeoutMs, reviewPlan ? digest(reviewPlan) : null]);
   let checkpoint: Checkpoint = { version: 1, manifest, inventoryIds, deepIds: inventory.ids, createdAt: new Date().toISOString(), completed: {} };
   if (options.checkpointPath && fs.existsSync(options.checkpointPath)) {
     if (!options.resume) throw new Error("Checkpoint exists; use --resume 1 or a new checkpoint path.");
@@ -149,15 +176,24 @@ export async function buildStoredDeepPlan(read: Reader, options: ScanOptions = {
   }
   if (options.checkpointPath) save(options.checkpointPath, checkpoint);
   const summary = summaryFor(inventoryIds.length, inventory.ids.length);
+  summary.skippedWithoutDeepData = inventoryIds.length - currentDeepCount;
+  summary.deepConferencesOutsideScope = currentDeepCount - inventory.ids.length;
   const plan: Plan = { version: 1, rules, createdAt: checkpoint.createdAt, inventoryIds,
     inventoryHash: digest(inventoryIds), events: [], summary };
   summary.sourceVerification = options.verifySources ? "stored_source_urls_only" : "stored_only";
+  if (reviewPlan) {
+    summary.sourceVerification = "review_items_only";
+    summary.inputPlanHash = digest(reviewPlan);
+    summary.inputTotals = { KEEP: reviewPlan.summary.KEEP, REMOVE: reviewPlan.summary.REMOVE, REVIEW: reviewPlan.summary.REVIEW };
+  }
   options.progress?.(summary);
   let newlyScanned = 0;
   for (let offset = 0; offset < inventory.ids.length; offset += batchSize) {
     const batch = await bounded(snapshots(inventory.ids.slice(offset, offset + batchSize), inventory.hasPublished), databaseTimeoutMs);
     for (const snapshot of batch) {
       const id = String(snapshot.event.id);
+      const reviewEvent = reviewPlan?.events.find(e => e.id === id);
+      if (reviewEvent) checkReviewSnapshot(snapshot, reviewEvent);
       const hash = inputHash(snapshot);
       const previous = checkpoint.completed[id];
       if (previous && previous.inputHash !== hash) throw new Error(`Stored data changed for ${id}; start a new dry-run.`);
@@ -168,7 +204,7 @@ export async function buildStoredDeepPlan(read: Reader, options: ScanOptions = {
           snapshot.fields.some(f => f.field === DEEP_SECTION_STORAGE[s].field && items(s, f.value).length) ||
           snapshot.published.some(p => items(s, p[DEEP_SECTION_STORAGE[s].column]).length));
         if (!hasItems) throw new Error(`Stored-data inventory changed for ${id}; start a new dry-run.`);
-        const result = await scanRecord(snapshot, read, { verifySources: !!options.verifySources, recordTimeoutMs, networkTimeoutMs });
+        const result = await scanRecord(snapshot, read, { verifySources: !!options.verifySources, recordTimeoutMs, networkTimeoutMs }, reviewEvent);
         checkpoint.completed[id] = { inputHash: hash, plan: result };
         if (options.checkpointPath) save(options.checkpointPath, checkpoint);
         newlyScanned++;
@@ -179,7 +215,8 @@ export async function buildStoredDeepPlan(read: Reader, options: ScanOptions = {
     }
   }
   // Reject a moving inventory rather than silently certify a partial scan.
-  if (digest((await bounded(deepInventory(), databaseTimeoutMs)).ids) !== digest(inventory.ids) ||
+  const finalDeepIds = (await bounded(deepInventory(), databaseTimeoutMs)).ids;
+  if ((reviewPlan ? inventory.ids.some(id => !finalDeepIds.includes(id)) : digest(finalDeepIds) !== digest(inventory.ids)) ||
       digest(await bounded(acceptedIds(), databaseTimeoutMs)) !== plan.inventoryHash) throw new Error("Inventory changed during scan; start a new dry-run.");
   summary.cleanlinessCanBeCertified = summary.protected.length === 0;
   summary.protectedConferenceCount = new Set(summary.protected.map((p: Row) => p.eventId)).size;

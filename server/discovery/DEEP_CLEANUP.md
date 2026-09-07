@@ -71,6 +71,23 @@ map keyed by the item's path. Empty sections remain optional enrichment.
 
 ## Write only after review and explicit approval
 
+### Optional REVIEW-only source-verification dry-run
+
+Use the completed stored-only JSON as input. This pins its conference IDs, verifies only REVIEW
+items, and carries prior KEEP/REMOVE decisions forward verbatim. Sources come only from those
+stored items/provenance and still pass the unchanged authority/identity checks. Missing evidence,
+unreadable sources and ownership exceptions remain REVIEW. Changed identity, deep data or
+provenance rejects a stale input plan. New conferences outside the input plan are never included.
+
+```sh
+npx tsx server/discovery/deepCleanupCli.ts dry-run --review-plan /tmp/deep-cleanup-stored-plan.json --out /tmp/deep-cleanup-reviewed-plan.json --checkpoint /tmp/deep-cleanup-reviewed.checkpoint.json --verify-sources 1 --batch-size 10 --network-timeout-ms 5000 --record-timeout-ms 15000 --resume 1
+```
+
+Repeat this exact command to resume. It has its own checkpoint; never reuse the stored-only
+checkpoint for source verification. This mode has zero production writes, no enrichment/refill
+and zero AI calls. The output includes updated totals/reasons and the input plan hash. Retain
+both JSON plans and the checkpoint outside ephemeral storage before a container replacement.
+
 Substitute the exact SHA-256 printed by the reviewed dry-run; restore the unchanged plan file
 at the specified path if Render restarted. Do not regenerate a different file under an old hash.
 

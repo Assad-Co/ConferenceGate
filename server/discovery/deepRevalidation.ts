@@ -173,6 +173,21 @@ export async function validateSection(section: DeepSection, raw: any, fallback: 
   return decisions;
 }
 
+/** Reuse settled decisions verbatim; only pending REVIEW items reach the unchanged validator. */
+async function verifyReviews(section: DeepSection, previous: Decision[], identity: EventIdentity | null, read: Reader): Promise<Decision[]> {
+  const results: Decision[] = [];
+  for (const item of previous) {
+    if (item.verdict !== "REVIEW") { results.push({ ...item }); continue; }
+    const payload = item.kind === "entry" ? [item.value] : item.kind === "unknown" ?
+      (item.path === "$" ? item.value : { [item.path]: item.value }) :
+      { [item.kind]: ["hashtag", "contact_email"].includes(item.kind) ? item.value : [item.value], source_url: item.sourceUrl };
+    const verified = await validateSection(section, payload, item.sourceUrl, identity, read);
+    const decision = verified[0];
+    results.push(decision ? { ...decision, path: item.path, kind: item.kind, value: item.value, sourceUrl: item.sourceUrl } : item);
+  }
+  return results;
+}
+
 /** Includes all accepted IDs, even those with no deep data, with keyset pagination. */
 export async function acceptedIds(): Promise<string[]> {
   const ids: string[] = [];
@@ -186,6 +201,7 @@ export async function acceptedIds(): Promise<string[]> {
 
 export async function buildPlan(read: Reader, options: { batchSize?: number; maxRefillPages?: number;
   snapshots?: StoredSnapshot[];
+  reviewEvent?: EventPlan;
   progress?: (scanned: number, total: number) => void } = {}): Promise<Plan> {
   const ids = options.snapshots ? options.snapshots.map(s => String(s.event.id)) : await acceptedIds();
   const summary: Row = { acceptedScanned: 0, conferencesWithDeepData: 0, itemsScanned: 0,
@@ -241,9 +257,13 @@ export async function buildPlan(read: Reader, options: { batchSize?: number; max
             summary.protected.push({ eventId: event.id, title: event.title, section, table: target.table,
               sourceUrl: target.key, reason: "published_field_ownership_unresolved", decisions: unresolved }); continue;
           }
-          const decisions = await validateSection(section, before, provenance?.source_url || null, identity, cached);
-          const provenanceDecisions = target.table === "discovery_events" && provenance && provenance.value !== before ?
-            await validateSection(section, provenance.value, provenance.source_url, identity, cached) : [];
+          const previous = options.reviewEvent?.changes.find(c => c.table === target.table && c.key === target.key && c.section === section);
+          if (options.reviewEvent && !previous) throw new Error(`Target absent from REVIEW plan: ${event.id}/${section}; create a fresh stored-only plan.`);
+          const decisions = previous ? await verifyReviews(section, previous.decisions, identity, cached) :
+            await validateSection(section, before, provenance?.source_url || null, identity, cached);
+          const provenanceDecisions = previous ? await verifyReviews(section, previous.provenanceDecisions || [], identity, cached) :
+            target.table === "discovery_events" && provenance && provenance.value !== before ?
+              await validateSection(section, provenance.value, provenance.source_url, identity, cached) : [];
           for (const d of [...decisions, ...provenanceDecisions]) {
             summary.itemsScanned++; summary[d.verdict]++; summary.sections[section].scanned++; summary.sections[section][d.verdict]++;
             if (d.verdict !== "KEEP" && summary.representativeRemovals.length < 30) summary.representativeRemovals.push({
