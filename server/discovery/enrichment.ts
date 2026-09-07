@@ -134,6 +134,14 @@ export interface EnrichmentOptions {
   maxDeepPagesPerEvent?: number;
   /** Record, per conference, why deep pages were or were not read. Diagnostic only. */
   trace?: boolean;
+  /**
+   * Visit only records that still have an empty deep section.
+   *
+   * Without it a pass aimed at deep coverage spends its whole budget re-verifying records that
+   * already hold everything their site publishes, which is how customer-visible conferences ended
+   * up at the back of a queue they never reached.
+   */
+  missingDeepSectionsOnly?: boolean;
 }
 
 export interface EnrichmentReport {
@@ -281,9 +289,13 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     const readinessClause = readinessFilter
       ? ` AND e.publish_readiness IN (${readinessFilter.map(() => "?").join(",")})`
       : "";
+    const deepClause = options.missingDeepSectionsOnly
+      ? ` AND (${["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors", "community"]
+          .map((column) => `e.${column} IS NULL OR e.${column} IN ('','[]','{}')`).join(" OR ")})`
+      : "";
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
-      ${readinessClause}
+      ${readinessClause}${deepClause}
       ORDER BY e.last_verified IS NOT NULL, e.last_verified ASC, e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
       [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
     for (const event of rows) {

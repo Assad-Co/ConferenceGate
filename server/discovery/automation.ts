@@ -4,7 +4,9 @@ import { auditPublishReady } from "./controlledPublish";
 import { auditDiscoveredConferences } from "./audit";
 import { reclassifyAllPublishReadiness, runEnrichment } from "./enrichment";
 import { buildInventoryReport, type InventoryReport } from "./inventory";
-import { isPublishEnabled, publishDiscoveredConferences, type PublishResult } from "./publish";
+import {
+  isPublishEnabled, publishDiscoveredConferences, syncPublishedDeepSections, type PublishResult,
+} from "./publish";
 import { runProductionScale } from "./scale";
 
 const LOCK_NAME = "production_data_pipeline";
@@ -23,6 +25,9 @@ export interface AutomationOptions {
   enrichmentJinaPages?: number;
   discoveryTimeBudgetMs?: number;
   enrichmentTimeBudgetMs?: number;
+  /** Bound on the second enrichment pass, the one aimed at published conferences' deep sections. */
+  publishedDeepLimit?: number;
+  publishedDeepTimeBudgetMs?: number;
   leaseMinutes?: number;
   scheduleHours?: number;
   quiet?: boolean;
@@ -220,6 +225,29 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       timeBudgetMs: options.enrichmentTimeBudgetMs ?? 20 * 60_000, quiet: options.quiet,
     });
     enrichmentRunId = enrichment.runId;
+
+    // A second, smaller pass over the conferences customers can actually open.
+    //
+    // The pass above works the needs_enrichment backlog, which is right for growing inventory and
+    // wrong for the detail page: a record becomes publish_ready the moment its title, date, country
+    // and official source verify, and from that moment the backlog pass excluded it forever. The
+    // programme, speakers, committee and sponsors of every published conference were therefore the
+    // one thing the schedule could never reach. This visits only publish_ready records that still
+    // have an empty deep section, so it costs nothing once they are full.
+    await runEnrichment({
+      readiness: ["publish_ready"], missingDeepSectionsOnly: true,
+      limit: options.publishedDeepLimit ?? 60,
+      maxSearchQueries: 0,
+      maxJinaPages: Math.floor((options.enrichmentJinaPages ?? 50) / 2),
+      timeBudgetMs: options.publishedDeepTimeBudgetMs ?? 8 * 60_000,
+      quiet: options.quiet,
+    });
+
+    // Enrichment is what learns a conference's sections, so enrichment is what delivers them to
+    // the page. This fills empty tabs on rows this engine already published; it publishes nothing,
+    // changes no readiness, and leaves the permit, the audit and the eligibility SQL untouched.
+    await syncPublishedDeepSections({ limit: 1_000 });
+
     await dbRun("UPDATE discovery_automation_state SET last_enrichment_at=datetime('now') WHERE id=1");
 
     await setStage(runId, ownerId, "readiness", leaseMinutes);

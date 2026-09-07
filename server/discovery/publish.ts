@@ -222,6 +222,82 @@ async function backfillDeepSections(existing: Record<string, any>, row: Record<s
   return updates.length;
 }
 
+export interface DeepSectionSyncResult {
+  examined: number;
+  updatedRecords: number;
+  sectionsFilled: number;
+  dryRun: boolean;
+  filled: Array<{ sourceUrl: string; sections: string[] }>;
+}
+
+/**
+ * Copies stored deep sections onto the published rows that are still missing them.
+ *
+ * This exists because filling an empty tab was only ever a side effect of `publish`, and `publish`
+ * runs behind the controlled permit AND a fresh passing audit. A conference published in March
+ * whose speakers page was read in September therefore kept four empty tabs until the next
+ * successful publication run — and if the audit failed, indefinitely. Enrichment is what learns
+ * the sections, so enrichment is what should deliver them.
+ *
+ * It publishes nothing. It cannot make a conference visible, cannot change readiness, and touches
+ * no row this engine did not write: the eligibility SQL, the audit and the permit all continue to
+ * govern which conferences exist in `extracted_conferences` at all. The only thing that changes is
+ * whether a tab on an already-visible conference shows what the organiser's own page said.
+ */
+export async function syncPublishedDeepSections(
+  options: { limit?: number; dryRun?: boolean } = {}
+): Promise<DeepSectionSyncResult> {
+  // `extracted_conferences` belongs to the app's own schema, not the discovery engine's, so a
+  // worker that only initialised the discovery tables would fail here rather than report zero.
+  const { dbAll, initDb } = await import("../db");
+  await initDb();
+  const limit = Math.max(1, Math.min(options.limit ?? 500, 5000));
+  const result: DeepSectionSyncResult = {
+    examined: 0, updatedRecords: 0, sectionsFilled: 0, dryRun: !!options.dryRun, filled: [],
+  };
+
+  // Only rows this engine wrote, only where the discovery record actually holds something the
+  // published row does not.
+  const rows = await dbAll<Record<string, any>>(
+    `SELECT ec.source_url, ec.program_agenda, ec.keynote_speakers, ec.technical_committee,
+            ec.sponsors_exhibitors, ec.community, ec.extraction_metadata,
+            e.program_agenda AS e_program_agenda, e.keynote_speakers AS e_keynote_speakers,
+            e.technical_committee AS e_technical_committee,
+            e.sponsors_exhibitors AS e_sponsors_exhibitors, e.community AS e_community
+       FROM extracted_conferences ec
+       JOIN discovery_events e
+         ON e.id = json_extract(ec.extraction_metadata, '$.discovery_event_id')
+      WHERE json_extract(ec.extraction_metadata, '$.origin') = 'discovery_engine'
+      ORDER BY ec.updated_at DESC
+      LIMIT ?`,
+    [limit]
+  );
+
+  for (const row of rows) {
+    result.examined += 1;
+    const stored: Record<string, any> = {};
+    for (const section of DEEP_SECTIONS) {
+      const { column } = DEEP_SECTION_STORAGE[section];
+      stored[column] = row[`e_${column}`];
+    }
+    const sections = DEEP_SECTIONS.filter((section) => {
+      const { column } = DEEP_SECTION_STORAGE[section];
+      return !storedSectionIsEmpty(stored[column]) && storedSectionIsEmpty(row[column]);
+    });
+    if (sections.length === 0) continue;
+    if (!options.dryRun) {
+      const filled = await backfillDeepSections(row, stored);
+      if (filled === 0) continue;
+      result.sectionsFilled += filled;
+    } else {
+      result.sectionsFilled += sections.length;
+    }
+    result.updatedRecords += 1;
+    if (result.filled.length < 20) result.filled.push({ sourceUrl: String(row.source_url), sections: [...sections] });
+  }
+  return result;
+}
+
 export async function publishDiscoveredConferences(options: PublishOptions = {}): Promise<PublishResult> {
   const { dbAll } = await import("../db");
   const statuses = options.statuses ?? ["published", "validated"];

@@ -405,3 +405,85 @@ export function formatDeepCoverageReport(report: DeepCoverageReport): string {
   }
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------------------------
+// Field coverage across the accepted inventory
+//
+// "The detail page is empty" is a claim about nine fields, not five, and the answer differs per
+// field: a description comes from the landing page, fees from /registration, speakers from a
+// subpage that may not exist. Reads stored rows only — no fetching, no provider calls, no writes.
+// ---------------------------------------------------------------------------------------------
+
+export const COVERAGE_FIELDS = [
+  "description", "callForPapers", "fees", "program", "speakers",
+  "committee", "sponsors", "venue", "community",
+] as const;
+export type CoverageField = (typeof COVERAGE_FIELDS)[number];
+
+export interface FieldCoverageReport {
+  scope: "accepted" | "published";
+  records: number;
+  counts: Record<CoverageField, number>;
+  percent: Record<CoverageField, number>;
+  sample: Array<{ id: string; title: string; officialUrl: string | null; present: CoverageField[]; missing: CoverageField[] }>;
+}
+
+const COVERAGE_SQL: Record<CoverageField, string> = {
+  description: "description IS NOT NULL AND description <> ''",
+  callForPapers: "abstract_deadline IS NOT NULL OR paper_submission_deadline IS NOT NULL OR submission_url IS NOT NULL OR notification_date IS NOT NULL OR camera_ready_deadline IS NOT NULL",
+  fees: "registration_url IS NOT NULL OR early_bird_deadline IS NOT NULL OR price IS NOT NULL",
+  program: "program_agenda IS NOT NULL AND program_agenda NOT IN ('','[]','{}')",
+  speakers: "keynote_speakers IS NOT NULL AND keynote_speakers NOT IN ('','[]','{}')",
+  committee: "technical_committee IS NOT NULL AND technical_committee NOT IN ('','[]','{}')",
+  sponsors: "sponsors_exhibitors IS NOT NULL AND sponsors_exhibitors NOT IN ('','[]','{}')",
+  venue: "venue IS NOT NULL OR venue_address IS NOT NULL",
+  community: "community IS NOT NULL AND community NOT IN ('','[]','{}')",
+};
+
+export async function buildFieldCoverageReport(
+  options: { sample?: number; scope?: "accepted" | "published" } = {}
+): Promise<FieldCoverageReport> {
+  const { dbAll, dbGet } = await import("../db");
+  const scope = options.scope ?? "accepted";
+  const where = scope === "published"
+    ? "status='published' AND publish_readiness='publish_ready'"
+    : "status IN ('validated','published','needs_review')";
+  const sampleSize = Math.max(1, Math.min(options.sample ?? 20, 200));
+
+  const totals = await dbGet<Record<string, number>>(
+    `SELECT COUNT(*) total, ${COVERAGE_FIELDS.map((field) => `SUM(${COVERAGE_SQL[field]}) ${field}`).join(", ")}
+       FROM discovery_events WHERE ${where}`);
+  const records = Number(totals?.total || 0);
+  const counts = Object.fromEntries(
+    COVERAGE_FIELDS.map((field) => [field, Number(totals?.[field] || 0)])) as Record<CoverageField, number>;
+  const percent = Object.fromEntries(COVERAGE_FIELDS.map((field) =>
+    [field, records ? Number(((100 * counts[field]) / records).toFixed(1)) : 0])) as Record<CoverageField, number>;
+
+  const rows = await dbAll<Record<string, any>>(
+    `SELECT id, title, official_url, ${COVERAGE_FIELDS.map((field) => `(${COVERAGE_SQL[field]}) AS has_${field}`).join(", ")}
+       FROM discovery_events WHERE ${where} ORDER BY last_verified DESC, id LIMIT ?`, [sampleSize]);
+
+  return {
+    scope, records, counts, percent,
+    sample: rows.map((row) => ({
+      id: String(row.id), title: String(row.title), officialUrl: row.official_url ? String(row.official_url) : null,
+      present: COVERAGE_FIELDS.filter((field) => Number(row[`has_${field}`]) === 1),
+      missing: COVERAGE_FIELDS.filter((field) => Number(row[`has_${field}`]) !== 1),
+    })),
+  };
+}
+
+export function formatFieldCoverageReport(report: FieldCoverageReport): string {
+  const lines = [`Field coverage across ${report.records} ${report.scope} conferences`, ""];
+  for (const field of COVERAGE_FIELDS) {
+    lines.push(`  ${field.padEnd(14)} ${String(report.counts[field]).padStart(5)}  ${String(report.percent[field]).padStart(5)}%`);
+  }
+  lines.push("", `Sample of ${report.sample.length}:`);
+  for (const record of report.sample) {
+    lines.push(`  ${record.title.slice(0, 70)}`);
+    lines.push(`    ${record.officialUrl || "(no official URL)"}`);
+    lines.push(`    has: ${record.present.join(", ") || "(nothing)"}`);
+    lines.push(`    missing: ${record.missing.join(", ") || "(nothing)"}`);
+  }
+  return lines.join("\n");
+}

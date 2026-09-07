@@ -27,12 +27,14 @@ import { computeMetrics } from "./metrics";
 import { buildInventoryReport } from "./inventory";
 import { runDiscovery } from "./pipeline";
 import { providerStatus } from "./providers";
-import { isPublishEnabled, publishDiscoveredConferences } from "./publish";
+import { isPublishEnabled, publishDiscoveredConferences, syncPublishedDeepSections } from "./publish";
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
 import { runProductionAutomation, withPipelineLease } from "./automation";
-import { buildDeepCoverageReport, formatDeepCoverageReport } from "./deepEnrichment";
+import {
+  buildDeepCoverageReport, buildFieldCoverageReport, formatDeepCoverageReport, formatFieldCoverageReport,
+} from "./deepEnrichment";
 import { DEEP_SECTIONS } from "./deepSections";
 import { buildOperationalStatus } from "./operations";
 import { runUrlRemediation } from "./urlRemediation";
@@ -93,7 +95,7 @@ const HELP = `Conference Gate — discovery engine
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
   enrich   [--limit 500] [--max-search-queries 500] [--max-jina-pages 200]
-           [--max-deep-pages 4] [--readiness publish_ready] [--trace]
+           [--max-deep-pages 4] [--readiness publish_ready] [--missing-deep-only] [--trace]
            [--time-budget-ms 1800000] [--allow-local-db] [--quiet]
                             Verify accepted records against first-party pages, preserve field
                             provenance/history, enrich supported fields and classify publication
@@ -133,6 +135,13 @@ const HELP = `Conference Gate — discovery engine
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
+  field-coverage [--sample 20] [--published]
+                            Percentage of accepted (or published) conferences holding each of the
+                            nine detail fields, plus a per-conference sample of what is present and
+                            what is missing. Stored rows only: no fetching, no writes.
+  sync-deep-tabs [--dry-run] [--limit 500]
+                            Copy stored deep sections onto published rows still missing them.
+                            Publishes nothing and touches no record this engine did not write.
   deep-coverage [--limit 20] [--section speakers]
                             Which accepted conferences hold programme, speaker, committee, sponsor
                             and community data, and which page of the organiser's site stated each.
@@ -259,6 +268,7 @@ async function main(): Promise<void> {
         maxSearchQueries: numberFlag(flags["max-search-queries"], 500),
         maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
         maxDeepPagesPerEvent: Number(flags["max-deep-pages"] ?? 4),
+        missingDeepSectionsOnly: flags["missing-deep-only"] === true,
         // Records are otherwise taken least-recently-verified first, which is the right order for
         // working a backlog and the wrong one for a sample: those records are precisely the ones
         // with no authoritative page yet, so a five-record sample can legitimately read nothing.
@@ -519,6 +529,22 @@ async function main(): Promise<void> {
         enrichmentTimeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 20 * 60_000),
         scheduleHours: numberFlag(flags["schedule-hours"], 8),
         quiet: flags.quiet === true,
+      });
+      console.log(JSON.stringify(result, null, 2));
+      break;
+    }
+
+    case "field-coverage": {
+      console.log(formatFieldCoverageReport(await buildFieldCoverageReport({
+        sample: numberFlag(flags.sample, 20),
+        scope: flags.published === true ? "published" : "accepted",
+      })));
+      break;
+    }
+
+    case "sync-deep-tabs": {
+      const result = await syncPublishedDeepSections({
+        limit: numberFlag(flags.limit, 500), dryRun: flags["dry-run"] === true,
       });
       console.log(JSON.stringify(result, null, 2));
       break;
