@@ -1,12 +1,42 @@
 #!/usr/bin/env node
 import "../env";
 import fs from "node:fs";
+import path from "node:path";
 import { closeDb } from "../db";
 import { buildPlan, digest, type Plan, type Reader } from "./deepRevalidation";
 import { applyPlan, restoreRun } from "./deepCleanupStore";
 import { fetchRobots, isPathAllowed } from "./robots";
 import { readPage, newReadBudget } from "./readPage";
 import { isSafeExternalUrl } from "../urlSafety";
+
+function printDryRunSummary(plan: Plan, outputPath: string): void {
+  const summary = plan.summary;
+  const reasons = new Map<string, number>();
+  for (const event of plan.events) for (const change of event.changes) {
+    for (const decision of [...change.decisions, ...(change.provenanceDecisions || [])]) {
+      if (decision.verdict !== "KEEP") reasons.set(decision.reason, (reasons.get(decision.reason) || 0) + 1);
+    }
+  }
+  console.log([
+    "Deep-section dry-run complete",
+    `Accepted conferences scanned: ${summary.acceptedScanned}`,
+    `Conferences containing deep data: ${summary.conferencesWithDeepData}`,
+    `Items scanned: ${summary.itemsScanned}`,
+    `KEEP: ${summary.KEEP}`, `REMOVE: ${summary.REMOVE}`, `REVIEW: ${summary.REVIEW}`,
+    "Counts by section:",
+    ...Object.entries(summary.sections).map(([section, counts]: [string, any]) =>
+      `  ${section}: scanned=${counts.scanned} KEEP=${counts.KEEP} REMOVE=${counts.REMOVE} REVIEW=${counts.REVIEW}`),
+    `Affected conferences: ${summary.affectedConferences}`,
+    `Protected ownership exceptions: ${summary.protected.length}`,
+    "Removal reasons:",
+    ...(reasons.size ? [...reasons].sort(([a], [b]) => a.localeCompare(b)).map(([reason, count]) => `  ${reason}: ${count}`) : ["  None"]),
+    `Output plan path: ${outputPath}`,
+    `SHA-256: ${digest(plan)}`,
+    `Proposed run ID: deep_${digest(plan).slice(0, 24)}`,
+    "AI calls: 0",
+    "PRODUCTION ROWS MODIFIED: 0",
+  ].join("\n"));
+}
 
 // These readers have no database writes, no paid fallback, and no AI route.
 export function cleanupReader(): Reader {
@@ -44,10 +74,12 @@ async function main(): Promise<void> {
   if (!process.env.TURSO_DATABASE_URL && process.env.NODE_ENV !== "test") throw new Error("TURSO_DATABASE_URL is required; refusing an ephemeral Render database.");
   if (mode === "dry-run") {
     if (!flags.out) throw new Error("--out is required.");
+    const outputPath = path.resolve(flags.out);
+    console.log(`Starting deep-section dry-run. Scanning accepted inventory; output: ${outputPath}`);
     const plan = await buildPlan(cleanupReader(), { batchSize: number("batch-size", 50), maxRefillPages: number("refill-pages", 4, 0),
-      progress: (n, total) => { if (n % 10 === 0) console.error(`Scanned ${n}/${total} accepted conferences`); } });
-    fs.writeFileSync(flags.out, JSON.stringify(plan, null, 2), { flag: "wx" });
-    console.log(JSON.stringify({ ...plan.summary, plan: flags.out, sha256: digest(plan), proposedRunId: `deep_${digest(plan).slice(0, 24)}`, databaseWrites: 0 }, null, 2));
+      progress: (n, total) => { if (n === 1 || n % 10 === 0 || n === total) console.error(`Scanned ${n}/${total} accepted conferences`); } });
+    fs.writeFileSync(outputPath, JSON.stringify(plan, null, 2), { flag: "wx" });
+    printDryRunSummary(plan, outputPath);
   } else if (mode === "write") {
     if (!flags.plan || !flags.approve) throw new Error("--plan and --approve are required after dry-run review.");
     const plan = JSON.parse(fs.readFileSync(flags.plan, "utf8")) as Plan;
@@ -58,4 +90,22 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(await restoreRun(flags.run, { maxEvents: number("max-events", Number.MAX_SAFE_INTEGER) }), null, 2));
   }
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(closeDb);
+// A floating main().catch() is insufficient: a pending promise alone does not keep Node alive.
+// Keep a referenced handle for the entire command (including file writing), and await its
+// completion explicitly. Fail closed until the command and database close have both succeeded.
+process.exitCode = 1;
+const keepAlive = setInterval(() => console.error("Deep-section command is still running; waiting for completion."), 15000);
+let succeeded = false;
+try {
+  await main();
+  succeeded = true;
+} catch (error) {
+  console.error("Deep-section command failed:", error instanceof Error ? error.stack || error.message : error);
+} finally {
+  clearInterval(keepAlive);
+  try { closeDb(); } catch (error) {
+    succeeded = false;
+    console.error("Database close failed:", error);
+  }
+  process.exitCode = succeeded ? 0 : 1;
+}
