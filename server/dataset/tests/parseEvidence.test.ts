@@ -181,3 +181,44 @@ test("a month-only date keeps its precision rather than inventing a day", () => 
   assert.equal(outcome.record.startDate, null);
   assert.equal(outcome.record.year, 2028);
 });
+
+test("segment zero is the conference's name, never its city", () => {
+  // "California, United States" states a state and a country and no city at all. Filling the city
+  // with the conference's own title is worse than leaving it empty.
+  const outcome = parseHarvestEvidence(
+    evidence({ stated: "ICLR 2027 International Conference on Learning Representations, California, United States, April 26-30, 2027" }),
+    OPTIONS
+  );
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.city, null);
+  assert.equal(outcome.record.region, "California");
+  assert.equal(outcome.record.country, "United States");
+  assert.equal(outcome.record.title, "ICLR 2027 International Conference on Learning Representations");
+});
+
+test("a building named where the city would be is recorded as the venue, not the city", () => {
+  const outcome = parseHarvestEvidence(
+    evidence({ stated: "CIF International Conference 2027, European University Cyprus, Cyprus, October 27-31, 2027" }),
+    OPTIONS
+  );
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.venue, "European University Cyprus");
+  assert.equal(outcome.record.city, null);
+  assert.equal(outcome.record.country, "Cyprus");
+});
+
+test("a name that opens with an edition ordinal is not mistaken for a venue", () => {
+  // "4th Honolulu Education Conference" mentions the city, which is otherwise a venue signal.
+  const outcome = parseHarvestEvidence(
+    evidence({ stated: "HEC 2027, 4th Honolulu Education Conference, Honolulu, Hawaii, USA, March 10-12, 2027" }),
+    OPTIONS
+  );
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.title, "HEC 2027, 4th Honolulu Education Conference");
+  assert.equal(outcome.record.venue, null);
+  assert.equal(outcome.record.city, "Honolulu");
+  assert.equal(outcome.record.region, "Hawaii");
+});

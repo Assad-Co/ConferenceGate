@@ -103,14 +103,18 @@ function isSubdivision(segment: string): boolean {
  *  because "Geophysics and Geochemistry" is the second half of a conference's name, not a building.
  */
 function looksLikeVenue(segment: string, city: string | null): boolean {
+  // A segment that opens with an edition ordinal, or closes with the word for a kind of event, is
+  // the conference's own name: "4th Honolulu Education Conference" is not a building. Checked
+  // before the venue vocabulary, because such a name can still mention a hall or a university.
+  if (/^\d{1,3}(st|nd|rd|th)\b/i.test(segment)) return false;
+  if (/\b(conference|congress|symposium|summit|meeting|workshop|expo|exhibition|convention|forum|school|session)$/i.test(segment)) {
+    return false;
+  }
   if (VENUE_TERMS.test(segment)) return true;
   // "Helsinki Congress Paasitorni, Helsinki, Finland": a segment that repeats the city right after
   // it is naming a building in that city, whatever words it uses.
   if (city && city.length > 3 && new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(segment)) return true;
   if (/\b(and|&|on|of|for|in)\b/i.test(segment)) return false;
-  if (/\b(conference|congress|symposium|summit|meeting|workshop|expo|exhibition|convention|forum|school|session)\b/i.test(segment)) {
-    return false;
-  }
   const words = segment.split(/\s+/);
   if (words.length > 5) return false;
   return /^[A-Z0-9]/.test(segment);
@@ -272,6 +276,10 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
   let city: string | null = null;
   let region: string | null = null;
   let venue: string | null = null;
+  // The other names for the same country. A reader searching "USA" or "UK" is naming the country
+  // this record already resolved, so those spellings belong in the record's keywords rather than
+  // being a miss.
+  let countryAliases: string[] = [];
   let titleEnd = segments.length;
 
   if (countryIndex >= 0) {
@@ -279,17 +287,34 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
     country = match.name;
     countryCode = match.iso2;
     worldRegion = match.region;
+    countryAliases = [match.iso2, match.iso3, ...match.aliases];
 
     let cursor = countryIndex - 1;
     if (cursor >= 0 && isSubdivision(segments[cursor])) {
       region = segments[cursor];
       cursor -= 1;
     }
-    if (cursor >= 0) {
-      city = segments[cursor];
-      cursor -= 1;
-    }
+    // Segment 0 is always the conference's name, never its city: "ICLR 2027 International
+    // Conference on Learning Representations, California, United States" states a state and a
+    // country and no city at all, and filling the city with the title would be worse than leaving
+    // it empty.
     const venueParts: string[] = [];
+    if (cursor >= 1) {
+      // The segment before the country is usually the city, but sometimes the organiser named only
+      // the building ("European University Cyprus, Cyprus"). Where that is all there is, it is
+      // recorded as the venue and the city stays unknown.
+      if (looksLikeVenue(segments[cursor], null) && VENUE_TERMS.test(segments[cursor])) {
+        venueParts.unshift(segments[cursor]);
+        cursor -= 1;
+        if (cursor >= 1) {
+          city = segments[cursor];
+          cursor -= 1;
+        }
+      } else {
+        city = segments[cursor];
+        cursor -= 1;
+      }
+    }
     while (cursor >= 1 && looksLikeVenue(segments[cursor], city)) {
       venueParts.unshift(segments[cursor]);
       cursor -= 1;
@@ -304,6 +329,7 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
       country = inText.name;
       countryCode = inText.iso2;
       worldRegion = inText.region;
+      countryAliases = [inText.iso2, inText.iso3, ...inText.aliases];
     }
     const dateIndex = segments.findIndex((segment) => YEAR_RE.test(segment) && parseDateRange(segment).startYear);
     titleEnd = dateIndex > 0 ? dateIndex : Math.min(1, segments.length);
@@ -329,7 +355,7 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
 
   const topics = [...new Set([...categoryResults.flatMap((result) => result.evidence), ...topicsFromTitle(title)])].slice(0, 16);
   const keywords = [...new Set(
-    [acronym, evidence.org, city, region, country, worldRegion, String(dates.startYear), category]
+    [acronym, evidence.org, city, region, country, ...countryAliases, worldRegion, String(dates.startYear), category]
       .filter((value): value is string => Boolean(value && value.trim()))
   )];
 

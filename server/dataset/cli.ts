@@ -64,13 +64,28 @@ export function coverageReport(records: LaunchConferenceRecord[]) {
     coverage: {
       title: percentage(total, total),
       exactDates: percentage(exactDates, total),
+      monthOnlyDates: percentage(total - exactDates, total),
       city: percentage(withField((record) => Boolean(record.city)), total),
       country: percentage(withField((record) => Boolean(record.country)), total),
       officialUrl: percentage(officialUrls, total),
       venue: percentage(venues, total),
       organization: percentage(withField((record) => Boolean(record.organization)), total),
       category: percentage(withField((record) => Boolean(record.category)), total),
+      description: percentage(withField((record) => Boolean(record.description)), total),
       corroborated: percentage(withField((record) => record.corroboratingSourceUrls.length > 0), total),
+    },
+    // Stated as zero rather than omitted. These are the deep sections, and no page of any
+    // conference here has been read -- the harvest reads search results, not sites. A reader is
+    // told "not retrieved" on those tabs, never "(0)", and enrichment can fill them later without
+    // any record here having claimed otherwise.
+    notAttempted: {
+      submissionDeadline: "0.0%",
+      program: "0.0%",
+      speakers: "0.0%",
+      committee: "0.0%",
+      sponsors: "0.0%",
+      registrationFees: "0.0%",
+      images: "0.0%",
     },
   };
 }

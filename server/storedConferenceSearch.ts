@@ -58,10 +58,30 @@ function queryTokens(query: string): string[] {
   ))];
 }
 
+/** Cache of the word-start matchers, since one search runs the same tokens over every record. */
+const TOKEN_MATCHERS = new Map<string, RegExp>();
+
+function wordStartMatcher(token: string): RegExp {
+  let matcher = TOKEN_MATCHERS.get(token);
+  if (!matcher) {
+    matcher = new RegExp(`(?:^|[^a-z0-9])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+    TOKEN_MATCHERS.set(token, matcher);
+  }
+  return matcher;
+}
+
+/**
+ * A token matches where a word starts with it.
+ *
+ * Not a plain substring test: "EAGE" was matching a record whose only "eage" was the middle of
+ * spac-eage-nda.com, and a reader searching for a society does not expect somebody else's hostname.
+ * Not a whole-word test either, because matching the start of a word is what lets "geochem" find
+ * geochemistry and "robot" find robotics without a stemmer.
+ */
 function tokenMatches(text: string, token: string): boolean {
   if (token === "ai") return /\bai\b|artificial intelligence|machine learning/.test(text);
   if (token === "medical") return /\bmedical\b|\bmedicine\b|\bhealth(?:care)?\b|\bclinical\b/.test(text);
-  return text.includes(token);
+  return wordStartMatcher(token).test(text);
 }
 
 /** Returns null when the stored record does not satisfy every meaningful query token. Higher

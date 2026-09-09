@@ -1,51 +1,62 @@
 {
-  "generatedAt": "2026-09-09T16:39:18.686Z",
+  "generatedAt": "2026-09-09T16:48:48.645Z",
   "horizonStart": "2026-09-09",
-  "evidenceRows": 263,
-  "accepted": 257,
+  "evidenceRows": 325,
+  "accepted": 319,
   "duplicatesMerged": 1,
   "rejected": 5,
   "rejectionReasons": {
     "already_finished": 3,
     "no_location": 2
   },
-  "total": 257,
+  "total": 319,
   "byYear": {
     "2026": 9,
-    "2027": 234,
+    "2027": 296,
     "2028": 14
   },
-  "countries": 38,
-  "cities": 111,
-  "categories": 29,
+  "countries": 45,
+  "cities": 133,
+  "categories": 31,
   "worldRegions": {
-    "North America": 109,
-    "Europe": 80,
-    "Asia": 45,
-    "Middle East": 11,
+    "North America": 136,
+    "Europe": 108,
+    "Asia": 50,
+    "Middle East": 12,
+    "Oceania": 5,
     "South America": 5,
-    "Oceania": 4,
     "Africa": 3
   },
   "formats": {
-    "in-person": 247,
-    "hybrid": 10
+    "in-person": 305,
+    "hybrid": 14
   },
   "sourceTypes": {
-    "official_site": 226,
-    "directory_listing": 28,
-    "reference": 3
+    "official_site": 276,
+    "directory_listing": 39,
+    "reference": 4
   },
   "coverage": {
     "title": "100.0%",
     "exactDates": "96.9%",
-    "city": "100.0%",
+    "monthOnlyDates": "3.1%",
+    "city": "99.4%",
     "country": "100.0%",
-    "officialUrl": "87.9%",
-    "venue": "29.6%",
-    "organization": "43.6%",
-    "category": "63.4%",
-    "corroborated": "0.4%"
+    "officialUrl": "86.5%",
+    "venue": "29.2%",
+    "organization": "40.8%",
+    "category": "57.4%",
+    "description": "100.0%",
+    "corroborated": "0.3%"
+  },
+  "notAttempted": {
+    "submissionDeadline": "0.0%",
+    "program": "0.0%",
+    "speakers": "0.0%",
+    "committee": "0.0%",
+    "sponsors": "0.0%",
+    "registrationFees": "0.0%",
+    "images": "0.0%"
   },
   "rejections": [
     {

@@ -30,6 +30,9 @@ const FIXTURE_EVIDENCE: HarvestEvidence[] = [
   row("https://www.wicys.org/event/wicys-2027-annual-conference/", "WiCyS 2027 Annual Conference, Women in Cybersecurity, Aurora, Colorado, USA, March 17-19, 2027", "WiCyS"),
   row("https://onegiantleap.com/", "LEAP 2027 Tech Conference, Riyadh, Saudi Arabia, April 12-15, 2027"),
   row("https://miccai.org/2028", "MICCAI 2028 International Conference on Medical Image Computing, Sao Paulo, Brazil, October 16-20, 2028"),
+  // Its source host contains "eage" in the middle of a word, which a substring matcher treated as
+  // a hit for the society of that name.
+  row("https://www.spaceagenda.com/event/smallsat-2027/", "SmallSat 2027, 41st Annual AIAA/USU Conference on Small Satellites, Logan, Utah, USA, August 15-18, 2027"),
 ];
 
 /** Writes the fixture dataset where the reader looks, and points the reader at it. */
@@ -158,4 +161,14 @@ test("a missing dataset degrades to no records rather than throwing", () => {
     else process.env.LAUNCH_DATASET_DIR = previous;
     resetLaunchDatasetCache();
   }
+});
+
+test("an acronym matches where a word starts with it, not inside somebody else's hostname", () => {
+  // "EAGE" used to return a small-satellite conference, whose only "eage" was the middle of
+  // spac-eage-nda.com. A reader searching for a society does not expect that.
+  withFixtureDataset(() => {
+    const results = searchLaunchDataset("EAGE");
+    assert.equal(results.length, 1);
+    assert.ok(results[0].title.includes("EAGE"));
+  });
 });
