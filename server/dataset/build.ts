@@ -13,12 +13,13 @@ import type {
   LaunchSearchIndexEntry,
   LaunchSourceType,
 } from "./types";
-import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions } from "./parseEvidence";
+import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions, type ParseOutcome } from "./parseEvidence";
 import { flattenStoredConferenceText } from "../storedConferenceSearch";
 
 /** Strength order used when two sources describe one conference. */
 const SOURCE_RANK: Record<LaunchSourceType, number> = {
-  official_site: 3,
+  official_site: 4,
+  event_api: 3,
   third_party: 2,
   reference: 1,
   directory_listing: 0,
@@ -151,7 +152,27 @@ export function buildSearchIndexEntry(record: LaunchConferenceRecord): LaunchSea
   };
 }
 
-export function buildLaunchDataset(evidence: HarvestEvidence[], options: ParseOptions): BuildResult {
+/** One already-structured outcome from an API source, with the context needed to report a refusal
+ *  as legibly as a text one. */
+export interface StructuredOutcome {
+  outcome: ParseOutcome;
+  sourceUrl: string;
+  statedText: string;
+}
+
+/**
+ * Builds the dataset from harvested text evidence and, optionally, from API sources that already
+ * produced structured records.
+ *
+ * Both streams meet here on purpose. An API record skips the text parser — its start date was
+ * already a date — but it goes through the same date-window rules upstream and the same
+ * deduplication, ranking and ordering below, so the catalogue has one set of rules and not two.
+ */
+export function buildLaunchDataset(
+  evidence: HarvestEvidence[],
+  options: ParseOptions,
+  structured: StructuredOutcome[] = []
+): BuildResult {
   const rejections: LaunchRejection[] = [];
   const parsed: LaunchConferenceRecord[] = [];
 
@@ -162,6 +183,14 @@ export function buildLaunchDataset(evidence: HarvestEvidence[], options: ParseOp
       continue;
     }
     parsed.push({ ...outcome.record, corroboratingSourceUrls: [] });
+  }
+
+  for (const item of structured) {
+    if (item.outcome.ok === false) {
+      rejections.push({ reason: item.outcome.reason, sourceUrl: item.sourceUrl, statedText: item.statedText });
+      continue;
+    }
+    parsed.push({ ...item.outcome.record, corroboratingSourceUrls: [] });
   }
 
   // Strongest sources first, so a merge keeps the organiser's own wording and a directory only ever

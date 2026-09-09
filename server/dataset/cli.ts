@@ -6,9 +6,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { buildLaunchDataset, toCsv } from "./build";
-import type { HarvestEvidence } from "./parseEvidence";
+import { buildLaunchDataset, toCsv, type StructuredOutcome } from "./build";
+import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
+import { mapPredictHqEvent } from "./sources/predicthq";
+import { readPredictHqCache, readResolvedUrls } from "./ingest";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const HARVEST_DIR = path.join(DATA_DIR, "harvest");
@@ -31,6 +33,32 @@ export function readHarvest(dir = HARVEST_DIR): HarvestEvidence[] {
     }
   }
   return evidence;
+}
+
+/**
+ * The cached PredictHQ events, mapped to records.
+ *
+ * An event with no resolvable website is refused rather than published: a reader has to be able to
+ * open the conference. Those refusals are counted in the report like any other, so "how many events
+ * are waiting on a URL" is a number somebody can read rather than a silent gap.
+ */
+export function structuredFromPredictHq(options: ParseOptions): StructuredOutcome[] {
+  const cache = readPredictHqCache();
+  if (!cache) return [];
+  const resolved = readResolvedUrls();
+
+  return cache.events.map((event) => {
+    const eventId = event.id || "";
+    const officialUrl = resolved.urls[eventId]?.url ?? null;
+    const outcome = mapPredictHqEvent(event, { ...options, officialUrl });
+    return {
+      outcome,
+      sourceUrl: officialUrl || `predicthq:${eventId || "unknown"}`,
+      statedText: [event.title, event.geo?.address?.locality, event.country, event.start_local || event.start]
+        .filter(Boolean)
+        .join(", "),
+    };
+  });
 }
 
 function percentage(count: number, total: number): string {
@@ -94,11 +122,9 @@ function main(): void {
   const evidence = readHarvest();
   const now = new Date();
   const horizonStart = now.toISOString().slice(0, 10);
-  const result = buildLaunchDataset(evidence, {
-    retrievedAt: horizonStart,
-    horizonStart,
-    years: [2026, 2027, 2028],
-  });
+  const options = { retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028] };
+  const structured = structuredFromPredictHq(options);
+  const result = buildLaunchDataset(evidence, options, structured);
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(DATASET_JSON, JSON.stringify(result.dataset, null, 2) + "\n");
@@ -109,6 +135,7 @@ function main(): void {
     generatedAt: result.dataset.generatedAt,
     horizonStart,
     evidenceRows: evidence.length,
+    apiEventRows: structured.length,
     accepted: result.dataset.records.length,
     duplicatesMerged: result.duplicatesMerged,
     rejected: result.rejections.length,

@@ -14,7 +14,11 @@ export type LaunchSourceType =
   /** An encyclopaedia or reference work. Real, but not the organiser speaking. */
   | "reference"
   /** Trade press, a university page, a partner announcement — third-party but not a directory. */
-  | "third_party";
+  | "third_party"
+  /** A structured events API that aggregates and verifies event data (PredictHQ). Stronger than a
+   *  listing because the fields are stated rather than parsed out of prose, weaker than the
+   *  organiser's own site because it is still somebody reporting on the event. */
+  | "event_api";
 
 export type LaunchFormat = "in-person" | "hybrid" | "online";
 
@@ -40,8 +44,12 @@ export interface LaunchEvidence {
   statedText: string;
   /** When this was read. */
   retrievedAt: string;
-  /** Always "web_search": no page was fetched, so nothing here may claim to be a site read. */
-  method: "web_search";
+  /** How the facts reached us. Never "site read" — no page of any conference is fetched by any of
+   *  these paths, and the detail page depends on that being visible. */
+  method: "web_search" | "event_api" | "scholarly_api";
+  /** The upstream record's own identifier, when the source has one. Lets a later run recognise the
+   *  same event rather than re-deriving it from the title. */
+  externalId?: string | null;
 }
 
 export interface LaunchConferenceRecord {

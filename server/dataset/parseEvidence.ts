@@ -202,7 +202,7 @@ export function seriesName(title: string, acronym: string | null): string | null
   return stripped || acronym || null;
 }
 
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return value
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
@@ -220,13 +220,39 @@ const TOPIC_STOP_WORDS = new Set([
 ]);
 
 /** Subject words the title itself used. Nothing is inferred — a topic must appear in the text. */
-function topicsFromTitle(title: string): string[] {
+export function topicsFromTitle(title: string): string[] {
   const words = title
     .toLowerCase()
     .replace(/[^a-z0-9\s&-]/g, " ")
     .split(/\s+/)
     .filter((word) => word.length > 3 && !TOPIC_STOP_WORDS.has(word) && !/^\d+$/.test(word));
   return [...new Set(words)].slice(0, 12);
+}
+
+/**
+ * The date window every record has to satisfy, whoever supplied it.
+ *
+ * Exported so an API source runs exactly these checks rather than a second set that drifts: a year
+ * outside the dataset, a date nobody stated to better than a year, and a conference that has
+ * already finished are refused identically whether the dates came from a sentence or from JSON.
+ *
+ * Returns the refusal reason, or null when the dates are acceptable.
+ */
+export function refuseByDateWindow(
+  dates: { startDate: string | null; endDate: string | null; startYear: number | null; startMonth: number | null; precision: string | null },
+  options: ParseOptions
+): string | null {
+  if (!dates.startYear) return "no_date";
+  if (!options.years.includes(dates.startYear)) return `year_out_of_range:${dates.startYear}`;
+  if (dates.precision !== "day" && dates.precision !== "month") return "date_precision_too_coarse";
+
+  const lastDay = dates.endDate || dates.startDate;
+  if (lastDay && lastDay < options.horizonStart) return "already_finished";
+  if (!lastDay && dates.startYear && dates.startMonth) {
+    const monthEnd = `${dates.startYear}-${String(dates.startMonth).padStart(2, "0")}-28`;
+    if (monthEnd < options.horizonStart) return "already_finished";
+  }
+  return null;
 }
 
 export interface ParseOptions {
@@ -246,18 +272,10 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
   if (!host) return { ok: false, reason: "unparseable_source_url" };
 
   const dates = parseDateRange(stated);
-  if (!dates.startYear) return { ok: false, reason: "no_date" };
-  if (!options.years.includes(dates.startYear)) return { ok: false, reason: `year_out_of_range:${dates.startYear}` };
-  if (dates.precision !== "day" && dates.precision !== "month") return { ok: false, reason: "date_precision_too_coarse" };
-
-  // A finished conference is not launch inventory. Month-precision records are kept when the month
-  // has not ended, since the source never claimed a day.
-  const lastDay = dates.endDate || dates.startDate;
-  if (lastDay && lastDay < options.horizonStart) return { ok: false, reason: "already_finished" };
-  if (!lastDay && dates.startYear && dates.startMonth) {
-    const monthEnd = `${dates.startYear}-${String(dates.startMonth).padStart(2, "0")}-28`;
-    if (monthEnd < options.horizonStart) return { ok: false, reason: "already_finished" };
-  }
+  // A finished conference is not launch inventory, and a date nobody stated to better than a year
+  // is not a date. Both refusals live in refuseByDateWindow so an API source applies the same ones.
+  const dateRefusal = refuseByDateWindow(dates, options);
+  if (dateRefusal) return { ok: false, reason: dateRefusal };
 
   const segments = splitSegments(stated);
   if (segments.length === 0) return { ok: false, reason: "empty_statement" };
