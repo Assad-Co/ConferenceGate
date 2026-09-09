@@ -15,6 +15,7 @@
 
 import { classifyCategories, primaryCategory } from "../../discovery/categories";
 import { normalizeCountry } from "../../discovery/countries";
+import { isDirectoryHost, isReferenceHost, isSocialHost } from "../../directoryHosts";
 import {
   classifySource,
   refuseByDateWindow,
@@ -186,10 +187,15 @@ const CONFERENCE_VOCABULARY =
  * ADIPEC, GITEX and LEAP, whose names say nothing about what they are. The size test alone would
  * accept any large gathering. So: a title that names itself a conference, OR an event big enough
  * that nothing else it could be would draw that crowd.
+ *
+ * The bypass is set high because PredictHQ's attendance figures are bucketed rather than measured:
+ * a live run returned 3000, 4000 and 5000 over and over, so a low threshold admits everything and
+ * decides nothing. At ten thousand it only excuses events that really are enormous, and a Harvard
+ * short course billed at "3000" has to earn its place on its name instead — which it cannot.
  */
 export function looksLikeConference(
   event: PredictHqEvent,
-  highAttendanceBypass = 2000
+  highAttendanceBypass = 10000
 ): boolean {
   if (CONFERENCE_VOCABULARY.test(event.title || "")) return true;
   return (Number(event.phq_attendance) || 0) >= highAttendanceBypass;
@@ -246,6 +252,12 @@ export function mapPredictHqEvent(event: PredictHqEvent, options: PredictHqMapOp
     host = new URL(officialUrl).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return { ok: false, reason: "unparseable_source_url" };
+  }
+  // A directory, an encyclopaedia or a social post cannot be a conference's own website, so a
+  // record pointing at one has nothing a reader can open. Refused rather than merely downgraded:
+  // the link is the record's only route to the conference.
+  if (isDirectoryHost(host) || isReferenceHost(host) || isSocialHost(host)) {
+    return { ok: false, reason: "source_url_is_a_listing" };
   }
 
   const { acronym, edition } = splitTitleParts(title);

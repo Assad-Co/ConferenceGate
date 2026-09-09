@@ -1,52 +1,54 @@
 {
-  "generatedAt": "2026-09-09T17:22:51.605Z",
+  "generatedAt": "2026-09-09T18:14:16.569Z",
   "horizonStart": "2026-09-09",
   "evidenceRows": 325,
-  "apiEventRows": 0,
-  "accepted": 319,
+  "apiEventRows": 55,
+  "accepted": 345,
   "duplicatesMerged": 1,
-  "rejected": 5,
+  "rejected": 34,
   "rejectionReasons": {
+    "not_a_conference": 28,
     "already_finished": 3,
-    "no_location": 2
+    "no_location": 2,
+    "source_url_is_a_listing": 1
   },
-  "total": 319,
+  "total": 345,
   "byYear": {
-    "2026": 9,
+    "2026": 35,
     "2027": 296,
     "2028": 14
   },
-  "countries": 45,
-  "cities": 133,
+  "countries": 46,
+  "cities": 142,
   "categories": 31,
   "worldRegions": {
-    "North America": 136,
-    "Europe": 108,
-    "Asia": 50,
-    "Middle East": 12,
+    "North America": 151,
+    "Europe": 110,
+    "Asia": 57,
+    "Middle East": 14,
     "Oceania": 5,
     "South America": 5,
     "Africa": 3
   },
   "formats": {
-    "in-person": 305,
+    "in-person": 331,
     "hybrid": 14
   },
   "sourceTypes": {
-    "official_site": 276,
-    "directory_listing": 39,
+    "official_site": 300,
+    "directory_listing": 41,
     "reference": 4
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "96.9%",
-    "monthOnlyDates": "3.1%",
+    "exactDates": "97.1%",
+    "monthOnlyDates": "2.9%",
     "city": "99.4%",
     "country": "100.0%",
-    "officialUrl": "86.5%",
-    "venue": "29.2%",
-    "organization": "40.8%",
-    "category": "57.4%",
+    "officialUrl": "87.0%",
+    "venue": "34.2%",
+    "organization": "37.7%",
+    "category": "56.8%",
     "description": "100.0%",
     "corroborated": "0.3%"
   },
@@ -84,6 +86,151 @@
       "reason": "no_location",
       "sourceUrl": "https://tethys.pnnl.gov/events/46th-international-ocean-offshore-arctic-engineering-conference-omae-2027",
       "statedText": "OMAE 2027, 46th International Conference on Ocean, Offshore and Arctic Engineering, May 2027"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://cretech.com/",
+      "statedText": "CREtech New York, New York, US, 2026-10-20T00:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.terrapinn.com/conference/biotechx/index.stm",
+      "statedText": "BioTechX Europe, Basel, CH, 2026-10-06T08:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://pll.harvard.edu/course/leading-more-effective-teams-0",
+      "statedText": "Leading More Effective Teams, Cambridge, US, 2026-11-04T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.entrepreneurindia.com/",
+      "statedText": "Entrepreneur, New Delhi, IN, 2026-10-05T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+      "statedText": "Plastic Surgery The Meeting 2026, Houston, US, 2026-10-15T00:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+      "statedText": "Chief Financial Officer Forum, Indianapolis, US, 2026-11-12T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://venunite.com/events/card-house-society-x-synexis-core",
+      "statedText": "Card House Society X Synexis Core, Fort Lauderdale, US, 2026-10-11T10:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+      "statedText": "Routes World 2026, Frankfurt am Main, DE, 2026-10-21T00:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.cantonfair.net/event/40737-operative-days",
+      "statedText": "Operative Days, Helsinki, FI, 2026-11-25T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.facebook.com/groups/1771911893152721/posts/3066212810389283/",
+      "statedText": "Mexi-Con 2026, McAllen, US, 2026-09-12T12:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://eventtechlive.com/",
+      "statedText": "Event Tech Live London, London, GB, 2026-11-11T00:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.alibabacocreate.com/us",
+      "statedText": "Alibaba.com CoCreate, Los Angeles, US, 2026-09-09T00:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://liners.com/events/the-future-of-payments-crypto-lightning-and-global-money",
+      "statedText": "The Future of Payments: Crypto, Lightning & Global Money, Abuja, NG, 2026-11-28T10:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+      "statedText": "Cardiology & Pulmonology for Primary Care, Las Vegas, US, 2026-10-06T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+      "statedText": "Annual EuroFinance International Treasury Management, Barcelona, ES, 2026-09-16T08:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.linkedin.com/posts/danielle-griffin-ed-d-ab4a6851_blackwallst-legacyweekend-blackexcellence-activity-7391504511040880640-hO7O",
+      "statedText": "Black Wall St. 11th Anniversary Legacy Weekend Celebrating Our 2nd Annual, Houston, US, 2026-11-07T10:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://his.saudebusiness.com/en/tickets/",
+      "statedText": "Healthcare Innvotion Show, Sao Paulo, BR, 2026-09-16T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.ohchr.org/sites/default/files/documents/hrbodies/hrcouncil/forums/business-forums/sessions/session15/15-unfbhr-concept-note-en.pdf",
+      "statedText": "United Nations Forum on Business and Human Rights, Geneve, CH, 2026-11-23T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "http://ftlauderdaleanimefest.com/",
+      "statedText": "Ft.Lauderdale Anime-Fest, Fort Lauderdale, US, 2026-09-20T10:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.index.ae/events/eioc/",
+      "statedText": "Excellence in Oncology Care, Dubai, AE, 2026-11-13T08:30:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://www.indianahrconf.com/",
+      "statedText": "Human Resources Director Forum, Indianapolis, US, 2026-11-17T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://careers.ed.ac.uk/employers/fairs-and-flagship-events/careers-in-engineering-fair-4-november-2026",
+      "statedText": "Careers in Engineering, Edinburgh, GB, 2026-11-04T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+      "statedText": "Chief Data Officer Network DACH, Frankfurt, DE, 2026-11-02T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://expohour.com/qs-connect-1-2-1-dubai/speakers",
+      "statedText": "QS Connect 1 2 1 Dubai, Dubai, AE, 2026-11-08T12:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "http://www.animaine.org/",
+      "statedText": "Animaine, South Portland, US, 2026-11-06T09:00:00"
+    },
+    {
+      "reason": "source_url_is_a_listing",
+      "sourceUrl": "https://conference.researchbib.com/view/event/155322",
+      "statedText": "International Conference on Research Challenges in Engineering, IT, Design & Agri Sciences, Seoul, KR, 2026-10-03T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://digitalmarketingcon.eu/",
+      "statedText": "Digital Marketing Europe, Vilnius, LT, 2026-11-10T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://store.lso.ca/23rd-real-estate-law-summit",
+      "statedText": "The Real Estate Lawyer, Toronto, CA, 2026-11-24T09:00:00"
+    },
+    {
+      "reason": "not_a_conference",
+      "sourceUrl": "https://conztruct.co.nz/register/",
+      "statedText": "Conztruct, Napier, NZ, 2026-11-12T16:00:00"
     }
   ]
 }

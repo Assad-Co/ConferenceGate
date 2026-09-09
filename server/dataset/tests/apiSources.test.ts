@@ -355,10 +355,13 @@ test("real conferences still pass, by name or by size", () => {
   ]) {
     assert.ok(looksLikeConference({ title }), `should be a conference: ${title}`);
   }
-  // A name that says nothing about what it is still qualifies on size alone.
+  // A name that says nothing about what it is qualifies on size alone, but the bar is high:
+  // PredictHQ's attendance comes back bucketed at 3000/4000/5000 for almost everything, so only a
+  // genuinely enormous figure means anything.
   assert.equal(looksLikeConference({ title: "ADIPEC 2027" }), false);
+  assert.equal(looksLikeConference({ title: "GITEX GLOBAL", phq_attendance: 5000 }), false);
   assert.ok(looksLikeConference({ title: "ADIPEC 2027", phq_attendance: 180000 }));
-  assert.ok(looksLikeConference({ title: "GITEX GLOBAL", phq_attendance: 5000 }));
+  assert.ok(looksLikeConference({ title: "GITEX GLOBAL", phq_attendance: 40000 }));
 });
 
 test("a site in a contradicting country is refused, however well the name matches", () => {
@@ -400,4 +403,30 @@ test("Exa retries a rate limit rather than failing the whole run", async () => {
   const hit = await resolveOfficialUrl({ title: "International Conference on Applied Geochemistry", year: 2027, fetchImpl });
   assert.equal(calls, 2, "expected one retry after the 429");
   assert.ok(hit);
+});
+
+test("an event whose resolved URL is a listing has nothing a reader can open", () => {
+  // A directory, an encyclopaedia or a social post cannot be a conference's own site, and the link
+  // is the record's only route to the conference — so it is refused, not merely downgraded.
+  for (const url of [
+    "https://conference.researchbib.com/view/event/155322",
+    "https://www.facebook.com/groups/1771911893152721/posts/3066212810389283/",
+    "https://www.linkedin.com/posts/someone_activity-7391504511040880640-hO7O",
+    "https://en.wikipedia.org/wiki/Some_Conference",
+  ]) {
+    const outcome = mapPredictHqEvent(
+      { id: "x", title: "International Conference on Something", state: "active", country: "US", start_local: "2027-05-01T09:00:00" },
+      { ...OPTIONS, officialUrl: url }
+    );
+    assert.equal(outcome.ok, false, url);
+    if (!outcome.ok) assert.equal(outcome.reason, "source_url_is_a_listing");
+  }
+});
+
+test("a Harvard short course billed at PredictHQ's bucketed attendance is still not a conference", () => {
+  // PredictHQ's attendance figures come back as repeated round numbers (3000, 4000, 5000), so a low
+  // bypass admits everything. "Leading More Effective Teams" has to earn its place on its name.
+  assert.equal(looksLikeConference({ title: "Leading More Effective Teams", phq_attendance: 3000 }), false);
+  assert.equal(looksLikeConference({ title: "Careers in Engineering", phq_attendance: 5000 }), false);
+  assert.equal(looksLikeConference({ title: "Ft.Lauderdale Anime-Fest", phq_attendance: 4003 }), false);
 });

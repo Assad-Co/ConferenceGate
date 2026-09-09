@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T17:22:51.605Z",
+  "generatedAt": "2026-09-09T18:14:16.569Z",
   "horizonStart": "2026-09-09",
   "years": [
     2026,
@@ -73,6 +73,523 @@
         "country": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "annual-virginia-accounting-auditing-conference-2026-roanoke",
+      "title": "Annual Virginia Accounting & Auditing Conference",
+      "acronym": null,
+      "series": "Annual Virginia Accounting & Auditing Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-09-28",
+      "endDate": "2026-09-29",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Roanoke",
+      "region": "Virginia",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "The Hotel Roanoke & Conference Center",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "accounting",
+        "virginia",
+        "auditing"
+      ],
+      "keywords": [
+        "Roanoke",
+        "Virginia",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com",
+      "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+      "sourceHost": "vscpa.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.vscpa.com/accountingandauditingconference",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual Virginia Accounting & Auditing Conference",
+        "statedText": "Annual Virginia Accounting & Auditing Conference, The Hotel Roanoke & Conference Center, Roanoke, Virginia, United States, 2026-09-28 to 2026-09-29",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3jAHNcFCcyKZXCzgpX"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+          "sourcePageTitle": "Annual Virginia Accounting & Auditing Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+          "sourcePageTitle": "Annual Virginia Accounting & Auditing Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+          "sourcePageTitle": "Annual Virginia Accounting & Auditing Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+          "sourcePageTitle": "Annual Virginia Accounting & Auditing Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.vscpa.com/accountingandauditingconference",
+          "sourcePageTitle": "Annual Virginia Accounting & Auditing Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "international-conference-on-research-challenges-to-multidisciplinary-i",
+      "title": "International Conference on Research Challenges To Multidisciplinary Innovation",
+      "acronym": null,
+      "series": "International Conference on Research Challenges To Multidisciplinary Innovation",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-03",
+      "endDate": "2026-10-04",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Seoul",
+      "region": null,
+      "country": "South Korea",
+      "countryCode": "KR",
+      "worldRegion": "Asia",
+      "venue": "Nine Tree by Parnas Seoul Myeongdong II",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "research",
+        "challenges",
+        "multidisciplinary",
+        "innovation"
+      ],
+      "keywords": [
+        "Seoul",
+        "South Korea",
+        "KR",
+        "KOR",
+        "korea",
+        "republic of korea",
+        "korea, republic of",
+        "korea (south)",
+        "대한민국",
+        "Asia",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - An international academic conference that brings together researchers, practitioners, and policymakers.",
+      "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+      "sourceHost": "academicsera.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+        "statedText": "International Conference on Research Challenges To Multidisciplinary Innovation, Nine Tree by Parnas Seoul Myeongdong II, Seoul, South Korea, 2026-10-03 to 2026-10-04",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "78bUPmQNeqrByQ5FtT"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+          "sourcePageTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+          "sourcePageTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+          "sourcePageTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+          "sourcePageTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://academicsera.com/Conference/25553/ICMRP/",
+          "sourcePageTitle": "International Conference on Research Challenges To Multidisciplinary Innovation",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "annual-meeting-with-materials-science-technology-2026-pittsburgh",
+      "title": "Annual Meeting with Materials Science & Technology",
+      "acronym": null,
+      "series": "Annual Meeting with Materials Science & Technology",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-04",
+      "endDate": "2026-10-07",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Pittsburgh",
+      "region": "Pennsylvania",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "David L. Lawrence Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": "Chemistry & Materials",
+      "categories": [
+        "Chemistry & Materials"
+      ],
+      "topics": [
+        "materials science",
+        "materials",
+        "science",
+        "technology"
+      ],
+      "keywords": [
+        "Pittsburgh",
+        "Pennsylvania",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Chemistry & Materials"
+      ],
+      "description": "Sourced from predicthq.com - The Annual Meeting with Materials Science & Technology is a major conference that brings together researchers, engineers, and industry professionals to present and discuss advances in materia",
+      "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+      "sourceHost": "ceramics.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual Meeting with Materials Science & Technology",
+        "statedText": "Annual Meeting with Materials Science & Technology, David L. Lawrence Convention Center, Pittsburgh, Pennsylvania, United States, 2026-10-04 to 2026-10-07",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "6BYiHE6EAwPn9AZY6e"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "hacking-cyber-security-briefing-conference-2026-kochi",
+      "title": "Hacking & Cyber Security Briefing Conference",
+      "acronym": null,
+      "series": "Hacking & Cyber Security Briefing Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-06",
+      "endDate": "2026-10-13",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Kochi",
+      "region": "Kerala",
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Grand Hyatt Kochi Bolgatty",
+      "format": "in-person",
+      "organization": null,
+      "category": "Cybersecurity & Privacy",
+      "categories": [
+        "Cybersecurity & Privacy"
+      ],
+      "topics": [
+        "cybersecurity",
+        "cyber security",
+        "hacking",
+        "cyber",
+        "security",
+        "briefing"
+      ],
+      "keywords": [
+        "Kochi",
+        "Kerala",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "Cybersecurity & Privacy"
+      ],
+      "description": "Sourced from predicthq.com - Hacking & Cyber Security Briefing Conference (c0c0n) is a major cybersecurity event in Kochi that brings together researchers, security practitioners, industry vendors, and policymakers to di",
+      "sourceUrl": "https://www.c0c0n.org/",
+      "sourceHost": "c0c0n.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.c0c0n.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Hacking & Cyber Security Briefing Conference",
+        "statedText": "Hacking & Cyber Security Briefing Conference, Grand Hyatt Kochi Bolgatty, Kochi, Kerala, India, 2026-10-06 to 2026-10-13",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "FDsHrYjE8XjJ9dDg2Y"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "annual-north-american-cystic-fibrosis-conference-2026-atlanta",
+      "title": "Annual North American Cystic Fibrosis Conference",
+      "acronym": null,
+      "series": "Annual North American Cystic Fibrosis Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-08",
+      "endDate": "2026-10-10",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Atlanta",
+      "region": "Georgia",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Georgia World Congress Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "north",
+        "american",
+        "cystic",
+        "fibrosis"
+      ],
+      "keywords": [
+        "Atlanta",
+        "Georgia",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The Annual North American Cystic Fibrosis Conference (NACFC) is the main scientific and clinical meeting focused on cystic fibrosis in North America, convening clinicians, researchers, multid",
+      "sourceUrl": "https://www.nacfconference.org/",
+      "sourceHost": "nacfconference.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.nacfconference.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual North American Cystic Fibrosis Conference",
+        "statedText": "Annual North American Cystic Fibrosis Conference, Georgia World Congress Center, Atlanta, Georgia, United States, 2026-10-08 to 2026-10-10",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "BtaZoCE2Ly8ENQ2Lrm"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.nacfconference.org/",
+          "sourcePageTitle": "Annual North American Cystic Fibrosis Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.nacfconference.org/",
+          "sourcePageTitle": "Annual North American Cystic Fibrosis Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.nacfconference.org/",
+          "sourcePageTitle": "Annual North American Cystic Fibrosis Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.nacfconference.org/",
+          "sourcePageTitle": "Annual North American Cystic Fibrosis Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.nacfconference.org/",
+          "sourcePageTitle": "Annual North American Cystic Fibrosis Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "singapore-health-and-biomedical-congress-2026-singapore",
+      "title": "Singapore Health and Biomedical Congress",
+      "acronym": null,
+      "series": "Singapore Health and Biomedical Congress",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-08",
+      "endDate": "2026-10-09",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Singapore",
+      "region": null,
+      "country": "Singapore",
+      "countryCode": "SG",
+      "worldRegion": "Asia",
+      "venue": "Singapore Expo",
+      "format": "in-person",
+      "organization": null,
+      "category": "Healthcare & Health IT",
+      "categories": [
+        "Healthcare & Health IT"
+      ],
+      "topics": [
+        "health",
+        "singapore",
+        "biomedical"
+      ],
+      "keywords": [
+        "Singapore",
+        "SG",
+        "SGP",
+        "Asia",
+        "2026",
+        "Healthcare & Health IT"
+      ],
+      "description": "Sourced from predicthq.com - Singapore Health and Biomedical Congress (SHBC) is a regional medical conference that gathers clinicians, researchers, and industry professionals.",
+      "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+      "sourceHost": "shbc.com.sg",
+      "sourceType": "official_site",
+      "officialUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Singapore Health and Biomedical Congress",
+        "statedText": "Singapore Health and Biomedical Congress, Singapore Expo, Singapore, Singapore, 2026-10-08 to 2026-10-09",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "hXaP4CqQARNZpu8kbJ"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+          "sourcePageTitle": "Singapore Health and Biomedical Congress",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+          "sourcePageTitle": "Singapore Health and Biomedical Congress",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+          "sourcePageTitle": "Singapore Health and Biomedical Congress",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+          "sourcePageTitle": "Singapore Health and Biomedical Congress",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://shbc.com.sg/about/singapore-health-and-biomedical-congress/",
+          "sourcePageTitle": "Singapore Health and Biomedical Congress",
           "confidence": "High"
         }
       },
@@ -241,6 +758,363 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "cardiometabolic-health-congress-2026-boston",
+      "title": "Cardiometabolic Health Congress",
+      "acronym": null,
+      "series": "Cardiometabolic Health Congress",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-17",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Boston",
+      "region": "Massachusetts",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Boston Park Plaza",
+      "format": "in-person",
+      "organization": null,
+      "category": "Healthcare & Health IT",
+      "categories": [
+        "Healthcare & Health IT",
+        "Medicine & Oncology"
+      ],
+      "topics": [
+        "health",
+        "diagnosis",
+        "cardiometabolic"
+      ],
+      "keywords": [
+        "Boston",
+        "Massachusetts",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Healthcare & Health IT"
+      ],
+      "description": "Sourced from predicthq.com - The Cardiometabolic Health Congress (CMHC) is an interdisciplinary clinical conference that focuses on the prevention, diagnosis, and management of cardiometabolic disorders such as diabetes,",
+      "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+      "sourceHost": "cardiometabolichealth.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Cardiometabolic Health Congress",
+        "statedText": "Cardiometabolic Health Congress, Boston Park Plaza, Boston, Massachusetts, United States, 2026-10-15 to 2026-10-17",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "8YSMgkCDf5oXwQjasc"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+          "sourcePageTitle": "Cardiometabolic Health Congress",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+          "sourcePageTitle": "Cardiometabolic Health Congress",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+          "sourcePageTitle": "Cardiometabolic Health Congress",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+          "sourcePageTitle": "Cardiometabolic Health Congress",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.cardiometabolichealth.org/21st-annual-cardiometabolic-health-congress/",
+          "sourcePageTitle": "Cardiometabolic Health Congress",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "national-frozen-refrigerated-foods-convention-2026-oxon-hill",
+      "title": "National Frozen & Refrigerated Foods Convention",
+      "acronym": null,
+      "series": "National Frozen & Refrigerated Foods Convention",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-17",
+      "endDate": "2026-10-20",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Oxon Hill",
+      "region": "Maryland",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Gaylord National Resort & Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "frozen",
+        "refrigerated",
+        "foods"
+      ],
+      "keywords": [
+        "Oxon Hill",
+        "Maryland",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The National Frozen & Refrigerated Foods Convention is the premier industry conference and trade show organized by the National Frozen & Refrigerated Foods Association (NFRA).",
+      "sourceUrl": "https://nfraweb.org/events/",
+      "sourceHost": "nfraweb.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://nfraweb.org/events/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "National Frozen & Refrigerated Foods Convention",
+        "statedText": "National Frozen & Refrigerated Foods Convention, Gaylord National Resort & Convention Center, Oxon Hill, Maryland, United States, 2026-10-17 to 2026-10-20",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "6Nm9sy9ySUqBA4bFjY"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://nfraweb.org/events/",
+          "sourcePageTitle": "National Frozen & Refrigerated Foods Convention",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://nfraweb.org/events/",
+          "sourcePageTitle": "National Frozen & Refrigerated Foods Convention",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://nfraweb.org/events/",
+          "sourcePageTitle": "National Frozen & Refrigerated Foods Convention",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://nfraweb.org/events/",
+          "sourcePageTitle": "National Frozen & Refrigerated Foods Convention",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://nfraweb.org/events/",
+          "sourcePageTitle": "National Frozen & Refrigerated Foods Convention",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "all-things-open-conference-2026-raleigh",
+      "title": "All Things Open Conference",
+      "acronym": null,
+      "series": "All Things Open Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-18",
+      "endDate": "2026-10-20",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Raleigh",
+      "region": "North Carolina",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Raleigh Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": "Technology & Consumer Electronics",
+      "categories": [
+        "Technology & Consumer Electronics"
+      ],
+      "topics": [
+        "open source",
+        "things",
+        "open"
+      ],
+      "keywords": [
+        "Raleigh",
+        "North Carolina",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Technology & Consumer Electronics"
+      ],
+      "description": "Sourced from predicthq.com - All Things Open is an annual conference in Raleigh that focuses on open source software, the open web, and the broader open-technology community.",
+      "sourceUrl": "https://2026.allthingsopen.org/",
+      "sourceHost": "2026.allthingsopen.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://2026.allthingsopen.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "All Things Open Conference",
+        "statedText": "All Things Open Conference, Raleigh Convention Center, Raleigh, North Carolina, United States, 2026-10-18 to 2026-10-20",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "HEPXoA8fJb26nASd6Z"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "annual-abs-east-conference-2026-miami-beach",
+      "title": "Annual ABS East Conference",
+      "acronym": null,
+      "series": "Annual ABS East Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-18",
+      "endDate": "2026-10-21",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Miami Beach",
+      "region": "Florida",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Fontainebleau Miami Beach",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "finance",
+        "east"
+      ],
+      "keywords": [
+        "Miami Beach",
+        "Florida",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com - ABS East is an annual industry conference focused on asset-backed securities and structured finance, held at the Fontainebleau Miami Beach.",
+      "sourceUrl": "https://abseast.com/",
+      "sourceHost": "abseast.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://abseast.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual ABS East Conference",
+        "statedText": "Annual ABS East Conference, Fontainebleau Miami Beach, Miami Beach, Florida, United States, 2026-10-18 to 2026-10-21",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "J5St2NMazjPQJVVEze"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://abseast.com/",
+          "sourcePageTitle": "Annual ABS East Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://abseast.com/",
+          "sourcePageTitle": "Annual ABS East Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://abseast.com/",
+          "sourcePageTitle": "Annual ABS East Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://abseast.com/",
+          "sourcePageTitle": "Annual ABS East Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://abseast.com/",
+          "sourcePageTitle": "Annual ABS East Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "iecon-2026-doha",
       "title": "IECON 2026, 52nd Annual Conference of the IEEE Industrial Electronics Society",
       "acronym": "IECON",
@@ -319,6 +1193,178 @@
         "organization": {
           "sourceUrl": "https://www.iecon2026.org/",
           "sourcePageTitle": "IECON 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "medtech-conference-2026-boston",
+      "title": "MedTech Conference",
+      "acronym": null,
+      "series": "MedTech Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-18",
+      "endDate": "2026-10-21",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Boston",
+      "region": "Massachusetts",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Boston Convention and Exhibition Center",
+      "format": "in-person",
+      "organization": null,
+      "category": "Healthcare & Health IT",
+      "categories": [
+        "Healthcare & Health IT"
+      ],
+      "topics": [
+        "health",
+        "medtech"
+      ],
+      "keywords": [
+        "Boston",
+        "Massachusetts",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Healthcare & Health IT"
+      ],
+      "description": "Sourced from predicthq.com - The MedTech Conference is a leading industry gathering focused on medical devices, diagnostics, and health technology, bringing together manufacturers, investors, regulators, and innovators t",
+      "sourceUrl": "https://themedtechconference.com/",
+      "sourceHost": "themedtechconference.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://themedtechconference.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "MedTech Conference",
+        "statedText": "MedTech Conference, Boston Convention and Exhibition Center, Boston, Massachusetts, United States, 2026-10-18 to 2026-10-21",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3bwALtbHiboJxsPCEn"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://themedtechconference.com/",
+          "sourcePageTitle": "MedTech Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://themedtechconference.com/",
+          "sourcePageTitle": "MedTech Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://themedtechconference.com/",
+          "sourcePageTitle": "MedTech Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://themedtechconference.com/",
+          "sourcePageTitle": "MedTech Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://themedtechconference.com/",
+          "sourcePageTitle": "MedTech Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "international-supply-chain-conference-2026-berlin",
+      "title": "International Supply Chain Conference",
+      "acronym": null,
+      "series": "International Supply Chain Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-21",
+      "endDate": "2026-10-22",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Berlin",
+      "region": "Berlin",
+      "country": "Germany",
+      "countryCode": "DE",
+      "worldRegion": "Europe",
+      "venue": "InterContinental Berlin",
+      "format": "in-person",
+      "organization": null,
+      "category": "Manufacturing & Industry",
+      "categories": [
+        "Manufacturing & Industry"
+      ],
+      "topics": [
+        "supply chain",
+        "supply",
+        "chain"
+      ],
+      "keywords": [
+        "Berlin",
+        "Germany",
+        "DE",
+        "DEU",
+        "deutschland",
+        "federal republic of germany",
+        "brd",
+        "Europe",
+        "2026",
+        "Manufacturing & Industry"
+      ],
+      "description": "Sourced from predicthq.com - The International Supply Chain Conference is an annual gathering of supply chain professionals, researchers, and policymakers held at the InterContinental Berlin. Organized by the Bundesverei",
+      "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+      "sourceHost": "supplychainconferenceexpo.berlin",
+      "sourceType": "official_site",
+      "officialUrl": "https://supplychainconferenceexpo.berlin/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "International Supply Chain Conference",
+        "statedText": "International Supply Chain Conference, InterContinental Berlin, Berlin, Berlin, Germany, 2026-10-21 to 2026-10-22",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3asVqRVfmapsSUPHxf"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+          "sourcePageTitle": "International Supply Chain Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+          "sourcePageTitle": "International Supply Chain Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+          "sourcePageTitle": "International Supply Chain Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+          "sourcePageTitle": "International Supply Chain Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://supplychainconferenceexpo.berlin/",
+          "sourcePageTitle": "International Supply Chain Conference",
           "confidence": "High"
         }
       },
@@ -421,6 +1467,179 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "corenet-global-north-american-summit-2026-chicago",
+      "title": "CoreNet Global North American Summit",
+      "acronym": null,
+      "series": "CoreNet Global North American Summit",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-26",
+      "endDate": "2026-10-29",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Chicago",
+      "region": "Illinois",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "McCormick Place",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "corenet",
+        "north",
+        "american"
+      ],
+      "keywords": [
+        "Chicago",
+        "Illinois",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The CoreNet Global North American Summit is the flagship conference for corporate real estate and workplace leaders, organized by CoreNet Global and held at McCormick Place in Chicago. The mu",
+      "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+      "sourceHost": "corenetglobal.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "CoreNet Global North American Summit",
+        "statedText": "CoreNet Global North American Summit, McCormick Place, Chicago, Illinois, United States, 2026-10-26 to 2026-10-29",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "CEgZky54FbPBj3aNMo"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+          "sourcePageTitle": "CoreNet Global North American Summit",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+          "sourcePageTitle": "CoreNet Global North American Summit",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+          "sourcePageTitle": "CoreNet Global North American Summit",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+          "sourcePageTitle": "CoreNet Global North American Summit",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.corenetglobal.org/attend-summits-events/2026-corenet-global---north-america-summit",
+          "sourcePageTitle": "CoreNet Global North American Summit",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "national-diversity-in-stem-conference-2026-long-beach",
+      "title": "National Diversity in STEM Conference",
+      "acronym": null,
+      "series": "National Diversity in STEM Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-29",
+      "endDate": "2026-10-31",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Long Beach",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Long Beach Convention & Entertainment Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "diversity",
+        "stem"
+      ],
+      "keywords": [
+        "Long Beach",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The National Diversity in STEM Conference is a national conference that focuses on advancing diversity, equity, and inclusion across science, technology, engineering, and mathematics.",
+      "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+      "sourceHost": "ischool.sjsu.edu",
+      "sourceType": "official_site",
+      "officialUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "National Diversity in STEM Conference",
+        "statedText": "National Diversity in STEM Conference, Long Beach Convention & Entertainment Center, Long Beach, California, United States, 2026-10-29 to 2026-10-31",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "EXF8VaJNtvKhUmxwBP"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+          "sourcePageTitle": "National Diversity in STEM Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+          "sourcePageTitle": "National Diversity in STEM Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+          "sourcePageTitle": "National Diversity in STEM Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+          "sourcePageTitle": "National Diversity in STEM Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://ischool.sjsu.edu/conference-exhibit/sacnas-national-diversity-stem-ndistem-conference-2026",
+          "sourcePageTitle": "National Diversity in STEM Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "adipec-abu-dhabi-international-petroleum-exhibition-and-conference-202",
       "title": "ADIPEC 2026 Abu Dhabi International Petroleum Exhibition and Conference",
       "acronym": null,
@@ -492,6 +1711,173 @@
         "country": {
           "sourceUrl": "https://www.adipec.com/",
           "sourcePageTitle": "ADIPEC 2026 Exhibition and Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "dubai-global-dental-summit-2026-dubai",
+      "title": "Dubai Global Dental Summit",
+      "acronym": null,
+      "series": "Dubai Global Dental Summit",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-02",
+      "endDate": "2026-11-07",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Dubai",
+      "region": "Dubai",
+      "country": "United Arab Emirates",
+      "countryCode": "AE",
+      "worldRegion": "Middle East",
+      "venue": "Madinat Jumeirah",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "dubai",
+        "dental"
+      ],
+      "keywords": [
+        "Dubai",
+        "United Arab Emirates",
+        "AE",
+        "ARE",
+        "uae",
+        "u.a.e.",
+        "emirates",
+        "the emirates",
+        "Middle East",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The Dubai Global Dental Summit is an international conference for dental professionals taking place in Dubai.",
+      "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+      "sourceHost": "ceyesovinternational.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Dubai Global Dental Summit",
+        "statedText": "Dubai Global Dental Summit, Madinat Jumeirah, Dubai, Dubai, United Arab Emirates, 2026-11-02 to 2026-11-07",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "6rxoMr7R3SrfFrhjGd"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+          "sourcePageTitle": "Dubai Global Dental Summit",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+          "sourcePageTitle": "Dubai Global Dental Summit",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+          "sourcePageTitle": "Dubai Global Dental Summit",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+          "sourcePageTitle": "Dubai Global Dental Summit",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://ceyesovinternational.com/dubai-global-dental-summit/",
+          "sourcePageTitle": "Dubai Global Dental Summit",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "federal-small-business-conference-2026-dallas",
+      "title": "Federal Small Business Conference",
+      "acronym": null,
+      "series": "Federal Small Business Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-04",
+      "endDate": "2026-11-06",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Dallas",
+      "region": "Texas",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Kay Bailey Hutchison Convention Center Dallas",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "federal",
+        "small",
+        "business"
+      ],
+      "keywords": [
+        "Dallas",
+        "Texas",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Federal Small Business Conference is a multi-day conference and expo held at the Kay Bailey Hutchison Convention Center in Dallas that brings together small business owners, federal procureme",
+      "sourceUrl": "https://www.samesbc.org/",
+      "sourceHost": "samesbc.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.samesbc.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Federal Small Business Conference",
+        "statedText": "Federal Small Business Conference, Kay Bailey Hutchison Convention Center Dallas, Dallas, Texas, United States, 2026-11-04 to 2026-11-06",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "HwKkU8RjiQHcSN4B5V"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.samesbc.org/",
+          "sourcePageTitle": "Federal Small Business Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.samesbc.org/",
+          "sourcePageTitle": "Federal Small Business Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.samesbc.org/",
+          "sourcePageTitle": "Federal Small Business Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.samesbc.org/",
+          "sourcePageTitle": "Federal Small Business Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.samesbc.org/",
+          "sourcePageTitle": "Federal Small Business Conference",
           "confidence": "High"
         }
       },
@@ -585,6 +1971,833 @@
         "organization": {
           "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
           "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "digital-orthodontics-symposium-2026-dubai",
+      "title": "Digital Orthodontics Symposium",
+      "acronym": null,
+      "series": "Digital Orthodontics Symposium",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-13",
+      "endDate": "2026-11-14",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Dubai",
+      "region": null,
+      "country": "United Arab Emirates",
+      "countryCode": "AE",
+      "worldRegion": "Middle East",
+      "venue": "Madinat Jumeirah Conference & Events Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "digital",
+        "orthodontics"
+      ],
+      "keywords": [
+        "Dubai",
+        "United Arab Emirates",
+        "AE",
+        "ARE",
+        "uae",
+        "u.a.e.",
+        "emirates",
+        "the emirates",
+        "Middle East",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Digital Orthodontics Symposium is a professional conference focused on digital workflows and technologies in orthodontic care.",
+      "sourceUrl": "https://cappmea.com/dos-2026",
+      "sourceHost": "cappmea.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cappmea.com/dos-2026",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Digital Orthodontics Symposium",
+        "statedText": "Digital Orthodontics Symposium, Madinat Jumeirah Conference & Events Centre, Dubai, United Arab Emirates, 2026-11-13 to 2026-11-14",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "6SptXvFBP6ZRjAAheM"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://cappmea.com/dos-2026",
+          "sourcePageTitle": "Digital Orthodontics Symposium",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://cappmea.com/dos-2026",
+          "sourcePageTitle": "Digital Orthodontics Symposium",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://cappmea.com/dos-2026",
+          "sourcePageTitle": "Digital Orthodontics Symposium",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://cappmea.com/dos-2026",
+          "sourcePageTitle": "Digital Orthodontics Symposium",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://cappmea.com/dos-2026",
+          "sourcePageTitle": "Digital Orthodontics Symposium",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "the-condo-conference-2026-etobicoke",
+      "title": "The Condo Conference",
+      "acronym": null,
+      "series": "The Condo Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-13",
+      "endDate": "2026-11-14",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Etobicoke",
+      "region": "Ontario",
+      "country": "Canada",
+      "countryCode": "CA",
+      "worldRegion": "North America",
+      "venue": "Toronto Congress Centre - North Building",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "condo"
+      ],
+      "keywords": [
+        "Etobicoke",
+        "Ontario",
+        "Canada",
+        "CA",
+        "CAN",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The Condo Conference is a major industry event that brings together builders, developers, property managers, and professionals.",
+      "sourceUrl": "https://condoconference.ca/",
+      "sourceHost": "condoconference.ca",
+      "sourceType": "official_site",
+      "officialUrl": "https://condoconference.ca/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "The Condo Conference",
+        "statedText": "The Condo Conference, Toronto Congress Centre - North Building, Etobicoke, Ontario, Canada, 2026-11-13 to 2026-11-14",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3XGiGzoaVo3hqwEbaq"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://condoconference.ca/",
+          "sourcePageTitle": "The Condo Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://condoconference.ca/",
+          "sourcePageTitle": "The Condo Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://condoconference.ca/",
+          "sourcePageTitle": "The Condo Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://condoconference.ca/",
+          "sourcePageTitle": "The Condo Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://condoconference.ca/",
+          "sourcePageTitle": "The Condo Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "world-extreme-medicine-conference-2026-edinburgh",
+      "title": "World Extreme Medicine Conference",
+      "acronym": null,
+      "series": "World Extreme Medicine Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-14",
+      "endDate": "2026-11-16",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Edinburgh",
+      "region": "Scotland",
+      "country": "United Kingdom",
+      "countryCode": "GB",
+      "worldRegion": "Europe",
+      "venue": "Dynamic Earth",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "extreme",
+        "medicine"
+      ],
+      "keywords": [
+        "Edinburgh",
+        "Scotland",
+        "United Kingdom",
+        "GB",
+        "GBR",
+        "uk",
+        "u.k.",
+        "great britain",
+        "britain",
+        "england",
+        "scotland",
+        "wales",
+        "northern ireland",
+        "united kingdom of great britain and northern ireland",
+        "Europe",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The World Extreme Medicine Conference is an international gathering for clinicians, expedition medics, emergency responders and humanitarian practitioners.",
+      "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+      "sourceHost": "worldextrememedicine.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "World Extreme Medicine Conference",
+        "statedText": "World Extreme Medicine Conference, Dynamic Earth, Edinburgh, Scotland, United Kingdom, 2026-11-14 to 2026-11-16",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "7YZVZojG5N4aEQM9jL"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+          "sourcePageTitle": "World Extreme Medicine Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+          "sourcePageTitle": "World Extreme Medicine Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+          "sourcePageTitle": "World Extreme Medicine Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+          "sourcePageTitle": "World Extreme Medicine Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://worldextrememedicine.com/world-extreme-medicine-conference/",
+          "sourcePageTitle": "World Extreme Medicine Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "gartner-it-symposium-xpo-2026-kochi",
+      "title": "Gartner IT Symposium/Xpo",
+      "acronym": null,
+      "series": "Gartner IT Symposium/Xpo",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-16",
+      "endDate": "2026-11-18",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Kochi",
+      "region": "Kerala",
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Grand Hyatt Kochi Bolgatty",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "strategy",
+        "gartner"
+      ],
+      "keywords": [
+        "Kochi",
+        "Kerala",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com - Gartner IT Symposium/Xpo gathers IT leaders and professionals in Kochi for a multi-day conference focused on technology strategy and digital transformation.",
+      "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+      "sourceHost": "gartner.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Gartner IT Symposium/Xpo",
+        "statedText": "Gartner IT Symposium/Xpo, Grand Hyatt Kochi Bolgatty, Kochi, Kerala, India, 2026-11-16 to 2026-11-18",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "8gcoV8JMKAz49fwHuw"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+          "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+          "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+          "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+          "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
+          "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "astmh-2026-oxon-hill",
+      "title": "ASTMH Annual Meeting 2026",
+      "acronym": "ASTMH",
+      "series": "ASTMH Annual Meeting",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-18",
+      "endDate": "2026-11-22",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Oxon Hill",
+      "region": "Maryland",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Gaylord National Resort & Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "astmh"
+      ],
+      "keywords": [
+        "ASTMH",
+        "Oxon Hill",
+        "Maryland",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The ASTMH Annual Meeting is the flagship scientific conference of the American Society of Tropical Medicine and Hygiene.",
+      "sourceUrl": "https://www.astmh.org/annual-meeting",
+      "sourceHost": "astmh.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.astmh.org/annual-meeting",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "ASTMH Annual Meeting 2026",
+        "statedText": "ASTMH Annual Meeting 2026, Gaylord National Resort & Convention Center, Oxon Hill, Maryland, United States, 2026-11-18 to 2026-11-22",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "Tj7w2kdtwShKesUWBV"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.astmh.org/annual-meeting",
+          "sourcePageTitle": "ASTMH Annual Meeting 2026",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.astmh.org/annual-meeting",
+          "sourcePageTitle": "ASTMH Annual Meeting 2026",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.astmh.org/annual-meeting",
+          "sourcePageTitle": "ASTMH Annual Meeting 2026",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.astmh.org/annual-meeting",
+          "sourcePageTitle": "ASTMH Annual Meeting 2026",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.astmh.org/annual-meeting",
+          "sourcePageTitle": "ASTMH Annual Meeting 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "michigan-association-of-chiropractors-express-convention-2026-mount-pl",
+      "title": "Michigan Association of Chiropractors Express Convention",
+      "acronym": null,
+      "series": "Michigan Association of Chiropractors Express Convention",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-21",
+      "endDate": "2026-11-22",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Mount Pleasant",
+      "region": "Michigan",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Comfort Inn & Suites Hotel and Conference Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "michigan",
+        "association",
+        "chiropractors",
+        "express"
+      ],
+      "keywords": [
+        "Mount Pleasant",
+        "Michigan",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The Michigan Association of Chiropractors Express Convention is a professional conference.",
+      "sourceUrl": "https://chiromi.com/express-convention/",
+      "sourceHost": "chiromi.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://chiromi.com/express-convention/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Michigan Association of Chiropractors Express Convention",
+        "statedText": "Michigan Association of Chiropractors Express Convention, Comfort Inn & Suites Hotel and Conference Center, Mount Pleasant, Michigan, United States, 2026-11-21 to 2026-11-22",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "5hSxNpGG465GEpRj7E"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://chiromi.com/express-convention/",
+          "sourcePageTitle": "Michigan Association of Chiropractors Express Convention",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://chiromi.com/express-convention/",
+          "sourcePageTitle": "Michigan Association of Chiropractors Express Convention",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://chiromi.com/express-convention/",
+          "sourcePageTitle": "Michigan Association of Chiropractors Express Convention",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://chiromi.com/express-convention/",
+          "sourcePageTitle": "Michigan Association of Chiropractors Express Convention",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://chiromi.com/express-convention/",
+          "sourcePageTitle": "Michigan Association of Chiropractors Express Convention",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "icccs-2026-candolim",
+      "title": "International Conference on Climate Change and Sustainability(ICCCS)",
+      "acronym": "ICCCS",
+      "series": "International Conference on Climate Change and Sustainability(ICCCS)",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-24",
+      "endDate": "2026-11-24",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Candolim",
+      "region": "Goa",
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": "Environment & Sustainability",
+      "categories": [
+        "Environment & Sustainability"
+      ],
+      "topics": [
+        "sustainability",
+        "climate change",
+        "climate",
+        "change",
+        "icccs"
+      ],
+      "keywords": [
+        "ICCCS",
+        "Candolim",
+        "Goa",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "Environment & Sustainability"
+      ],
+      "description": "Sourced from predicthq.com - An international conference that gathers researchers, professionals, and policymakers to discuss climate change and sustainability, highlighting advances in science and technology. Hosted at",
+      "sourceUrl": "https://climatechangeconvention.org/history-2026/",
+      "sourceHost": "climatechangeconvention.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://climatechangeconvention.org/history-2026/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "International Conference on Climate Change and Sustainability(ICCCS)",
+        "statedText": "International Conference on Climate Change and Sustainability(ICCCS), Candolim, Goa, India, 2026-11-24",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "39Caceu4rEvgM5XTLC"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://climatechangeconvention.org/history-2026/",
+          "sourcePageTitle": "International Conference on Climate Change and Sustainability(ICCCS)",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://climatechangeconvention.org/history-2026/",
+          "sourcePageTitle": "International Conference on Climate Change and Sustainability(ICCCS)",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://climatechangeconvention.org/history-2026/",
+          "sourcePageTitle": "International Conference on Climate Change and Sustainability(ICCCS)",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://climatechangeconvention.org/history-2026/",
+          "sourcePageTitle": "International Conference on Climate Change and Sustainability(ICCCS)",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "mobile-and-digital-marketing-summit-2026-mumbai",
+      "title": "Mobile and Digital Marketing Summit",
+      "acronym": null,
+      "series": "Mobile and Digital Marketing Summit",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-25",
+      "endDate": "2026-11-25",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Mumbai",
+      "region": "Maharashtra",
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Taj Lands End Mumbai",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "marketing",
+        "mobile",
+        "digital"
+      ],
+      "keywords": [
+        "Mumbai",
+        "Maharashtra",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com - The Mobile and Digital Marketing Summit is a conference in Mumbai that gathers marketing and technology professionals.",
+      "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+      "sourceHost": "worldmarketingcongress.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Mobile and Digital Marketing Summit",
+        "statedText": "Mobile and Digital Marketing Summit, Taj Lands End Mumbai, Mumbai, Maharashtra, India, 2026-11-25",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3RDWLn5tHWJt7YLB3H"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+          "sourcePageTitle": "Mobile and Digital Marketing Summit",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+          "sourcePageTitle": "Mobile and Digital Marketing Summit",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+          "sourcePageTitle": "Mobile and Digital Marketing Summit",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+          "sourcePageTitle": "Mobile and Digital Marketing Summit",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.worldmarketingcongress.org/mobile_digital_marketing/",
+          "sourcePageTitle": "Mobile and Digital Marketing Summit",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "optometric-management-symposium-2026-lake-buena-vista",
+      "title": "Optometric Management Symposium",
+      "acronym": null,
+      "series": "Optometric Management Symposium",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-12-03",
+      "endDate": "2026-12-06",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Lake Buena Vista",
+      "region": "Florida",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Disney's Yacht Club Resort",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "optometric",
+        "management"
+      ],
+      "keywords": [
+        "Lake Buena Vista",
+        "Florida",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Optometric Management Symposium is a major conference for eye-care professionals focused on optometric practice management, education, and leadership.",
+      "sourceUrl": "https://omconference.com/",
+      "sourceHost": "omconference.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://omconference.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Optometric Management Symposium",
+        "statedText": "Optometric Management Symposium, Disney's Yacht Club Resort, Lake Buena Vista, Florida, United States, 2026-12-03 to 2026-12-06",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "445fxUkHWMEfoHfFy6"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://omconference.com/",
+          "sourcePageTitle": "Optometric Management Symposium",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://omconference.com/",
+          "sourcePageTitle": "Optometric Management Symposium",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://omconference.com/",
+          "sourcePageTitle": "Optometric Management Symposium",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://omconference.com/",
+          "sourcePageTitle": "Optometric Management Symposium",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://omconference.com/",
+          "sourcePageTitle": "Optometric Management Symposium",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "esmo-asia-congress-2026-singapore",
+      "title": "ESMO Asia Congress",
+      "acronym": null,
+      "series": "ESMO Asia Congress",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-12-04",
+      "endDate": "2026-12-06",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Singapore",
+      "region": null,
+      "country": "Singapore",
+      "countryCode": "SG",
+      "worldRegion": "Asia",
+      "venue": "Suntec Convention & Exhibition Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": "Medicine & Oncology",
+      "categories": [
+        "Medicine & Oncology"
+      ],
+      "topics": [
+        "oncology",
+        "esmo",
+        "asia"
+      ],
+      "keywords": [
+        "Singapore",
+        "SG",
+        "SGP",
+        "Asia",
+        "2026",
+        "Medicine & Oncology"
+      ],
+      "description": "Sourced from predicthq.com - ESMO Asia Congress is the regional oncology meeting organized by the European Society for Medical Oncology (ESMO).",
+      "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+      "sourceHost": "esmo.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "ESMO Asia Congress",
+        "statedText": "ESMO Asia Congress, Suntec Convention & Exhibition Centre, Singapore, Singapore, 2026-12-04 to 2026-12-06",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "vGGpFXNKYHsX4GzhD6"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+          "sourcePageTitle": "ESMO Asia Congress",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+          "sourcePageTitle": "ESMO Asia Congress",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+          "sourcePageTitle": "ESMO Asia Congress",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+          "sourcePageTitle": "ESMO Asia Congress",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.esmo.org/meeting-calendar/esmo-asia-congress-2026",
+          "sourcePageTitle": "ESMO Asia Congress",
           "confidence": "High"
         }
       },
@@ -12177,8 +14390,8 @@
       "description": "GITEX Africa 2027, Palais des Congres, Marrakech, Morocco, April 14-16, 2027",
       "sourceUrl": "https://liners.com/events/gitex-africa-2027",
       "sourceHost": "liners.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://liners.com/events/gitex-africa-2027",
+      "sourceType": "directory_listing",
+      "officialUrl": null,
       "evidence": {
         "query": "GITEX Web Summit MWC tech conference 2027",
         "resultTitle": "GITEX Africa 2027 Dates Tickets and Venue",
@@ -12190,27 +14403,27 @@
         "title": {
           "sourceUrl": "https://liners.com/events/gitex-africa-2027",
           "sourcePageTitle": "GITEX Africa 2027 Dates Tickets and Venue",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "dates": {
           "sourceUrl": "https://liners.com/events/gitex-africa-2027",
           "sourcePageTitle": "GITEX Africa 2027 Dates Tickets and Venue",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "city": {
           "sourceUrl": "https://liners.com/events/gitex-africa-2027",
           "sourcePageTitle": "GITEX Africa 2027 Dates Tickets and Venue",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "country": {
           "sourceUrl": "https://liners.com/events/gitex-africa-2027",
           "sourcePageTitle": "GITEX Africa 2027 Dates Tickets and Venue",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "venue": {
           "sourceUrl": "https://liners.com/events/gitex-africa-2027",
           "sourcePageTitle": "GITEX Africa 2027 Dates Tickets and Venue",
-          "confidence": "High"
+          "confidence": "Low"
         }
       },
       "corroboratingSourceUrls": [],
@@ -25888,8 +28101,8 @@
       "description": "SNA Annual National Conference 2028, Nashville, Tennessee, USA, July 9-11, 2028",
       "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
       "sourceHost": "k12conferences.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
+      "sourceType": "directory_listing",
+      "officialUrl": null,
       "evidence": {
         "query": "2028 international conference dates location",
         "resultTitle": "SNA Annual National Conference (ANC) 2028",
@@ -25901,27 +28114,27 @@
         "title": {
           "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
           "sourcePageTitle": "SNA Annual National Conference (ANC) 2028",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "dates": {
           "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
           "sourcePageTitle": "SNA Annual National Conference (ANC) 2028",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "city": {
           "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
           "sourcePageTitle": "SNA Annual National Conference (ANC) 2028",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "country": {
           "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
           "sourcePageTitle": "SNA Annual National Conference (ANC) 2028",
-          "confidence": "High"
+          "confidence": "Low"
         },
         "organization": {
           "sourceUrl": "https://www.k12conferences.com/conference/sna-annual-national-conference-anc-2028",
           "sourcePageTitle": "SNA Annual National Conference (ANC) 2028",
-          "confidence": "High"
+          "confidence": "Low"
         }
       },
       "corroboratingSourceUrls": [],

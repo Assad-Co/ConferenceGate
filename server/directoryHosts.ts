@@ -65,7 +65,39 @@ const DIRECTORY_DOMAINS = new Set([
   "trade-fairs.org",
   "tradefest.io",
   "visitsaltlake.com",
+  // A second live run attached these to real conferences. cantonfair.net is the worst of them: it
+  // was given as the website for a three-day event in Helsinki.
+  "venunite.com",
+  "expohour.com",
+  "liners.com",
+  "researchbib.com",
+  "cantonfair.net",
+  "conferencealerts.co.in",
+  "sharedaudiences.com",
 ]);
+
+/** Social networks. A post about a conference is not the conference's website, however well it
+ *  matches the name — and a Facebook group or a LinkedIn post is what a search returns when an
+ *  event has no site of its own at all. */
+const SOCIAL_DOMAINS = new Set([
+  "facebook.com",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "instagram.com",
+  "youtube.com",
+  "tiktok.com",
+  "reddit.com",
+  "pinterest.com",
+  "threads.net",
+  "medium.com",
+  "substack.com",
+]);
+
+export function isSocialHost(host: string): boolean {
+  const normalized = host.toLowerCase().replace(/^www\./, "");
+  return [...SOCIAL_DOMAINS].some((domain) => normalized === domain || normalized.endsWith(`.${domain}`));
+}
 
 /** The listing hosts as a plain list, for callers that must name them to somebody else — Exa's
  *  `excludeDomains`, for one, which keeps a search from spending result slots on pages that could

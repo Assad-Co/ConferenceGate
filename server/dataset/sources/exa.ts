@@ -16,7 +16,7 @@
 // Paid, so it is opt-in and capped: no key means the resolver is simply off and the events it would
 // have resolved stay unresolved rather than the run failing.
 
-import { directoryDomains, isDirectoryHost, isReferenceHost } from "../../directoryHosts";
+import { directoryDomains, isDirectoryHost, isReferenceHost, isSocialHost } from "../../directoryHosts";
 
 const SEARCH_URL = "https://api.exa.ai/search";
 
@@ -191,7 +191,10 @@ export function candidateNamesConference(
   } catch {
     return null;
   }
-  if (isDirectoryHost(host) || isReferenceHost(host)) return null;
+  if (isDirectoryHost(host) || isReferenceHost(host) || isSocialHost(host)) return null;
+  // A PDF is a document about an event, never the event's website. The UN Forum on Business and
+  // Human Rights resolved to a concept-note PDF, which no reader could use as a conference page.
+  if (/\.pdf(?:[?#]|$)/i.test(candidate.url)) return null;
 
   const haystack = `${candidate.url} ${candidate.title || ""}`.toLowerCase();
   const acronym = options.acronym?.toLowerCase().replace(/[^a-z0-9]/g, "");
