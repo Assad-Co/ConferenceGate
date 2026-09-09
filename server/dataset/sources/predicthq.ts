@@ -83,6 +83,9 @@ export interface PredictHqFetchOptions {
   maxEvents?: number;
   /** Page size. PredictHQ caps this; 500 is its documented maximum. */
   pageSize?: number;
+  /** ISO2 country codes to restrict this request to. Asking country by country is what stops the
+   *  catalogue from being whatever ranks highest globally, which is overwhelmingly the US. */
+  countries?: string[];
   /** Only events at or above this PHQ rank. Rank is significance, not correctness — it is used to
    *  spend the quota on conferences people have heard of first, never to assert quality. */
   minRank?: number;
@@ -125,6 +128,7 @@ export async function fetchPredictHqConferences(options: PredictHqFetchOptions):
   if (options.minAttendance !== undefined) {
     first.searchParams.set("phq_attendance.gte", String(options.minAttendance));
   }
+  if (options.countries?.length) first.searchParams.set("country", options.countries.join(","));
 
   const collected: PredictHqEvent[] = [];
   let nextUrl: string | null = first.toString();

@@ -310,6 +310,12 @@ async function runOneshot(argv: string[]): Promise<void> {
   const maxResolve = Number(argFor(argv, "--resolve") || 150);
   const minRank = argFor(argv, "--min-rank") ? Number(argFor(argv, "--min-rank")) : 50;
   const minAttendance = Number(argFor(argv, "--min-attendance") || 500);
+  // Asked country by country rather than as one global request. PredictHQ ranks by significance,
+  // and significance is measured in a way that puts American events on top, so a single call for
+  // "the top 400 conferences" returns a catalogue that is mostly one country. A per-country quota
+  // is the difference between a worldwide catalogue and a US one with exceptions.
+  const countryList = (argFor(argv, "--countries") || "").split(",").map((code) => code.trim().toUpperCase()).filter(Boolean);
+  const perCountry = Number(argFor(argv, "--per-country") || 40);
 
   if (!isPredictHqConfigured()) {
     console.error("PREDICTHQ_ACCESS_TOKEN is not set — nothing to fetch.");
@@ -318,16 +324,29 @@ async function runOneshot(argv: string[]): Promise<void> {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  console.log(`[1/3] fetching up to ${maxEvents} conferences, ${today} .. 2028-12-31, rank >= ${minRank}, attendance >= ${minAttendance}`);
-  let events: PredictHqEvent[];
+  const window = { activeFrom: today, activeTo: argFor(argv, "--to") || "2028-12-31" };
+  console.log(`[1/3] fetching conferences, ${window.activeFrom} .. ${window.activeTo}, rank >= ${minRank}, attendance >= ${minAttendance}`);
+  let events: PredictHqEvent[] = [];
   try {
-    events = await fetchPredictHqConferences({
-      activeFrom: today,
-      activeTo: "2028-12-31",
-      maxEvents,
-      minRank,
-      minAttendance,
-    });
+    if (countryList.length > 0) {
+      console.log(`      ${countryList.length} countries, up to ${perCountry} each`);
+      const seen = new Set<string>();
+      for (const country of countryList) {
+        const batch = await fetchPredictHqConferences({
+          ...window,
+          maxEvents: perCountry,
+          minRank,
+          minAttendance,
+          countries: [country],
+        });
+        const fresh = batch.filter((event) => event.id && !seen.has(event.id));
+        for (const event of fresh) seen.add(event.id!);
+        events.push(...fresh);
+        console.log(`      ${country}: ${fresh.length}`);
+      }
+    } else {
+      events = await fetchPredictHqConferences({ ...window, maxEvents, minRank, minAttendance });
+    }
   } catch (error) {
     console.error(`PredictHQ FAILED — ${(error as Error).message}`);
     process.exitCode = 1;

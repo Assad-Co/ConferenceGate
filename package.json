@@ -16,7 +16,8 @@
     "test:discovery": "node scripts/runDiscoveryTests.mjs",
     "dataset:build": "tsx server/dataset/cli.ts",
     "dataset:ingest": "tsx server/dataset/ingest.ts",
-    "dataset:verify": "tsx server/dataset/verifySearch.ts"
+    "dataset:verify": "tsx server/dataset/verifySearch.ts",
+    "dataset:seed-discovery": "tsx server/dataset/seedDiscovery.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
