@@ -10,7 +10,7 @@ import { buildLaunchDataset, toCsv, type StructuredOutcome } from "./build";
 import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
-import { readPredictHqCache, readResolvedUrls } from "./ingest";
+import { readPortableEvents, readPredictHqCache, readResolvedUrls } from "./ingest";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const HARVEST_DIR = path.join(DATA_DIR, "harvest");
@@ -43,13 +43,18 @@ export function readHarvest(dir = HARVEST_DIR): HarvestEvidence[] {
  * are waiting on a URL" is a number somebody can read rather than a silent gap.
  */
 export function structuredFromPredictHq(options: ParseOptions): StructuredOutcome[] {
+  // Two ways the same events arrive: a cache this machine fetched, and lines carried back from a
+  // machine that could reach the API but could not keep a file. Both are the same events.
   const cache = readPredictHqCache();
-  if (!cache) return [];
+  const portable = readPortableEvents();
+  const events = [...(cache?.events || []), ...portable.events];
+  if (events.length === 0) return [];
   const resolved = readResolvedUrls();
+  const urlFor = (id: string) => resolved.urls[id]?.url ?? portable.urls[id] ?? null;
 
-  return cache.events.map((event) => {
+  return events.map((event) => {
     const eventId = event.id || "";
-    const officialUrl = resolved.urls[eventId]?.url ?? null;
+    const officialUrl = urlFor(eventId);
     const outcome = mapPredictHqEvent(event, { ...options, officialUrl });
     return {
       outcome,

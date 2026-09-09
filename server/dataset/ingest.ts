@@ -5,6 +5,8 @@
 // in CI, in a container with no egress at all — and that a rebuild months later reproduces exactly
 // what the API said at the time rather than whatever it says now.
 //
+//   npx tsx server/dataset/ingest.ts oneshot             verify + fetch + resolve, printing a
+//                                                        portable block for a host with no disk
 //   npx tsx server/dataset/ingest.ts verify              one cheap call per API, exact statuses
 //   npx tsx server/dataset/ingest.ts status              what is configured and what is cached
 //   npx tsx server/dataset/ingest.ts predicthq           pull the conferences feed
@@ -26,6 +28,8 @@ import { exaSearch, isExaConfigured, resolveOfficialUrl } from "./sources/exa";
 const DATA_DIR = path.join(process.cwd(), "data");
 export const SOURCES_DIR = path.join(DATA_DIR, "sources");
 export const PREDICTHQ_CACHE = path.join(SOURCES_DIR, "predicthq-events.json");
+/** Events captured from a host that had network but no disk, pasted back in as JSONL. */
+export const PORTABLE_EVENTS = path.join(SOURCES_DIR, "predicthq-portable.jsonl");
 export const RESOLVED_URLS_CACHE = path.join(SOURCES_DIR, "resolved-urls.json");
 export const SERIES_FILE = path.join(DATA_DIR, "conference-series.json");
 
@@ -61,6 +65,37 @@ export interface ResolvedUrlCache {
 
 export function readPredictHqCache(): PredictHqCache | null {
   return readJson<PredictHqCache>(PREDICTHQ_CACHE);
+}
+
+/**
+ * Events carried back from a machine that could reach the APIs but could not keep a file.
+ *
+ * Render's web service has no persistent disk and no way to commit, so an ingest run there loses
+ * everything the moment it ends. This is the way across that gap: `oneshot` prints one compact JSON
+ * line per conference, those lines get saved here, and the builder reads them exactly like a cache
+ * it fetched itself. The URL each line carries is folded back out into the resolved-URL map, so
+ * nothing downstream needs to know the data arrived by hand.
+ */
+export function readPortableEvents(): { events: PredictHqEvent[]; urls: Record<string, string> } {
+  const events: PredictHqEvent[] = [];
+  const urls: Record<string, string> = {};
+  if (!fs.existsSync(PORTABLE_EVENTS)) return { events, urls };
+
+  for (const raw of fs.readFileSync(PORTABLE_EVENTS, "utf8").split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    let parsed: PredictHqEvent & { _resolvedUrl?: string };
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const { _resolvedUrl, ...event } = parsed;
+    if (!event.id) continue;
+    events.push(event);
+    if (_resolvedUrl) urls[event.id] = _resolvedUrl;
+  }
+  return { events, urls };
 }
 
 export function readResolvedUrls(): ResolvedUrlCache {
@@ -237,6 +272,94 @@ async function runVerify(): Promise<void> {
   }
 }
 
+/** The fields the mapper actually reads, and nothing else — these lines get pasted by a human. */
+function toPortableLine(event: PredictHqEvent, resolvedUrl: string | null): string {
+  const venue = (event.entities || []).find((entity) => entity?.type === "venue" && entity.name);
+  const compact: Record<string, unknown> = {
+    id: event.id,
+    title: event.title,
+    state: event.state,
+    country: event.country,
+    start_local: event.start_local || event.start,
+    end_local: event.end_local || event.end,
+  };
+  // Kept short on purpose: a description that runs to a thousand characters makes the block
+  // unpasteable, and the first couple of sentences are what a reader sees anyway.
+  if (event.description) compact.description = String(event.description).replace(/\s+/g, " ").slice(0, 220);
+  if (event.labels?.length) compact.labels = event.labels.slice(0, 6);
+  if (venue?.name) compact.entities = [{ name: venue.name, type: "venue" }];
+  const locality = event.geo?.address?.locality;
+  const region = event.geo?.address?.region;
+  if (locality || region) compact.geo = { address: { locality: locality ?? null, region: region ?? null } };
+  if (resolvedUrl) compact._resolvedUrl = resolvedUrl;
+  return JSON.stringify(compact);
+}
+
+/**
+ * Everything in one run, for a host that has network but nothing to write to.
+ *
+ * Verify, fetch, resolve, then print the result as JSONL. The point is the printed block: it is the
+ * only way data gets off a machine with no disk and no credentials to commit with, so it is kept
+ * compact enough to copy out of a terminal.
+ */
+async function runOneshot(argv: string[]): Promise<void> {
+  const maxEvents = Number(argFor(argv, "--max") || 250);
+  const maxResolve = Number(argFor(argv, "--resolve") || 150);
+  const minRank = argFor(argv, "--min-rank") ? Number(argFor(argv, "--min-rank")) : 30;
+
+  if (!isPredictHqConfigured()) {
+    console.error("PREDICTHQ_ACCESS_TOKEN is not set — nothing to fetch.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  console.log(`[1/3] fetching up to ${maxEvents} conferences, ${today} .. 2028-12-31, rank >= ${minRank}`);
+  let events: PredictHqEvent[];
+  try {
+    events = await fetchPredictHqConferences({ activeFrom: today, activeTo: "2028-12-31", maxEvents, minRank });
+  } catch (error) {
+    console.error(`PredictHQ FAILED — ${(error as Error).message}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`      got ${events.length} events`);
+
+  const urls: Record<string, string> = {};
+  if (isExaConfigured()) {
+    console.log(`[2/3] resolving official websites for up to ${maxResolve} of them`);
+    let looked = 0;
+    for (const event of events) {
+      if (looked >= maxResolve) break;
+      if (!event.id || !event.title) continue;
+      const year = Number((event.start_local || event.start || "").slice(0, 4));
+      if (!year) continue;
+      looked += 1;
+      try {
+        const hit = await resolveOfficialUrl({
+          title: event.title,
+          year,
+          city: event.geo?.address?.locality ?? null,
+          country: event.country ?? null,
+        });
+        if (hit) urls[event.id] = hit.url;
+      } catch (error) {
+        console.error(`      Exa FAILED — ${(error as Error).message}`);
+        break;
+      }
+    }
+    console.log(`      looked up ${looked}, found ${Object.keys(urls).length} websites`);
+  } else {
+    console.log("[2/3] EXA_API_KEY not set — skipping website resolution (those events cannot be published)");
+  }
+
+  const withUrl = events.filter((event) => event.id && urls[event.id]);
+  console.log(`[3/3] ${withUrl.length} events have a website and are ready to publish\n`);
+  console.log("=== COPY EVERYTHING BELOW THIS LINE ===");
+  for (const event of withUrl) console.log(toPortableLine(event, urls[event.id!]));
+  console.log("=== COPY EVERYTHING ABOVE THIS LINE ===");
+}
+
 function runStatus(): void {
   const cache = readPredictHqCache();
   const resolved = readResolvedUrls();
@@ -263,9 +386,10 @@ async function main(): Promise<void> {
     case "openalex": await runOpenAlex(argv); break;
     case "resolve": await runResolve(argv); break;
     case "verify": await runVerify(); break;
+    case "oneshot": await runOneshot(argv); break;
     case "status": case undefined: runStatus(); break;
     default:
-      console.error(`Unknown command "${command}". Use: status | verify | predicthq | openalex | resolve`);
+      console.error(`Unknown command "${command}". Use: status | verify | oneshot | predicthq | openalex | resolve`);
       process.exitCode = 1;
   }
 }
