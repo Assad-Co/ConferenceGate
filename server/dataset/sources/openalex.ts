@@ -10,8 +10,8 @@
 // does not know that ICRA 2027 is in Santa Clara in March. So this produces SERIES, never records —
 // names, acronyms and homepages that other sources then resolve to a dated edition.
 //
-// A `mailto` is sent on every request because that is what OpenAlex asks for in return for the
-// free, unmetered service, and it puts us in their faster pool.
+// A `mailto` is still sent on every request: OpenAlex asks for a contact address, and it costs
+// nothing to be identifiable.
 
 const API_BASE = "https://api.openalex.org/sources";
 
@@ -69,6 +69,8 @@ export async function fetchOpenAlexConferenceSeries(
   const pageSize = Math.min(Math.max(1, options.pageSize ?? 200), 200);
   const minWorks = Math.max(0, options.minWorks ?? 25);
   const contact = process.env.OPENALEX_CONTACT_EMAIL?.trim();
+  // Passed as a URL parameter, which is how OpenAlex takes it — not a header.
+  const apiKey = process.env.OPENALEX_API_KEY?.trim();
 
   const collected: OpenAlexSource[] = [];
   let cursor: string | null = "*";
@@ -84,11 +86,20 @@ export async function fetchOpenAlexConferenceSeries(
       "id,display_name,abbreviated_title,alternate_titles,type,homepage_url,country_code,works_count,cited_by_count,topics"
     );
     if (contact) url.searchParams.set("mailto", contact);
+    if (apiKey) url.searchParams.set("api_key", apiKey);
 
     const response: Response = await doFetch(url.toString(), { headers: { Accept: "application/json" } });
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      throw new Error(`OpenAlex responded ${response.status}: ${body.slice(0, 300)}`);
+      // 429 here is a spent daily budget far more often than it is a burst of traffic, and the two
+      // call for different responses, so the advice says which one this is.
+      const hint =
+        response.status === 429
+          ? apiKey
+            ? " — daily budget spent; it resets at midnight UTC, or add prepaid usage at https://openalex.org/pricing"
+            : " — no OPENALEX_API_KEY is set, which leaves a tiny unauthenticated budget. A free key raises it 10x."
+          : "";
+      throw new Error(`OpenAlex responded ${response.status}${hint}: ${body.slice(0, 240)}`);
     }
     const page = (await response.json()) as OpenAlexPage;
     pageNumber += 1;

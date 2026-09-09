@@ -178,6 +178,35 @@ test("a source OpenAlex does not type as a conference is refused", () => {
   assert.equal(mapOpenAlexSeries({ id: "https://openalex.org/S2", type: "conference" }), null);
 });
 
+test("an OpenAlex 429 says whether the budget is spent or no key is set", async () => {
+  delete process.env.OPENALEX_API_KEY;
+  const spent = (async () =>
+    new Response('{"error":"Rate limit exceeded","message":"Insufficient budget."}', { status: 429 })) as unknown as typeof fetch;
+  await assert.rejects(
+    () => fetchOpenAlexConferenceSeries({ fetchImpl: spent }),
+    /no OPENALEX_API_KEY is set/
+  );
+
+  process.env.OPENALEX_API_KEY = "test-key";
+  await assert.rejects(
+    () => fetchOpenAlexConferenceSeries({ fetchImpl: spent }),
+    /daily budget spent/
+  );
+  delete process.env.OPENALEX_API_KEY;
+});
+
+test("an OpenAlex API key is sent as a URL parameter, which is how OpenAlex takes it", async () => {
+  process.env.OPENALEX_API_KEY = "secret-key";
+  let seen = "";
+  const fetchImpl = (async (url: string | URL | Request) => {
+    seen = String(url);
+    return jsonResponse({ results: [], meta: { next_cursor: null } });
+  }) as unknown as typeof fetch;
+  await fetchOpenAlexConferenceSeries({ fetchImpl });
+  assert.ok(seen.includes("api_key=secret-key"), seen);
+  delete process.env.OPENALEX_API_KEY;
+});
+
 test("the OpenAlex client follows its cursor and asks for the polite pool", async () => {
   process.env.OPENALEX_CONTACT_EMAIL = "someone@example.com";
   const seen: string[] = [];

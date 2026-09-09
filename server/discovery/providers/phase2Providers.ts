@@ -1,8 +1,9 @@
 // Phase 2 providers.
 //
 // Common Crawl is still a stub, and says so. OpenAlex is now real: it enumerates conference series
-// from a free, key-less scholarly index, which is the one thing search discovery structurally
-// cannot do — search only finds conferences somebody already thought to query for.
+// from a scholarly index, which is the one thing search discovery structurally cannot do — search
+// only finds conferences somebody already thought to query for. Since February 2026 that index
+// bills per request against a small daily budget, so it wants OPENALEX_API_KEY set.
 //
 // Sections 39 and 40 are explicit that Common Crawl and OpenAlex come after Phase 1 succeeds, and
 // that nothing should be downloading Common Crawl segments now. These exist so that adding them
@@ -45,7 +46,8 @@ export class CommonCrawlProvider implements DiscoveryProvider {
  *
  *  OpenAlex answers the question search discovery cannot: which conference series exist at all.
  *  Search can only find conferences somebody thought to query for; this enumerates them, in every
- *  discipline, from an index that needs no key, no account and no quota.
+ *  discipline. Cheap rather than free: about $0.0001 a request against a daily budget that a free
+ *  API key raises tenfold.
  *
  *  What it yields is a series' homepage, not a dated edition — OpenAlex is bibliographic and
  *  backward-looking. That is still a strong lead: the homepage of a real recurring conference is
@@ -63,7 +65,9 @@ export class OpenAlexProvider implements DiscoveryProvider {
   }
 
   unavailableReason(): string | null {
-    return this.isEnabled() ? null : "Set DISCOVERY_OPENALEX=1 to enumerate conference series from OpenAlex (no key required).";
+    return this.isEnabled()
+      ? null
+      : "Set DISCOVERY_OPENALEX=1 to enumerate conference series from OpenAlex. Set OPENALEX_API_KEY too — the unauthenticated daily budget is spent almost immediately from a shared host.";
   }
 
   async discover(context: DiscoveryContext): Promise<DiscoveryCandidate[]> {
