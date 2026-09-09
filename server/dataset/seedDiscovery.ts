@@ -191,7 +191,9 @@ export interface SeedResult {
   failures: Array<{ id: string; message: string }>;
 }
 
-export async function seedLaunchRecords(options: { dryRun?: boolean; limit?: number } = {}): Promise<SeedResult> {
+export async function seedLaunchRecords(
+  options: { dryRun?: boolean; limit?: number; onProgress?: (done: number, total: number, title: string) => void } = {}
+): Promise<SeedResult> {
   const { records } = loadLaunchDataset();
   const limit = options.limit ?? records.length;
   const result: SeedResult = { considered: 0, seeded: 0, skippedWithoutUrl: 0, failures: [] };
@@ -209,6 +211,7 @@ export async function seedLaunchRecords(options: { dryRun?: boolean; limit?: num
       continue;
     }
     try {
+      options.onProgress?.(result.considered, limit, record.title);
       await storeEvent(toNormalizedEvent(record), {
         // `validated` is what enrichment selects. Publication stays behind its own flag and audit.
         status: "validated",
@@ -237,7 +240,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  const result = await seedLaunchRecords({ dryRun, limit });
+  const started = Date.now();
+  // Each record is several round trips to a remote database, so a silent run looks identical to a
+  // hung one for minutes at a time. Printing every twentieth is enough to see it moving without
+  // turning the log into three hundred lines.
+  const result = await seedLaunchRecords({
+    dryRun,
+    limit,
+    onProgress: (done, total, title) => {
+      if (done === 1 || done % 20 === 0) {
+        const elapsed = Math.round((Date.now() - started) / 1000);
+        console.log(`  ${done}/${total}  ${elapsed}s  ${title.slice(0, 52)}`);
+      }
+    },
+  });
   console.log(`${dryRun ? "[dry run] " : ""}considered ${result.considered}`);
   console.log(`  seeded as validated       ${result.seeded}`);
   console.log(`  skipped, no website       ${result.skippedWithoutUrl}`);
