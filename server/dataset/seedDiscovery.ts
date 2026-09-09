@@ -20,8 +20,15 @@
 //   npx tsx server/dataset/seedDiscovery.ts --dry-run     what would be written, writing nothing
 //   npx tsx server/dataset/seedDiscovery.ts               write them
 
+import { createHash } from "node:crypto";
 import { storeEvent } from "../discovery/store";
-import { EMPTY_DEADLINES, type CategoryAssignment, type EventFormat, type NormalizedEvent } from "../discovery/types";
+import {
+  EMPTY_DEADLINES,
+  type CategoryAssignment,
+  type EventFormat,
+  type FieldProvenance,
+  type NormalizedEvent,
+} from "../discovery/types";
 import { loadLaunchDataset } from "./staticDataset";
 import type { LaunchConferenceRecord } from "./types";
 
@@ -48,6 +55,47 @@ function trustFor(record: LaunchConferenceRecord): number {
     case "reference": return 0.4;
     default: return 0.25;
   }
+}
+
+/** The dataset's per-field provenance, in the engine's shape.
+ *
+ *  Both sides record the same idea — which page supplied a value and how firmly — but with
+ *  different field names, so this is a translation rather than a re-derivation. The confidence
+ *  words become the numbers the engine compares sources with. */
+function provenanceFor(record: LaunchConferenceRecord): Record<string, FieldProvenance> {
+  const numeric: Record<string, number> = { High: 0.9, Medium: 0.6, Low: 0.35 };
+  const values: Record<string, string | null> = {
+    title: record.title,
+    dates: record.startDate,
+    city: record.city,
+    country: record.country,
+    venue: record.venue,
+    organization: record.organization,
+  };
+  const translated: Record<string, FieldProvenance> = {};
+  for (const [field, entry] of Object.entries(record.provenance)) {
+    translated[field] = {
+      value: values[field] ?? null,
+      sourceUrl: entry.sourceUrl,
+      sourceDomain: record.sourceHost,
+      method: "derived",
+      confidence: numeric[entry.confidence] ?? 0.5,
+      lastVerified: record.evidence.retrievedAt,
+    };
+  }
+  return translated;
+}
+
+/** Identifies this version of the record, so a re-seed after a rebuild is recognised as a change
+ *  rather than as the same row arriving twice. */
+function contentHashFor(record: LaunchConferenceRecord): string {
+  return createHash("sha256")
+    .update(
+      [record.title, record.startDate, record.endDate, record.city, record.country, record.venue, record.sourceUrl]
+        .map((value) => value ?? "")
+        .join("|")
+    )
+    .digest("hex");
 }
 
 export function toNormalizedEvent(record: LaunchConferenceRecord): NormalizedEvent {
@@ -128,7 +176,12 @@ export function toNormalizedEvent(record: LaunchConferenceRecord): NormalizedEve
       confidenceScore: trustFor(record),
       classificationReason: `Launch dataset record built from ${record.evidence.method} evidence and validated against the date, location and source-URL rules.`,
     },
-  } as NormalizedEvent;
+    provenance: provenanceFor(record),
+    // Nothing is flagged: a record only reaches the dataset by passing its rules, and inventing a
+    // flag here would put a mark on the row that no check actually raised.
+    qualityFlags: [],
+    contentHash: contentHashFor(record),
+  };
 }
 
 export interface SeedResult {
@@ -190,7 +243,15 @@ async function main(): Promise<void> {
   console.log(`  skipped, no website       ${result.skippedWithoutUrl}`);
   console.log(`  failed                    ${result.failures.length}`);
   for (const failure of result.failures.slice(0, 10)) console.log(`    ${failure.id}: ${failure.message}`);
-  if (!dryRun) {
+
+  if (result.failures.length > 0) {
+    // Reporting success while writing nothing is worse than failing: it sends somebody away
+    // believing the catalogue is being enriched when not one row was stored.
+    console.error(`\n${result.failures.length} records could not be stored. Nothing downstream will see them.`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!dryRun && result.seeded > 0) {
     console.log("\nThese are now visible to enrichment. The next automation run will read each");
     console.log("conference's own site and fill programme, speakers, committee and sponsors.");
   }
