@@ -5,6 +5,7 @@
 // in CI, in a container with no egress at all — and that a rebuild months later reproduces exactly
 // what the API said at the time rather than whatever it says now.
 //
+//   npx tsx server/dataset/ingest.ts verify              one cheap call per API, exact statuses
 //   npx tsx server/dataset/ingest.ts status              what is configured and what is cached
 //   npx tsx server/dataset/ingest.ts predicthq           pull the conferences feed
 //   npx tsx server/dataset/ingest.ts openalex            pull the conference series seed list
@@ -20,7 +21,7 @@ import {
   type PredictHqEvent,
 } from "./sources/predicthq";
 import { fetchOpenAlexConferenceSeries, mapOpenAlexSeries, type ConferenceSeries } from "./sources/openalex";
-import { isExaConfigured, resolveOfficialUrl } from "./sources/exa";
+import { exaSearch, isExaConfigured, resolveOfficialUrl } from "./sources/exa";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 export const SOURCES_DIR = path.join(DATA_DIR, "sources");
@@ -169,6 +170,73 @@ async function runResolve(argv: string[]): Promise<void> {
   console.log(`[resolve] looked up ${looked}, found ${found}, cached -> ${RESOLVED_URLS_CACHE}`);
 }
 
+/**
+ * One real call per configured API, through the clients that ship.
+ *
+ * Worth its own command because the request shapes here were written from documentation rather than
+ * from a successful call — the container this was built in cannot reach any of these hosts. This
+ * turns "hopefully the auth header is right" into a five-second answer, and prints the exact status
+ * and body when it is not, so a wrong header reads as `401` rather than as an empty feed.
+ */
+async function runVerify(): Promise<void> {
+  const checks: Array<{ name: string; run: () => Promise<string> }> = [];
+
+  if (isPredictHqConfigured()) {
+    checks.push({
+      name: "PredictHQ",
+      run: async () => {
+        const events = await fetchPredictHqConferences({
+          activeFrom: new Date().toISOString().slice(0, 10),
+          activeTo: "2028-12-31",
+          maxEvents: 1,
+          pageSize: 1,
+        });
+        const first = events[0];
+        return first ? `ok — e.g. "${(first.title || "").slice(0, 60)}" (${first.country ?? "?"})` : "ok — reachable, no events in window";
+      },
+    });
+  } else {
+    console.log("PredictHQ  skipped (PREDICTHQ_ACCESS_TOKEN not set)");
+  }
+
+  checks.push({
+    name: "OpenAlex ",
+    run: async () => {
+      const sources = await fetchOpenAlexConferenceSeries({ maxSeries: 1, pageSize: 1 });
+      const first = sources[0];
+      return first ? `ok — e.g. "${(first.display_name || "").slice(0, 60)}"` : "ok — reachable, no sources returned";
+    },
+  });
+
+  if (isExaConfigured()) {
+    checks.push({
+      name: "Exa      ",
+      run: async () => {
+        const results = await exaSearch({ query: "EAGE Annual Conference official website", numResults: 1 });
+        const first = results[0];
+        return first ? `ok — e.g. ${first.url}` : "ok — reachable, no results returned";
+      },
+    });
+  } else {
+    console.log("Exa        skipped (EXA_API_KEY not set)");
+  }
+
+  let failures = 0;
+  for (const check of checks) {
+    try {
+      console.log(`${check.name}  ${await check.run()}`);
+    } catch (error) {
+      failures += 1;
+      console.log(`${check.name}  FAILED — ${(error as Error).message}`);
+    }
+  }
+  if (failures > 0) {
+    console.log(`\n${failures} check(s) failed. The message above is the API's own, verbatim: a 401 or 403 means the`);
+    console.log("credential or the auth header is wrong, a 400 means the request shape is. Report it back and it gets fixed.");
+    process.exitCode = 1;
+  }
+}
+
 function runStatus(): void {
   const cache = readPredictHqCache();
   const resolved = readResolvedUrls();
@@ -194,9 +262,10 @@ async function main(): Promise<void> {
     case "predicthq": await runPredictHq(argv); break;
     case "openalex": await runOpenAlex(argv); break;
     case "resolve": await runResolve(argv); break;
+    case "verify": await runVerify(); break;
     case "status": case undefined: runStatus(); break;
     default:
-      console.error(`Unknown command "${command}". Use: status | predicthq | openalex | resolve`);
+      console.error(`Unknown command "${command}". Use: status | verify | predicthq | openalex | resolve`);
       process.exitCode = 1;
   }
 }

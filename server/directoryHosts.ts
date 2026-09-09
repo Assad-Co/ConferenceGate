@@ -44,6 +44,13 @@ const DIRECTORY_DOMAINS = new Set([
   "eventbrowse.com",
 ]);
 
+/** The listing hosts as a plain list, for callers that must name them to somebody else — Exa's
+ *  `excludeDomains`, for one, which keeps a search from spending result slots on pages that could
+ *  never be a conference's own website. */
+export function directoryDomains(): string[] {
+  return [...DIRECTORY_DOMAINS];
+}
+
 /** True when the host is a conference directory, calendar or listing aggregator. */
 export function isDirectoryHost(host: string): boolean {
   const normalized = host.toLowerCase().replace(/^www\./, "");

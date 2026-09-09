@@ -16,7 +16,7 @@
 // Paid, so it is opt-in and capped: no key means the resolver is simply off and the events it would
 // have resolved stay unresolved rather than the run failing.
 
-import { isDirectoryHost, isReferenceHost } from "../../directoryHosts";
+import { directoryDomains, isDirectoryHost, isReferenceHost } from "../../directoryHosts";
 
 const SEARCH_URL = "https://api.exa.ai/search";
 
@@ -41,8 +41,13 @@ export function isExaConfigured(): boolean {
 export interface ExaSearchOptions {
   query: string;
   numResults?: number;
-  /** "auto" lets Exa pick between its neural and keyword paths; the default here. */
-  type?: "auto" | "neural" | "keyword" | "fast";
+  /**
+   * Search depth. "auto" is the documented default and the right one here: resolving a homepage is
+   * a lookup, not research, so the deep variants would cost more and add latency for nothing.
+   *
+   * "neural" and "keyword" are deliberately absent — Exa's own guide calls them legacy terminology.
+   */
+  type?: "auto" | "fast" | "instant" | "deep-lite" | "deep" | "deep-reasoning";
   includeDomains?: string[];
   excludeDomains?: string[];
   fetchImpl?: typeof fetch;
@@ -173,10 +178,14 @@ export async function resolveOfficialUrl(options: ResolveOptions): Promise<Resol
     .filter(Boolean)
     .join(" ");
 
+  // Listing hosts are excluded at the API rather than filtered afterwards. They rank well for
+  // exactly these queries, so leaving them in spends most of the result slots on pages that are
+  // rejected a moment later anyway.
   const results = await exaSearch({
     query,
     numResults: options.numResults ?? 8,
     type: "auto",
+    excludeDomains: directoryDomains(),
     fetchImpl: options.fetchImpl,
   });
 

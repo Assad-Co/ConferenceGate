@@ -212,6 +212,21 @@ test("distinctive tokens drop the words every conference shares", () => {
   assert.deepEqual(distinctiveTokens("13th International Conference on Applied Geochemistry 2027"), ["applied", "geochemistry"]);
 });
 
+test("resolution excludes listing hosts at the API rather than filtering them afterwards", async () => {
+  process.env.EXA_API_KEY = "test-key";
+  let sentBody: any = null;
+  const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+    sentBody = JSON.parse(String(init?.body));
+    return jsonResponse({ results: [] });
+  }) as unknown as typeof fetch;
+
+  await resolveOfficialUrl({ title: "International Conference on Water", year: 2027, fetchImpl });
+  assert.equal(sentBody.type, "auto");
+  assert.ok(Array.isArray(sentBody.excludeDomains));
+  assert.ok(sentBody.excludeDomains.includes("10times.com"));
+  assert.ok(sentBody.excludeDomains.includes("conferenceindex.org"));
+});
+
 test("URL resolution returns null rather than the best guess", async () => {
   process.env.EXA_API_KEY = "test-key";
   const fetchImpl = (async () =>
