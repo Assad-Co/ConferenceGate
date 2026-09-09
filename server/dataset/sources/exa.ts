@@ -20,6 +20,17 @@ import { directoryDomains, isDirectoryHost, isReferenceHost } from "../../direct
 
 const SEARCH_URL = "https://api.exa.ai/search";
 
+/** Exa allows 10 requests a second. A loop of short calls reaches that easily, so calls are spaced
+ *  to stay comfortably under it rather than discovering the limit as a 429 mid-run. */
+const MIN_CALL_INTERVAL_MS = 160;
+let lastCallAt = 0;
+
+async function throttle(): Promise<void> {
+  const wait = MIN_CALL_INTERVAL_MS - (Date.now() - lastCallAt);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastCallAt = Date.now();
+}
+
 export interface ExaResult {
   id?: string;
   url?: string;
@@ -58,23 +69,34 @@ export async function exaSearch(options: ExaSearchOptions): Promise<ExaResult[]>
   if (!key) throw new Error("EXA_API_KEY is not set");
   const doFetch = options.fetchImpl || fetch;
 
-  const response: Response = await doFetch(SEARCH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": key, Accept: "application/json" },
-    body: JSON.stringify({
-      query: options.query,
-      numResults: Math.min(Math.max(1, options.numResults ?? 8), 25),
-      type: options.type ?? "auto",
-      ...(options.includeDomains ? { includeDomains: options.includeDomains } : {}),
-      ...(options.excludeDomains ? { excludeDomains: options.excludeDomains } : {}),
-    }),
+  const body = JSON.stringify({
+    query: options.query,
+    numResults: Math.min(Math.max(1, options.numResults ?? 8), 25),
+    type: options.type ?? "auto",
+    ...(options.includeDomains ? { includeDomains: options.includeDomains } : {}),
+    ...(options.excludeDomains ? { excludeDomains: options.excludeDomains } : {}),
   });
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Exa responded ${response.status}: ${body.slice(0, 300)}`);
+
+  // A rate limit is a "wait and it will work" answer, not a failure, so it is retried a couple of
+  // times before it becomes one. Anything else is a real error and is raised immediately.
+  for (let attempt = 0; ; attempt += 1) {
+    await throttle();
+    const response: Response = await doFetch(SEARCH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key, Accept: "application/json" },
+      body,
+    });
+    if (response.ok) {
+      const payload = (await response.json()) as ExaSearchResponse;
+      return Array.isArray(payload.results) ? payload.results : [];
+    }
+    const text = await response.text().catch(() => "");
+    if (response.status === 429 && attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt));
+      continue;
+    }
+    throw new Error(`Exa responded ${response.status}: ${text.slice(0, 300)}`);
   }
-  const payload = (await response.json()) as ExaSearchResponse;
-  return Array.isArray(payload.results) ? payload.results : [];
 }
 
 const NAME_NOISE = new Set([
@@ -104,12 +126,43 @@ export function distinctiveTokens(title: string): string[] {
   ];
 }
 
+/** Country-code top-level domains, for the contradiction check below. Neutral TLDs (.com, .org,
+ *  .net, .io …) are deliberately absent: they say nothing about where an event is. */
+const CCTLD_COUNTRY: Record<string, string> = {
+  ae: "AE", ar: "AR", at: "AT", au: "AU", be: "BE", bh: "BH", br: "BR", ca: "CA", ch: "CH",
+  cl: "CL", cn: "CN", cz: "CZ", de: "DE", dk: "DK", eg: "EG", es: "ES", fi: "FI", fr: "FR",
+  gr: "GR", hk: "HK", hu: "HU", id: "ID", ie: "IE", il: "IL", in: "IN", ir: "IR", is: "IS",
+  it: "IT", jp: "JP", ke: "KE", kr: "KR", kw: "KW", lu: "LU", ma: "MA", mx: "MX", my: "MY",
+  ng: "NG", nl: "NL", no: "NO", nz: "NZ", om: "OM", pe: "PE", ph: "PH", pk: "PK", pl: "PL",
+  pt: "PT", qa: "QA", ro: "RO", rs: "RS", ru: "RU", sa: "SA", se: "SE", sg: "SG", th: "TH",
+  tr: "TR", tw: "TW", ua: "UA", uk: "GB", vn: "VN", za: "ZA",
+};
+
+/**
+ * True when a host's country-code domain contradicts where the event is held.
+ *
+ * "Writers of the North: Books as Therapy" in Albany, Western Australia resolved to
+ * writersofthenorth.co.uk — a real site, a genuine name match, and the wrong hemisphere. Two events
+ * can share a name, so a name match alone was never enough. A neutral TLD says nothing and is
+ * allowed through; only an explicit contradiction rejects.
+ */
+export function countryContradicts(host: string, eventCountryCode: string | null | undefined): boolean {
+  if (!eventCountryCode) return false;
+  const parts = host.toLowerCase().split(".");
+  const tld = parts[parts.length - 1];
+  const hostCountry = CCTLD_COUNTRY[tld];
+  if (!hostCountry) return false;
+  return hostCountry !== eventCountryCode.toUpperCase();
+}
+
 export interface ResolveOptions {
   title: string;
   year: number;
   city?: string | null;
   country?: string | null;
   acronym?: string | null;
+  /** ISO2 of where the event is held, used to reject a site in a contradicting country. */
+  countryCode?: string | null;
   numResults?: number;
   fetchImpl?: typeof fetch;
 }
@@ -196,9 +249,11 @@ export async function resolveOfficialUrl(options: ResolveOptions): Promise<Resol
       { title: options.title, acronym: options.acronym }
     );
     if (!matchedOn) continue;
+    const host = new URL(result.url).hostname.toLowerCase().replace(/^www\./, "");
+    if (countryContradicts(host, options.countryCode)) continue;
     return {
       url: result.url,
-      host: new URL(result.url).hostname.toLowerCase().replace(/^www\./, ""),
+      host,
       matchedOn,
       resultTitle: result.title ?? null,
       score: typeof result.score === "number" ? result.score : null,

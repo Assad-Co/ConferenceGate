@@ -20,6 +20,7 @@ import path from "node:path";
 import {
   fetchPredictHqConferences,
   isPredictHqConfigured,
+  looksLikeConference,
   type PredictHqEvent,
 } from "./sources/predicthq";
 import { fetchOpenAlexConferenceSeries, mapOpenAlexSeries, type ConferenceSeries } from "./sources/openalex";
@@ -282,6 +283,8 @@ function toPortableLine(event: PredictHqEvent, resolvedUrl: string | null): stri
     country: event.country,
     start_local: event.start_local || event.start,
     end_local: event.end_local || event.end,
+    phq_attendance: event.phq_attendance ?? null,
+    rank: event.rank ?? null,
   };
   // Kept short on purpose: a description that runs to a thousand characters makes the block
   // unpasteable, and the first couple of sentences are what a reader sees anyway.
@@ -305,7 +308,8 @@ function toPortableLine(event: PredictHqEvent, resolvedUrl: string | null): stri
 async function runOneshot(argv: string[]): Promise<void> {
   const maxEvents = Number(argFor(argv, "--max") || 250);
   const maxResolve = Number(argFor(argv, "--resolve") || 150);
-  const minRank = argFor(argv, "--min-rank") ? Number(argFor(argv, "--min-rank")) : 30;
+  const minRank = argFor(argv, "--min-rank") ? Number(argFor(argv, "--min-rank")) : 50;
+  const minAttendance = Number(argFor(argv, "--min-attendance") || 500);
 
   if (!isPredictHqConfigured()) {
     console.error("PREDICTHQ_ACCESS_TOKEN is not set — nothing to fetch.");
@@ -314,10 +318,16 @@ async function runOneshot(argv: string[]): Promise<void> {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  console.log(`[1/3] fetching up to ${maxEvents} conferences, ${today} .. 2028-12-31, rank >= ${minRank}`);
+  console.log(`[1/3] fetching up to ${maxEvents} conferences, ${today} .. 2028-12-31, rank >= ${minRank}, attendance >= ${minAttendance}`);
   let events: PredictHqEvent[];
   try {
-    events = await fetchPredictHqConferences({ activeFrom: today, activeTo: "2028-12-31", maxEvents, minRank });
+    events = await fetchPredictHqConferences({
+      activeFrom: today,
+      activeTo: "2028-12-31",
+      maxEvents,
+      minRank,
+      minAttendance,
+    });
   } catch (error) {
     console.error(`PredictHQ FAILED — ${(error as Error).message}`);
     process.exitCode = 1;
@@ -325,11 +335,16 @@ async function runOneshot(argv: string[]): Promise<void> {
   }
   console.log(`      got ${events.length} events`);
 
+  // Filtered here rather than after resolution: paying Exa to find a website for a church service
+  // is the expensive way to discover it is not a conference.
+  const conferences = events.filter((event) => looksLikeConference(event));
+  console.log(`      ${conferences.length} of them read as conferences (the rest are other events in the same category)`);
+
   const urls: Record<string, string> = {};
   if (isExaConfigured()) {
     console.log(`[2/3] resolving official websites for up to ${maxResolve} of them`);
     let looked = 0;
-    for (const event of events) {
+    for (const event of conferences) {
       if (looked >= maxResolve) break;
       if (!event.id || !event.title) continue;
       const year = Number((event.start_local || event.start || "").slice(0, 4));
@@ -341,8 +356,11 @@ async function runOneshot(argv: string[]): Promise<void> {
           year,
           city: event.geo?.address?.locality ?? null,
           country: event.country ?? null,
+          countryCode: event.country ?? null,
         });
         if (hit) urls[event.id] = hit.url;
+        // Printed as it goes: a silent five-minute loop tells nobody whether it is working.
+        console.log(`      ${looked}/${Math.min(maxResolve, conferences.length)} ${hit ? "OK  " : "--  "} ${(event.title || "").slice(0, 52)}${hit ? ` -> ${hit.host}` : ""}`);
       } catch (error) {
         console.error(`      Exa FAILED — ${(error as Error).message}`);
         break;
@@ -353,7 +371,7 @@ async function runOneshot(argv: string[]): Promise<void> {
     console.log("[2/3] EXA_API_KEY not set — skipping website resolution (those events cannot be published)");
   }
 
-  const withUrl = events.filter((event) => event.id && urls[event.id]);
+  const withUrl = conferences.filter((event) => event.id && urls[event.id]);
   console.log(`[3/3] ${withUrl.length} events have a website and are ready to publish\n`);
   console.log("=== COPY EVERYTHING BELOW THIS LINE ===");
   for (const event of withUrl) console.log(toPortableLine(event, urls[event.id!]));

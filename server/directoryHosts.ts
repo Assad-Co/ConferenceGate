@@ -42,6 +42,29 @@ const DIRECTORY_DOMAINS = new Set([
   "medflixs.com",
   "infosec-conferences.com",
   "eventbrowse.com",
+  // Added after a live resolver run attached these to real events. Every one of them is an event
+  // aggregator that ranks well for an event's own name, which is precisely why the resolver has to
+  // know them by name rather than hope they lose on relevance.
+  "happeningnext.com",
+  "stayhappening.com",
+  "eventslist.co.uk",
+  "evensi.com",
+  "eventil.com",
+  "bizzabo.com",
+  "conferencemonkey.org",
+  "conferenceineurope.net",
+  "conferenceineurope.org",
+  "conference2go.com",
+  "conferencenext.com",
+  "expotobi.com",
+  "k12conferences.com",
+  "papercall.io",
+  "sessionize.com",
+  "lu.ma",
+  "eventpop.me",
+  "trade-fairs.org",
+  "tradefest.io",
+  "visitsaltlake.com",
 ]);
 
 /** The listing hosts as a plain list, for callers that must name them to somebody else — Exa's

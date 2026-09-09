@@ -5,11 +5,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   fetchPredictHqConferences,
+  looksLikeConference,
   mapPredictHqEvent,
   type PredictHqEvent,
 } from "../sources/predicthq";
 import { fetchOpenAlexConferenceSeries, mapOpenAlexSeries } from "../sources/openalex";
-import { candidateNamesConference, distinctiveTokens, resolveOfficialUrl } from "../sources/exa";
+import {
+  candidateNamesConference,
+  countryContradicts,
+  distinctiveTokens,
+  resolveOfficialUrl,
+} from "../sources/exa";
 import { buildLaunchDataset } from "../build";
 
 const OPTIONS = { retrievedAt: "2026-09-09", horizonStart: "2026-09-09", years: [2026, 2027, 2028] };
@@ -303,4 +309,95 @@ test("API records and text evidence merge into one catalogue under one set of ru
   // The unresolved event is reported as a refusal rather than vanishing.
   assert.equal(result.rejections.length, 1);
   assert.equal(result.rejections[0].reason, "no_source_url");
+});
+
+/* ------------------------------------- what a live PredictHQ run actually returned */
+
+// Every title below came back from a real run at rank >= 30 against category=conferences. None of
+// them is a conference, and all thirteen were about to be published with a website attached.
+const NOT_CONFERENCES = [
+  "Grow & Glow Frauenfrühstück",
+  "The City Club of Florence Candidates Forum",
+  "Autism Diversity",
+  "Writers of the North: Books as Therapy",
+  'Lectures on Tap-"Beyond Test Dummies: Inside the World of Test Engineering"',
+  "Lachlan Goudie in conversation: The Secrets of Painting",
+  "RSM175 Evening Lecture Series: Climate (in-person attendance)",
+  "Meet & Mingle with the John Lewis Personal Stylists",
+  "An evening of clairvoyance with Deborah Finch psychic medium",
+  "MOAD Talks with Sports Journalist Michelle Kaufman",
+  "Massive church service",
+  "Dolan Lecture Series 2026",
+  "Book Launch — Outbound: Essays in Circulation",
+];
+
+test("the events a live run mistook for conferences are all refused", () => {
+  for (const title of NOT_CONFERENCES) {
+    assert.equal(looksLikeConference({ title }), false, `should not be a conference: ${title}`);
+    const outcome = mapPredictHqEvent(
+      { id: "x", title, state: "active", country: "US", start_local: "2027-05-01T09:00:00" },
+      { ...OPTIONS, officialUrl: "https://example-conf.org/" }
+    );
+    assert.equal(outcome.ok, false);
+    if (!outcome.ok) assert.equal(outcome.reason, "not_a_conference");
+  }
+});
+
+test("real conferences still pass, by name or by size", () => {
+  for (const title of [
+    "88th EAGE Annual Conference & Exhibition",
+    "SPE ATCE 2026 Annual Technical Conference and Exhibition",
+    "World Petrochemical Conference",
+    "International Symposium on Industrial Electronics",
+    "Mobile World Congress 2027",
+    "Smart Cities Connect Conference and Expo",
+    "SEG/AAPG IMAGE 2027 International Meeting for Applied Geoscience",
+  ]) {
+    assert.ok(looksLikeConference({ title }), `should be a conference: ${title}`);
+  }
+  // A name that says nothing about what it is still qualifies on size alone.
+  assert.equal(looksLikeConference({ title: "ADIPEC 2027" }), false);
+  assert.ok(looksLikeConference({ title: "ADIPEC 2027", phq_attendance: 180000 }));
+  assert.ok(looksLikeConference({ title: "GITEX GLOBAL", phq_attendance: 5000 }));
+});
+
+test("a site in a contradicting country is refused, however well the name matches", () => {
+  // "Writers of the North: Books as Therapy" was held in Albany, Western Australia and resolved to
+  // writersofthenorth.co.uk: a real site, a perfect name match, and the wrong hemisphere.
+  assert.equal(countryContradicts("writersofthenorth.co.uk", "AU"), true);
+  assert.equal(countryContradicts("writersofthenorth.co.uk", "GB"), false);
+  // A neutral TLD says nothing about where an event is and must never reject on its own.
+  assert.equal(countryContradicts("eageannual.org", "NL"), false);
+  assert.equal(countryContradicts("atce.org", "US"), false);
+  assert.equal(countryContradicts("some-conf.com", "AU"), false);
+  // No known country means no contradiction to find.
+  assert.equal(countryContradicts("some-conf.co.uk", null), false);
+});
+
+test("the aggregators a live run attached to real events are now known listing hosts", () => {
+  for (const url of [
+    "https://happeningnext.com/event/some-event",
+    "https://stayhappening.com/e/some-event",
+    "https://eventslist.co.uk/northampton/events/autism-diversity",
+  ]) {
+    assert.equal(
+      candidateNamesConference({ url, title: "Autism Diversity Conference" }, { title: "Autism Diversity Conference" }),
+      null,
+      `should be refused as a listing host: ${url}`
+    );
+  }
+});
+
+test("Exa retries a rate limit rather than failing the whole run", async () => {
+  process.env.EXA_API_KEY = "test-key";
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    if (calls === 1) return new Response('{"error":"rate limit"}', { status: 429 });
+    return jsonResponse({ results: [{ url: "https://appliedgeochemistry2027.org/", title: "Applied Geochemistry 2027" }] });
+  }) as unknown as typeof fetch;
+
+  const hit = await resolveOfficialUrl({ title: "International Conference on Applied Geochemistry", year: 2027, fetchImpl });
+  assert.equal(calls, 2, "expected one retry after the 429");
+  assert.ok(hit);
 });

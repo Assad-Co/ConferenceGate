@@ -85,6 +85,16 @@ export interface PredictHqFetchOptions {
   /** Only events at or above this PHQ rank. Rank is significance, not correctness — it is used to
    *  spend the quota on conferences people have heard of first, never to assert quality. */
   minRank?: number;
+  /**
+   * Only events expected to draw at least this many people.
+   *
+   * This is the filter that matters. PredictHQ's "conferences" category is far broader than the
+   * word suggests: a live run at rank >= 30 returned a women's breakfast, a psychic medium evening,
+   * a church service and a department-store styling drop-in. What separates those from a real
+   * conference is not vocabulary, it is size — they draw dozens, a conference draws hundreds to
+   * tens of thousands.
+   */
+  minAttendance?: number;
   fetchImpl?: typeof fetch;
   onPage?: (page: PredictHqPage, pageNumber: number) => void;
 }
@@ -111,6 +121,9 @@ export async function fetchPredictHqConferences(options: PredictHqFetchOptions):
   // Most significant first, so a capped run keeps the conferences most readers have heard of.
   first.searchParams.set("sort", "-rank");
   if (options.minRank !== undefined) first.searchParams.set("rank.gte", String(options.minRank));
+  if (options.minAttendance !== undefined) {
+    first.searchParams.set("phq_attendance.gte", String(options.minAttendance));
+  }
 
   const collected: PredictHqEvent[] = [];
   let nextUrl: string | null = first.toString();
@@ -162,6 +175,26 @@ function formatOf(event: PredictHqEvent): "in-person" | "hybrid" | "online" {
   return "in-person";
 }
 
+/** The words that make a title a conference rather than an evening out. */
+const CONFERENCE_VOCABULARY =
+  /\b(conferences?|congress(?:es)?|symposi(?:um|a)|conventions?|expo(?:sition)?s?|summits?|colloqui(?:um|a)|trade\s+(?:fair|show)|(?:annual|general|international)\s+meeting|world\s+congress)\b/i;
+
+/**
+ * True when an event is a conference rather than something else in the same category.
+ *
+ * Two ways to qualify, because either alone is wrong. The vocabulary test alone would refuse
+ * ADIPEC, GITEX and LEAP, whose names say nothing about what they are. The size test alone would
+ * accept any large gathering. So: a title that names itself a conference, OR an event big enough
+ * that nothing else it could be would draw that crowd.
+ */
+export function looksLikeConference(
+  event: PredictHqEvent,
+  highAttendanceBypass = 2000
+): boolean {
+  if (CONFERENCE_VOCABULARY.test(event.title || "")) return true;
+  return (Number(event.phq_attendance) || 0) >= highAttendanceBypass;
+}
+
 export interface PredictHqMapOptions extends ParseOptions {
   /**
    * The conference's own website, resolved elsewhere.
@@ -170,6 +203,8 @@ export interface PredictHqMapOptions extends ParseOptions {
    * without this the event is refused rather than published with no link.
    */
   officialUrl?: string | null;
+  /** Attendance above which an event counts as a conference whatever its title says. */
+  highAttendanceBypass?: number;
 }
 
 /**
@@ -183,6 +218,7 @@ export function mapPredictHqEvent(event: PredictHqEvent, options: PredictHqMapOp
   const title = (event.title || "").replace(/\s+/g, " ").trim();
   if (!title || title.length < 4) return { ok: false, reason: "no_title" };
   if (event.state && event.state !== "active") return { ok: false, reason: `event_state:${event.state}` };
+  if (!looksLikeConference(event, options.highAttendanceBypass)) return { ok: false, reason: "not_a_conference" };
 
   const startDate = isoDay(event.start_local) || isoDay(event.start);
   const endDate = isoDay(event.end_local) || isoDay(event.end) || isoDay(event.predicted_end_local) || startDate;
