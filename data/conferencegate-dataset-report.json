@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-09-09T16:27:33.868Z",
+  "horizonStart": "2026-09-09",
+  "evidenceRows": 159,
+  "accepted": 156,
+  "duplicatesMerged": 0,
+  "rejected": 3,
+  "rejectionReasons": {
+    "already_finished": 3
+  },
+  "total": 156,
+  "byYear": {
+    "2026": 9,
+    "2027": 141,
+    "2028": 6
+  },
+  "countries": 31,
+  "cities": 84,
+  "categories": 23,
+  "worldRegions": {
+    "North America": 63,
+    "Europe": 46,
+    "Asia": 31,
+    "Middle East": 8,
+    "Oceania": 3,
+    "South America": 3,
+    "Africa": 2
+  },
+  "formats": {
+    "in-person": 148,
+    "hybrid": 8
+  },
+  "sourceTypes": {
+    "official_site": 140,
+    "directory_listing": 14,
+    "reference": 2
+  },
+  "coverage": {
+    "title": "100.0%",
+    "exactDates": "99.4%",
+    "city": "100.0%",
+    "country": "100.0%",
+    "officialUrl": "89.7%",
+    "venue": "29.5%",
+    "organization": "45.5%",
+    "category": "71.8%",
+    "corroborated": "0.0%"
+  },
+  "rejections": [
+    {
+      "reason": "already_finished",
+      "sourceUrl": "https://seg.org/Events/Upcoming-SEG-Annual-Meetings",
+      "statedText": "SEG IMAGE 2026 Annual Meeting, George R. Brown Convention Center, Houston, Texas, USA, 17-20 August 2026"
+    },
+    {
+      "reason": "already_finished",
+      "sourceUrl": "https://speior.org/",
+      "statedText": "SPE Improved Oil Recovery Conference 2026, River Spirit Casino and Resort, Tulsa, Oklahoma, USA, April 21-23, 2026"
+    },
+    {
+      "reason": "already_finished",
+      "sourceUrl": "https://www.spe-events.org/LACPEC/about",
+      "statedText": "2026 SPE Latin American and Caribbean Petroleum Engineering Conference, The Windsor Barra, Rio de Janeiro, Brazil, June 9-11, 2026"
+    }
+  ]
+}

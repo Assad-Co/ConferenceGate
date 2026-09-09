@@ -37,6 +37,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
     terms: [
       "software engineering", "computer science", "computing", "information technology", "cloud computing",
       "consumer electronics", "semiconductor", "internet of things", "iot", "quantum computing",
+      "electronics", "industrial electronics", "emerging electronics", "microelectronics",
       "human-computer interaction", "distributed systems", "devops", "open source",
     ],
   },
@@ -61,6 +62,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
       "mechanical engineering", "civil engineering", "electrical engineering", "structural engineering",
       "industrial engineering", "systems engineering", "control systems", "mechatronics",
       "engineering design", "applied mechanics", "engineering education",
+          "asme", "asce", "turbomachinery",
     ],
   },
   {
@@ -76,17 +78,20 @@ export const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     category: "Automotive & Mobility",
-    terms: ["automotive", "vehicle", "electric vehicle", "mobility", "autonomous driving", "powertrain", "transport engineering"],
+    terms: ["automotive", "vehicle", "electric vehicle", "mobility", "autonomous driving", "powertrain", "transport engineering", "sae",
+    ],
   },
   {
     category: "Aerospace & Aviation",
-    terms: ["aerospace", "aeronautic", "astronautic", "aviation", "space mission", "satellite", "propulsion", "flight test"],
+    terms: ["aerospace", "aeronautic", "astronautic", "aviation", "space mission", "satellite", "propulsion", "flight test", "aiaa", "defence", "defense",
+    ],
   },
   {
     category: "Energy & Geosciences",
     terms: [
       "energy transition", "power systems", "smart grid", "energy policy", "energy storage",
       "hydrogen", "nuclear energy", "geothermal", "energy efficiency", "electricity market",
+          "power grid", "power grids", "energy systems",
     ],
   },
   {
@@ -97,19 +102,24 @@ export const CATEGORY_RULES: CategoryRule[] = [
     category: "Petroleum & Energy",
     terms: [
       "petroleum", "oil and gas", "oil & gas", "upstream", "downstream", "reservoir", "drilling",
+      "natural gas", "gastech", "petroleum engineering", "petroleum geoscience",
       "well logging", "hydrocarbon", "refinery", "lng", "offshore engineering", "subsea",
+          "spe", "aapg", "adipec", "apogce",
     ],
   },
   {
     category: "Geosciences & Earth Systems",
     terms: [
       "geoscience", "geology", "geophysics", "seismology", "earth science", "hydrology",
+      "geography", "geosciences", "mineral resource", "geological",
       "volcanology", "tectonic", "stratigraphy", "geochemistry", "remote sensing", "geodesy",
+          "seg", "eage", "agu", "goldschmidt", "geochemical society",
     ],
   },
   {
     category: "Mining & Metallurgy",
-    terms: ["mining", "mineral processing", "metallurgy", "ore", "quarry", "extractive industry", "beneficiation"],
+    terms: ["mining", "mineral processing", "metallurgy", "ore", "quarry", "extractive industry", "beneficiation", "pdac", "metsoc", "apcom",
+    ],
   },
   {
     category: "Marine & Ocean Sciences",
@@ -128,14 +138,17 @@ export const CATEGORY_RULES: CategoryRule[] = [
     terms: [
       "agriculture", "agronomy", "crop science", "soil science", "horticulture", "food science",
       "food security", "agri-food", "livestock", "plant breeding", "irrigation", "nutrition science",
+      "veterinary", "veterinary medicine", "animal science", "biological sciences",
     ],
   },
   {
     category: "Healthcare & Health IT",
     terms: [
       "digital health", "health informatics", "health it", "telemedicine", "telehealth",
-      "healthcare interoperability", "electronic health record", "ehr", "public health",
-      "health systems", "nursing", "patient safety", "healthcare management",
+      "healthcare interoperability", "electronic health record", "ehr", "public health", "nursing",
+      "epidemiology", "health sciences", "healthcare systems", "medical education", "health systems",
+      "patient safety", "healthcare management",
+          "health", "arab health",
     ],
   },
   {
@@ -144,6 +157,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
       "oncology", "cancer", "clinical trial", "cardiology", "neurology", "surgery", "radiology",
       "paediatric", "pediatric", "immunology", "psychiatry", "dermatology", "anaesthesia",
       "anesthesia", "internal medicine", "orthopaedic", "orthopedic", "medical imaging", "diagnosis",
+          "aacr", "nccn", "esmo", "asco", "neuro-oncology",
     ],
   },
   {
@@ -161,12 +175,14 @@ export const CATEGORY_RULES: CategoryRule[] = [
     category: "Chemistry & Materials",
     terms: [
       "chemistry", "chemical engineering", "materials science", "polymer", "catalysis",
+      "composite materials", "material engineering", "materials engineering",
       "nanomaterial", "nanotechnology", "composites", "corrosion", "electrochemistry", "crystallography",
+          "aiche", "acs",
     ],
   },
   {
     category: "Physics & Astronomy",
-    terms: ["physics", "astronomy", "astrophysics", "particle physics", "optics", "photonics", "condensed matter", "plasma", "quantum mechanics"],
+    terms: ["physics", "astronomy", "astrophysics", "particle physics", "optics", "photonics", "condensed matter", "plasma", "quantum mechanics", "quantum", "quantum technology", "quantum photonics"],
   },
   {
     category: "Business & Finance",
@@ -194,7 +210,11 @@ export const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     category: "Education & EdTech",
-    terms: ["education", "edtech", "e-learning", "pedagogy", "curriculum", "teaching", "higher education", "vocational training", "learning analytics", "assessment"],
+    terms: [
+      "education", "edtech", "e-learning", "pedagogy", "curriculum", "teaching", "higher education",
+      "vocational training", "learning analytics", "assessment", "learning", "educational technology",
+      "teacher education", "international development",
+    ],
   },
   {
     category: "Law & Policy",
@@ -202,11 +222,18 @@ export const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     category: "Social Sciences",
-    terms: ["sociology", "psychology", "anthropology", "political science", "social policy", "demography", "gender studies", "criminology", "development studies"],
+    terms: [
+      "sociology", "psychology", "anthropology", "political science", "social policy", "demography",
+      "gender studies", "criminology", "development studies", "social sciences", "social science",
+      "political psychology", "humanity",
+    ],
   },
   {
     category: "Arts & Humanities",
-    terms: ["humanities", "literature", "philosophy", "history", "linguistics", "cultural studies", "musicology", "archaeology", "religious studies", "translation studies"],
+    terms: [
+      "humanities", "literature", "philosophy", "history", "linguistics", "cultural studies", "musicology",
+      "archaeology", "religious studies", "translation studies", "arts and humanities",
+    ],
   },
   {
     category: "Tourism & Hospitality",

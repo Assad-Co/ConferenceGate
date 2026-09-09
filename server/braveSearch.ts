@@ -3,6 +3,7 @@ import { asyncHandler } from "./asyncHandler";
 import { isSerperConfigured, serperSearch } from "./serperSearch";
 import { dbAll } from "./db";
 import { scoreStoredConferenceRecord } from "./storedConferenceSearch";
+import { isDirectoryHost } from "./directoryHosts";
 
 export interface LiveSearchResult {
   title: string;
@@ -348,30 +349,6 @@ const LISTING_SNIPPET_RE =
   /\b(?:browse|search|discover|compare|find)\s+(?:hundreds?|thousands?|upcoming|all)\s+(?:of\s+)?(?:conferences?|events?)\b|\b(?:calendar|directory|database|listing)\s+of\s+(?:conferences?|events?)\b|\b(?:conferences?|events?)\s+across\s+(?:the\s+)?(?:world|country|industries)\b/i;
 const PLURAL_CONFERENCES_RE = /\bconferences\b/i;
 
-const DIRECTORY_DOMAINS = new Set([
-  // Seed sources for discovery, and directories for every other purpose: a listing host is never
-  // promoted to a conference's authoritative site, whatever it says about itself.
-  "conflists.com",
-  "iconf.org",
-  "10times.com",
-  "allevents.in",
-  "allconferencealert.com",
-  "allconferences.com",
-  "conferencealerts.com",
-  "internationalconferencealerts.com",
-  "clocate.com",
-  "conferenceindex.org",
-  "conference-next.com",
-  "dev.events",
-  "eventbrite.com",
-  "eventsget.com",
-  "eventseye.com",
-  "meetup.com",
-  "conferenceseries.com",
-  "myconferencetimes.com",
-  "techconferences.co",
-]);
-
 function normalizedHost(link: string, displayLink: string): string {
   try {
     return new URL(link).hostname.toLowerCase().replace(/^www\./, "");
@@ -380,11 +357,11 @@ function normalizedHost(link: string, displayLink: string): string {
   }
 }
 
-/** Exported for the discovery engine, which needs the same judgement about what is a listing
- *  site rather than a conference — one list, not two that drift apart. */
-export function isDirectoryHost(host: string): boolean {
-  return [...DIRECTORY_DOMAINS].some((domain) => host === domain || host.endsWith(`.${domain}`));
-}
+/** Re-exported for the discovery engine, which needs the same judgement about what is a listing
+ *  site rather than a conference — one list, not two that drift apart. The list itself lives in
+ *  server/directoryHosts.ts so the launch dataset builder can share it without pulling in a
+ *  database client. */
+export { isDirectoryHost };
 
 function isLikelyOfficialConferencePage(result: LiveSearchResult): boolean {
   const title = result.title.trim();

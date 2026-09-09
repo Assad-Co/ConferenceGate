@@ -1,0 +1,144 @@
+// The launch dataset's record shape.
+//
+// One rule governs every field here, the same one the extraction pipeline and the discovery engine
+// follow: a field the source did not state is null, never a plausible guess. `evidence` carries the
+// exact text a value was read from, so any record on the site can be traced back to the sentence
+// that justified it.
+
+/** How strong the page that stated a fact is, as evidence about the conference. */
+export type LaunchSourceType =
+  /** The conference's own website, or the organising society's page for it. */
+  | "official_site"
+  /** A conference directory, calendar or listing aggregator. Never promoted to official. */
+  | "directory_listing"
+  /** An encyclopaedia or reference work. Real, but not the organiser speaking. */
+  | "reference"
+  /** Trade press, a university page, a partner announcement — third-party but not a directory. */
+  | "third_party";
+
+export type LaunchFormat = "in-person" | "hybrid" | "online";
+
+/** Where one field's value came from, and how firmly. Mirrors the extraction pipeline's
+ *  `FieldProvenance` so the detail page can render both the same way. */
+export interface LaunchFieldProvenance {
+  sourceUrl: string;
+  sourcePageTitle: string | null;
+  confidence: "High" | "Medium" | "Low";
+}
+
+/** The raw material a record was derived from, kept verbatim.
+ *
+ *  `statedText` is preserved in full rather than trimmed to the fields that parsed, because it
+ *  routinely carries the venue, the edition, the hosting institution and the format — information
+ *  worth showing a reader even when the structured parse could not place it in a column. */
+export interface LaunchEvidence {
+  /** The search that surfaced this result. */
+  query: string;
+  /** The result's title, verbatim. */
+  resultTitle: string;
+  /** The statement of the conference's facts, verbatim. */
+  statedText: string;
+  /** When this was read. */
+  retrievedAt: string;
+  /** Always "web_search": no page was fetched, so nothing here may claim to be a site read. */
+  method: "web_search";
+}
+
+export interface LaunchConferenceRecord {
+  /** Stable slug: series + year + city, so a rebuild produces the same id for the same event. */
+  id: string;
+  title: string;
+  acronym: string | null;
+  /** The title with its year and edition ordinal removed — what recurs between editions. */
+  series: string | null;
+  /** "88th", "13th", … when the source stated one. */
+  edition: string | null;
+  year: number;
+
+  startDate: string | null;
+  endDate: string | null;
+  /** "day" when both days are known, "month" when only the month was stated. */
+  datePrecision: "day" | "month" | null;
+  /** The date exactly as the source wrote it. */
+  datesText: string | null;
+
+  city: string | null;
+  /** State, province or emirate, when the source named one. */
+  region: string | null;
+  country: string | null;
+  countryCode: string | null;
+  worldRegion: string | null;
+  venue: string | null;
+  format: LaunchFormat;
+
+  organization: string | null;
+  category: string | null;
+  categories: string[];
+  topics: string[];
+  keywords: string[];
+
+  /** The preserved source text. Deliberately not a generated summary. */
+  description: string | null;
+
+  /** The page that stated these facts. Always present — a record without one is not published. */
+  sourceUrl: string;
+  sourceHost: string;
+  sourceType: LaunchSourceType;
+  /** The conference's own website, when the source was that website. Null for every listing. */
+  officialUrl: string | null;
+
+  evidence: LaunchEvidence;
+  provenance: Record<string, LaunchFieldProvenance>;
+  /** Other pages that stated the same conference. Deduplication keeps the strongest source as the
+   *  record and lists the rest here rather than discarding the fact that they agreed. */
+  corroboratingSourceUrls: string[];
+
+  /** Marks these as launch-dataset records so stored Turso records stay distinguishable. */
+  origin: "launch_dataset";
+}
+
+/** A row the builder refused, and why. Kept so the rejection count in the report is auditable
+ *  rather than a number nobody can check. */
+export interface LaunchRejection {
+  reason: string;
+  sourceUrl: string;
+  statedText: string;
+}
+
+export interface LaunchDataset {
+  generatedAt: string;
+  /** Only conferences whose end date is on or after this day are included. */
+  horizonStart: string;
+  years: number[];
+  records: LaunchConferenceRecord[];
+}
+
+/** The compact per-record entry the customer search matches against. */
+export interface LaunchSearchIndexEntry {
+  id: string;
+  title: string;
+  acronym: string | null;
+  series: string | null;
+  organization: string | null;
+  category: string | null;
+  topics: string[];
+  keywords: string[];
+  city: string | null;
+  country: string | null;
+  worldRegion: string | null;
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  format: LaunchFormat;
+  sourceUrl: string;
+  sourceType: LaunchSourceType;
+  description: string | null;
+  /** Everything above, normalized and joined — what the matcher actually scans. */
+  haystack: string;
+}
+
+export interface LaunchSearchIndex {
+  generatedAt: string;
+  count: number;
+  entries: LaunchSearchIndexEntry[];
+}
