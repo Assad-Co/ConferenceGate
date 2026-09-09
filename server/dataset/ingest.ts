@@ -20,7 +20,7 @@ import path from "node:path";
 import {
   fetchPredictHqConferences,
   isPredictHqConfigured,
-  looksLikeConference,
+  worthResolving,
   type PredictHqEvent,
 } from "./sources/predicthq";
 import { fetchOpenAlexConferenceSeries, mapOpenAlexSeries, type ConferenceSeries } from "./sources/openalex";
@@ -335,10 +335,11 @@ async function runOneshot(argv: string[]): Promise<void> {
   }
   console.log(`      got ${events.length} events`);
 
-  // Filtered here rather than after resolution: paying Exa to find a website for a church service
-  // is the expensive way to discover it is not a conference.
-  const conferences = events.filter((event) => looksLikeConference(event));
-  console.log(`      ${conferences.length} of them read as conferences (the rest are other events in the same category)`);
+  // Only the outright disqualifications are applied here. The full gate needs the website — owning
+  // a domain named after yourself is a qualification nobody can see before paying to look — so this
+  // filter is deliberately the looser of the two.
+  const conferences = events.filter(worthResolving);
+  console.log(`      ${conferences.length} worth looking up (the rest are disqualified outright)`);
 
   const urls: Record<string, string> = {};
   if (isExaConfigured()) {

@@ -176,29 +176,101 @@ function formatOf(event: PredictHqEvent): "in-person" | "hybrid" | "online" {
   return "in-person";
 }
 
-/** The words that make a title a conference rather than an evening out. */
+/** The words that make a title a conference rather than an evening out.
+ *
+ *  "meeting" and "forum" are in the list now. They were left out at first as too loose, but the
+ *  events they were guarding against ("Massive church service", "Candidates Forum") are already
+ *  refused by the fetch thresholds and the listing-host rules, and leaving them out cost real
+ *  conferences: Plastic Surgery The Meeting, the Chief Financial Officer Forum. */
 const CONFERENCE_VOCABULARY =
-  /\b(conferences?|congress(?:es)?|symposi(?:um|a)|conventions?|expo(?:sition)?s?|summits?|colloqui(?:um|a)|trade\s+(?:fair|show)|(?:annual|general|international)\s+meeting|world\s+congress)\b/i;
+  /\b(conferences?|congress(?:es)?|symposi(?:um|a)|conventions?|expo(?:sition)?s?|summits?|colloqui(?:um|a)|forums?|meetings?|trade\s+(?:fair|show))\b/i;
+
+/** Things that are emphatically not professional conferences, however they are described.
+ *
+ *  Every entry is here because a live run published or nearly published one: an anime fan
+ *  convention, a university careers fair, a student recruitment session. These veto an event
+ *  outright — no amount of size or vocabulary rescues them.
+ *
+ *  The forum entries are the fine distinction. "Forum" belongs in the conference vocabulary — the
+ *  Chief Financial Officer Forum and the UN Forum on Business and Human Rights are both real — but
+ *  a candidates forum or a town hall is a public meeting, not a professional one. */
+const DISQUALIFYING_VOCABULARY =
+  /\b(anime|manga|cosplay|comic[-\s]?con|comicon|fan\s?(?:fest|convention)|renaissance\s+faire|candidates?\s+forum|town\s+hall|community\s+forum|public\s+forum|careers?|job\s+fair|recruitment|open\s+day|graduation|commencement|gala\s+dinner|awards?\s+(?:night|dinner|ceremony))\b/i;
+
+/** A page that teaches a course, sells a seat on one, or is a document rather than a site.
+ *
+ *  The PDF rule earns its place twice: the resolver refuses one, and so does this, because a
+ *  website resolved before the resolver knew better still reaches the mapper. The UN Forum on
+ *  Business and Human Rights arrived here pointing at a concept-note PDF. */
+const COURSE_PATH = /\/(?:course|courses|training|classes|webinar|webinars|programme?s)\//i;
+const DOCUMENT_URL = /\.(?:pdf|docx?|pptx?)(?:[?#]|$)/i;
+
+function compactHost(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "").replace(/[^a-z0-9]/g, "");
+  } catch {
+    return null;
+  }
+}
+
+const HOST_NOISE = new Set([
+  "the", "and", "for", "with", "international", "national", "annual", "world", "global",
+  "conference", "congress", "symposium", "summit", "meeting", "convention", "expo", "forum",
+  "european", "asian", "american", "north", "south", "east", "west", "new",
+]);
+
+/**
+ * True when the resolved site is named after the event.
+ *
+ * This is the signal that separates a conference from a session on somebody else's calendar.
+ * "Event Tech Live London" lives at eventtechlive.com and "Conztruct" at conztruct.co.nz; a Harvard
+ * short course lives at pll.harvard.edu/course/…, which is named after Harvard. An event with its
+ * own domain went to the trouble of being an event.
+ */
+export function hostNamesEvent(title: string, url: string): boolean {
+  const host = compactHost(url);
+  if (!host) return false;
+  const words = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 3 && !HOST_NOISE.has(word) && !/^(19|20)\d\d$/.test(word));
+  if (words.some((word) => word.length >= 5 && host.includes(word))) return true;
+  return words.filter((word) => host.includes(word)).length >= 2;
+}
+
+export interface ConferenceGateOptions {
+  /** Attendance above which an event counts as a conference whatever its title says. */
+  highAttendanceBypass?: number;
+  /** The resolved website, when there is one. Lets an event qualify by owning its own domain. */
+  resolvedUrl?: string | null;
+}
 
 /**
  * True when an event is a conference rather than something else in the same category.
  *
- * Two ways to qualify, because either alone is wrong. The vocabulary test alone would refuse
- * ADIPEC, GITEX and LEAP, whose names say nothing about what they are. The size test alone would
- * accept any large gathering. So: a title that names itself a conference, OR an event big enough
- * that nothing else it could be would draw that crowd.
- *
- * The bypass is set high because PredictHQ's attendance figures are bucketed rather than measured:
- * a live run returned 3000, 4000 and 5000 over and over, so a low threshold admits everything and
- * decides nothing. At ten thousand it only excuses events that really are enormous, and a Harvard
- * short course billed at "3000" has to earn its place on its name instead — which it cannot.
+ * Three ways to qualify, because no one of them is sufficient. Vocabulary alone refuses ADIPEC and
+ * CREtech, whose names say nothing about what they are. Size alone accepts any large gathering, and
+ * PredictHQ's attendance is bucketed so it barely discriminates. Owning a matching domain alone
+ * would accept an anime convention. Together they hold, and the disqualifying list vetoes the rest.
  */
-export function looksLikeConference(
-  event: PredictHqEvent,
-  highAttendanceBypass = 10000
-): boolean {
-  if (CONFERENCE_VOCABULARY.test(event.title || "")) return true;
-  return (Number(event.phq_attendance) || 0) >= highAttendanceBypass;
+export function looksLikeConference(event: PredictHqEvent, options: ConferenceGateOptions = {}): boolean {
+  const title = event.title || "";
+  if (DISQUALIFYING_VOCABULARY.test(title)) return false;
+  if (options.resolvedUrl && (COURSE_PATH.test(options.resolvedUrl) || DOCUMENT_URL.test(options.resolvedUrl))) {
+    return false;
+  }
+
+  if (CONFERENCE_VOCABULARY.test(title)) return true;
+  if ((Number(event.phq_attendance) || 0) >= (options.highAttendanceBypass ?? 10000)) return true;
+  return Boolean(options.resolvedUrl && hostNamesEvent(title, options.resolvedUrl));
+}
+
+/** Whether an event is worth spending a website lookup on: anything not already disqualified.
+ *  Deliberately looser than the gate above, because owning a matching domain is a qualification we
+ *  cannot see until after we have paid to look. */
+export function worthResolving(event: PredictHqEvent): boolean {
+  return !DISQUALIFYING_VOCABULARY.test(event.title || "");
 }
 
 export interface PredictHqMapOptions extends ParseOptions {
@@ -224,7 +296,12 @@ export function mapPredictHqEvent(event: PredictHqEvent, options: PredictHqMapOp
   const title = (event.title || "").replace(/\s+/g, " ").trim();
   if (!title || title.length < 4) return { ok: false, reason: "no_title" };
   if (event.state && event.state !== "active") return { ok: false, reason: `event_state:${event.state}` };
-  if (!looksLikeConference(event, options.highAttendanceBypass)) return { ok: false, reason: "not_a_conference" };
+  if (!looksLikeConference(event, {
+    highAttendanceBypass: options.highAttendanceBypass,
+    resolvedUrl: options.officialUrl ?? null,
+  })) {
+    return { ok: false, reason: "not_a_conference" };
+  }
 
   const startDate = isoDay(event.start_local) || isoDay(event.start);
   const endDate = isoDay(event.end_local) || isoDay(event.end) || isoDay(event.predicted_end_local) || startDate;

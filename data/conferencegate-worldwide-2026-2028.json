@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T18:14:16.569Z",
+  "generatedAt": "2026-09-09T18:24:16.743Z",
   "horizonStart": "2026-09-09",
   "years": [
     2026,
@@ -7,6 +7,87 @@
     2028
   ],
   "records": [
+    {
+      "id": "alibaba-com-cocreate-2026-los-angeles",
+      "title": "Alibaba.com CoCreate",
+      "acronym": null,
+      "series": "Alibaba.com CoCreate",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-09-09",
+      "endDate": "2026-09-10",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Los Angeles",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "alibaba",
+        "cocreate"
+      ],
+      "keywords": [
+        "Los Angeles",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Alibaba.com CoCreate is a two-day conference in Los Angeles that brings together buyers, suppliers, and technology partners to explore innovations in the global e-commerce ecosystem. Attendee",
+      "sourceUrl": "https://www.alibabacocreate.com/us",
+      "sourceHost": "alibabacocreate.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.alibabacocreate.com/us",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Alibaba.com CoCreate",
+        "statedText": "Alibaba.com CoCreate, Los Angeles, California, United States, 2026-09-09 to 2026-09-10",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "yvQhPGd6z4vGJ5htrY"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.alibabacocreate.com/us",
+          "sourcePageTitle": "Alibaba.com CoCreate",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.alibabacocreate.com/us",
+          "sourcePageTitle": "Alibaba.com CoCreate",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.alibabacocreate.com/us",
+          "sourcePageTitle": "Alibaba.com CoCreate",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.alibabacocreate.com/us",
+          "sourcePageTitle": "Alibaba.com CoCreate",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
     {
       "id": "gastech-2026-bangkok",
       "title": "Gastech 2026",
@@ -73,6 +154,91 @@
         "country": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "annual-eurofinance-international-treasury-management-2026-barcelona",
+      "title": "Annual EuroFinance International Treasury Management",
+      "acronym": null,
+      "series": "Annual EuroFinance International Treasury Management",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-09-16",
+      "endDate": "2026-09-18",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Barcelona",
+      "region": "Catalunya",
+      "country": "Spain",
+      "countryCode": "ES",
+      "worldRegion": "Europe",
+      "venue": "Barcelona International Convention Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "management",
+        "finance",
+        "strategy",
+        "eurofinance",
+        "treasury"
+      ],
+      "keywords": [
+        "Barcelona",
+        "Catalunya",
+        "Spain",
+        "ES",
+        "ESP",
+        "españa",
+        "espana",
+        "Europe",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com - Annual EuroFinance International Treasury Management is a leading professional conference for corporate treasurers and finance professionals focused on treasury strategy, cash and risk manage",
+      "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+      "sourceHost": "eurofinance.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.eurofinance.com/international-treasury-event/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual EuroFinance International Treasury Management",
+        "statedText": "Annual EuroFinance International Treasury Management, Barcelona International Convention Centre, Barcelona, Catalunya, Spain, 2026-09-16 to 2026-09-18",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "5wLZqYb8NeVW86SQ2K"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
           "confidence": "High"
         }
       },
@@ -337,6 +503,174 @@
         "venue": {
           "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
           "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "entrepreneur-2026-new-delhi",
+      "title": "Entrepreneur",
+      "acronym": null,
+      "series": "Entrepreneur",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-05",
+      "endDate": "2026-10-05",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "New Delhi",
+      "region": null,
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Bharat Mandapam",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "entrepreneur"
+      ],
+      "keywords": [
+        "New Delhi",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Entrepreneur is a one-day business conference held at Bharat Mandapam in New Delhi that brings together founders, investors, policymakers, and industry leaders to discuss startup growth, inno",
+      "sourceUrl": "https://www.entrepreneurindia.com/",
+      "sourceHost": "entrepreneurindia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.entrepreneurindia.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Entrepreneur",
+        "statedText": "Entrepreneur, Bharat Mandapam, New Delhi, India, 2026-10-05",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "8HvAzEvLcgo4MbQfTB"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "cardiology-pulmonology-for-primary-care-2026-las-vegas",
+      "title": "Cardiology & Pulmonology for Primary Care",
+      "acronym": null,
+      "series": "Cardiology & Pulmonology for Primary Care",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-06",
+      "endDate": "2026-10-08",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Las Vegas",
+      "region": "Nevada",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Cosmopolitan of Las Vegas",
+      "format": "in-person",
+      "organization": null,
+      "category": "Medicine & Oncology",
+      "categories": [
+        "Medicine & Oncology"
+      ],
+      "topics": [
+        "cardiology",
+        "pulmonology",
+        "primary",
+        "care"
+      ],
+      "keywords": [
+        "Las Vegas",
+        "Nevada",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Medicine & Oncology"
+      ],
+      "description": "Sourced from predicthq.com - Cardiology & Pulmonology for Primary Care is a clinical conference that delivers practical, evidence-based updates and management strategies for cardiovascular and respiratory conditions tail",
+      "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+      "sourceHost": "mer-primary-care-conferences.constantcontactsites.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Cardiology & Pulmonology for Primary Care",
+        "statedText": "Cardiology & Pulmonology for Primary Care, Cosmopolitan of Las Vegas, Las Vegas, Nevada, United States, 2026-10-06 to 2026-10-08",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "38b6BDHJb8bXTS7T3a"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+          "sourcePageTitle": "Cardiology & Pulmonology for Primary Care",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+          "sourcePageTitle": "Cardiology & Pulmonology for Primary Care",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+          "sourcePageTitle": "Cardiology & Pulmonology for Primary Care",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+          "sourcePageTitle": "Cardiology & Pulmonology for Primary Care",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://mer-primary-care-conferences.constantcontactsites.com/las-vegas",
+          "sourcePageTitle": "Cardiology & Pulmonology for Primary Care",
           "confidence": "High"
         }
       },
@@ -849,6 +1183,95 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "plastic-surgery-the-meeting-2026-houston",
+      "title": "Plastic Surgery The Meeting 2026",
+      "acronym": null,
+      "series": "Plastic Surgery The Meeting",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-18",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Houston",
+      "region": "Texas",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "George R. Brown Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": "Medicine & Oncology",
+      "categories": [
+        "Medicine & Oncology"
+      ],
+      "topics": [
+        "surgery",
+        "plastic"
+      ],
+      "keywords": [
+        "Houston",
+        "Texas",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Medicine & Oncology"
+      ],
+      "description": "Sourced from predicthq.com - Plastic Surgery The Meeting is the American Society of Plastic Surgeons flagship scientific and educational conference, bringing together plastic surgeons, trainees, industry representatives",
+      "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+      "sourceHost": "plasticsurgerythemeeting.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.plasticsurgerythemeeting.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Plastic Surgery The Meeting 2026",
+        "statedText": "Plastic Surgery The Meeting 2026, George R. Brown Convention Center, Houston, Texas, United States, 2026-10-15 to 2026-10-18",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "AWJQnTqREDyjgk49i6"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+          "sourcePageTitle": "Plastic Surgery The Meeting 2026",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+          "sourcePageTitle": "Plastic Surgery The Meeting 2026",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+          "sourcePageTitle": "Plastic Surgery The Meeting 2026",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+          "sourcePageTitle": "Plastic Surgery The Meeting 2026",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.plasticsurgerythemeeting.com/",
+          "sourcePageTitle": "Plastic Surgery The Meeting 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "national-frozen-refrigerated-foods-convention-2026-oxon-hill",
       "title": "National Frozen & Refrigerated Foods Convention",
       "acronym": null,
@@ -1289,6 +1712,91 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "cretech-new-york-2026-new-york",
+      "title": "CREtech New York",
+      "acronym": null,
+      "series": "CREtech New York",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-20",
+      "endDate": "2026-10-21",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "New York",
+      "region": "New York",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Jacob K. Javits Convention Center",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "cretech",
+        "york"
+      ],
+      "keywords": [
+        "New York",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - CREtech New York is a leading commercial real estate technology conference that convenes property owners, brokers, investors, startups and technology providers to explore innovation shaping t",
+      "sourceUrl": "https://cretech.com/",
+      "sourceHost": "cretech.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cretech.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "CREtech New York",
+        "statedText": "CREtech New York, Jacob K. Javits Convention Center, New York, New York, United States, 2026-10-20 to 2026-10-21",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "3ecxiPp5AF5ykqsxe4"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://cretech.com/",
+          "sourcePageTitle": "CREtech New York",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://cretech.com/",
+          "sourcePageTitle": "CREtech New York",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://cretech.com/",
+          "sourcePageTitle": "CREtech New York",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://cretech.com/",
+          "sourcePageTitle": "CREtech New York",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://cretech.com/",
+          "sourcePageTitle": "CREtech New York",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "international-supply-chain-conference-2026-berlin",
       "title": "International Supply Chain Conference",
       "acronym": null,
@@ -1365,6 +1873,85 @@
         "venue": {
           "sourceUrl": "https://supplychainconferenceexpo.berlin/",
           "sourcePageTitle": "International Supply Chain Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "routes-world-2026-frankfurt-am-main",
+      "title": "Routes World 2026",
+      "acronym": null,
+      "series": "Routes World",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-21",
+      "endDate": "2026-10-23",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Frankfurt am Main",
+      "region": "Hessen",
+      "country": "Germany",
+      "countryCode": "DE",
+      "worldRegion": "Europe",
+      "venue": "Messe Frankfurt",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "routes"
+      ],
+      "keywords": [
+        "Frankfurt am Main",
+        "Hessen",
+        "Germany",
+        "DE",
+        "DEU",
+        "deutschland",
+        "federal republic of germany",
+        "brd",
+        "Europe",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com",
+      "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+      "sourceHost": "routesonline.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Routes World 2026",
+        "statedText": "Routes World 2026, Messe Frankfurt, Frankfurt am Main, Hessen, Germany, 2026-10-21 to 2026-10-23",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "CbAUprewbfxLXjaCrE"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+          "sourcePageTitle": "Routes World 2026",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+          "sourcePageTitle": "Routes World 2026",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+          "sourcePageTitle": "Routes World 2026",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+          "sourcePageTitle": "Routes World 2026",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.routesonline.com/events/288/routes-world-2026/",
+          "sourcePageTitle": "Routes World 2026",
           "confidence": "High"
         }
       },
@@ -1718,6 +2305,89 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "chief-data-officer-network-dach-2026-frankfurt",
+      "title": "Chief Data Officer Network DACH",
+      "acronym": null,
+      "series": "Chief Data Officer Network DACH",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-02",
+      "endDate": "2026-11-03",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Frankfurt",
+      "region": "Hessen",
+      "country": "Germany",
+      "countryCode": "DE",
+      "worldRegion": "Europe",
+      "venue": "Sheraton Frankfurt Airport Hotel",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "chief",
+        "data",
+        "officer",
+        "network",
+        "dach"
+      ],
+      "keywords": [
+        "Frankfurt",
+        "Hessen",
+        "Germany",
+        "DE",
+        "DEU",
+        "deutschland",
+        "federal republic of germany",
+        "brd",
+        "Europe",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Chief Data Officer Network DACH is a two-day conference for data leadership in the DACH region.",
+      "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+      "sourceHost": "thenetwork-group.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Chief Data Officer Network DACH",
+        "statedText": "Chief Data Officer Network DACH, Sheraton Frankfurt Airport Hotel, Frankfurt, Hessen, Germany, 2026-11-02 to 2026-11-03",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "4Cp5dRE7uA7TVsVmYN"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+          "sourcePageTitle": "Chief Data Officer Network DACH",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+          "sourcePageTitle": "Chief Data Officer Network DACH",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+          "sourcePageTitle": "Chief Data Officer Network DACH",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+          "sourcePageTitle": "Chief Data Officer Network DACH",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://thenetwork-group.com/dach-chief-data-officer-network/dach-chief-data-officer-network/",
+          "sourcePageTitle": "Chief Data Officer Network DACH",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "dubai-global-dental-summit-2026-dubai",
       "title": "Dubai Global Dental Summit",
       "acronym": null,
@@ -1885,6 +2555,95 @@
       "origin": "launch_dataset"
     },
     {
+      "id": "animaine-2026-south-portland",
+      "title": "Animaine",
+      "acronym": null,
+      "series": "Animaine",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-06",
+      "endDate": "2026-11-08",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "South Portland",
+      "region": "Maine",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Best Western Merry Manor Inn",
+      "format": "in-person",
+      "organization": null,
+      "category": "Arts & Humanities",
+      "categories": [
+        "Arts & Humanities"
+      ],
+      "topics": [
+        "literature",
+        "animaine"
+      ],
+      "keywords": [
+        "South Portland",
+        "Maine",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Arts & Humanities"
+      ],
+      "description": "Sourced from predicthq.com - Animaine is a conference dedicated to literature, film, and theater, staged at the Best Western Merry Manor Inn in South Portland, Maine.",
+      "sourceUrl": "http://www.animaine.org/",
+      "sourceHost": "animaine.org",
+      "sourceType": "official_site",
+      "officialUrl": "http://www.animaine.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Animaine",
+        "statedText": "Animaine, Best Western Merry Manor Inn, South Portland, Maine, United States, 2026-11-06 to 2026-11-08",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "5B43Egv89hvcp9EePq"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "http://www.animaine.org/",
+          "sourcePageTitle": "Animaine",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "http://www.animaine.org/",
+          "sourcePageTitle": "Animaine",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "http://www.animaine.org/",
+          "sourcePageTitle": "Animaine",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "http://www.animaine.org/",
+          "sourcePageTitle": "Animaine",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "http://www.animaine.org/",
+          "sourcePageTitle": "Animaine",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
       "id": "aiche-annual-meeting-2026-minneapolis",
       "title": "2026 AIChE Annual Meeting",
       "acronym": null,
@@ -1971,6 +2730,333 @@
         "organization": {
           "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
           "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "digital-marketing-europe-2026-vilnius",
+      "title": "Digital Marketing Europe",
+      "acronym": null,
+      "series": "Digital Marketing Europe",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-10",
+      "endDate": "2026-11-12",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Vilnius",
+      "region": "Vilniaus apskritis",
+      "country": "Lithuania",
+      "countryCode": "LT",
+      "worldRegion": "Europe",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "marketing",
+        "digital",
+        "europe"
+      ],
+      "keywords": [
+        "Vilnius",
+        "Vilniaus apskritis",
+        "Lithuania",
+        "LT",
+        "LTU",
+        "Europe",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com - Digital Marketing Europe (DME) is a conference in Vilnius that brings together marketing professionals.",
+      "sourceUrl": "https://digitalmarketingcon.eu/",
+      "sourceHost": "digitalmarketingcon.eu",
+      "sourceType": "official_site",
+      "officialUrl": "https://digitalmarketingcon.eu/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Digital Marketing Europe",
+        "statedText": "Digital Marketing Europe, Vilnius, Vilniaus apskritis, Lithuania, 2026-11-10 to 2026-11-12",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "7rjMnU2WBaA6wymsCY"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://digitalmarketingcon.eu/",
+          "sourcePageTitle": "Digital Marketing Europe",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://digitalmarketingcon.eu/",
+          "sourcePageTitle": "Digital Marketing Europe",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://digitalmarketingcon.eu/",
+          "sourcePageTitle": "Digital Marketing Europe",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://digitalmarketingcon.eu/",
+          "sourcePageTitle": "Digital Marketing Europe",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "event-tech-live-london-2026-london",
+      "title": "Event Tech Live London",
+      "acronym": null,
+      "series": "Event Tech Live London",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-11",
+      "endDate": "2026-11-12",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "London",
+      "region": "England",
+      "country": "United Kingdom",
+      "countryCode": "GB",
+      "worldRegion": "Europe",
+      "venue": "ExCeL London",
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "event",
+        "tech",
+        "live",
+        "london"
+      ],
+      "keywords": [
+        "London",
+        "England",
+        "United Kingdom",
+        "GB",
+        "GBR",
+        "uk",
+        "u.k.",
+        "great britain",
+        "britain",
+        "england",
+        "scotland",
+        "wales",
+        "northern ireland",
+        "united kingdom of great britain and northern ireland",
+        "Europe",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - Conference and exhibition dedicated to event technology.",
+      "sourceUrl": "https://eventtechlive.com/",
+      "sourceHost": "eventtechlive.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://eventtechlive.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Event Tech Live London",
+        "statedText": "Event Tech Live London, ExCeL London, London, England, United Kingdom, 2026-11-11 to 2026-11-12",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "H3xyRtnffaPadv6fdq"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://eventtechlive.com/",
+          "sourcePageTitle": "Event Tech Live London",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://eventtechlive.com/",
+          "sourcePageTitle": "Event Tech Live London",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://eventtechlive.com/",
+          "sourcePageTitle": "Event Tech Live London",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://eventtechlive.com/",
+          "sourcePageTitle": "Event Tech Live London",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://eventtechlive.com/",
+          "sourcePageTitle": "Event Tech Live London",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "chief-financial-officer-forum-2026-indianapolis",
+      "title": "Chief Financial Officer Forum",
+      "acronym": null,
+      "series": "Chief Financial Officer Forum",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-12",
+      "endDate": "2026-11-12",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Indianapolis",
+      "region": "Indiana",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": null,
+      "categories": [],
+      "topics": [
+        "chief",
+        "financial",
+        "officer"
+      ],
+      "keywords": [
+        "Indianapolis",
+        "Indiana",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026"
+      ],
+      "description": "Sourced from predicthq.com - The Chief Financial Officer Forum is hosted at the IBA Center for Professional Development in Indianapolis. It brings together senior financial executives from the financial services sector t",
+      "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+      "sourceHost": "hmacademy.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Chief Financial Officer Forum",
+        "statedText": "Chief Financial Officer Forum, Indianapolis, Indiana, United States, 2026-11-12",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "AkTTXcToAn58cVuZc3"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+          "sourcePageTitle": "Chief Financial Officer Forum",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+          "sourcePageTitle": "Chief Financial Officer Forum",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+          "sourcePageTitle": "Chief Financial Officer Forum",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://hmacademy.com/ind-convening/cfo-forum",
+          "sourcePageTitle": "Chief Financial Officer Forum",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "conztruct-2026-napier",
+      "title": "Conztruct",
+      "acronym": null,
+      "series": "Conztruct",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-12",
+      "endDate": "2026-11-12",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Napier",
+      "region": "Hawke's Bay",
+      "country": "New Zealand",
+      "countryCode": "NZ",
+      "worldRegion": "Oceania",
+      "venue": "Napier Conference Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": "Architecture & Construction",
+      "categories": [
+        "Architecture & Construction"
+      ],
+      "topics": [
+        "construction",
+        "conztruct"
+      ],
+      "keywords": [
+        "Napier",
+        "Hawke's Bay",
+        "New Zealand",
+        "NZ",
+        "NZL",
+        "aotearoa",
+        "Oceania",
+        "2026",
+        "Architecture & Construction"
+      ],
+      "description": "Sourced from predicthq.com - Conztruct is a construction and infrastructure conference held at the Napier Conference Centre in Napier, Hawke's Bay.",
+      "sourceUrl": "https://conztruct.co.nz/register/",
+      "sourceHost": "conztruct.co.nz",
+      "sourceType": "official_site",
+      "officialUrl": "https://conztruct.co.nz/register/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Conztruct",
+        "statedText": "Conztruct, Napier Conference Centre, Napier, Hawke's Bay, New Zealand, 2026-11-12",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "8usevjE5WpZeb8TCNm"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://conztruct.co.nz/register/",
+          "sourcePageTitle": "Conztruct",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://conztruct.co.nz/register/",
+          "sourcePageTitle": "Conztruct",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://conztruct.co.nz/register/",
+          "sourcePageTitle": "Conztruct",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://conztruct.co.nz/register/",
+          "sourcePageTitle": "Conztruct",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://conztruct.co.nz/register/",
+          "sourcePageTitle": "Conztruct",
           "confidence": "High"
         }
       },
@@ -2295,6 +3381,97 @@
         "venue": {
           "sourceUrl": "https://www.gartner.com/en/conferences/apac/symposium-india",
           "sourcePageTitle": "Gartner IT Symposium/Xpo",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset"
+    },
+    {
+      "id": "human-resources-director-forum-2026-indianapolis",
+      "title": "Human Resources Director Forum",
+      "acronym": null,
+      "series": "Human Resources Director Forum",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-17",
+      "endDate": "2026-11-17",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Indianapolis",
+      "region": "Indiana",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Indiana Bankers Association",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "human resources",
+        "human",
+        "resources",
+        "director"
+      ],
+      "keywords": [
+        "Indianapolis",
+        "Indiana",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Business & Finance"
+      ],
+      "description": "Sourced from predicthq.com",
+      "sourceUrl": "https://www.indianahrconf.com/",
+      "sourceHost": "indianahrconf.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.indianahrconf.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Human Resources Director Forum",
+        "statedText": "Human Resources Director Forum, Indiana Bankers Association, Indianapolis, Indiana, United States, 2026-11-17",
+        "retrievedAt": "2026-09-09",
+        "method": "event_api",
+        "externalId": "mHUKzhRjkMSWDg8jym"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.indianahrconf.com/",
+          "sourcePageTitle": "Human Resources Director Forum",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.indianahrconf.com/",
+          "sourcePageTitle": "Human Resources Director Forum",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.indianahrconf.com/",
+          "sourcePageTitle": "Human Resources Director Forum",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.indianahrconf.com/",
+          "sourcePageTitle": "Human Resources Director Forum",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.indianahrconf.com/",
+          "sourcePageTitle": "Human Resources Director Forum",
           "confidence": "High"
         }
       },
