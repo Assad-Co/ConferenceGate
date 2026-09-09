@@ -1,50 +1,51 @@
 {
-  "generatedAt": "2026-09-09T16:27:33.868Z",
+  "generatedAt": "2026-09-09T16:39:18.686Z",
   "horizonStart": "2026-09-09",
-  "evidenceRows": 159,
-  "accepted": 156,
-  "duplicatesMerged": 0,
-  "rejected": 3,
+  "evidenceRows": 263,
+  "accepted": 257,
+  "duplicatesMerged": 1,
+  "rejected": 5,
   "rejectionReasons": {
-    "already_finished": 3
+    "already_finished": 3,
+    "no_location": 2
   },
-  "total": 156,
+  "total": 257,
   "byYear": {
     "2026": 9,
-    "2027": 141,
-    "2028": 6
+    "2027": 234,
+    "2028": 14
   },
-  "countries": 31,
-  "cities": 84,
-  "categories": 23,
+  "countries": 38,
+  "cities": 111,
+  "categories": 29,
   "worldRegions": {
-    "North America": 63,
-    "Europe": 46,
-    "Asia": 31,
-    "Middle East": 8,
-    "Oceania": 3,
-    "South America": 3,
-    "Africa": 2
+    "North America": 109,
+    "Europe": 80,
+    "Asia": 45,
+    "Middle East": 11,
+    "South America": 5,
+    "Oceania": 4,
+    "Africa": 3
   },
   "formats": {
-    "in-person": 148,
-    "hybrid": 8
+    "in-person": 247,
+    "hybrid": 10
   },
   "sourceTypes": {
-    "official_site": 140,
-    "directory_listing": 14,
-    "reference": 2
+    "official_site": 226,
+    "directory_listing": 28,
+    "reference": 3
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "99.4%",
+    "exactDates": "96.9%",
     "city": "100.0%",
     "country": "100.0%",
-    "officialUrl": "89.7%",
-    "venue": "29.5%",
-    "organization": "45.5%",
-    "category": "71.8%",
-    "corroborated": "0.0%"
+    "officialUrl": "87.9%",
+    "venue": "29.6%",
+    "organization": "43.6%",
+    "category": "63.4%",
+    "corroborated": "0.4%"
   },
   "rejections": [
     {
@@ -61,6 +62,16 @@
       "reason": "already_finished",
       "sourceUrl": "https://www.spe-events.org/LACPEC/about",
       "statedText": "2026 SPE Latin American and Caribbean Petroleum Engineering Conference, The Windsor Barra, Rio de Janeiro, Brazil, June 9-11, 2026"
+    },
+    {
+      "reason": "no_location",
+      "sourceUrl": "https://prceurope.com/",
+      "statedText": "PRC Europe 2027 Petrochemical and Refining Congress, Vosendorf, May 24-25, 2027"
+    },
+    {
+      "reason": "no_location",
+      "sourceUrl": "https://tethys.pnnl.gov/events/46th-international-ocean-offshore-arctic-engineering-conference-omae-2027",
+      "statedText": "OMAE 2027, 46th International Conference on Ocean, Offshore and Arctic Engineering, May 2027"
     }
   ]
 }

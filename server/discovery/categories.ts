@@ -47,6 +47,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
       "cybersecurity", "cyber security", "information security", "infosec", "network security",
       "cryptography", "privacy", "penetration testing", "threat intelligence", "zero trust",
       "security operations", "malware", "incident response",
+          "rsa conference", "black hat", "def con", "security conference",
     ],
   },
   {

@@ -339,6 +339,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // checked, or checking that was abandoned after the poll ceiling without ever hearing back —
   // the latter must say so rather than sit under "(checking…)" forever once nothing is actually
   // checking anymore. Partial counts already found are shown either way, since they're real.
+  // A section is "not retrieved" for two different reasons that read identically to a visitor: the
+  // site refused us, or nothing was ever fetched because this record comes from the stored launch
+  // catalogue. Either way the honest label is "not retrieved" — never "(0)", which asserts the
+  // conference has none.
+  const sectionsUnread = Boolean(data?.fetchFailed || data?.sectionsNotRead);
+
   const incompleteLabel = (name: string, count: number): string =>
     count > 0 ? `${name} (${count})` : name;
 
@@ -512,25 +518,29 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'overview', label: 'Overview' },
               { id: 'cfp', label: 'Call for Papers' },
               { id: 'fees', label: !loading && data?.crawlComplete
-                ? data.fetchFailed
+                ? sectionsUnread
                   ? 'Fees & Pricing (not retrieved)'
                   : upcomingRegistrationFees.length > 0
                     ? `Fees & Pricing (${upcomingRegistrationFees.length})`
                     : 'Fees & Pricing'
                 : incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
               { id: 'agenda', label: !loading && data?.crawlComplete
-                ? `Program & Agenda (${data.agendaSessions.length})`
+                ? sectionsUnread
+                  ? 'Program & Agenda (not retrieved)'
+                  : `Program & Agenda (${data.agendaSessions.length})`
                 : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
               { id: 'speakers', label: !loading && data?.crawlComplete
-                ? data.fetchFailed
+                ? sectionsUnread
                   ? 'Keynote Speakers (not retrieved)'
                   : `Keynote Speakers (${data.speakers.length})`
                 : incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
               { id: 'committee', label: !loading && data?.crawlComplete
-                ? `Technical Committee (${data.committee.length})`
+                ? sectionsUnread
+                  ? 'Technical Committee (not retrieved)'
+                  : `Technical Committee (${data.committee.length})`
                 : incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
               { id: 'sponsors', label: !loading && data?.crawlComplete
-                ? data.fetchFailed
+                ? sectionsUnread
                   ? 'Sponsors & Exhibitors (not retrieved)'
                   : `Sponsors & Exhibitors (${data.sponsors.length})`
                 : incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
@@ -1178,7 +1188,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.agendaSessions.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={data.fetchFailed
+                      message={sectionsUnread
                         ? "Program information was not retrieved; this does not mean the conference has no program."
                         : "The completed crawl found no session-by-session program."}
                       sourceUrl={result.link}
@@ -1232,7 +1242,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.speakers.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={data.fetchFailed
+                      message={sectionsUnread
                         ? "Speaker information was not retrieved; this does not mean the conference has no speakers."
                         : "The completed crawl found no named keynote or invited speakers."}
                       sourceUrl={result.link}
@@ -1256,7 +1266,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.committee.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={data.fetchFailed
+                      message={sectionsUnread
                         ? "Committee information was not retrieved."
                         : "The completed crawl found no named technical committee roster."}
                       sourceUrl={result.link}
@@ -1280,7 +1290,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.sponsors.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={data.fetchFailed
+                      message={sectionsUnread
                         ? "Sponsor and exhibitor information was not retrieved."
                         : "The completed crawl found no named sponsors or exhibitors."}
                       sourceUrl={result.link}

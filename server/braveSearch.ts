@@ -4,6 +4,7 @@ import { isSerperConfigured, serperSearch } from "./serperSearch";
 import { dbAll } from "./db";
 import { scoreStoredConferenceRecord } from "./storedConferenceSearch";
 import { isDirectoryHost } from "./directoryHosts";
+import { browseLaunchDataset, searchLaunchDataset } from "./dataset/staticDataset";
 
 export interface LiveSearchResult {
   title: string;
@@ -578,10 +579,30 @@ export async function searchConferences(
   // organiser runs. Every record reaching this point has already passed the publication gate — an
   // authoritative first-party source, a verified title, date and country, and a sampled audit — so
   // guessing again from its description can only lose data it cannot improve.
-  const results = deduplicateStoredConferences(await searchPreparedConferences(query));
+  // Two stored sources, in strength order. Turso rows are conferences Conference Gate has actually
+  // prepared and always rank first; the launch dataset that ships in the repository fills the space
+  // underneath them, and answers on its own when there are no credentials for a database at all.
+  // Neither path fetches anything.
+  const results = deduplicateStoredConferences([
+    ...(await storedConferencesOrEmpty(query)),
+    ...searchLaunchDataset(query),
+  ]);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
+}
+
+/** The database read, degraded to "no rows" rather than an error.
+ *
+ *  A host with no `TURSO_DATABASE_URL` is a supported deployment, not a broken one: the search must
+ *  still answer from the static catalogue instead of returning a 502 to the reader. */
+async function storedConferencesOrEmpty(query: string): Promise<LiveSearchResult[]> {
+  try {
+    return await searchPreparedConferences(query);
+  } catch (error) {
+    console.warn("[search] stored conference read failed; answering from the launch dataset:", (error as Error).message);
+    return [];
+  }
 }
 
 /** A plain web search, used when a conference's own site can't be read and its details have to be
@@ -632,7 +653,10 @@ export async function browseStoredConferences(limit = 60): Promise<LiveSearchRes
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
 
-  const rows = await searchPreparedConferences("");
+  // Both stored sources are ordered together, not one after the other: appending the static
+  // catalogue to an already-sorted list of database rows produced a page that restarted at January
+  // halfway down.
+  const rows = [...(await storedConferencesOrEmpty("")), ...browseLaunchDataset(limit)];
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const withDates = rows.map((result) => {
@@ -645,7 +669,8 @@ export async function browseStoredConferences(limit = 60): Promise<LiveSearchRes
   const rest = withDates.filter((entry) => !(entry.time >= startOfToday.getTime() && Number.isFinite(entry.time)));
   upcoming.sort((left, right) => left.time - right.time);
   const results = deduplicateStoredConferences(
-    [...upcoming, ...rest].map((entry) => entry.result)).slice(0, Math.max(1, Math.min(limit, 200)));
+    [...upcoming, ...rest].map((entry) => entry.result)
+  ).slice(0, Math.max(1, Math.min(limit, 200)));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;

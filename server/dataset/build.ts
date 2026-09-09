@@ -37,13 +37,42 @@ function identityKey(record: LaunchConferenceRecord): string {
   return `${identity}|${record.year}|${place}`;
 }
 
-/** A second key that catches the same event described with and without its venue city, e.g. one
- *  source saying "Houston" and another naming only the country. Requires the dates to match, so it
- *  cannot merge two different editions of one series. */
-function dateKey(record: LaunchConferenceRecord): string | null {
-  if (!record.startDate) return null;
-  const identity = (record.acronym || record.series || record.title).toLowerCase().replace(/[^a-z0-9]+/g, "");
-  return `${identity}|${record.startDate}`;
+/** The words that say what kind of event something is rather than which event it is. Two sources
+ *  describing one conference rarely choose the same ones -- "EAGE Annual 2027" and "88th EAGE
+ *  Annual Conference & Exhibition 2027" are the same event -- so they are removed before names are
+ *  compared. */
+const NAME_NOISE = new Set([
+  "annual", "conference", "conferences", "congress", "congresses", "exhibition", "exhibitions",
+  "international", "national", "world", "global", "european", "asian", "summit", "symposium",
+  "symposia", "meeting", "workshop", "expo", "exposition", "convention", "forum", "edition",
+  "the", "and", "on", "of", "for", "in", "at", "conf",
+]);
+
+/** The distinctive words in a conference's name: what is left once the event-type words and the
+ *  year are gone. */
+function nameTokens(record: LaunchConferenceRecord): Set<string> {
+  const source = `${record.acronym || ""} ${record.series || record.title}`;
+  const tokens = source
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !NAME_NOISE.has(token) && !/^\d+(st|nd|rd|th)?$/.test(token));
+  return new Set(tokens);
+}
+
+/** Same place, same year, same stated start date -- the bucket inside which two names are worth
+ *  comparing at all. Keeping the date in the key is what stops one series' regional editions from
+ *  collapsing into each other. */
+function placeKey(record: LaunchConferenceRecord): string {
+  const place = (record.city || record.country || record.format).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return `${place}|${record.year}|${record.startDate || "undated"}`;
+}
+
+function isSubsetOrEqual(left: Set<string>, right: Set<string>): boolean {
+  if (left.size === 0 || right.size === 0) return false;
+  const [smaller, larger] = left.size <= right.size ? [left, right] : [right, left];
+  for (const token of smaller) if (!larger.has(token)) return false;
+  return true;
 }
 
 function mergeRecords(strong: LaunchConferenceRecord, weak: LaunchConferenceRecord): LaunchConferenceRecord {
@@ -140,20 +169,35 @@ export function buildLaunchDataset(evidence: HarvestEvidence[], options: ParseOp
   parsed.sort((left, right) => SOURCE_RANK[right.sourceType] - SOURCE_RANK[left.sourceType]);
 
   const byIdentity = new Map<string, LaunchConferenceRecord>();
-  const byDate = new Map<string, string>();
+  const byPlace = new Map<string, string[]>();
   let duplicatesMerged = 0;
 
   for (const record of parsed) {
     const key = identityKey(record);
-    const dKey = dateKey(record);
-    const existingKey = byIdentity.has(key) ? key : dKey && byDate.has(dKey) ? byDate.get(dKey)! : null;
-    if (existingKey && byIdentity.has(existingKey)) {
+    let existingKey: string | null = byIdentity.has(key) ? key : null;
+
+    // Not an exact identity match: look for strong agreement instead. Same city, same year, same
+    // start date, and one name's distinctive words contained in the other's. Anything weaker is
+    // left as two records -- a shared name is never on its own a reason to drop a conference.
+    if (!existingKey) {
+      const tokens = nameTokens(record);
+      for (const candidateKey of byPlace.get(placeKey(record)) || []) {
+        const candidate = byIdentity.get(candidateKey);
+        if (candidate && isSubsetOrEqual(tokens, nameTokens(candidate))) {
+          existingKey = candidateKey;
+          break;
+        }
+      }
+    }
+
+    if (existingKey) {
       byIdentity.set(existingKey, mergeRecords(byIdentity.get(existingKey)!, record));
       duplicatesMerged += 1;
       continue;
     }
     byIdentity.set(key, record);
-    if (dKey && !byDate.has(dKey)) byDate.set(dKey, key);
+    const place = placeKey(record);
+    byPlace.set(place, [...(byPlace.get(place) || []), key]);
   }
 
   const records = [...byIdentity.values()].sort((left, right) => {

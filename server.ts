@@ -46,6 +46,7 @@ import {
 import { checkWordCompliance } from "./server/wordLimit";
 import { initDiscoverySchema } from "./server/discovery/schema";
 import { discoveryRouter } from "./server/discovery/router";
+import { findLaunchRecordByUrl, launchRecordToTabbedExtraction } from "./server/dataset/staticDataset";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -3143,7 +3144,7 @@ Return JSON with exactly this shape:
     const running = crawlJobs.get(url);
     if (running?.result) return res.json(running.result);
 
-    const persisted = await loadPersistedExtractedConference(url, false);
+    const persisted = await loadPersistedExtractedConference(url, false).catch(() => null);
     if (persisted) {
       extractionCache.set(url, {
         data: { ...persisted, crawlComplete: true, crawlPending: false },
@@ -3155,6 +3156,17 @@ Return JSON with exactly this shape:
         crawlPending: false,
         detailsReady: hasSubstantialTabCoverage(persisted),
       });
+    }
+
+    // Nothing prepared for this URL. If it is one of the launch dataset's conferences, open it from
+    // the file that ships in the repository rather than showing the reader an empty page. This is
+    // still a stored read: no fetch, no provider, no model. The payload marks its deep sections as
+    // never read, so the page says "not retrieved" rather than claiming a crawl found none.
+    const launchRecord = findLaunchRecordByUrl(url);
+    if (launchRecord) {
+      const payload = launchRecordToTabbedExtraction(launchRecord);
+      extractionCache.set(url, { data: payload, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      return res.json(payload);
     }
     return res.status(204).end();
   });

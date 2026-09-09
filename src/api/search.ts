@@ -158,6 +158,10 @@ export interface ExtractedConferenceDetails {
   /** Why the read failed, established by re-probing the site rather than inferred from which code
    *  path gave up. Shown verbatim, since the remedies genuinely differ. */
   readFailureReason?: string;
+  /** No page of this conference was ever read: the record comes from Conference Gate's stored
+   *  launch catalogue, which carries verified core details and nothing deeper. The tabs below must
+   *  therefore say "not retrieved" rather than reporting that a crawl found the section empty. */
+  sectionsNotRead?: boolean;
   /** Some or all of these details came from sites other than the conference's own — used when the
    *  official site blocks us or says very little. Weaker than the organiser's own word, so it is
    *  always disclosed; per-field `provenance` names exactly which source each value came from. */
