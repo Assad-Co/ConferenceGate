@@ -268,8 +268,14 @@ async function main(): Promise<void> {
     return;
   }
   if (!dryRun && result.seeded > 0) {
-    console.log("\nThese are now visible to enrichment. The next automation run will read each");
-    console.log("conference's own site and fill programme, speakers, committee and sponsors.");
+    // Deliberately does not promise filled tabs. Enrichment reads the sites and writes what it
+    // finds into `discovery_events`; the detail page reads `extracted_conferences`. Publication
+    // is what joins the two, and it is opt-in. Saying "the tabs will fill" would be the same
+    // overstatement this pipeline refuses everywhere else.
+    console.log("\nThese are now visible to enrichment: `npm run discovery -- enrich --missing-deep-only`");
+    console.log("(or the next automation run) reads each conference's own site and stores what it");
+    console.log("finds on the discovery record. Reaching the detail page's tabs is a further step:");
+    console.log("publication, behind DISCOVERY_PUBLISH_TO_CONFERENCES. `publish --dry-run` shows it.");
   }
 }
 
