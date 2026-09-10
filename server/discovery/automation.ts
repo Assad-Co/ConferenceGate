@@ -397,7 +397,7 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // see would have been starved by the one they cannot. It gets a third, and no more.
     const discoveryBudget = Math.min(
       options.discoveryTimeBudgetMs ?? 25 * 60_000,
-      Math.floor(expensiveWindow() / 3)
+      Math.floor(expensiveWindow() / 6)
     );
     if (initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
       await setStage(runId, ownerId, "discovery", leaseMinutes);
@@ -434,16 +434,31 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // programme, speakers, committee and sponsors of every published conference were therefore the
     // one thing the schedule could never reach. This visits only publish_ready records that still
     // have an empty deep section, so it costs nothing once they are full.
-    const deepBudget = stageBudget(options.publishedDeepTimeBudgetMs ?? 8 * 60_000);
+    // The pass that actually fills a reader's tabs, and now the largest in the cycle.
+    //
+    // It used to get eight minutes of fifty-five and sixty records, and only records already
+    // publish_ready — of which there were eighty-five against a thousand needing enrichment. At
+    // that rate the catalogue's programmes and speakers were decades away, which is the honest
+    // reason tabs stayed empty however often the worker ran.
+    //
+    // The readiness filter is gone because it was never protecting anything: CLAUDE.md is explicit
+    // that a deep field is not a readiness input and is not audited, so reading one early cannot
+    // make a conference more publishable than its own evidence warrants. A record enriched now and
+    // published later simply arrives with its sections already filled.
+    const deepBudget = stageBudget(options.publishedDeepTimeBudgetMs ?? 25 * 60_000);
     if (deepBudget > 0) await runEnrichment({
-      readiness: ["publish_ready"], missingDeepSectionsOnly: true,
+      missingDeepSectionsOnly: true,
       // The deep pass reads a conference's own site. A record without one cannot yield a section,
       // so asking for it spends a slot to learn nothing — which is what a forty-record production
       // pass did, forty times over, before this narrowed what it asks for.
       requireOfficialUrl: true,
-      limit: options.publishedDeepLimit ?? 60,
+      limit: options.publishedDeepLimit ?? 400,
       maxSearchQueries: 0,
-      maxJinaPages: Math.floor((options.enrichmentJinaPages ?? 50) / 2),
+      maxJinaPages: options.enrichmentJinaPages ?? 50,
+      // Programme, speakers, committee and sponsors is already four; four was therefore the exact
+      // budget for a site that keeps each on its own page and nothing to spare for one that splits
+      // a programme across two.
+      maxDeepPagesPerEvent: 6,
       timeBudgetMs: deepBudget,
       quiet: options.quiet,
     });

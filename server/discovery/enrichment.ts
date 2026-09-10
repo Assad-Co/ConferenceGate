@@ -15,6 +15,7 @@ import {
 import type { DeepSection } from "./deepSections";
 import { eventIdentityFrom } from "./eventIdentity";
 import { canonicalizeUrl, normalizeDates, normalizeDeadlines, normalizeFormat, normalizeLocation, normalizeNavigableUrl, normalizeTitle } from "./normalize";
+import { isExaConfigured, resolveOfficialUrl } from "../dataset/sources/exa";
 import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
@@ -285,6 +286,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
   const budget = newReadBudget(Math.max(0, options.maxJinaPages ?? 200), Math.max(20, limit));
   const metrics: Record<string, number> = {
     braveQueries: 0, braveResults: 0, braveErrors: 0, serperQueries: 0, serperResults: 0,
+    exaQueries: 0, exaResolved: 0, exaErrors: 0,
     serperErrors: 0, directAttempts: 0, directSuccesses: 0, jinaAttempts: 0,
     jinaSuccesses: 0, jinaRecoveries: 0, robotsDisallowed: 0, pagesUnreadable: 0,
     directoryLeads: 0, directoryResolutions: 0, deepPagesRead: 0, deepSectionsFilled: 0,
@@ -712,6 +714,45 @@ async function searchForOfficial(event: EventRow, remaining: number, metrics: Re
     queries += 1; metrics.serperQueries += 1;
     try { const found = await serperSearch(serperQuery, 10); metrics.serperResults += found.length; results.push(...found); }
     catch (error) { metrics.serperErrors += 1; noteProviderFailure(errors, "serper", error); }
+  }
+
+  // Last resort, and a different kind of search.
+  //
+  // Brave and Serper answer "what pages match these words", which is why they hand back the
+  // directory listings that rank for a conference's name. This asks the narrower question the
+  // stage is actually about — which page IS this conference — and answers it under the test the
+  // dataset builder already uses: the acronym or half the distinctive words must appear in the
+  // URL, page title or host, listing domains are excluded at the API, and a site in a country
+  // contradicting the venue is refused. A record with no official page is the reason its tabs
+  // stay empty forever, so it is worth one more question before giving up on it.
+  const strongSoFar = results.some((r) => !isDirectoryHost(host(r.link)) && titleSimilarity(r.title, event.title) >= 0.55);
+  if (!strongSoFar && remaining > queries && isExaConfigured() && event.start_year) {
+    queries += 1;
+    metrics.exaQueries = (metrics.exaQueries || 0) + 1;
+    try {
+      const resolved = await resolveOfficialUrl({
+        title: event.title,
+        year: event.start_year,
+        city: event.city,
+        country: event.country,
+        acronym: event.acronym,
+        countryCode: event.country_code,
+      });
+      if (resolved) {
+        metrics.exaResolved = (metrics.exaResolved || 0) + 1;
+        results.push({
+          title: resolved.resultTitle || event.title,
+          link: resolved.url,
+          snippet: "",
+          displayLink: resolved.host,
+          thumbnail: null,
+          favicon: null,
+        });
+      }
+    } catch (error) {
+      metrics.exaErrors = (metrics.exaErrors || 0) + 1;
+      noteProviderFailure(errors, "exa", error);
+    }
   }
   const unique = new Map<string, LiveSearchResult>();
   for (const result of results) {
