@@ -18,6 +18,16 @@ async function acceptedCount(): Promise<number> {
 export interface ScaleOptions {
   targetAccepted?: number; batchPages?: number; batchCandidates?: number; maxBatches?: number;
   batchTimeBudgetMs?: number; maxSearchQueries?: number; maxJinaPages?: number; quiet?: boolean;
+  /**
+   * Absolute time by which this must stop, as a timestamp rather than a duration.
+   *
+   * `batchTimeBudgetMs` is per batch and is handed separately to the discovery pass and the
+   * enrichment pass inside it, so one batch can legitimately run to twice it, and the loop then
+   * starts another. In production that turned a seven-minute allowance into thirty-two minutes and
+   * left the stages a reader can see with nine minutes of their twenty. A caller that has to be
+   * finished by a certain time cannot express that as a per-batch duration.
+   */
+  deadline?: number;
 }
 export interface ScaleResult { scaleRunId: string; status: string; stopReason: string; batches: number; report: InventoryReport }
 
@@ -51,7 +61,12 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
   let noGrowth = 0;
   let batches = 0;
   let stopReason = "batch_limit";
+  /** What a pass inside this batch may spend: its own budget, never past the caller's deadline. */
+  const remaining = (requested: number): number =>
+    options.deadline ? Math.max(0, Math.min(requested, options.deadline - Date.now())) : requested;
+
   while (batches < (options.maxBatches ?? 50)) {
+    if (options.deadline && Date.now() >= options.deadline) { stopReason = "deadline_reached"; break; }
     const before = await acceptedCount();
     if (before >= target) { stopReason = "target_reached"; break; }
     const interrupted = await dbGet<{ id: string }>(`SELECT id FROM discovery_scale_batches WHERE scale_run_id=? AND batch_number=?`,
@@ -72,7 +87,7 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
         maxSearchQueries: options.maxSearchQueries ?? 48, maxJinaPages: options.maxJinaPages ?? 150,
         enableSearchDiscovery: true,
         maxAlternateUrls: 150, maxCandidatesPerDomain: 25, domainConcurrency: 4,
-        timeBudgetMs: options.batchTimeBudgetMs ?? 30 * 60_000, maxAiCalls: 0,
+        timeBudgetMs: remaining(options.batchTimeBudgetMs ?? 30 * 60_000), maxAiCalls: 0,
         allowAutoPublish: false, trigger: `production_scale:${scaleRunId}`, quiet: options.quiet,
       });
       const searchQueries = (discovery.search?.braveQueries || 0) + (discovery.search?.serperQueries || 0);
@@ -81,7 +96,7 @@ export async function runProductionScale(options: ScaleOptions = {}): Promise<Sc
       }
       const enrichment = await runEnrichment({ runId: discovery.runId, limit: 2_000,
         maxJinaPages: options.maxJinaPages ?? 150, maxSearchQueries: options.maxSearchQueries ?? 48,
-        timeBudgetMs: options.batchTimeBudgetMs ?? 30 * 60_000, quiet: options.quiet });
+        timeBudgetMs: remaining(options.batchTimeBudgetMs ?? 30 * 60_000), quiet: options.quiet });
       const after = await acceptedCount();
       noGrowth = after > before ? 0 : noGrowth + 1;
       const metrics = { discovery: { ...discovery, events: undefined }, enrichment, publishingEnabled: false };

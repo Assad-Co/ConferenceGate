@@ -121,6 +121,27 @@ test("a cycle still stands down for a worker that is genuinely running", async (
   await releasePipelineLease("worker-alive");
 });
 
+test("a scale run stops at the caller's deadline rather than at its per-batch budget", async () => {
+  const { runProductionScale } = await import("../scale");
+  // The production failure: a seven-minute allowance ran thirty-two minutes, because the budget is
+  // per batch, is handed separately to the discovery and enrichment passes inside it, and cannot
+  // end a pass already running. A caller with a hard stop cannot express it as a duration.
+  const startedAt = Date.now();
+  const result = await runProductionScale({
+    targetAccepted: 1,
+    maxBatches: 50,
+    batchTimeBudgetMs: 30 * 60_000,
+    // Already past: the loop must decline to start a batch at all.
+    deadline: Date.now() - 1,
+    quiet: true,
+  });
+  assert.ok(Date.now() - startedAt < 30_000, "returned immediately instead of running a batch");
+  assert.ok(
+    result.stopReason === "deadline_reached" || result.stopReason === "target_reached",
+    `expected the deadline (or an already-met target) to stop it, got ${result.stopReason}`
+  );
+});
+
 test("automation publication has a separate exact permit and unrestricted publishing is not implied", () => {
   assert.equal(automationPublicationEnabled({ CONFERENCEGATE_AUTOMATION_PUBLICATION: "1" }), true);
   assert.equal(automationPublicationEnabled({ CONFERENCEGATE_AUTOMATION_PUBLICATION: "true" }), false);

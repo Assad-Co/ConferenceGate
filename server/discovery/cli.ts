@@ -92,6 +92,10 @@ function automationOptions(flags: Record<string, string | boolean>) {
     // reaches publication, so the cycle has to stop itself first.
     runTimeBudgetMs: numberFlag(flags["run-time-budget-ms"], 55 * 60_000),
     scheduleHours: numberFlag(flags["schedule-hours"], 8),
+    // Finding conferences is not the shortage. The store holds well over a thousand and fewer than
+    // two percent have a programme anybody can read; a cycle that spends its window finding more
+    // of what it cannot yet process makes the backlog worse.
+    skipDiscovery: flags["skip-discovery"] === true,
     quiet: flags.quiet === true,
   };
 }
@@ -157,7 +161,8 @@ const HELP = `Conference Gate — discovery engine
                             Resume bounded production batches through discovery, run-scoped
                             enrichment, with AI and publication disabled.
   automate [--target 5000] [--batch-pages 500] [--enrichment-limit 250]
-           [--schedule-hours 8] [--run-time-budget-ms 3300000] [--repeat-for-ms 0] [--quiet]
+           [--schedule-hours 8] [--run-time-budget-ms 3300000] [--repeat-for-ms 0]
+           [--skip-discovery] [--quiet]
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.

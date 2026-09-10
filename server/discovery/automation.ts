@@ -43,6 +43,15 @@ export interface AutomationOptions {
    * publishes what is already ready.
    */
   runTimeBudgetMs?: number;
+  /**
+   * Run no discovery at all this cycle.
+   *
+   * Finding conferences is not the shortage — the store holds well over a thousand and fewer than
+   * two percent of them have a programme anybody can read. Discovery competes for the same window
+   * as the stages that turn a stored record into a readable one, and a cycle that spends its time
+   * finding more of what it cannot yet process makes the backlog worse rather than better.
+   */
+  skipDiscovery?: boolean;
   quiet?: boolean;
 }
 
@@ -237,6 +246,31 @@ async function setStage(runId: string, ownerId: string, stage: string, leaseMinu
     updated_at=datetime('now') WHERE id=1`, [stage, runId]);
 }
 
+/** Prints the readiness reasons standing between accepted records and publication, most common
+ *  first. Reads only; changes nothing. */
+async function reportReadinessBlockers(label: string): Promise<void> {
+  const rows = await dbAll<{ readiness_reasons: string; count: number }>(
+    `SELECT readiness_reasons, COUNT(*) count FROM discovery_events
+      WHERE status IN ('validated','published','needs_review') AND publish_readiness <> 'publish_ready'
+      GROUP BY readiness_reasons ORDER BY count DESC LIMIT 12`
+  );
+  const tally = new Map<string, number>();
+  for (const row of rows) {
+    let reasons: unknown[] = [];
+    try { const parsed = JSON.parse(String(row.readiness_reasons || "[]")); if (Array.isArray(parsed)) reasons = parsed; } catch { reasons = []; }
+    for (const reason of reasons) {
+      tally.set(String(reason), (tally.get(String(reason)) || 0) + Number(row.count));
+    }
+  }
+  const ranked = [...tally].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!ranked.length) {
+    console.error(`[automation] ${label} readiness: nothing is blocked`);
+    return;
+  }
+  console.error(`[automation] ${label} readiness blockers: ` +
+    ranked.map(([reason, count]) => `${reason}=${count}`).join("  "));
+}
+
 async function countPublishCandidates(): Promise<number> {
   return Number((await dbGet<{ count: number }>(`SELECT COUNT(*) count FROM discovery_events e
     WHERE e.status='validated' AND e.publish_readiness='publish_ready'
@@ -352,6 +386,13 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   ): Promise<{ publication: PublishResult | null; auditId: string | null }> => {
     await setStage(runId, ownerId, `readiness_${label}`, leaseMinutes);
     await reclassifyAllPublishReadiness();
+    // Which fields are actually holding records back, in words, every cycle.
+    //
+    // "publication wrote 0" says something is wrong and nothing about what. The reasons are
+    // already computed and stored per record; not printing them meant the one question that
+    // mattered — what is blocking these conferences — could only be answered by someone opening
+    // the database by hand.
+    await reportReadinessBlockers(label);
     // Empty tabs filled in on conferences this engine already published. Runs before the decision
     // below, and unconditionally: it publishes nothing and changes no readiness, so a cycle with
     // nothing new to publish must still deliver sections the deep pass has since read.
@@ -399,13 +440,19 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       options.discoveryTimeBudgetMs ?? 25 * 60_000,
       Math.floor(expensiveWindow() / 6)
     );
-    if (initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
+    if (!options.skipDiscovery && initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
       await setStage(runId, ownerId, "discovery", leaseMinutes);
       const scale = await runProductionScale({
         targetAccepted: options.targetAccepted ?? 5_000,
         batchPages: options.batchPages ?? 500,
         maxBatches: 1,
         batchTimeBudgetMs: discoveryBudget,
+        // A budget checked between batches cannot end a batch already running. Discovery took 32
+        // minutes of a 7-minute allowance in production and left enrichment 9 of its 20, because
+        // one batch — with an events API and a URL resolver inside it — is far longer than the
+        // page loop this budget was written for. The deadline goes in as well, so the loop can
+        // stop itself rather than discovering afterwards that it should have.
+        deadline: Date.now() + discoveryBudget,
         maxSearchQueries: options.maxSearchQueries ?? 14,
         maxJinaPages: options.maxJinaPages ?? 100,
         quiet: options.quiet,
