@@ -52,6 +52,71 @@ export interface LaunchEvidence {
   externalId?: string | null;
 }
 
+/** What a curated detail cell tells us about its section.
+ *
+ *  Three states, not two, because "the organiser has not announced speakers" and "nobody could
+ *  read the speakers page" are different facts with different remedies, and a page that prints one
+ *  when the other is true is lying to the reader. */
+export type LaunchSectionAvailability = "stated" | "not_announced" | "unread";
+
+export interface LaunchDetailPerson {
+  name: string;
+  /** The heading that introduced them. Never inferred from position on a page. */
+  role: string | null;
+  org: string | null;
+  title: string | null;
+  /** What they are speaking about, when the source said. */
+  topic: string | null;
+}
+
+export interface LaunchDetailSponsor {
+  name: string;
+  tier: string | null;
+}
+
+export interface LaunchDetailFee {
+  category: string;
+  amount: number | null;
+  currency: string | null;
+}
+
+/** Why a section holding text produced no structured entries. */
+export type LaunchUnstructuredReason = "withdrawn_in_source" | "no_recognisable_entries" | null;
+
+export interface LaunchDetailSection<T> {
+  availability: LaunchSectionAvailability;
+  items: T[];
+  /** The source cell, verbatim. Kept whether or not anything structured out of it, because the
+   *  sentence is the evidence and often says more than the columns could hold. */
+  text: string | null;
+  unstructuredReason: LaunchUnstructuredReason;
+}
+
+export interface LaunchDetailProse {
+  availability: LaunchSectionAvailability;
+  text: string | null;
+}
+
+/**
+ * The deep sections of a conference, supplied rather than crawled.
+ *
+ * Present only where a curated list covered the conference. Its absence means nobody has supplied
+ * these sections — never that the conference has no speakers.
+ */
+export interface LaunchConferenceDetails {
+  /** The list this came from, for provenance. */
+  source: string;
+  venueName: string | null;
+  venueAddress: string | null;
+  program: LaunchDetailProse;
+  keynotes: LaunchDetailSection<LaunchDetailPerson>;
+  committee: LaunchDetailSection<LaunchDetailPerson>;
+  fees: LaunchDetailSection<LaunchDetailFee>;
+  sponsors: LaunchDetailSection<LaunchDetailSponsor>;
+  /** A travel advisory the list's compiler wrote. Not the organiser speaking, and shown as such. */
+  safetyNote: string | null;
+}
+
 export interface LaunchConferenceRecord {
   /** Stable slug: series + year + city, so a rebuild produces the same id for the same event. */
   id: string;
@@ -103,6 +168,10 @@ export interface LaunchConferenceRecord {
 
   /** Marks these as launch-dataset records so stored Turso records stay distinguishable. */
   origin: "launch_dataset";
+
+  /** Programme, speakers, committee, fees and sponsors, when a curated list supplied them.
+   *  Absent means nobody supplied them, which is not the same as the conference having none. */
+  details?: LaunchConferenceDetails | null;
 }
 
 /** A row the builder refused, and why. Kept so the rejection count in the report is auditable

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T13:50:07.132Z",
+  "generatedAt": "2026-09-10T14:38:09.524Z",
   "horizonStart": "2026-09-10",
   "evidenceRows": 325,
   "apiEventRows": 72,
@@ -12,6 +12,17 @@
     "no_location": 3,
     "source_url_is_a_listing": 1
   },
+  "detailsAttached": 15,
+  "detailsUnmatched": [
+    {
+      "title": "3rd Edition Geological Process-Based Forward Modeling",
+      "reason": "no_conference_with_this_title"
+    },
+    {
+      "title": "Latin America Geothermal Systems Workshop 2026",
+      "reason": "no_conference_with_this_title"
+    }
+  ],
   "total": 374,
   "byYear": {
     "2026": 61,

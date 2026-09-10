@@ -15,6 +15,10 @@ import type {
 } from "./types";
 import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions, type ParseOutcome } from "./parseEvidence";
 import { flattenStoredConferenceText } from "../storedConferenceSearch";
+import { parseCuratedDates } from "./sources/curated";
+import {
+  detailMatchKey, mapCuratedDetailRow, type CuratedDetailRow,
+} from "./sources/curatedDetails";
 
 /** Strength order used when two sources describe one conference. */
 const SOURCE_RANK: Record<LaunchSourceType, number> = {
@@ -30,6 +34,11 @@ export interface BuildResult {
   index: LaunchSearchIndex;
   rejections: LaunchRejection[];
   duplicatesMerged: number;
+  /** How many conferences a curated detail list filled the deep sections of. */
+  detailsAttached: number;
+  /** Detail rows that reached no conference. Reported rather than dropped, because a row that
+   *  matches nothing usually means a title was rewritten, not that the conference is gone. */
+  detailsUnmatched: Array<{ title: string; reason: string }>;
 }
 
 function identityKey(record: LaunchConferenceRecord): string {
@@ -168,10 +177,18 @@ export interface StructuredOutcome {
  * already a date — but it goes through the same date-window rules upstream and the same
  * deduplication, ranking and ordering below, so the catalogue has one set of rules and not two.
  */
+/** A curated list of deep sections, waiting for the conferences it describes to exist. */
+export interface DetailSupply {
+  /** The file it came from, kept on every record it fills so the claim has a source. */
+  source: string;
+  rows: CuratedDetailRow[];
+}
+
 export function buildLaunchDataset(
   evidence: HarvestEvidence[],
   options: ParseOptions,
-  structured: StructuredOutcome[] = []
+  structured: StructuredOutcome[] = [],
+  details: DetailSupply[] = []
 ): BuildResult {
   const rejections: LaunchRejection[] = [];
   const parsed: LaunchConferenceRecord[] = [];
@@ -236,13 +253,80 @@ export function buildLaunchDataset(
     return left.title.localeCompare(right.title);
   });
 
+  const attachment = attachDetails(records, details);
+
   const generatedAt = new Date().toISOString();
   return {
     dataset: { generatedAt, horizonStart: options.horizonStart, years: options.years, records },
     index: { generatedAt, count: records.length, entries: records.map(buildSearchIndexEntry) },
     rejections,
     duplicatesMerged,
+    detailsAttached: attachment.attached,
+    detailsUnmatched: attachment.unmatched,
   };
+}
+
+/**
+ * Whether a detail row is describing the same edition as the record it matched by title.
+ *
+ * Conference titles repeat across years, so a title match alone could file the 2027 programme
+ * under the 2026 event — the single mistake the discovery engine's `eventIdentity` guard exists to
+ * prevent, arriving here by a different road. Where both sides state a month, both must agree;
+ * where the record only knows a year, the year must agree.
+ */
+function agreesOnDate(record: LaunchConferenceRecord, datesText: string | null): boolean {
+  if (!datesText) return true;
+  const stated = parseCuratedDates(datesText.replace(/\([^)]*\)/g, " "));
+  if (stated.startYear === null) return true;
+  if (stated.startYear !== record.year) return false;
+  if (!record.startDate || stated.startMonth === null) return true;
+  return Number(record.startDate.slice(5, 7)) === stated.startMonth;
+}
+
+function attachDetails(
+  records: LaunchConferenceRecord[],
+  supplies: DetailSupply[]
+): { attached: number; unmatched: Array<{ title: string; reason: string }> } {
+  const unmatched: Array<{ title: string; reason: string }> = [];
+  let attached = 0;
+  if (supplies.length === 0) return { attached, unmatched };
+
+  const byTitle = new Map<string, LaunchConferenceRecord>();
+  for (const record of records) byTitle.set(detailMatchKey(record.title), record);
+
+  for (const supply of supplies) {
+    for (const row of supply.rows) {
+      const record = byTitle.get(detailMatchKey(row.name));
+      if (!record) {
+        unmatched.push({ title: row.name, reason: "no_conference_with_this_title" });
+        continue;
+      }
+      if (!agreesOnDate(record, row.dates)) {
+        unmatched.push({ title: row.name, reason: "dates_disagree_with_the_record" });
+        continue;
+      }
+      // A conference already filled by an earlier list keeps what it has: two lists disagreeing is
+      // a fact to look at, not something to resolve by whichever file sorted last.
+      if (record.details) {
+        unmatched.push({ title: row.name, reason: "already_filled_by_another_list" });
+        continue;
+      }
+      const detail = mapCuratedDetailRow(row, record.city);
+      record.details = {
+        source: supply.source,
+        venueName: detail.venueName,
+        venueAddress: detail.venueAddress,
+        program: detail.program,
+        keynotes: detail.keynotes,
+        committee: detail.committee,
+        fees: detail.fees,
+        sponsors: detail.sponsors,
+        safetyNote: detail.safetyNote,
+      };
+      attached += 1;
+    }
+  }
+  return { attached, unmatched };
 }
 
 const CSV_COLUMNS = [

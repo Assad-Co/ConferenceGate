@@ -86,9 +86,14 @@ interface ExternalConferenceDetailProps {
   onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
 }
 
-const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message }) => (
+const EmptyExtractState: React.FC<{ message: string; sourceUrl: string; note?: string | null }> = ({ message, note }) => (
   <div className="py-8 text-center space-y-3">
     <p className="text-xs text-slate-500 max-w-md mx-auto">{message}</p>
+    {note && (
+      <p className="text-[11px] text-slate-500 max-w-xl mx-auto text-left bg-slate-50 border border-slate-200 rounded-xl p-3 leading-relaxed">
+        <span className="font-semibold text-slate-600">From the source: </span>{note}
+      </p>
+    )}
   </div>
 );
 
@@ -339,11 +344,43 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // checked, or checking that was abandoned after the poll ceiling without ever hearing back —
   // the latter must say so rather than sit under "(checking…)" forever once nothing is actually
   // checking anymore. Partial counts already found are shown either way, since they're real.
-  // A section is "not retrieved" for two different reasons that read identically to a visitor: the
-  // site refused us, or nothing was ever fetched because this record comes from the stored launch
-  // catalogue. Either way the honest label is "not retrieved" — never "(0)", which asserts the
-  // conference has none.
-  const sectionsUnread = Boolean(data?.fetchFailed || data?.sectionsNotRead);
+
+  // Why a section is empty, one section at a time.
+  //
+  // A record can be part-filled: a curated list gave AAPG's ICE 2026 twelve keynote speakers and a
+  // twenty-seven-person committee while its registration portal still refuses automated readers.
+  // One flag for the whole page could only ever be right about all eight tabs at once, so each
+  // section answers for itself and the whole-record flag is the fallback for records that carry no
+  // such map. The three answers are genuinely different and never share a sentence on screen:
+  // 'stated' has something to show, 'not_announced' means the organiser has not published it, and
+  // 'unread' means nobody managed to read it — the only one of the three that means look again.
+  const sectionState = (section: string): 'stated' | 'not_announced' | 'unread' => {
+    const stated = data?.sectionAvailability?.[section];
+    if (stated) return stated;
+    return data?.fetchFailed || data?.sectionsNotRead ? 'unread' : 'stated';
+  };
+
+  /** What to tell the reader about a section holding nothing, given why it holds nothing. */
+  const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
+    switch (sectionState(section)) {
+      case 'not_announced':
+        return `The organiser has not announced ${subject} yet.`;
+      case 'unread':
+        return `${subject[0].toUpperCase()}${subject.slice(1)} could not be retrieved; this does not mean the conference has none.`;
+      default:
+        return crawled;
+    }
+  };
+
+  // The source's own sentence, when it says more than "Not yet announced" does. This is where a
+  // reader finds out that four companies named in the record's source are explicitly NOT sponsors
+  // of this event, or that a committee exists but its membership has not been published — facts
+  // the structured columns have no room for and must not be allowed to swallow.
+  const sectionNote = (section: string): string | null => {
+    const note = data?.section_notes?.[section];
+    if (!note || note.trim().length < 40) return null;
+    return note.trim();
+  };
 
 
   // The conference's own picture of itself, when its page published one.
@@ -354,8 +391,18 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // artwork.
   const heroImage = data?.overview?.image_url || result.thumbnail || null;
 
+  /** The programme as the source described it, when nobody published a session list. */
+  const programOverview = data?.program_agenda?.overview?.trim() || null;
+  /** Registration wording that says more than the fee rows do — refund terms, what a fee covers. */
+  const pricingText = data?.fees_pricing?.pricing_text?.trim() || null;
+
+  // A count is a claim, so it appears only when there is something to count. "(0)" beside a
+  // section nobody could read asserts the conference has none, and a bare label says only what is
+  // true — that this is the speakers tab. Which of the three reasons it is empty for is the
+  // panel's job to explain, not the tab's.
   const incompleteLabel = (name: string, count: number): string =>
     count > 0 ? `${name} (${count})` : name;
+
 
   // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
   // only true while polling is actually still happening. Once it's given up, say so and point at
@@ -526,33 +573,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             [
               { id: 'overview', label: 'Overview' },
               { id: 'cfp', label: 'Call for Papers' },
-              { id: 'fees', label: !loading && data?.crawlComplete
-                ? sectionsUnread
-                  ? 'Fees & Pricing'
-                  : upcomingRegistrationFees.length > 0
-                    ? `Fees & Pricing (${upcomingRegistrationFees.length})`
-                    : 'Fees & Pricing'
-                : incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
-              { id: 'agenda', label: !loading && data?.crawlComplete
-                ? sectionsUnread
-                  ? 'Program & Agenda'
-                  : `Program & Agenda (${data.agendaSessions.length})`
-                : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
-              { id: 'speakers', label: !loading && data?.crawlComplete
-                ? sectionsUnread
-                  ? 'Keynote Speakers'
-                  : `Keynote Speakers (${data.speakers.length})`
-                : incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
-              { id: 'committee', label: !loading && data?.crawlComplete
-                ? sectionsUnread
-                  ? 'Technical Committee'
-                  : `Technical Committee (${data.committee.length})`
-                : incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
-              { id: 'sponsors', label: !loading && data?.crawlComplete
-                ? sectionsUnread
-                  ? 'Sponsors & Exhibitors'
-                  : `Sponsors & Exhibitors (${data.sponsors.length})`
-                : incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
+              { id: 'fees', label: incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
+              { id: 'agenda', label: incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
+              { id: 'speakers', label: incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
+              { id: 'committee', label: incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
+              { id: 'sponsors', label: incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
               { id: 'venue', label: 'Venue & Accommodation' },
               { id: 'community', label: 'Community' },
             ] as Array<{ id: ExternalDetailTab; label: string }>
@@ -1144,7 +1169,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   )}
                 </div>
 
-                {upcomingRegistrationFees.length > 0 || data?.registrationUrl ? (
+                {/* Refund terms, what a fee covers, which portal sells it: the sentence the prices
+                    were read from routinely carries more than the price rows can hold. */}
+                {pricingText && (
+                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    {pricingText}
+                  </p>
+                )}
+
+                {upcomingRegistrationFees.length > 0 || data?.registrationUrl || pricingText ? (
                   <div className="space-y-5">
                     {upcomingRegistrationFees.length > 0 && (
                       <div className="overflow-x-auto rounded-2xl border border-slate-200">
@@ -1204,12 +1237,20 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'agenda' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Program & Agenda</h3>
+                {/* A description of the programme is not a session-by-session schedule, and the two
+                    are shown as what they are. For most of these conferences the description is
+                    everything anyone has published, and burying it under "no program found" hid
+                    seven themes, three field trips and a call for papers deadline. */}
+                {programOverview && (
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    {programOverview}
+                  </p>
+                )}
                 {!data?.agendaSessions.length ? (
-                  data?.crawlComplete === true ? (
+                  programOverview ? null : data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={sectionsUnread
-                        ? "Program information was not retrieved; this does not mean the conference has no program."
-                        : "The completed crawl found no session-by-session program."}
+                      message={emptySectionMessage("program_agenda", "a program", "The completed crawl found no session-by-session program.")}
+                      note={sectionNote("program_agenda")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1261,9 +1302,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.speakers.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={sectionsUnread
-                        ? "Speaker information was not retrieved; this does not mean the conference has no speakers."
-                        : "The completed crawl found no named keynote or invited speakers."}
+                      message={emptySectionMessage("keynote_speakers", "speakers", "The completed crawl found no named keynote or invited speakers.")}
+                      note={sectionNote("keynote_speakers")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1285,9 +1325,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.committee.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={sectionsUnread
-                        ? "Committee information was not retrieved."
-                        : "The completed crawl found no named technical committee roster."}
+                      message={emptySectionMessage("technical_committee", "a committee", "The completed crawl found no named technical committee roster.")}
+                      note={sectionNote("technical_committee")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1309,9 +1348,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 {!data?.sponsors.length ? (
                   data?.crawlComplete === true ? (
                     <EmptyExtractState
-                      message={sectionsUnread
-                        ? "Sponsor and exhibitor information was not retrieved."
-                        : "The completed crawl found no named sponsors or exhibitors."}
+                      message={emptySectionMessage("sponsors_exhibitors", "sponsors", "The completed crawl found no named sponsors or exhibitors.")}
+                      note={sectionNote("sponsors_exhibitors")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1355,6 +1393,22 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     </div>
                     {data?.venueName && <p className="text-sm font-bold text-slate-900">{data.venueName}</p>}
                     {data?.venueAddress && <p className="text-slate-600">{data.venueAddress}</p>}
+                  </div>
+                )}
+                {/* Whose word this is matters more than usual: it is the compiler of the source
+                    list, not the organiser, and a reader deciding whether to fly somewhere has to
+                    be told that rather than left to assume the conference said it. */}
+                {data?.travelAdvisory && (
+                  <div className="p-5 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>Travel advisory</span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">{data.travelAdvisory}</p>
+                    <p className="text-[10px] text-amber-800/80">
+                      Compiled by Conference Gate from the {data.travelAdvisorySource || 'source'} list, not
+                      published by the organiser. Check the conference's own site before travelling.
+                    </p>
                   </div>
                 )}
                 {venueAnchor ? (

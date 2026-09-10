@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T13:50:07.132Z",
+  "generatedAt": "2026-09-10T14:38:09.524Z",
   "horizonStart": "2026-09-10",
   "years": [
     2026,
@@ -177,6 +177,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Bush Convention Center",
+        "venueAddress": "Midland, Texas",
+        "program": {
+          "availability": "stated",
+          "text": "Theme: 'A Century Beneath the Surface' (WTGS 100th anniversary, est. 1926). Sat 9/12: 100-Year Anniversary Core Workshop (17 cores from 1920-1934 Permian Basin discoveries) + K-12 Teacher Workshop 'Rock Solid: Teaching with Energy'. Sun 9/13: Vendor Setup, FREE all-day short course 'Fundamentals of Siliciclastic Sequence Stratigraphy' (instructor John Holbrook, TCU), Icebreaker. Mon 9/14: Full-day SWS AAPG presentations, DPA Luncheon, Casino Night social at Petroleum Club of Midland (6-10pm). Tue 9/15: Full-day WTGS presentations, Networking Luncheon, Happy Hour. Wed 9/16: Half-day WTGS presentations, Ethics Luncheon. Thu 9/17: 58th Annual Rockhound Classic golf tournament + field trip departure. Call for Papers: abstracts due 26 June 2026 to submissions@wtgs.org, 500-word max, 20+5 min oral slots."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": "Hosted on PheedLoop (site.pheedloop.com/event/wtgs2026/home) - blocks automated access; no dollar figures could be pulled. Check link directly.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Sponsorship opportunities available (e.g. Casino Night social); specific sponsor names not yet published.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -423,6 +457,186 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Kuwait City, Al Ahmadi, Kuwait",
+        "program": {
+          "availability": "stated",
+          "text": "3-day workshop. Objectives: move beyond thickness-only seal evaluation to cover rock mineralogy/lithofacies, brittle-ductile behavior, hydrocarbon phase/column height, structural reactivation/tilted fluid contacts, pressure regimes, CO2 storage seal assessment. Themes: regional/intraformational seals with field analogues; sequence stratigraphy/facies/diagenesis vs seal development; seal architecture in carbonate/evaporite/siliciclastic/mixed sequences; static & dynamic sealing capacity; integrating petrophysical/rock mechanics/seismic/engineering data; structural geology & geomechanics impact on seals; fault seal capacity; CCS seal evaluation. Oral presentations and posters."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Bader Al-Ajmi",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mohammed Rashid",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Aisha Al-Hajri",
+              "role": "Committee Member",
+              "org": "PDO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ali Al-Ghamdi",
+              "role": "Committee Member",
+              "org": "Aramco",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jassim Al Safwani",
+              "role": "Committee Member",
+              "org": "Aramco",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mohammed Al Saleh",
+              "role": "Committee Member",
+              "org": "Aramco",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Hemant Singh",
+              "role": "Committee Member",
+              "org": "Baker Hughes",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Said Al Balushi",
+              "role": "Committee Member",
+              "org": "CCED",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Nicolas Hawie",
+              "role": "Committee Member",
+              "org": "Halliburton",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Hamad Al-Hamad",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mohammad Al-Mershed",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sayed Behbehani",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mohammad Al-Naqi",
+              "role": "Committee Member",
+              "org": "Kuwait University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Laiyyan Al Kharusi",
+              "role": "Committee Member",
+              "org": "Occidental Oman",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Nestor Danilo Vasconez Noguera",
+              "role": "Committee Member",
+              "org": "SLB",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Bader Al-Ajmi (KOC), Mohammed Rashid (KOC), Aisha Al-Hajri (PDO), Ali Al-Ghamdi (Aramco), Jassim Al Safwani (Aramco), Mohammed Al Saleh (Aramco), Hemant Singh (Baker Hughes), Said Al Balushi (CCED), Nicolas Hawie (Halliburton), Hamad Al-Hamad (KOC), Mohammad Al-Mershed (KOC), Sayed Behbehani (KOC), Mohammad Al-Naqi (Kuwait University), Laiyyan Al Kharusi (Occidental Oman), Nestor Danilo Vasconez Noguera (SLB), plus additional members (full list on site).",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Non-Member",
+              "amount": 1850,
+              "currency": "USD"
+            },
+            {
+              "category": "Member (AAPG/EAGE/DGS/GSO/KGS)",
+              "amount": 1650,
+              "currency": "USD"
+            },
+            {
+              "category": "Committee/Presenter",
+              "amount": 1550,
+              "currency": "USD"
+            },
+            {
+              "category": "Young Professional (under 35, <10 yrs exp)",
+              "amount": 850,
+              "currency": "USD"
+            },
+            {
+              "category": "Academia",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "Student (pursuing Master's)",
+              "amount": 350,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD - Non-Member $1,850; Member (AAPG/EAGE/DGS/GSO/KGS) $1,650; Committee/Presenter $1,550; Young Professional (under 35, <10 yrs exp) $850; Academia $500; Student (pursuing Master's) $350. Fees include onsite documentation, coffee breaks, luncheons. Refund: full minus $100 fee if cancelled 30+ days prior; no refund inside 30 days.",
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "KPC (Kuwait Petroleum Corporation, via new sub-brand logo shown)",
+              "tier": "Platinum Sponsor"
+            },
+            {
+              "name": "Kuwait Geosciences Society (KGS)",
+              "tier": "Supporting Organization"
+            }
+          ],
+          "text": "Platinum Sponsor: KPC (Kuwait Petroleum Corporation, via new sub-brand logo shown). Supporting Organization: Kuwait Geosciences Society (KGS).",
+          "unstructuredReason": null
+        },
+        "safetyNote": "Kuwait has experienced Iranian drone/missile strikes on infrastructure during the active, ongoing 2026 Iran war (began 28 Feb 2026, resumed after a ceasefire that collapsed 8 July 2026; large attack wave hit Jordan, Bahrain, Kuwait and Iraq on 1-2 Sept 2026). Confirm event status directly with organizers before travel."
       }
     },
     {
@@ -599,6 +813,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Oklahoma State University",
+        "venueAddress": "Stillwater, Oklahoma",
+        "program": {
+          "availability": "not_announced",
+          "text": "Biennial Mid-Continent Section field conference; hosted via Tulsa Geological Society listing. Detailed technical agenda not yet published."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -1360,6 +1608,182 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Crowne Plaza Muscat by IHG",
+        "venueAddress": "Qurum Heights, Muscat, Oman",
+        "program": {
+          "availability": "stated",
+          "text": "GTW on structural styles of the Arabian Plate & Zagros/Makran regions. 5 themes across half-day sessions: Latest Advances on Tectonic Evolution of the Middle East; Case Studies in Structural Evaluation of Complex Reservoirs/Traps/Storage; Salt Tectonics in the Middle East; Digital Tools/Data Analytics/AI in Structural Geology; Examples of Structurally Influenced Resource Plays & Hydrocarbon Fields. Includes poster session, breakout sessions, and an optional one-day short course 'Interpretation of Structural Styles - Enhanced Through Generative AI' (11 Oct, instructor Pascal Richard/PRgeology, fee $590, registration deadline 15 Sept 2026) and a 2-day field trip 'Structural Styles of Eastern Arabia - Jabal Akhdar Dome' (15-16 Oct, fee $550 incl. 1-night hotel, guided hike, meals, transport; registration deadline 1 Sept 2026)."
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Mohammed Al-Mazrui",
+              "role": "Inaugural Keynote",
+              "org": "PDO",
+              "title": "Exploration Director",
+              "topic": null
+            },
+            {
+              "name": "Simon Stewart",
+              "role": "Technical Keynotes",
+              "org": "Aramco",
+              "title": null,
+              "topic": "Structural Style Frontiers - A Perspective from Saudi Arabia"
+            },
+            {
+              "name": "Wilfried Bauer",
+              "role": "Keynote Speaker",
+              "org": "GUTech",
+              "title": null,
+              "topic": "The Neoproterozoic Basement of Oman"
+            }
+          ],
+          "text": "Inaugural Keynote: Mohammed Al-Mazrui (Exploration Director, PDO). Technical Keynotes: Simon Stewart (Aramco) - 'Structural Style Frontiers - A Perspective from Saudi Arabia'; Wilfried Bauer (GUTech) - 'The Neoproterozoic Basement of Oman'.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Oskar Vidal Royo",
+              "role": "Committee Member",
+              "org": "Terractiva",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Andreas Scharf",
+              "role": "Committee Member",
+              "org": "Sultan Qaboos University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Elias Al Kharusi",
+              "role": "Committee Member",
+              "org": "Petrogas",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Meshal Al-Wadi",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Christian Heine",
+              "role": "Committee Member",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Antoine Delaunay",
+              "role": "Committee Member",
+              "org": "KAUST",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ivan Callegari",
+              "role": "Committee Member",
+              "org": "GUTech",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "David Repol",
+              "role": "Committee Member",
+              "org": "PDO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Majid Aljamed",
+              "role": "Committee Member",
+              "org": "Aramco",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Oskar Vidal Royo (Terractiva), Andreas Scharf (Sultan Qaboos University), Elias Al Kharusi (Petrogas), Meshal Al-Wadi (KOC), Christian Heine (Shell), Antoine Delaunay (KAUST), Ivan Callegari (GUTech), David Repol (PDO), Majid Aljamed (Aramco), plus additional members (full list on site).",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [
+            {
+              "category": "General Non-Member",
+              "amount": 1850,
+              "currency": "USD"
+            },
+            {
+              "category": "Member (AAPG/DGS/GSO/KGS)",
+              "amount": 1650,
+              "currency": "USD"
+            },
+            {
+              "category": "Committee/Presenter",
+              "amount": 1550,
+              "currency": "USD"
+            },
+            {
+              "category": "Young Professional (under 35, <10 yrs exp)",
+              "amount": 850,
+              "currency": "USD"
+            },
+            {
+              "category": "Academia",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "Student (graduate degree)",
+              "amount": 350,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD - General Non-Member $1,850; Member (AAPG/DGS/GSO/KGS) $1,650; Committee/Presenter $1,550; Young Professional (under 35, <10 yrs exp) $850; Academia $500; Student (graduate degree) $350.",
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Aramco",
+              "tier": "Platinum Sponsors"
+            },
+            {
+              "name": "Petroleum Development Oman (PDO)",
+              "tier": "Platinum Sponsors"
+            },
+            {
+              "name": "PTTEP",
+              "tier": "Gold Sponsor"
+            },
+            {
+              "name": "Petrogas",
+              "tier": "Lanyard Sponsor"
+            },
+            {
+              "name": "Petex",
+              "tier": "Exhibitors"
+            },
+            {
+              "name": "SLB",
+              "tier": "Exhibitors"
+            }
+          ],
+          "text": "Platinum Sponsors: Aramco, Petroleum Development Oman (PDO). Gold Sponsor: PTTEP. Lanyard Sponsor: Petrogas. Exhibitors: Petex, SLB.",
+          "unstructuredReason": null
+        },
+        "safetyNote": "Oman has seen Iranian drone strikes on the Port of Duqm and Port of Salalah during the ongoing 2026 Iran war/Strait of Hormuz crisis (active as of Sept 2026). Confirm event status directly with organizers before travel."
       }
     },
     {
@@ -2488,6 +2912,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Montana Technological University (MontanaTech)",
+        "venueAddress": "Butte, Montana",
+        "program": {
+          "availability": "stated",
+          "text": "Theme: 'UNEARTH new OPPORTUNITIES.' 15+ proposed sessions: Rocky Mountain Petroliferous Basins (Big Horn, DJ, Paradox, Powder River, San Juan, Uinta-Piceance, Williston); Unconventional/Tight Reservoir geology & engineering (Bakken, Mancos-Mowry, Mesaverde, Niobrara-Mowry); Geothermal Resources in Montana/Mountain West; Geologic Hydrogen & Helium E&P; Carbon Sequestration & Natural Gas Storage; Petroleum-Critical Minerals intersection; Orphaned/Abandoned Wells remediation; Produced Water management. Call for Abstracts closed 1 September 2026 (no extensions)."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Managed by the RMS Executive Committee (Section Officers + representatives of its 11 affiliated societies); individual meeting-specific committee names not yet published.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published; registration also listed via Eventbrite.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Sponsorship program open (tiered levels); specific sponsor/exhibitor names not yet published.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -2572,6 +3030,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Canonsburg, Pennsylvania",
+        "program": {
+          "availability": "not_announced",
+          "text": "Annual meeting of AAPG's Eastern Section; program not yet published on AAPG's calendar listing."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -3252,6 +3744,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Bogota, Colombia",
+        "program": {
+          "availability": "not_announced",
+          "text": "Leadership-development summit for geoscience students and young professionals across AAPG's Latin America & Caribbean Region; agenda not yet published in detail."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Sponsorship opportunities open (see event page 'Become a Sponsor' section); names not yet published.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -4257,6 +4783,189 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Torarica Resort",
+        "venueAddress": "Paramaribo, Suriname (Rietbergplein 1)",
+        "program": {
+          "availability": "stated",
+          "text": "Theme: 'The Emergence of the Guiana Basin in Global Exploration, Development and Production'. Builds on prior events (Jan 2024, May 2025). Program themes: Regional and Basin Studies; Emerging Play Concepts in Frontier Areas; Advancing Geoscience and AI Technologies; Data Acquisition Technologies; Oil and Gas Developments and Production; Environmental Considerations. Includes keynote talks from Staatsolie/Ministry reps, executive panels (e.g. 'Unlocking the Next Frontier: Exploration, Emerging Plays, and the Future of the Atlantic Margin'), technical presentations, poster sessions, student career development session, Q&A."
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Sharista Kalapnat-Kisoensingh",
+              "role": "Welcome/Opening Remarks",
+              "org": "Staatsolie",
+              "title": "Exploration Manager - Offshore Directorate",
+              "topic": null
+            }
+          ],
+          "text": "Welcome/Opening Remarks: Sharista Kalapnat-Kisoensingh (Exploration Manager - Offshore Directorate, Staatsolie). Keynote talks from Staatsolie and Ministry representatives (specific keynote names not fully itemized on site beyond opening remarks).",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Sharista Kisoensingh",
+              "role": "Committee Member",
+              "org": "Staatsolie",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Harris Saifi Hakimi",
+              "role": "Committee Member",
+              "org": "Petronas",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Muhammad Ridzal Ridhuwan",
+              "role": "Committee Member",
+              "org": "Petronas",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Shiladitya Sengupta",
+              "role": "Committee Member",
+              "org": "TotalEnergies",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Dirk Erickson",
+              "role": "Committee Member",
+              "org": "Chevron",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Eddie McAllister",
+              "role": "Committee Member",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "David Haddox",
+              "role": "Committee Member",
+              "org": "ExxonMobil",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Vanisha Chedi",
+              "role": "Committee Member",
+              "org": "Staatsolie",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Sharista Kisoensingh (Staatsolie), Harris Saifi Hakimi (Petronas), Muhammad Ridzal Ridhuwan (Petronas), Shiladitya Sengupta (TotalEnergies), Dirk Erickson (Chevron), Eddie McAllister (Shell), David Haddox (ExxonMobil), Vanisha Chedi (Staatsolie), plus additional members.",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Professional Nonmembers (Early Bird)",
+              "amount": 895,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional Nonmembers (Standard)",
+              "amount": 995,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional Members (Early Bird)",
+              "amount": 795,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional Members (Standard)",
+              "amount": 895,
+              "currency": "USD"
+            },
+            {
+              "category": "Presenters/Session Chairs (Early Bird)",
+              "amount": 595,
+              "currency": "USD"
+            },
+            {
+              "category": "Presenters/Session Chairs (Standard)",
+              "amount": 695,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional one-day only (Early Bird)",
+              "amount": 495,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional one-day only (Standard)",
+              "amount": 595,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic/AAPG Emeritus (Early Bird)",
+              "amount": 445,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic/AAPG Emeritus (Standard)",
+              "amount": 545,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Nonmembers (Early Bird)",
+              "amount": 175,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Nonmembers (Standard)",
+              "amount": 195,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Members (limit 20) (Early Bird)",
+              "amount": 150,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Members (limit 20) (Standard)",
+              "amount": 165,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD, tax included. Early Bird (pay by 18 Oct) / Standard: Professional Nonmembers $895/$995; Professional Members $795/$895; Presenters/Session Chairs $595/$695; Professional one-day only $495/$595; Academic/AAPG Emeritus $445/$545; Student Nonmembers $175/$195; Student Members (limit 20) $150/$165. 'Registration Opening Soon' noted on page as of fetch date.",
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Staatsolie",
+              "tier": "Principal Sponsor"
+            },
+            {
+              "name": "TotalEnergies",
+              "tier": "Gold"
+            },
+            {
+              "name": "SEG",
+              "tier": "Supporting Organization"
+            }
+          ],
+          "text": "Principal Sponsor: Staatsolie. Gold: TotalEnergies. Supporting Organization: SEG. Sponsorship tiers range Patron ($2,500+) to Principal ($30,000+), with items like Opening Reception ($20,000), Lanyards ($10,000), Poster Session ($7,500), etc.",
+          "unstructuredReason": null
+        },
+        "safetyNote": null
       }
     },
     {
@@ -4431,6 +5140,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Manama, Bahrain",
+        "program": {
+          "availability": "unread",
+          "text": "Workshop continuing prior editions' focus on stratigraphic trap exploration - case studies, emerging technologies, industry-academia collaboration. Detailed session-by-session agenda and downloadable brochure not fully accessible via search at time of research; check AAPG event page directly."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published; prior editions have used similar tiered pricing (Non-Member/Member/Presenter/Young Professional/Academia/Student) to other Middle East GTWs (~$350-$1,850 range) - not confirmed for this specific edition.",
+          "unstructuredReason": "withdrawn_in_source"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": "Bahrain has been directly and repeatedly struck by Iranian drones/missiles during the active, ongoing 2026 Iran war, including hits on residential towers (Fontana Towers, March 2026), a Crowne Plaza hotel, the US Fifth Fleet HQ in Manama, and a desalination plant. Strongly recommend confirming event status directly with AAPG/organizers before finalizing any travel."
       }
     },
     {
@@ -4685,6 +5428,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Buenos Aires, Argentina (exact venue TBA; 2023 edition was at the Hilton Buenos Aires)",
+        "program": {
+          "availability": "stated",
+          "text": "Executive-level summit on the business of unconventional resources in Argentina/Latin America (Vaca Muerta focus), hosted by YPF, jointly run by SPE, AAPG, SEG."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Hosted by YPF. Broader URTeC (main US 2026 event, separate conference) sponsor tiers are published - Emerald: Chevron, ExxonMobil; Sapphire: Core Laboratories, Devon - but these are NOT confirmed as sponsors of the Latin America Summit specifically.",
+          "unstructuredReason": "withdrawn_in_source"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -4938,6 +5715,149 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Al Khobar, Eastern Province, Saudi Arabia (lodging: Movenpick Al Khobar Hotel)",
+        "program": {
+          "availability": "stated",
+          "text": "GTW theme: shifting from 'integration as best practice' to 'integration as a survival and capital-allocation imperative' - tightly integrating geoscience, reservoir engineering, and technology deployment to improve asset value across the full field lifecycle amid capital discipline and geopolitical risk. Detailed session schedule available via downloadable brochure on the AAPG page. Call for poster abstracts open, deadline 9 November 2026 (send to cnavarro@aapg.org)."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Abdullah Alsubaie",
+              "role": "Committee Member",
+              "org": "Aramco",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Leonardo Patacchini",
+              "role": "Committee Member",
+              "org": "Stone Ridge Technology",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Volker Dieckmann",
+              "role": "Committee Member",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bill Ayres",
+              "role": "Committee Member",
+              "org": "Ayres Group",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Abdulkarim AlAli",
+              "role": "Committee Member",
+              "org": "Bapco Energies",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Irada Yusufova",
+              "role": "Committee Member",
+              "org": "Equinor",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bicheng Yan",
+              "role": "Committee Member",
+              "org": "KAUST",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Abdullah Motar Al-Anzi",
+              "role": "Committee Member",
+              "org": "KOC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Olfa Zenned",
+              "role": "Committee Member",
+              "org": "SLB",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Daniel Busby",
+              "role": "Committee Member",
+              "org": "TotalEnergies",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Remi Maillon",
+              "role": "Committee Member",
+              "org": "SNF",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Abdullah Alsubaie (Aramco), Leonardo Patacchini (Stone Ridge Technology), Volker Dieckmann (Shell), Bill Ayres (Ayres Group), Abdulkarim AlAli (Bapco Energies), Irada Yusufova (Equinor), Bicheng Yan (KAUST), Abdullah Motar Al-Anzi (KOC), Olfa Zenned (SLB), Daniel Busby (TotalEnergies), Remi Maillon (SNF), plus additional members.",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Non-Member",
+              "amount": 1850,
+              "currency": "USD"
+            },
+            {
+              "category": "Member",
+              "amount": 1650,
+              "currency": "USD"
+            },
+            {
+              "category": "Committee/Presenter",
+              "amount": 1550,
+              "currency": "USD"
+            },
+            {
+              "category": "Young Professional",
+              "amount": 850,
+              "currency": "USD"
+            },
+            {
+              "category": "Academia",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 350,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD (Registration Opening Soon at time of fetch) - Non-Member $1,850; Member $1,650; Committee/Presenter $1,550; Young Professional $850; Academia $500; Student $350.",
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Sponsorship opportunities open (contact cnavarro@aapg.org); specific sponsor names not yet published.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": "Saudi Arabia is a named party against Iran in the active, ongoing 2026 Iran war/Gulf conflict (as of Sept 2026). Confirm event status directly with organizers before travel."
       }
     },
     {
@@ -5021,6 +5941,328 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": "Nusantara International Convention Exhibition (NICE)",
+        "venueAddress": "Tangerang Regency (Greater Jakarta), Indonesia",
+        "program": {
+          "availability": "stated",
+          "text": "3-day program across 7 themes: (1) Exploration Opening New Frontiers & Emerging Plays, (2) Exploration in Mature Basins & Future Potential, (3) Digital Transformation & Data Management, (4) Unconventional Plays & Opportunities, (5) Basin Analysis & Petroleum Systems, (6) SEPM Research Symposium, (7) Energy Transition & CCS. Opening Ceremony, plenary sessions, parallel technical sessions, posters, field trips, short courses, Women in Energy panel, student/YP career sessions."
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Metee Saengsrichun",
+              "role": "Keynote Speaker",
+              "org": "PTTEP",
+              "title": null,
+              "topic": "Deepwater Exploration"
+            },
+            {
+              "name": "Steve Chappell",
+              "role": "Keynote Speaker",
+              "org": "Wood Mackenzie",
+              "title": null,
+              "topic": "International Shale Exploration"
+            },
+            {
+              "name": "Robert Clarke",
+              "role": "Keynote Speaker",
+              "org": "Wood Mackenzie",
+              "title": null,
+              "topic": "International Shale Exploration"
+            },
+            {
+              "name": "Joshua Dixon",
+              "role": "Keynote Speaker",
+              "org": "Wood Mackenzie",
+              "title": null,
+              "topic": "International Shale Exploration"
+            },
+            {
+              "name": "Israel Polonio",
+              "role": "Keynote Speaker",
+              "org": "Aker BP",
+              "title": null,
+              "topic": "Seismic Geomorphology"
+            },
+            {
+              "name": "Jonathan Salo",
+              "role": "Keynote Speaker",
+              "org": "Univ. Western Australia",
+              "title": null,
+              "topic": "Bintuni Basin Stratigraphy"
+            },
+            {
+              "name": "Simon Lang",
+              "role": "Keynote Speaker",
+              "org": "Univ. Western Australia",
+              "title": null,
+              "topic": "Bintuni Basin Stratigraphy"
+            },
+            {
+              "name": "Mohamad Jamaal Hoesni",
+              "role": "Keynote Speaker",
+              "org": "Beicip",
+              "title": null,
+              "topic": "Petroleum System Evaluation"
+            },
+            {
+              "name": "Sugiarto Hartono",
+              "role": "Keynote Speaker",
+              "org": "SLB",
+              "title": null,
+              "topic": "Unified Data Platforms/OSDU"
+            },
+            {
+              "name": "John Kaldi",
+              "role": "Keynote Speaker",
+              "org": "CO2CRC & Adelaide University",
+              "title": null,
+              "topic": "CCS in ASEAN"
+            },
+            {
+              "name": "Claudio Nini",
+              "role": "Keynote Speaker",
+              "org": "ENI",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Maria Mutti",
+              "role": "Invited Talk",
+              "org": "University of Potsdam",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Metee Saengsrichun (PTTEP) - Deepwater Exploration; Steve Chappell/Robert Clarke/Joshua Dixon (Wood Mackenzie) - International Shale Exploration; Israel Polonio (Aker BP) - Seismic Geomorphology; Jonathan Salo & Simon Lang (Univ. Western Australia) - Bintuni Basin Stratigraphy; Mohamad Jamaal Hoesni (Beicip) - Petroleum System Evaluation; Sugiarto Hartono (SLB) - Unified Data Platforms/OSDU; John Kaldi (CO2CRC & Adelaide University) - CCS in ASEAN; Claudio Nini (ENI). Invited Talk: Maria Mutti (University of Potsdam).",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Herman Darman",
+              "role": "Committee Member",
+              "org": "Pertamina",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Leonardus Tjahjadi",
+              "role": "Committee Member",
+              "org": "Independent",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Redo Waworuntu",
+              "role": "Committee Member",
+              "org": "Medco",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Keyu Liu",
+              "role": "Committee Member",
+              "org": "China University of Petroleum",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Minarwan",
+              "role": "Committee Member",
+              "org": "Conrad",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Enry Horas Sihombing",
+              "role": "Committee Member",
+              "org": "ExxonMobil",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sarawute Chantraprasert",
+              "role": "Committee Member",
+              "org": "PTTEP",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Dwandari Ralanarko",
+              "role": "Committee Member",
+              "org": "Pertamina",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sandip Kumar Roy",
+              "role": "Committee Member",
+              "org": "Independent",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mellinda Arisandy",
+              "role": "Committee Member",
+              "org": "Petronas",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Prashant Chaturvedi",
+              "role": "Committee Member",
+              "org": "PDO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Albertus Pradipta",
+              "role": "Committee Member",
+              "org": "BP",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Hade Maulin",
+              "role": "Committee Member",
+              "org": "Pertamina",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Meor Hakif",
+              "role": "Committee Member",
+              "org": "GSM",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Karthikeyan",
+              "role": "Committee Member",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Rosanele Romero",
+              "role": "Committee Member",
+              "org": "Wood Mackenzie",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Clare Barker-White",
+              "role": "Committee Member",
+              "org": "S&P",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Reny Samsu",
+              "role": "Committee Member",
+              "org": "Independent",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Grandika Primadani",
+              "role": "Committee Member",
+              "org": "S&P",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sau Hooi Yee",
+              "role": "Committee Member",
+              "org": "Petronas",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "K.L. Chong",
+              "role": "Committee Member",
+              "org": "TGS-Malaysia",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Irnisha Gheamarsa",
+              "role": "Committee Member",
+              "org": "PT Geoservices",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Septriandi Chan",
+              "role": "Theme Chairs",
+              "org": "NESR",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Stacy Primus Liew",
+              "role": "Theme Chairs",
+              "org": "S&P",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Leslie Wood",
+              "role": "Theme Chairs",
+              "org": "Colorado School of Mines",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Victorien Paumard",
+              "role": "Theme Chairs",
+              "org": "Univ. Western Australia",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Peter Grant",
+              "role": "Theme Chairs",
+              "org": "Botala Energy",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Herman Darman (Pertamina), Leonardus Tjahjadi (Independent), Redo Waworuntu (Medco), Keyu Liu (China University of Petroleum), Minarwan (Conrad), Enry Horas Sihombing (ExxonMobil), Sarawute Chantraprasert (PTTEP), Dwandari Ralanarko (Pertamina), Sandip Kumar Roy (Independent), Mellinda Arisandy (Petronas), Prashant Chaturvedi (PDO), Albertus Pradipta (BP), Hade Maulin (Pertamina), Meor Hakif (GSM), Karthikeyan (Shell), Rosanele Romero (Wood Mackenzie), Clare Barker-White (S&P), Reny Samsu (Independent), Grandika Primadani (S&P), Sau Hooi Yee (Petronas), K.L. Chong (TGS-Malaysia), Irnisha Gheamarsa (PT Geoservices); Theme Chairs also include Septriandi Chan (NESR), Stacy Primus Liew (S&P), Leslie Wood (Colorado School of Mines), Victorien Paumard (Univ. Western Australia), Peter Grant (Botala Energy).",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": "Not extracted - registration portal (iceevent.org/2026/registration-information) blocks automated access; check site directly for current member/non-member/student rates.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Pertamina (PHE)",
+              "tier": "Principal Sponsor & Host"
+            },
+            {
+              "name": "AAPG",
+              "tier": "Sponsoring Organization"
+            },
+            {
+              "name": "Indonesian Petroleum Association (IPA)",
+              "tier": "Host Society"
+            }
+          ],
+          "text": "Principal Sponsor & Host: Pertamina (PHE). Sponsoring Organization: AAPG. Host Society: Indonesian Petroleum Association (IPA). Full exhibitor list/floor plan on Expocad (aapgseg.expocad.com/Events/cie26jk).",
+          "unstructuredReason": null
+        },
+        "safetyNote": null
       }
     },
     {
@@ -16976,6 +18218,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Houston, Texas",
+        "program": {
+          "availability": "not_announced",
+          "text": "Regional AAPG Gulf Coast Section conference (successor to GCAGS); program not yet published."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -20365,6 +21641,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Cartagena, Colombia",
+        "program": {
+          "availability": "not_announced",
+          "text": "Successor to the 2026 Rio de Janeiro edition (hosted by Petrobras); program not yet published."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {
@@ -29868,6 +31178,40 @@
           "sourcePageTitle": "aapg-2026-2027",
           "confidence": "High"
         }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": "Caracas, Venezuela",
+        "program": {
+          "availability": "not_announced",
+          "text": "Technical symposium on Venezuela's geology and E&P opportunities; program not yet published."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
       }
     },
     {

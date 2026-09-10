@@ -162,10 +162,24 @@ export interface ExtractedConferenceDetails {
   /** Why the read failed, established by re-probing the site rather than inferred from which code
    *  path gave up. Shown verbatim, since the remedies genuinely differ. */
   readFailureReason?: string;
-  /** No page of this conference was ever read: the record comes from Conference Gate's stored
-   *  launch catalogue, which carries verified core details and nothing deeper. The tabs below must
-   *  therefore say "not retrieved" rather than reporting that a crawl found the section empty. */
+  /** No page of this conference was ever read AND no curated list covered it: nothing deeper than
+   *  the core details exists here. The tabs must say "not retrieved" rather than reporting that a
+   *  crawl found the section empty. */
   sectionsNotRead?: boolean;
+  /**
+   * What is known about each deep section, one section at a time.
+   *
+   * A single flag for the whole record could only ever be right about all of them at once, which
+   * stopped being true the moment a curated list filled the speakers and committee of a conference
+   * whose registration portal refuses automated readers. 'stated' means there is something to show,
+   * 'not_announced' means the organiser has not published it yet, 'unread' means nobody managed to
+   * read it — and the last two must never share a sentence on screen.
+   */
+  sectionAvailability?: Record<string, 'stated' | 'not_announced' | 'unread'>;
+  /** The source's own wording for a section, verbatim. Shown alongside whatever structured out of
+   *  it, because the sentence routinely says more than the columns could hold — including, in one
+   *  case, that four named companies are NOT sponsors of this event. */
+  section_notes?: Record<string, string | null>;
   /** Some or all of these details came from sites other than the conference's own — used when the
    *  official site blocks us or says very little. Weaker than the organiser's own word, so it is
    *  always disclosed; per-field `provenance` names exactly which source each value came from. */
@@ -202,6 +216,10 @@ export interface ExtractedConferenceDetails {
   venueName: string | null;
   venueAddress: string | null;
   hotels: HotelExtract[];
+  /** A travel advisory written by whoever compiled the record's source list — never the organiser,
+   *  and always shown with `travelAdvisorySource` naming whose word it is. */
+  travelAdvisory?: string | null;
+  travelAdvisorySource?: string | null;
   conferenceTitle: string | null;
   acronym: string | null;
   edition: string | null;
@@ -224,7 +242,7 @@ export interface ExtractedConferenceDetails {
   crawlCoverage: CrawlCoverage;
   overview?: Record<string, any>;
   call_for_papers?: Record<string, any>;
-  program_agenda?: { sessions?: any[] };
+  program_agenda?: { sessions?: any[]; overview?: string | null };
   keynote_speakers?: any[];
   technical_committee?: any[];
   sponsors_exhibitors?: any[];
@@ -233,6 +251,8 @@ export interface ExtractedConferenceDetails {
     registration_url?: string | null;
     registration_fees?: RegistrationFee[];
     early_bird_deadline?: string | null;
+    /** The source's own pricing wording, kept when it says more than the rows do. */
+    pricing_text?: string | null;
   };
   community?: Record<string, any>;
   extraction_metadata?: Record<string, any>;
@@ -356,6 +376,8 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
     hotels: venue.hotels ?? data?.hotels ?? [],
     accommodationText: venue.accommodation ?? data?.accommodationText ?? null,
     travelText: venue.travel_information ?? data?.travelText ?? null,
+    travelAdvisory: venue.travel_advisory ?? data?.travelAdvisory ?? null,
+    travelAdvisorySource: venue.travel_advisory_source ?? data?.travelAdvisorySource ?? null,
     socialLinks: community.social_media ?? data?.socialLinks ?? [],
   };
 }

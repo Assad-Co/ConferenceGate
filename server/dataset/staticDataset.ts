@@ -13,7 +13,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { scoreStoredConferenceRecord } from "../storedConferenceSearch";
-import type { LaunchConferenceRecord, LaunchDataset, LaunchSearchIndex } from "./types";
+import type {
+  LaunchConferenceRecord, LaunchDataset, LaunchDetailPerson, LaunchSearchIndex,
+  LaunchSectionAvailability,
+} from "./types";
 
 export const LAUNCH_DATASET_FILE = "conferencegate-worldwide-2026-2028.json";
 export const LAUNCH_INDEX_FILE = "conferencegate-search-index.json";
@@ -127,9 +130,10 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     displayLink: record.sourceHost,
     thumbnail: null,
     favicon: null,
-    // These records carry verified core details and no prepared tab data. Saying otherwise would
-    // promise a detail page that has speakers and a programme behind it.
-    prepared: false,
+    // True only where a curated list actually filled the deep sections. The flag drives the badge
+    // on the results card, so claiming it for a record carrying core details alone would promise a
+    // detail page with speakers and a programme behind it and then not have them.
+    prepared: Boolean(record.details),
     startDate: record.startDate,
     location: record.city || record.country
       ? { city: record.city ?? null, country: record.country ?? null }
@@ -231,16 +235,53 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
   const importantDates = record.startDate
     ? [{ label: "Conference dates", date: record.startDate, isDeadline: false }]
     : [];
+  const details = record.details ?? null;
+
+  // A section nobody supplied is "not read". A section a curated list covered is whatever that list
+  // said it was — content, an organiser who has not announced it yet, or a page that could not be
+  // read. Collapsing those three into one flag is what made the page tell every reader the same
+  // thing about a conference with twelve named keynote speakers and one with none.
+  const availability: Record<string, LaunchSectionAvailability> = {
+    call_for_papers: "unread",
+    program_agenda: details?.program.availability ?? "unread",
+    keynote_speakers: details?.keynotes.availability ?? "unread",
+    technical_committee: details?.committee.availability ?? "unread",
+    sponsors_exhibitors: details?.sponsors.availability ?? "unread",
+    venue_accommodation: details?.venueName || details?.venueAddress || record.venue ? "stated" : "unread",
+    fees_pricing: details?.fees.availability ?? "unread",
+    community: "unread",
+  };
+  const sectionsNotRead = Object.entries(availability)
+    .filter(([, state]) => state === "unread")
+    .map(([section]) => section);
+
+  const people = (items: LaunchDetailPerson[]) =>
+    items.map((person) => ({
+      name: person.name,
+      full_name: person.name,
+      role: person.role,
+      org: person.org,
+      organization: person.org,
+      title: person.title,
+      topic: person.topic,
+      email: null,
+      imageUrl: null,
+      photo_url: null,
+    }));
+
   return {
     extracted: true,
     isFallback: false,
     fetchFailed: false,
     crawlComplete: true,
     crawlPending: false,
-    // Nothing here came from reading the conference's own site, so nothing may claim a crawl found
-    // a section empty.
-    sectionsNotRead: true,
-    detailsReady: false,
+    // Whether anything deeper than the core details exists here at all. A venue read out of the
+    // record's own source text is core data, not a section somebody went and read, so it does not
+    // make this false — only a curated list of the deep sections does. Where one is attached, the
+    // per-section map below is what the page must read.
+    sectionsNotRead: details === null,
+    sectionAvailability: availability,
+    detailsReady: Boolean(details),
     sourceUrl: record.sourceUrl,
     pagesRead: 0,
     overview: {
@@ -255,7 +296,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       region: record.region,
       country: record.country,
       world_region: record.worldRegion,
-      venue: record.venue,
+      venue: details?.venueName || record.venue,
       format: record.format,
       organizer: record.organization,
       topics: record.topics,
@@ -266,13 +307,49 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       source_url: record.sourceUrl,
     },
     call_for_papers: {},
-    program_agenda: {},
-    keynote_speakers: [],
-    technical_committee: [],
-    sponsors_exhibitors: [],
-    venue_accommodation: record.venue ? { venue_name: record.venue, address: null, hotels: [] } : {},
-    fees_pricing: {},
+    program_agenda: { sessions: [], overview: details?.program.text ?? null },
+    keynote_speakers: people(details?.keynotes.items ?? []),
+    technical_committee: people(details?.committee.items ?? []),
+    sponsors_exhibitors: (details?.sponsors.items ?? []).map((sponsor) => ({
+      name: sponsor.name,
+      tier: sponsor.tier,
+      sponsorship_level: sponsor.tier,
+      logoUrl: null,
+      logo_url: null,
+    })),
+    venue_accommodation: {
+      venue_name: details?.venueName || record.venue || null,
+      address: details?.venueAddress ?? null,
+      hotels: [],
+      // Named as an advisory from the list's compiler, because it is not the organiser speaking and
+      // a reader deciding whether to travel needs to know whose word it is.
+      travel_advisory: details?.safetyNote ?? null,
+      travel_advisory_source: details?.safetyNote ? details.source : null,
+    },
+    fees_pricing: {
+      registration_url: null,
+      registration_fees: (details?.fees.items ?? []).map((fee) => ({
+        category: fee.category,
+        amount: fee.amount,
+        currency: fee.currency,
+        deadline: null,
+        notes: null,
+      })),
+      early_bird_deadline: null,
+      pricing_text: details?.fees.text ?? null,
+    },
     community: {},
+    // The cell each section came from, verbatim, so a reader sees what the list actually said —
+    // including the sentence that withdrew a value the parser therefore refused to store.
+    section_notes: details
+      ? {
+          program_agenda: details.program.text,
+          keynote_speakers: details.keynotes.text,
+          technical_committee: details.committee.text,
+          sponsors_exhibitors: details.sponsors.text,
+          fees_pricing: details.fees.text,
+        }
+      : {},
     provenance: record.provenance,
     extraction_metadata: {
       origin: "launch_dataset",
@@ -283,15 +360,17 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       corroborating_source_urls: record.corroboratingSourceUrls,
       // Named explicitly so a reader (and a future migration) can tell which sections were never
       // attempted rather than attempted and found empty.
-      sections_not_read: [
-        "call_for_papers",
-        "program_agenda",
-        "keynote_speakers",
-        "technical_committee",
-        "sponsors_exhibitors",
-        "fees_pricing",
-        "community",
-      ],
+      sections_not_read: sectionsNotRead,
+      detail_source: details?.source ?? null,
+      section_availability: availability,
+      unstructured_reasons: details
+        ? {
+            keynote_speakers: details.keynotes.unstructuredReason,
+            technical_committee: details.committee.unstructuredReason,
+            sponsors_exhibitors: details.sponsors.unstructuredReason,
+            fees_pricing: details.fees.unstructuredReason,
+          }
+        : {},
     },
   };
 }

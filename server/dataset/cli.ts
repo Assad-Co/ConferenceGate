@@ -6,11 +6,12 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { buildLaunchDataset, toCsv, type StructuredOutcome } from "./build";
+import { buildLaunchDataset, toCsv, type DetailSupply, type StructuredOutcome } from "./build";
 import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
-import { mapCuratedRow, rowsFromCsv, statedOrNull } from "./sources/curated";
+import { mapCuratedRow, parseCsv, rowsFromCsv, statedOrNull } from "./sources/curated";
+import { rowsFromDetailCsv } from "./sources/curatedDetails";
 import { readPortableEvents, readPredictHqCache, readResolvedUrls } from "./ingest";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -94,6 +95,26 @@ export function structuredFromCuratedLists(options: ParseOptions): StructuredOut
   return outcomes;
 }
 
+/**
+ * Curated lists of deep sections, under data/sources/details.
+ *
+ * A separate directory rather than a differently-shaped file in the same one: these rows describe
+ * conferences, they do not create them, and a file that lands in the wrong place should fail to
+ * parse rather than quietly invent events with no country.
+ */
+export function detailSuppliesFromDisk(): DetailSupply[] {
+  const dir = path.resolve(process.cwd(), "data/sources/details");
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith(".csv"))
+    .sort()
+    .map((file) => ({
+      source: file.replace(/\.csv$/, ""),
+      rows: rowsFromDetailCsv(parseCsv(fs.readFileSync(path.join(dir, file), "utf8"))),
+    }));
+}
+
 function percentage(count: number, total: number): string {
   return total === 0 ? "0.0%" : `${((count / total) * 100).toFixed(1)}%`;
 }
@@ -157,7 +178,7 @@ function main(): void {
   const horizonStart = now.toISOString().slice(0, 10);
   const options = { retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028] };
   const structured = [...structuredFromPredictHq(options), ...structuredFromCuratedLists(options)];
-  const result = buildLaunchDataset(evidence, options, structured);
+  const result = buildLaunchDataset(evidence, options, structured, detailSuppliesFromDisk());
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(DATASET_JSON, JSON.stringify(result.dataset, null, 2) + "\n");
@@ -173,6 +194,8 @@ function main(): void {
     duplicatesMerged: result.duplicatesMerged,
     rejected: result.rejections.length,
     rejectionReasons: tally(result.rejections.map((rejection) => rejection.reason.split(":")[0])),
+    detailsAttached: result.detailsAttached,
+    detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),
   };
   fs.writeFileSync(REPORT, JSON.stringify({ ...report, rejections: result.rejections }, null, 2) + "\n");
