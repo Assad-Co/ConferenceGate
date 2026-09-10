@@ -49,7 +49,10 @@ function readJsonFile<T>(fileName: string): T | null {
 
 interface LoadedDataset {
   records: LaunchConferenceRecord[];
-  byUrl: Map<string, LaunchConferenceRecord>;
+  /** Every record a URL belongs to. A society's events calendar belongs to all of the conferences
+   *  it lists, so this is a list rather than one record — keeping only the last one read meant two
+   *  of the three AAPG conferences found on one calendar opened a third conference's page. */
+  byUrl: Map<string, LaunchConferenceRecord[]>;
   index: LaunchSearchIndex | null;
 }
 
@@ -60,10 +63,16 @@ export function loadLaunchDataset(): LoadedDataset {
   const dataset = readJsonFile<LaunchDataset>(LAUNCH_DATASET_FILE);
   const index = readJsonFile<LaunchSearchIndex>(LAUNCH_INDEX_FILE);
   const records = Array.isArray(dataset?.records) ? dataset!.records : [];
-  const byUrl = new Map<string, LaunchConferenceRecord>();
+  const byUrl = new Map<string, LaunchConferenceRecord[]>();
+  const fileUnder = (url: string | null | undefined, record: LaunchConferenceRecord) => {
+    if (!url) return;
+    const existing = byUrl.get(url);
+    if (!existing) byUrl.set(url, [record]);
+    else if (!existing.includes(record)) existing.push(record);
+  };
   for (const record of records) {
-    if (record?.sourceUrl) byUrl.set(record.sourceUrl, record);
-    if (record?.officialUrl) byUrl.set(record.officialUrl, record);
+    fileUnder(record?.sourceUrl, record);
+    fileUnder(record?.officialUrl, record);
   }
   cached = { records, byUrl, index };
   if (records.length === 0) {
@@ -95,6 +104,15 @@ export interface LaunchSearchResult {
    * live inside a sentence.
    */
   location: { city: string | null; country: string | null } | null;
+  /**
+   * Whether `link` is this conference's own page.
+   *
+   * False when the dataset builder refused the stated website as the conference's own — a society's
+   * events calendar listing every event it runs, say. The record is still real and still shown; the
+   * URL simply says where it was found, and three conferences found on one calendar are three
+   * conferences, not one seen three times.
+   */
+  linkIsConferencePage: boolean;
 }
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
@@ -116,6 +134,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     location: record.city || record.country
       ? { city: record.city ?? null, country: record.country ?? null }
       : null,
+    linkIsConferencePage: Boolean(record.officialUrl),
   };
 }
 
@@ -174,9 +193,30 @@ export function browseLaunchDataset(limit = 60, now = new Date()): LaunchSearchR
     .map(toResult);
 }
 
-export function findLaunchRecordByUrl(url: string): LaunchConferenceRecord | null {
+/**
+ * The record a reader opened.
+ *
+ * `title` decides between conferences that share a URL, which happens when the only page a source
+ * published for several events is the listing that names them all. Without it the reader clicks
+ * "Venecon 2027" and reads about a different conference entirely — the URL is where all three were
+ * found, so it cannot say which one was asked for. With no title, or one that matches nothing, an
+ * ambiguous URL identifies no record rather than an arbitrary one of them.
+ */
+export function findLaunchRecordByUrl(url: string, title?: string | null): LaunchConferenceRecord | null {
   const { byUrl } = loadLaunchDataset();
-  return byUrl.get(url.trim()) ?? null;
+  const matches = byUrl.get(url.trim());
+  if (!matches || matches.length === 0) return null;
+  if (matches.length === 1) return matches[0];
+
+  const wanted = String(title || "").trim().toLowerCase();
+  if (!wanted) return null;
+  return matches.find((record) => record.title.trim().toLowerCase() === wanted) ?? null;
+}
+
+/** Whether this URL belongs to more than one conference, so a payload read for one of them must
+ *  not be cached under it and served to the others. */
+export function urlIdentifiesOneLaunchRecord(url: string): boolean {
+  return (loadLaunchDataset().byUrl.get(url.trim()) ?? []).length === 1;
 }
 
 /**

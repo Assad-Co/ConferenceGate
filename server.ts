@@ -46,7 +46,7 @@ import {
 import { checkWordCompliance } from "./server/wordLimit";
 import { initDiscoverySchema } from "./server/discovery/schema";
 import { discoveryRouter } from "./server/discovery/router";
-import { findLaunchRecordByUrl, launchRecordToTabbedExtraction } from "./server/dataset/staticDataset";
+import { findLaunchRecordByUrl, launchRecordToTabbedExtraction, urlIdentifiesOneLaunchRecord } from "./server/dataset/staticDataset";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -3182,10 +3182,18 @@ Return JSON with exactly this shape:
     // the file that ships in the repository rather than showing the reader an empty page. This is
     // still a stored read: no fetch, no provider, no model. The payload marks its deep sections as
     // never read, so the page says "not retrieved" rather than claiming a crawl found none.
-    const launchRecord = findLaunchRecordByUrl(url);
+    // The title comes along because a URL is not always one conference: where a source published
+    // only a listing page, every event on it carries that same URL, and the card the reader clicked
+    // is the only thing that says which one they meant.
+    const openedTitle = typeof req.query.title === "string" ? req.query.title : "";
+    const launchRecord = findLaunchRecordByUrl(url, openedTitle);
     if (launchRecord) {
       const payload = launchRecordToTabbedExtraction(launchRecord);
-      extractionCache.set(url, { data: payload, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      // Caching under a URL several conferences share would serve the first one opened to all of
+      // them, which is the same mix-up by another route.
+      if (urlIdentifiesOneLaunchRecord(url)) {
+        extractionCache.set(url, { data: payload, expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS });
+      }
       return res.json(payload);
     }
     return res.status(204).end();

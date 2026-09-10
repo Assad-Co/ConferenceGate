@@ -19,6 +19,14 @@ export interface LiveSearchResult {
   discoveryProvider?: "brave" | "serper";
   /** Stored start date, when the record has one. Used to order the browse view. */
   startDate?: string | null;
+  /**
+   * Whether `link` is this conference's own page, rather than merely where the record was found.
+   *
+   * Absent means yes, which is true of every search result and every published record. A stored
+   * record whose source stated no page of its own sets this false, so the URL it does carry is not
+   * mistaken for its identity.
+   */
+  linkIsConferencePage?: boolean;
 }
 
 interface CacheEntry {
@@ -502,13 +510,21 @@ function conferenceIdentity(title: string): string {
  * One conference can hold two rows (an alternate URL, a re-publication), and showing it twice is
  * noise. Two different conferences from one organiser are not noise, which is why there is no
  * per-host cap here: "IEEE" must return every IEEE conference, not the most recently updated one.
+ *
+ * A URL is evidence of sameness only when it is the conference's own page. Three rows of the AAPG
+ * calendar name the society's events calendar as their website, because that listing is the only
+ * page the source gave them — and they are three different conferences, in three different
+ * countries, on three different dates. Reading that shared URL as an identity deleted two of them
+ * from every search and from the browse view. Where a record says its link is only where it was
+ * found, the title is what has to distinguish it.
  */
 function deduplicateStoredConferences(results: LiveSearchResult[]): LiveSearchResult[] {
   const seenLinks = new Set<string>();
   const seenIdentities = new Set<string>();
   const unique: LiveSearchResult[] = [];
   for (const result of results) {
-    const link = result.link.trim().toLowerCase().replace(/\/+$/, "");
+    const identifies = result.linkIsConferencePage !== false;
+    const link = identifies ? result.link.trim().toLowerCase().replace(/\/+$/, "") : "";
     if (link && seenLinks.has(link)) continue;
     const identity = conferenceIdentity(result.title);
     if (identity && seenIdentities.has(identity)) continue;

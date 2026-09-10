@@ -364,12 +364,15 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
 // must never start an external fetch, provider search, browser session, or AI extraction.
 export async function extractConferenceDetails(
   url: string,
-  _title: string,
+  title: string,
   _focusTab?: string
 ): Promise<ExtractedConferenceDetails> {
   try {
+    // The title is sent because a URL does not always name one conference. Where a society
+    // published only its events calendar, every conference on that calendar carries the calendar's
+    // URL, and the card the reader opened is what distinguishes them.
     const cachedRes = await fetch(
-      `/api/ai/extract-conference/cached?url=${encodeURIComponent(url)}`,
+      `/api/ai/extract-conference/cached?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title || '')}`,
       {
         credentials: 'include',
         signal: AbortSignal.timeout(2500),
