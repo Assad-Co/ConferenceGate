@@ -621,7 +621,10 @@ async function main(): Promise<void> {
       try {
         const { seedLaunchRecords } = await import("../dataset/seedDiscovery");
         const seeded = await seedLaunchRecords({});
-        console.error(`[automate] catalogue seeded: ${seeded.seeded} record(s), ${seeded.failures.length} failed`);
+        console.error(
+          `[automate] catalogue seeded: ${seeded.seeded} written, ${seeded.unchanged} already current, `
+          + `${seeded.failures.length} failed`
+        );
       } catch (error: any) {
         // A catalogue that cannot be seeded must not stop the cycle that works what is already there.
         console.error(`[automate] catalogue seeding skipped: ${String(error?.message || error).slice(0, 200)}`);

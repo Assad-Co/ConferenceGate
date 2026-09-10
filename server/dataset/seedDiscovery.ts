@@ -22,6 +22,7 @@
 
 import { createHash } from "node:crypto";
 import { storeEvent } from "../discovery/store";
+import { dbAll, dbRun } from "../db";
 import {
   EMPTY_DEADLINES,
   type CategoryAssignment,
@@ -189,15 +190,55 @@ export interface SeedResult {
   seeded: number;
   /** Seeded, but with no website of their own yet — enrichment has to find one first. */
   leadsWithoutUrl: number;
+  /** Already in the store, byte for byte, so left alone. */
+  unchanged: number;
   failures: Array<{ id: string; message: string }>;
 }
 
+/**
+ * What this record would write, reduced to one string.
+ *
+ * Wider than `contentHashFor` above, and deliberately so: that one identifies the conference for
+ * the engine's own deduplication, so it covers title, dates and place. This one has to notice any
+ * change seeding would carry across — including the curated detail sections, where a new committee
+ * or a corrected fee changes nothing about which conference this is but is exactly what a re-seed
+ * exists to deliver.
+ */
+export function seedFingerprint(record: LaunchConferenceRecord): string {
+  return createHash("sha256")
+    .update(JSON.stringify([
+      record.title, record.startDate, record.endDate, record.city, record.country, record.venue,
+      record.format, record.organization, record.officialUrl, record.sourceUrl, record.sourceType,
+      record.description, record.topics, record.categories, record.details ?? null,
+    ]))
+    .digest("hex")
+    .slice(0, 32);
+}
+
 export async function seedLaunchRecords(
-  options: { dryRun?: boolean; limit?: number; onProgress?: (done: number, total: number, title: string) => void } = {}
+  options: {
+    dryRun?: boolean;
+    limit?: number;
+    onProgress?: (done: number, total: number, title: string) => void;
+    /** Write every record even if the store already holds it unchanged. */
+    force?: boolean;
+  } = {}
 ): Promise<SeedResult> {
   const { records } = loadLaunchDataset();
   const limit = options.limit ?? records.length;
-  const result: SeedResult = { considered: 0, seeded: 0, leadsWithoutUrl: 0, failures: [] };
+  const result: SeedResult = { considered: 0, seeded: 0, leadsWithoutUrl: 0, unchanged: 0, failures: [] };
+
+  // One query for what is already stored, instead of a round trip per record to restate it.
+  const stored = new Map<string, string>();
+  if (!options.dryRun && !options.force) {
+    try {
+      for (const row of await dbAll<{ record_id: string; fingerprint: string }>(
+        "SELECT record_id, fingerprint FROM discovery_seed_fingerprints"
+      )) stored.set(row.record_id, row.fingerprint);
+    } catch {
+      // No fingerprints yet, or a store that cannot answer: seed everything, exactly as before.
+    }
+  }
 
   for (const record of records.slice(0, limit)) {
     result.considered += 1;
@@ -218,6 +259,11 @@ export async function seedLaunchRecords(
       result.seeded += 1;
       continue;
     }
+    const fingerprint = seedFingerprint(record);
+    if (stored.get(record.id) === fingerprint) {
+      result.unchanged += 1;
+      continue;
+    }
     try {
       options.onProgress?.(result.considered, limit, record.title);
       await storeEvent(toNormalizedEvent(record), {
@@ -228,6 +274,14 @@ export async function seedLaunchRecords(
         provider: "launch_dataset",
         isOfficial: record.sourceType === "official_site",
       });
+      // Recorded only after the write succeeded, so a failed seed is retried next run rather than
+      // remembered as done.
+      await dbRun(
+        `INSERT INTO discovery_seed_fingerprints (record_id, fingerprint, seeded_at)
+         VALUES (?,?,datetime('now'))
+         ON CONFLICT(record_id) DO UPDATE SET fingerprint=excluded.fingerprint, seeded_at=excluded.seeded_at`,
+        [record.id, fingerprint]
+      );
       result.seeded += 1;
     } catch (error) {
       result.failures.push({ id: record.id, message: (error as Error).message });

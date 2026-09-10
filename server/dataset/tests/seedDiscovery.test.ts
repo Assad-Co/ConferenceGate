@@ -6,7 +6,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { toNormalizedEvent } from "../seedDiscovery";
+import { seedFingerprint, toNormalizedEvent } from "../seedDiscovery";
 import type { LaunchConferenceRecord } from "../types";
 
 function record(overrides: Partial<LaunchConferenceRecord> = {}): LaunchConferenceRecord {
@@ -149,10 +149,18 @@ test("seeding actually writes rows a database accepts", async () => {
   await initDiscoverySchema();
   const before = new Set((await dbAll<{ id: string }>(`SELECT id FROM discovery_events`)).map((row) => row.id));
   try {
-    const result = await seedLaunchRecords();
+    // force, because this test is about the write path. Without it a store that already holds these
+    // records from an earlier run correctly skips them, and the assertion below would be measuring
+    // the skip rather than the write.
+    const result = await seedLaunchRecords({ force: true });
 
     assert.equal(result.failures.length, 0, `expected no failures, got ${JSON.stringify(result.failures)}`);
     assert.equal(result.seeded, 2);
+
+    // And the second pass writes nothing, because nothing changed. That is the twelve minutes back.
+    const again = await seedLaunchRecords();
+    assert.equal(again.seeded, 0, "a re-seed rewrote records the store already held unchanged");
+    assert.equal(again.unchanged, 2);
 
     const rows = await dbAll<Record<string, any>>(
       `SELECT id, title, start_date, city, country, official_url, status, extraction_method
@@ -179,4 +187,44 @@ test("seeding actually writes rows a database accepts", async () => {
     resetLaunchDatasetCache();
     fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("a re-seed writes only what changed, and never skips a change that matters", () => {
+  // Seeding rewrote all 375 records every run at roughly two seconds a round trip — twelve minutes
+  // of a twenty-five minute cycle spent restating what the store already said. The fingerprint is
+  // what makes a second run cheap, so what it covers is the whole safety argument.
+  const base = {
+    id: "aapg-ice-2026", title: "AAPG ICE 2026", startDate: "2026-12-07", endDate: "2026-12-09",
+    city: "Jakarta", country: "Indonesia", venue: null, format: "in-person",
+    organization: "AAPG", officialUrl: "https://iceevent.org/2026/",
+    sourceUrl: "https://iceevent.org/2026/", sourceType: "official_site",
+    description: "A conference.", topics: ["geology"], categories: ["energy"], details: null,
+  } as any;
+
+  // The same record twice is the same fingerprint, which is the whole point.
+  assert.equal(seedFingerprint(base), seedFingerprint({ ...base }));
+
+  // Every field seeding carries must move it.
+  for (const change of [
+    { title: "AAPG ICE 2027" }, { startDate: "2026-12-08" }, { city: "Bali" },
+    { officialUrl: "https://iceevent.org/2027/" }, { venue: "NICE" }, { organization: "SEG" },
+    { topics: ["geophysics"] }, { description: "Something else." },
+  ]) {
+    assert.notEqual(
+      seedFingerprint({ ...base, ...change }), seedFingerprint(base),
+      `a change to ${Object.keys(change)[0]} would have been skipped as unchanged`
+    );
+  }
+
+  // And the case the narrower content hash would miss: the conference is the same conference, but
+  // its committee arrived. Skipping that would leave the tab empty in the store forever.
+  const withCommittee = {
+    ...base,
+    details: { source: "aapg-details", committee: { items: [{ name: "Herman Darman" }] } },
+  };
+  assert.notEqual(seedFingerprint(withCommittee), seedFingerprint(base));
+  assert.notEqual(
+    seedFingerprint({ ...withCommittee, details: { ...withCommittee.details, committee: { items: [] } } }),
+    seedFingerprint(withCommittee)
+  );
 });

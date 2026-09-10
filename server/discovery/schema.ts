@@ -368,6 +368,18 @@ export async function initDiscoverySchema(): Promise<void> {
 
     -- Durable orchestration state. The lease is database-owned, so two Render invocations cannot
     -- both become the heavy worker; a killed process becomes recoverable after lease_expires_at.
+    -- What the launch catalogue looked like the last time each record was written into the store.
+    --
+    -- Seeding rewrote all 375 records on every run whether or not one had changed, at roughly two
+    -- seconds a round trip: twelve minutes of a twenty-five minute cycle spent restating what the
+    -- database already said, leaving ten for the reading anyone was waiting on. A fingerprint per
+    -- record turns that into one query.
+    CREATE TABLE IF NOT EXISTS discovery_seed_fingerprints (
+      record_id TEXT PRIMARY KEY,
+      fingerprint TEXT NOT NULL,
+      seeded_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS discovery_pipeline_locks (
       name TEXT PRIMARY KEY,
       owner_id TEXT NOT NULL,
