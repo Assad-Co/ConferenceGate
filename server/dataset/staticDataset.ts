@@ -374,3 +374,91 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
     },
   };
 }
+
+/**
+ * Fills the sections a stored record leaves empty from the launch catalogue's own.
+ *
+ * The two sources describe the same conference and neither is allowed to erase the other. A record
+ * published by the discovery engine wins wherever it has content — it read the conference's own
+ * pages, which is stronger evidence than any list. But a record can be published the moment its
+ * title, date and country verify, long before anything read its speakers page, and serving that
+ * row alone replaced a curated twenty-seven-person committee with an empty tab.
+ *
+ * So this fills gaps and only gaps. It never overwrites a stored value, never merges two lists into
+ * one, and never claims a section is complete: each filled section keeps the launch record's own
+ * account of where it came from and what its source said.
+ */
+export function fillGapsFromLaunchRecord(
+  stored: Record<string, any>,
+  record: LaunchConferenceRecord
+): Record<string, any> {
+  const launch = launchRecordToTabbedExtraction(record) as Record<string, any>;
+  const merged: Record<string, any> = { ...stored };
+  const filled: string[] = [];
+
+  const isEmptyList = (value: unknown): boolean => !Array.isArray(value) || value.length === 0;
+  for (const section of ["keynote_speakers", "technical_committee", "sponsors_exhibitors"]) {
+    if (isEmptyList(stored[section]) && !isEmptyList(launch[section])) {
+      merged[section] = launch[section];
+      filled.push(section);
+    }
+  }
+
+  const storedProgram = stored.program_agenda || {};
+  if (isEmptyList(storedProgram.sessions) && !String(storedProgram.overview || "").trim()
+      && String(launch.program_agenda?.overview || "").trim()) {
+    merged.program_agenda = { ...storedProgram, overview: launch.program_agenda.overview };
+    filled.push("program_agenda");
+  }
+
+  const storedFees = stored.fees_pricing || {};
+  if (isEmptyList(storedFees.registration_fees) && !isEmptyList(launch.fees_pricing?.registration_fees)) {
+    merged.fees_pricing = {
+      ...storedFees,
+      registration_fees: launch.fees_pricing.registration_fees,
+      pricing_text: storedFees.pricing_text || launch.fees_pricing.pricing_text || null,
+    };
+    filled.push("fees_pricing");
+  }
+
+  const storedVenue = stored.venue_accommodation || {};
+  const launchVenue = launch.venue_accommodation || {};
+  if (!String(storedVenue.venue_name || "").trim() && String(launchVenue.venue_name || "").trim()) {
+    merged.venue_accommodation = {
+      ...storedVenue,
+      venue_name: launchVenue.venue_name,
+      address: storedVenue.address || launchVenue.address || null,
+    };
+    filled.push("venue_accommodation");
+  }
+  // The advisory is not a section anyone crawls, so it is carried across whenever the stored row
+  // has none of its own.
+  if (launchVenue.travel_advisory && !(merged.venue_accommodation || storedVenue).travel_advisory) {
+    merged.venue_accommodation = {
+      ...(merged.venue_accommodation || storedVenue),
+      travel_advisory: launchVenue.travel_advisory,
+      travel_advisory_source: launchVenue.travel_advisory_source,
+    };
+  }
+
+  if (filled.length === 0) return stored;
+
+  // What the page needs to describe each tab honestly: a filled section answers as the launch
+  // record does, and everything else keeps whatever the stored row already said.
+  const availability: Record<string, string> = { ...(stored.sectionAvailability || {}) };
+  const notes: Record<string, string | null> = { ...(stored.section_notes || {}) };
+  for (const section of filled) {
+    availability[section] = launch.sectionAvailability?.[section] ?? "stated";
+    if (launch.section_notes?.[section]) notes[section] = launch.section_notes[section];
+  }
+  merged.sectionAvailability = availability;
+  merged.section_notes = notes;
+  merged.sectionsNotRead = false;
+  merged.extraction_metadata = {
+    ...(stored.extraction_metadata || {}),
+    // Named so a reader of the payload can tell which tabs came from the list rather than a crawl.
+    sections_filled_from_launch_dataset: filled,
+    launch_detail_source: record.details?.source ?? null,
+  };
+  return merged;
+}

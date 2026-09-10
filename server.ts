@@ -46,7 +46,10 @@ import {
 import { checkWordCompliance } from "./server/wordLimit";
 import { initDiscoverySchema } from "./server/discovery/schema";
 import { discoveryRouter } from "./server/discovery/router";
-import { findLaunchRecordByUrl, launchRecordToTabbedExtraction, urlIdentifiesOneLaunchRecord } from "./server/dataset/staticDataset";
+import {
+  fillGapsFromLaunchRecord, findLaunchRecordByUrl, launchRecordToTabbedExtraction,
+  urlIdentifiesOneLaunchRecord,
+} from "./server/dataset/staticDataset";
 
 async function startServer() {
   // The database schema and the JWT signing secret both require an async round-trip to
@@ -3164,17 +3167,28 @@ Return JSON with exactly this shape:
     const running = crawlJobs.get(url);
     if (running?.result) return res.json(running.result);
 
+    // The title comes along because a URL is not always one conference: where a source published
+    // only a listing page, every event on it carries that same URL, and the card the reader clicked
+    // is the only thing that says which one they meant.
+    const openedTitle = typeof req.query.title === "string" ? req.query.title : "";
+    const launchRecord = findLaunchRecordByUrl(url, openedTitle);
+
     const persisted = await loadPersistedExtractedConference(url, false).catch(() => null);
     if (persisted) {
+      // Two sources describing one conference, and neither may erase the other. A crawled record
+      // wins wherever it has content — it read the conference's own pages — but it can be published
+      // the moment its title, date and country verify, long before anything read its speakers page.
+      // Served alone, such a row replaced a curated twenty-seven-person committee with an empty tab.
+      const answer = launchRecord ? fillGapsFromLaunchRecord(persisted, launchRecord) : persisted;
       extractionCache.set(url, {
-        data: { ...persisted, crawlComplete: true, crawlPending: false },
+        data: { ...answer, crawlComplete: true, crawlPending: false },
         expiresAt: Date.now() + EXTRACTION_CACHE_TTL_MS,
       });
       return res.json({
-        ...persisted,
+        ...answer,
         crawlComplete: true,
         crawlPending: false,
-        detailsReady: hasSubstantialTabCoverage(persisted),
+        detailsReady: hasSubstantialTabCoverage(answer),
       });
     }
 
@@ -3182,11 +3196,6 @@ Return JSON with exactly this shape:
     // the file that ships in the repository rather than showing the reader an empty page. This is
     // still a stored read: no fetch, no provider, no model. The payload marks its deep sections as
     // never read, so the page says "not retrieved" rather than claiming a crawl found none.
-    // The title comes along because a URL is not always one conference: where a source published
-    // only a listing page, every event on it carries that same URL, and the card the reader clicked
-    // is the only thing that says which one they meant.
-    const openedTitle = typeof req.query.title === "string" ? req.query.title : "";
-    const launchRecord = findLaunchRecordByUrl(url, openedTitle);
     if (launchRecord) {
       const payload = launchRecordToTabbedExtraction(launchRecord);
       // Caching under a URL several conferences share would serve the first one opened to all of

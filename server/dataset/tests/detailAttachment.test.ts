@@ -7,7 +7,7 @@ import { buildLaunchDataset, type DetailSupply, type StructuredOutcome } from ".
 import { mapCuratedRow, rowsFromCsv } from "../sources/curated";
 import { rowsFromDetailCsv } from "../sources/curatedDetails";
 import { parseCsv } from "../sources/curated";
-import { launchRecordToTabbedExtraction } from "../staticDataset";
+import { fillGapsFromLaunchRecord, launchRecordToTabbedExtraction } from "../staticDataset";
 import type { LaunchConferenceRecord } from "../types";
 
 const OPTIONS = { retrievedAt: "2026-09-09", horizonStart: "2026-09-09", years: [2026, 2027, 2028] };
@@ -125,4 +125,84 @@ test("a supplied section with nothing in it is not the same as one nobody suppli
   assert.equal(payload.sectionAvailability.keynote_speakers, "not_announced");
   assert.equal(payload.sectionAvailability.community, "unread");
   assert.equal(payload.sectionsNotRead, false);
+});
+
+test("a published record that has not been crawled deep keeps the curated sections", () => {
+  // The regression this exists to stop. A record is published the moment its title, date and
+  // country verify — long before anything reads its speakers page — and the detail route serves the
+  // stored row in preference to the catalogue. Served alone it replaced a curated committee with an
+  // empty tab, which is exactly the "(0) speakers" the whole project refuses to print.
+  const ice = find(build().dataset.records, "AAPG International");
+  const justPublished = {
+    extracted: true,
+    overview: { conference_name: "AAPG International Conference & Exhibition (ICE) 2026" },
+    keynote_speakers: [],
+    technical_committee: [],
+    sponsors_exhibitors: [],
+    program_agenda: { sessions: [] },
+    fees_pricing: { registration_fees: [] },
+    venue_accommodation: {},
+    sectionAvailability: { keynote_speakers: "unread" },
+  };
+
+  const merged = fillGapsFromLaunchRecord(justPublished, ice) as any;
+  assert.equal(merged.keynote_speakers.length, 2);
+  assert.equal(merged.technical_committee.length, 2);
+  assert.equal(merged.sponsors_exhibitors[0].tier, "Principal Sponsor & Host");
+  assert.equal(merged.program_agenda.overview, "3-day program across 7 themes.");
+  assert.equal(merged.venue_accommodation.venue_name, "Nusantara International Convention Exhibition (NICE)");
+  // The tab state follows the content that arrived with it.
+  assert.equal(merged.sectionAvailability.keynote_speakers, "stated");
+  assert.equal(merged.sectionsNotRead, false);
+  // And the payload says which tabs came from the list rather than a crawl.
+  assert.deepEqual(merged.extraction_metadata.sections_filled_from_launch_dataset, [
+    "keynote_speakers", "technical_committee", "sponsors_exhibitors", "program_agenda",
+    "venue_accommodation",
+  ]);
+});
+
+test("a crawled section is never overwritten by the curated one", () => {
+  // The other direction, and the more important one: the conference's own pages outrank any list,
+  // so anything already read stays exactly as it was read. Gaps are filled; values are not.
+  const ice = find(build().dataset.records, "AAPG International");
+  const crawled = {
+    extracted: true,
+    keynote_speakers: [{ name: "Someone The Site Actually Named", role: "Keynote" }],
+    technical_committee: [],
+    sponsors_exhibitors: [{ name: "A Sponsor The Site Listed", tier: "Gold" }],
+    program_agenda: { sessions: [{ title: "Opening plenary" }] },
+    fees_pricing: { registration_fees: [{ category: "Member", amount: 900, currency: "USD" }] },
+    venue_accommodation: { venue_name: "A Venue The Site Named", address: "Somewhere" },
+  };
+
+  const merged = fillGapsFromLaunchRecord(crawled, ice) as any;
+  assert.deepEqual(merged.keynote_speakers.map((p: any) => p.name), ["Someone The Site Actually Named"]);
+  assert.deepEqual(merged.sponsors_exhibitors.map((s: any) => s.name), ["A Sponsor The Site Listed"]);
+  assert.deepEqual(merged.program_agenda.sessions, [{ title: "Opening plenary" }]);
+  assert.equal(merged.program_agenda.overview, undefined, "a read programme was given a list's prose");
+  assert.equal(merged.fees_pricing.registration_fees[0].amount, 900);
+  assert.equal(merged.venue_accommodation.venue_name, "A Venue The Site Named");
+  // Only the one genuinely empty section was filled.
+  assert.deepEqual(merged.extraction_metadata.sections_filled_from_launch_dataset, ["technical_committee"]);
+});
+
+test("a stored record with nothing to add back is returned untouched", () => {
+  // No curated list covered this conference, so there is nothing to fill from and the stored row
+  // must come back as the same object rather than a rebuilt one carrying invented metadata.
+  const uncovered = find(build([DETAIL_HEADER].join("\n")).dataset.records, "GeoGulf");
+  const stored = { extracted: true, keynote_speakers: [], technical_committee: [] };
+  assert.equal(fillGapsFromLaunchRecord(stored, uncovered), stored);
+});
+
+test("what a list says about an unannounced section is still worth showing", () => {
+  // GeoGulf's list has no speakers, no committee and no sponsors — but it does say what the
+  // conference is and that its programme is not out yet. An empty Program tab would have been the
+  // worse answer, so the sentence is carried across and the tab says what the source said.
+  const geogulf = find(build().dataset.records, "GeoGulf");
+  const merged = fillGapsFromLaunchRecord({ extracted: true, keynote_speakers: [] }, geogulf) as any;
+  assert.equal(merged.program_agenda.overview, "Regional conference; program not yet published.");
+  assert.deepEqual(merged.extraction_metadata.sections_filled_from_launch_dataset, ["program_agenda"]);
+  // And it does not pretend the speakers are known.
+  assert.deepEqual(merged.keynote_speakers, []);
+  assert.equal(merged.sectionAvailability.keynote_speakers, undefined);
 });
