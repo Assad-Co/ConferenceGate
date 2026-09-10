@@ -194,15 +194,55 @@ test("a stored record with nothing to add back is returned untouched", () => {
   assert.equal(fillGapsFromLaunchRecord(stored, uncovered), stored);
 });
 
-test("what a list says about an unannounced section is still worth showing", () => {
-  // GeoGulf's list has no speakers, no committee and no sponsors — but it does say what the
-  // conference is and that its programme is not out yet. An empty Program tab would have been the
-  // worse answer, so the sentence is carried across and the tab says what the source said.
+test("a sentence that reports an absence is shown as one, not as the thing itself", () => {
+  // "Regional conference; program not yet published." says two things, and only one of them is a
+  // programme. It is not served as the programme — the tab says the organiser has not published one
+  // — but the sentence survives so a reader can see what the source actually said.
   const geogulf = find(build().dataset.records, "GeoGulf");
+  const payload = launchRecordToTabbedExtraction(geogulf) as any;
+  assert.equal(payload.sectionAvailability.program_agenda, "not_announced");
+  assert.equal(payload.program_agenda.overview, null);
+  assert.equal(payload.section_notes.program_agenda, "Regional conference; program not yet published.");
+
+  // Nothing is filled from it either, because there is nothing in it to fill with.
   const merged = fillGapsFromLaunchRecord({ extracted: true, keynote_speakers: [] }, geogulf) as any;
-  assert.equal(merged.program_agenda.overview, "Regional conference; program not yet published.");
-  assert.deepEqual(merged.extraction_metadata.sections_filled_from_launch_dataset, ["program_agenda"]);
-  // And it does not pretend the speakers are known.
   assert.deepEqual(merged.keynote_speakers, []);
-  assert.equal(merged.sectionAvailability.keynote_speakers, undefined);
+});
+
+test("an absence phrase is never served as a programme or a price", () => {
+  // A section whose cell says "Not yet announced as of 10 Sep 2026" has nothing to show, and the
+  // phrase itself is not content. Passed through as prose it appeared in the Fees panel as though
+  // it were a pricing note, and in the Program tab as though it were the programme.
+  const csv = [
+    DETAIL_HEADER,
+    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","Not yet announced as of 10 Sep 2026","Not yet announced","Not yet announced","Not yet announced as of 10 Sep 2026","Not yet announced","https://gcags.org/",""',
+  ].join("\n");
+  const payload = launchRecordToTabbedExtraction(find(build(csv).dataset.records, "GeoGulf")) as any;
+
+  assert.equal(payload.program_agenda.overview, null);
+  assert.equal(payload.fees_pricing.pricing_text, null);
+  assert.equal(payload.sectionAvailability.program_agenda, "not_announced");
+  assert.equal(payload.sectionAvailability.fees_pricing, "not_announced");
+});
+
+test("a section the source described in a sentence keeps that sentence as its content", () => {
+  // Most conferences describe their sponsors and committee rather than listing them — "Exhibit and
+  // sponsor program available", "Program committees and EDUCAUSE staff curate content" — and
+  // nothing structures out of those without inventing organisations. The sentence IS the content,
+  // and the page has to be able to tell it apart from an absence to show it as one.
+  const csv = [
+    DETAIL_HEADER,
+    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","Higher-ed IT strategy, cybersecurity and leadership sessions.","Featured speakers published by the organiser.","Program committees and staff curate content.","Not yet announced","Exhibit and sponsor program available.","https://gcags.org/",""',
+  ].join("\n");
+  const payload = launchRecordToTabbedExtraction(find(build(csv).dataset.records, "GeoGulf")) as any;
+
+  for (const section of ["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors"]) {
+    assert.equal(payload.sectionAvailability[section], "stated", `${section} was read as an absence`);
+    assert.ok(payload.section_notes[section], `${section} lost the sentence it was described in`);
+  }
+  // Structured lists stay empty rather than being invented out of the prose.
+  assert.deepEqual(payload.keynote_speakers, []);
+  assert.deepEqual(payload.sponsors_exhibitors, []);
+  // The one that genuinely says nothing is still an absence.
+  assert.equal(payload.sectionAvailability.fees_pricing, "not_announced");
 });

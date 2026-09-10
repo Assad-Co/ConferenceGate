@@ -385,15 +385,48 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     }
   };
 
-  // The source's own sentence, when it says more than "Not yet announced" does. This is where a
-  // reader finds out that four companies named in the record's source are explicitly NOT sponsors
-  // of this event, or that a committee exists but its membership has not been published — facts
-  // the structured columns have no room for and must not be allowed to swallow.
-  const sectionNote = (section: string): string | null => {
-    const note = data?.section_notes?.[section];
-    if (!note || note.trim().length < 40) return null;
-    return note.trim();
+  /**
+   * The source's own account of a section, where that is what it has instead of a list.
+   *
+   * Most conferences describe their sponsors and committee in a sentence rather than a roster —
+   * "Exhibit and sponsor program available", "Program committees and EDUCAUSE staff curate content"
+   * — and nothing structures out of those without inventing organisations that do not exist. The
+   * sentence is the content, so it is shown as content. Printing "the completed crawl found no
+   * sponsors" over the top of it was wrong twice: no crawl ran, and the source did say something.
+   */
+  const statedSectionText = (section: string): string | null => {
+    if (sectionState(section) !== 'stated') return null;
+    return data?.section_notes?.[section]?.trim() || null;
   };
+
+  // For a section that has nothing, the sentence explaining WHY — but only when it says more than
+  // the tab already does. "Not yet announced as of 10 Sep 2026" under "the organiser has not
+  // announced sponsors yet" is the same fact twice; the sentence naming four companies that are
+  // explicitly NOT this event's sponsors is not.
+  const sectionNote = (section: string): string | null => {
+    if (sectionState(section) === 'stated') return null;
+    const note = data?.section_notes?.[section]?.trim();
+    if (!note || note.length < 45) return null;
+    return note;
+  };
+
+  /** A section whose content is a sentence rather than a list. */
+  const StatedSection: React.FC<{ text: string }> = ({ text }) => (
+    <div className="space-y-2">
+      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
+        {text}
+      </p>
+      <a
+        href={result.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 hover:underline"
+      >
+        <ExternalLink className="w-3 h-3" />
+        The organiser's page has the full detail
+      </a>
+    </div>
+  );
 
 
   // The conference's own picture of itself, when its page published one.
@@ -1273,7 +1306,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   </div>
                 )}
                 {!data?.agendaSessions.length ? (
-                  programOverview || programThemes.length > 0 ? null : data?.crawlComplete === true ? (
+                  programOverview || programThemes.length > 0 ? null
+                    : statedSectionText("program_agenda") ? (
+                      <StatedSection text={statedSectionText("program_agenda")!} />
+                    ) : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("program_agenda", "a program", "The completed crawl found no session-by-session program.")}
                       note={sectionNote("program_agenda")}
@@ -1339,7 +1375,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Keynote & Invited Speakers</h3>
                 {!data?.speakers.length ? (
-                  data?.crawlComplete === true ? (
+                  statedSectionText("keynote_speakers") ? (
+                    <StatedSection text={statedSectionText("keynote_speakers")!} />
+                  ) : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("keynote_speakers", "speakers", "The completed crawl found no named keynote or invited speakers.")}
                       note={sectionNote("keynote_speakers")}
@@ -1362,7 +1400,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Technical Committee & Advisory Board</h3>
                 {!data?.committee.length ? (
-                  data?.crawlComplete === true ? (
+                  statedSectionText("technical_committee") ? (
+                    <StatedSection text={statedSectionText("technical_committee")!} />
+                  ) : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("technical_committee", "a committee", "The completed crawl found no named technical committee roster.")}
                       note={sectionNote("technical_committee")}
@@ -1385,7 +1425,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Sponsors & Exhibitors</h3>
                 {!data?.sponsors.length ? (
-                  data?.crawlComplete === true ? (
+                  statedSectionText("sponsors_exhibitors") ? (
+                    <StatedSection text={statedSectionText("sponsors_exhibitors")!} />
+                  ) : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("sponsors_exhibitors", "sponsors", "The completed crawl found no named sponsors or exhibitors.")}
                       note={sectionNote("sponsors_exhibitors")}

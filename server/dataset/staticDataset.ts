@@ -327,7 +327,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
         track: null,
       })),
       themes: details?.schedule.themes ?? [],
-      overview: details?.program.text ?? null,
+      overview: details?.program.availability === "stated" ? details.program.text : null,
     },
     keynote_speakers: people(details?.keynotes.items ?? []),
     technical_committee: people(details?.committee.items ?? []),
@@ -357,7 +357,9 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
         notes: null,
       })),
       early_bird_deadline: null,
-      pricing_text: details?.fees.text ?? null,
+      // "Not yet announced as of 10 Sep 2026" is not a pricing note. Only a cell that states
+      // something reaches the panel; the tab says the rest in its own words.
+      pricing_text: details?.fees.availability === "stated" ? details.fees.text : null,
     },
     community: {},
     // The cell each section came from, verbatim, so a reader sees what the list actually said —
