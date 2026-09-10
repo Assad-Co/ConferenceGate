@@ -397,6 +397,15 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // Readiness has just been recomputed, so a record that no longer qualifies says so now. Take
     // its published row back before publishing anything else: a rule that stops the next bad
     // record while leaving the last one on screen has only half worked.
+    // People filed as sponsors go back to the speakers list, and page furniture is dropped. Repairs
+    // stored rows in place; moves nothing it cannot evidence.
+    const { repairPublishedSponsors } = await import("./repairSponsors");
+    const repaired = await repairPublishedSponsors({ limit: 500 });
+    if (repaired.repaired > 0) {
+      console.error(`[automation] ${label} repaired ${repaired.repaired} sponsor list(s): ` +
+        `${repaired.movedToSpeakers} moved to speakers, ${repaired.droppedFurniture} dropped`);
+    }
+
     const retracted = await retractIneligiblePublications({ limit: 500 });
     if (retracted.retracted > 0) {
       console.error(`[automation] ${label} withdrew ${retracted.retracted} published record(s) that no longer qualify`);
@@ -469,11 +478,18 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       await dbRun("UPDATE discovery_automation_state SET last_discovery_at=datetime('now') WHERE id=1");
     }
 
-    const enrichmentBudget = stageBudget(options.enrichmentTimeBudgetMs ?? 20 * 60_000);
+    // Twenty minutes was enrichment's share when discovery took a third of the window. Discovery is
+    // off, so that time is simply unspent; the deep pass still gets whatever is left after this.
+    const enrichmentBudget = stageBudget(options.enrichmentTimeBudgetMs ?? 32 * 60_000);
     if (enrichmentBudget > 0) {
       await setStage(runId, ownerId, "enrichment", leaseMinutes);
       const enrichment = await runEnrichment({
         readiness: ["needs_enrichment"], limit: options.enrichmentLimit ?? 250,
+        // 526 of the 1,192 blocked records have no absolute official URL, so there is no page to
+        // fetch and no verification they can ever pass. They were still taking slots in a pass
+        // capped at 250 records: nearly half the budget spent on records whose blocker this stage
+        // cannot lift. The pass now asks only for records it can actually finish.
+        requireOfficialUrl: true,
         maxSearchQueries: options.enrichmentSearchQueries ?? 6,
         maxJinaPages: options.enrichmentJinaPages ?? 50,
         timeBudgetMs: enrichmentBudget, quiet: options.quiet,
