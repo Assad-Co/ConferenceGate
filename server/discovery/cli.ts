@@ -578,6 +578,22 @@ async function main(): Promise<void> {
       // Repeating turns one firing into a working stretch — each cycle takes and releases its own
       // lease, and publication runs at the end of every one, so records reach readers throughout
       // rather than once every eight hours.
+      // The launch catalogue belongs in the store before any cycle works the backlog.
+      //
+      // Seeding was a command a person ran once, which meant a record added to the catalogue
+      // afterwards — or one an earlier, more cautious seeding held back — simply never entered the
+      // store, and no amount of enrichment could reach it. storeEvent is an upsert keyed on
+      // content, so running this at the start of a stretch re-adds what is missing and leaves
+      // what is not. It reads no pages and publishes nothing.
+      try {
+        const { seedLaunchRecords } = await import("../dataset/seedDiscovery");
+        const seeded = await seedLaunchRecords({});
+        console.error(`[automate] catalogue seeded: ${seeded.seeded} record(s), ${seeded.failures.length} failed`);
+      } catch (error: any) {
+        // A catalogue that cannot be seeded must not stop the cycle that works what is already there.
+        console.error(`[automate] catalogue seeding skipped: ${String(error?.message || error).slice(0, 200)}`);
+      }
+
       const repeatFor = numberFlag(flags["repeat-for-ms"], 0);
       const repeatDeadline = Date.now() + repeatFor;
       let cycle = 0;

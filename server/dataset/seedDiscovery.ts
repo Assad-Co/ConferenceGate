@@ -187,7 +187,8 @@ export function toNormalizedEvent(record: LaunchConferenceRecord): NormalizedEve
 export interface SeedResult {
   considered: number;
   seeded: number;
-  skippedWithoutUrl: number;
+  /** Seeded, but with no website of their own yet — enrichment has to find one first. */
+  leadsWithoutUrl: number;
   failures: Array<{ id: string; message: string }>;
 }
 
@@ -196,16 +197,23 @@ export async function seedLaunchRecords(
 ): Promise<SeedResult> {
   const { records } = loadLaunchDataset();
   const limit = options.limit ?? records.length;
-  const result: SeedResult = { considered: 0, seeded: 0, skippedWithoutUrl: 0, failures: [] };
+  const result: SeedResult = { considered: 0, seeded: 0, leadsWithoutUrl: 0, failures: [] };
 
   for (const record of records.slice(0, limit)) {
     result.considered += 1;
-    // Enrichment works by following a conference's own website. A record without one has nothing
-    // for it to read, so seeding it would only add a row nothing can improve.
-    if (!record.officialUrl) {
-      result.skippedWithoutUrl += 1;
-      continue;
-    }
+    // A record with no website of its own is seeded anyway, as a lead.
+    //
+    // Skipping them was too cautious by half. Enrichment does not only follow a website it was
+    // handed — when a record has none it searches for one, which is exactly the "directories are
+    // leads" rule the engine already applies to what it discovers itself: the listing that named
+    // the conference is read again for the link to the event's own site. Forty-five of these were
+    // held out of the store entirely, so a reader opening one found a page nothing could ever
+    // improve, with every tab empty and no process on the way to fix it.
+    //
+    // Nothing is promoted by this. The record carries its directory source at directory trust,
+    // and publication still demands a real official URL, so a lead that never resolves stays out
+    // of sight rather than reaching a reader as a conference with no content.
+    if (!record.officialUrl) result.leadsWithoutUrl += 1;
     if (options.dryRun) {
       result.seeded += 1;
       continue;
@@ -256,7 +264,7 @@ async function main(): Promise<void> {
   });
   console.log(`${dryRun ? "[dry run] " : ""}considered ${result.considered}`);
   console.log(`  seeded as validated       ${result.seeded}`);
-  console.log(`  skipped, no website       ${result.skippedWithoutUrl}`);
+  console.log(`  of those, leads only      ${result.leadsWithoutUrl}  (no website yet; enrichment searches for one)`);
   console.log(`  failed                    ${result.failures.length}`);
   for (const failure of result.failures.slice(0, 10)) console.log(`    ${failure.id}: ${failure.message}`);
 
