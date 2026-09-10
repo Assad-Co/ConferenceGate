@@ -337,7 +337,7 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       let unresolvedConflict = false;
       let verified = await verifyExistingSources(event, budget, robotsCache, metrics, options.urlGuard);
       if (!verified && searchUsed < searchCap) {
-        const found = await searchForOfficial(event, searchCap - searchUsed, metrics);
+        const found = await searchForOfficial(event, searchCap - searchUsed, metrics, errors);
         searchUsed += found.queries;
         for (const candidate of found.results.slice(0, 4)) {
           if (Date.now() >= deadline) break;
@@ -682,7 +682,21 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
     extraction: raw, route: read.route, identityScore, provider, classificationEvidence: source.evidence };
 }
 
-async function searchForOfficial(event: EventRow, remaining: number, metrics: Record<string, number>): Promise<{ queries: number; results: LiveSearchResult[] }> {
+/**
+ * Keeps the first message each provider failed with, once per run.
+ *
+ * The counts alone were actively misleading: a pass reporting `braveErrors: 40` out of 40 queries
+ * looks like forty separate hiccups, when it is one expired key or one exhausted quota saying the
+ * same thing forty times — and Brave failing every query silently promotes Serper from "asked only
+ * where Brave fell short" to "asked for everything", which is a bill rather than a fallback.
+ * Deduplicated because forty copies of one sentence is not more information than one.
+ */
+function noteProviderFailure(errors: string[], provider: string, error: unknown): void {
+  const message = `${provider} search failed: ${String((error as any)?.message || error).slice(0, 200)}`;
+  if (!errors.includes(message)) errors.push(message);
+}
+
+async function searchForOfficial(event: EventRow, remaining: number, metrics: Record<string, number>, errors: string[]): Promise<{ queries: number; results: LiveSearchResult[] }> {
   const year = event.start_year ? ` ${event.start_year}` : "";
   const braveQuery = `\"${event.title.replace(/\"/g, "")}\"${year} official conference website`;
   const serperQuery = `${event.title.replace(/[^a-zA-Z0-9 ]+/g, " ")}${year} official conference`;
@@ -691,13 +705,13 @@ async function searchForOfficial(event: EventRow, remaining: number, metrics: Re
   if (remaining > queries && isBraveConfigured()) {
     queries += 1; metrics.braveQueries += 1;
     try { const found = await braveSearch(braveQuery, 10, "low"); metrics.braveResults += found.length; results.push(...found); }
-    catch { metrics.braveErrors += 1; }
+    catch (error) { metrics.braveErrors += 1; noteProviderFailure(errors, "brave", error); }
   }
   const strongBrave = results.some((r) => !isDirectoryHost(host(r.link)) && titleSimilarity(r.title, event.title) >= 0.55);
   if (!strongBrave && remaining > queries && isSerperConfigured()) {
     queries += 1; metrics.serperQueries += 1;
     try { const found = await serperSearch(serperQuery, 10); metrics.serperResults += found.length; results.push(...found); }
-    catch { metrics.serperErrors += 1; }
+    catch (error) { metrics.serperErrors += 1; noteProviderFailure(errors, "serper", error); }
   }
   const unique = new Map<string, LiveSearchResult>();
   for (const result of results) {
