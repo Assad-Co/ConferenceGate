@@ -10,6 +10,7 @@ import { buildLaunchDataset, toCsv, type StructuredOutcome } from "./build";
 import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
+import { mapCuratedRow, rowsFromCsv, statedOrNull } from "./sources/curated";
 import { readPortableEvents, readPredictHqCache, readResolvedUrls } from "./ingest";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -64,6 +65,33 @@ export function structuredFromPredictHq(options: ParseOptions): StructuredOutcom
         .join(", "),
     };
   });
+}
+
+/**
+ * Curated lists committed under data/sources — a society's own calendar, handed over rather than
+ * crawled. Read through the same rules as everything else; absent, the build is simply unchanged.
+ */
+export function structuredFromCuratedLists(options: ParseOptions): StructuredOutcome[] {
+  const dir = path.resolve(process.cwd(), "data/sources");
+  if (!fs.existsSync(dir)) return [];
+  const outcomes: StructuredOutcome[] = [];
+  for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".csv")).sort()) {
+    const full = path.join(dir, file);
+    const rows = rowsFromCsv(fs.readFileSync(full, "utf8"));
+    for (const row of rows) {
+      const outcome = mapCuratedRow(row, {
+        ...options,
+        sourceName: file.replace(/\.csv$/, ""),
+        sourceUrl: statedOrNull(row.website) || `curated:${file}`,
+      });
+      outcomes.push({
+        outcome,
+        sourceUrl: statedOrNull(row.website) || `curated:${file}#${row.name}`,
+        statedText: [row.name, row.dates, row.location, row.country].filter(Boolean).join(", "),
+      });
+    }
+  }
+  return outcomes;
 }
 
 function percentage(count: number, total: number): string {
@@ -128,7 +156,7 @@ function main(): void {
   const now = new Date();
   const horizonStart = now.toISOString().slice(0, 10);
   const options = { retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028] };
-  const structured = structuredFromPredictHq(options);
+  const structured = [...structuredFromPredictHq(options), ...structuredFromCuratedLists(options)];
   const result = buildLaunchDataset(evidence, options, structured);
 
   fs.mkdirSync(DATA_DIR, { recursive: true });

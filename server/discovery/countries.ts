@@ -110,6 +110,7 @@ export const COUNTRIES: CountryRecord[] = [
   { name: "South Korea", iso2: "KR", iso3: "KOR", region: "Asia", aliases: ["korea", "republic of korea", "korea, republic of", "korea (south)", "대한민국"] },
   { name: "Spain", iso2: "ES", iso3: "ESP", region: "Europe", aliases: ["españa", "espana"] },
   { name: "Sri Lanka", iso2: "LK", iso3: "LKA", region: "Asia", aliases: [] },
+  { name: "Suriname", iso2: "SR", iso3: "SUR", region: "South America", aliases: [] },
   { name: "Sweden", iso2: "SE", iso3: "SWE", region: "Europe", aliases: ["sverige"] },
   { name: "Switzerland", iso2: "CH", iso3: "CHE", region: "Europe", aliases: ["suisse", "schweiz", "svizzera", "confoederatio helvetica"] },
   { name: "Taiwan", iso2: "TW", iso3: "TWN", region: "Asia", aliases: ["chinese taipei", "taiwan, province of china"] },

@@ -1,54 +1,54 @@
 {
-  "generatedAt": "2026-09-09T18:24:16.743Z",
-  "horizonStart": "2026-09-09",
+  "generatedAt": "2026-09-10T13:50:07.132Z",
+  "horizonStart": "2026-09-10",
   "evidenceRows": 325,
-  "apiEventRows": 55,
-  "accepted": 359,
+  "apiEventRows": 72,
+  "accepted": 374,
   "duplicatesMerged": 1,
-  "rejected": 20,
+  "rejected": 22,
   "rejectionReasons": {
     "not_a_conference": 14,
-    "already_finished": 3,
-    "no_location": 2,
+    "already_finished": 4,
+    "no_location": 3,
     "source_url_is_a_listing": 1
   },
-  "total": 359,
+  "total": 374,
   "byYear": {
-    "2026": 49,
-    "2027": 296,
+    "2026": 61,
+    "2027": 299,
     "2028": 14
   },
-  "countries": 47,
-  "cities": 149,
+  "countries": 52,
+  "cities": 160,
   "categories": 31,
   "worldRegions": {
-    "North America": 158,
+    "North America": 163,
     "Europe": 115,
-    "Asia": 58,
-    "Middle East": 14,
+    "Asia": 59,
+    "Middle East": 18,
+    "South America": 10,
     "Oceania": 6,
-    "South America": 5,
     "Africa": 3
   },
   "formats": {
-    "in-person": 345,
+    "in-person": 360,
     "hybrid": 14
   },
   "sourceTypes": {
-    "official_site": 314,
+    "official_site": 326,
     "directory_listing": 41,
-    "reference": 4
+    "reference": 7
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "97.2%",
-    "monthOnlyDates": "2.8%",
-    "city": "99.4%",
+    "exactDates": "97.1%",
+    "monthOnlyDates": "2.9%",
+    "city": "99.5%",
     "country": "100.0%",
-    "officialUrl": "87.5%",
-    "venue": "35.9%",
-    "organization": "36.2%",
-    "category": "56.5%",
+    "officialUrl": "87.2%",
+    "venue": "35.3%",
+    "organization": "38.8%",
+    "category": "58.3%",
     "description": "100.0%",
     "corroborated": "0.3%"
   },
@@ -161,6 +161,16 @@
       "reason": "not_a_conference",
       "sourceUrl": "https://store.lso.ca/23rd-real-estate-law-summit",
       "statedText": "The Real Estate Lawyer, Toronto, CA, 2026-11-24T09:00:00"
+    },
+    {
+      "reason": "already_finished",
+      "sourceUrl": "https://www.aapg.org/event-details/latin-america-geothermal-systems-workshop-2026/",
+      "statedText": "Latin America Geothermal Systems Workshop 2026, 2-3 September 2026, Mexico City (Barceló México Reforma), Mexico"
+    },
+    {
+      "reason": "no_location",
+      "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+      "statedText": "3rd Edition Geological Process-Based Forward Modeling, May 2027, TBD, TBD"
     }
   ]
 }
