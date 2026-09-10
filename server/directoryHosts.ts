@@ -10,6 +10,13 @@ const DIRECTORY_DOMAINS = new Set([
   // promoted to a conference's authoritative site, whatever it says about itself.
   "conflists.com",
   "iconf.org",
+  // Aggregators that supplied most of one curated batch. Without them here, 113 records would have
+  // published a listing site — and 46 of those a filtered search page — as the conference's own
+  // website, which is the one promotion this list exists to prevent.
+  "iconf.com",
+  "impactconvene.com",
+  "conferencesked.com",
+  "worldconferencecalendar.com",
   "10times.com",
   "allevents.in",
   "allconferencealert.com",
@@ -113,7 +120,9 @@ export function isDirectoryHost(host: string): boolean {
 }
 
 /** Reference works — real sources, but encyclopaedic rather than the organiser speaking. */
-const REFERENCE_DOMAINS = new Set(["wikipedia.org", "wikidata.org", "dbpedia.org"]);
+// uia.org is the Union of International Associations' yearbook: real, careful, and still
+// somebody writing about the conference rather than the organiser speaking.
+const REFERENCE_DOMAINS = new Set(["wikipedia.org", "wikidata.org", "dbpedia.org", "uia.org"]);
 
 export function isReferenceHost(host: string): boolean {
   const normalized = host.toLowerCase().replace(/^www\./, "");

@@ -178,6 +178,10 @@ export function usableAsOfficialUrl(url: string | null): boolean {
     return false;
   }
   if (isDirectoryHost(host) || isReferenceHost(host)) return false;
+  // A filtered search is not a page about any one conference. "?tags=Communication+Engineering"
+  // returns whatever matches that tag today, so storing it as a conference's website sends a reader
+  // to a list and calls it the organiser's own page.
+  if (/[?&](?:tags?|search|q|query|category|keyword|filter|type|page)=/i.test(url)) return false;
   // An index of events on any host, however trustworthy the host.
   return !/\/(?:events?|meetings?|conferences?)\/(?:calendar|list|index)?\/?$/.test(path)
     && !/\/calendar\/?$/.test(path);

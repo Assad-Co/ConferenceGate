@@ -11,6 +11,7 @@ import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
 import { mapCuratedRow, parseCsv, rowsFromCsv, statedOrNull } from "./sources/curated";
+import { isIndexHeader, readIndexCsv } from "./sources/conferenceIndex";
 import { rowsFromDetailCsv } from "./sources/curatedDetails";
 import { readPortableEvents, readPredictHqCache, readResolvedUrls } from "./ingest";
 
@@ -78,7 +79,13 @@ export function structuredFromCuratedLists(options: ParseOptions): StructuredOut
   const outcomes: StructuredOutcome[] = [];
   for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".csv")).sort()) {
     const full = path.join(dir, file);
-    const rows = rowsFromCsv(fs.readFileSync(full, "utf8"));
+    const text = fs.readFileSync(full, "utf8");
+    // Two shapes share this directory. This one is read by column position, so handing it a file
+    // with different columns would not fail — it would quietly file a category as a date and an
+    // acronym as an event type. The header decides, and the other shape is left to the reader that
+    // understands it.
+    if (isIndexHeader(parseCsv(text)[0] ?? [])) continue;
+    const rows = rowsFromCsv(text);
     for (const row of rows) {
       const outcome = mapCuratedRow(row, {
         ...options,
@@ -93,6 +100,32 @@ export function structuredFromCuratedLists(options: ParseOptions): StructuredOut
     }
   }
   return outcomes;
+}
+
+/**
+ * Batches that carry a conference and its deep sections in one row.
+ *
+ * They produce a finished record rather than a parse outcome, so they bypass the text parser and
+ * join the build directly — under the same date window, deduplication and ranking as everything
+ * else. Each refusal is reported with the conference it refused.
+ */
+export function indexRecordsFromDisk(options: ParseOptions): {
+  records: LaunchConferenceRecord[];
+  refused: Array<{ title: string; reason: string; source: string }>;
+} {
+  const dir = path.resolve(process.cwd(), "data/sources");
+  if (!fs.existsSync(dir)) return { records: [], refused: [] };
+  const records: LaunchConferenceRecord[] = [];
+  const refused: Array<{ title: string; reason: string; source: string }> = [];
+  for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".csv")).sort()) {
+    const text = fs.readFileSync(path.join(dir, file), "utf8");
+    if (!isIndexHeader(parseCsv(text)[0] ?? [])) continue;
+    const sourceName = file.replace(/\.csv$/, "");
+    const outcome = readIndexCsv(text, { ...options, sourceName });
+    records.push(...outcome.records);
+    refused.push(...outcome.refused.map((entry) => ({ ...entry, source: sourceName })));
+  }
+  return { records, refused };
 }
 
 /**
@@ -178,7 +211,16 @@ function main(): void {
   const horizonStart = now.toISOString().slice(0, 10);
   const options = { retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028] };
   const structured = [...structuredFromPredictHq(options), ...structuredFromCuratedLists(options)];
-  const result = buildLaunchDataset(evidence, options, structured, detailSuppliesFromDisk());
+  const indexed = indexRecordsFromDisk(options);
+  const result = buildLaunchDataset(
+    evidence, options,
+    [...structured, ...indexed.records.map((record) => ({
+      outcome: { ok: true as const, record },
+      sourceUrl: record.sourceUrl,
+      statedText: record.evidence.statedText,
+    }))],
+    detailSuppliesFromDisk()
+  );
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(DATASET_JSON, JSON.stringify(result.dataset, null, 2) + "\n");
@@ -194,6 +236,8 @@ function main(): void {
     duplicatesMerged: result.duplicatesMerged,
     rejected: result.rejections.length,
     rejectionReasons: tally(result.rejections.map((rejection) => rejection.reason.split(":")[0])),
+    indexRecordsAccepted: indexed.records.length,
+    indexRecordsRefused: tally(indexed.refused.map((entry) => entry.reason)),
     detailsAttached: result.detailsAttached,
     detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),

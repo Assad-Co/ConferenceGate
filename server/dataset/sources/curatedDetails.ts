@@ -63,7 +63,7 @@ const WITHDRAWN = /\bnot\s+confirmed\b|\bnot\s+verified\b|\bunconfirmed\b/i;
 
 /** The cell says this does not exist yet. */
 const NOT_ANNOUNCED =
-  /\bnot\s+(?:yet\s+)?(?:been\s+)?(?:announced|published|released|available|confirmed|finalized|finalised)\b|\bto\s+be\s+(?:announced|confirmed|determined)\b|\b(?:tbd|tba)\b/i;
+  /\bnot\s+(?:yet\s+)?(?:been\s+)?(?:announced|published|released|available|confirmed|finalized|finalised|captured)\b|\bto\s+be\s+(?:announced|confirmed|determined)\b|\b(?:pricing|programme?|schedule|details?)\s+pending\b|\b(?:tbd|tba)\b/i;
 
 /** The cell says nobody could read it. A different fact with a different remedy, and the reason
  *  the two can never share a message on screen. */
@@ -181,27 +181,42 @@ export function parsePeople(cell: string, defaultRole: string): DetailPerson[] {
 
   const people: DetailPerson[] = [];
   const seen = new Set<string>();
-  for (const segment of segments(text)) {
-    const { role, rest } = leadingRole(segment);
-    for (const entry of splitOutsideBrackets(rest, [", "])) {
-      const match = entry.match(/^([^()]+?)\s*\(([^)]*)\)\s*(.*)$/);
-      if (!match) continue;
-      const [, namePart, affiliation, tail] = match;
 
-      // "Steve Chappell/Robert Clarke/Joshua Dixon (Wood Mackenzie)" — one affiliation, three
-      // people. The "&" in "(CO2CRC & Adelaide University)" is inside the brackets and untouched.
-      const names = namePart.split(/\s*(?:\/|&| and )\s*/).map(clean).filter(Boolean);
-      if (names.length === 0 || !names.every(looksLikePersonName)) continue;
+  const add = (name: string, role: string | null, org: string | null, title: string | null, topic: string | null) => {
+    const key = name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    people.push({ name, role: role || defaultRole, org, title, topic });
+  };
 
-      const { title, org } = splitAffiliation(affiliation);
-      const topicMatch = tail.match(/^[-–—]\s*(.+)$/);
-      const topic = topicMatch ? clean(topicMatch[1]).replace(/^['"“](.*)['"”]$/, "$1") : null;
+  for (const sentence of splitOutsideBrackets(text, [". "], endsAnInitial)) {
+    // A heading introduces everyone after it until the sentence ends: "Advisory: Osamu Tabata;
+    // Arcady Zhukov" names two advisors, and splitting on the semicolon first would have left the
+    // second one with no heading and thrown him away.
+    let currentRole: string | null = null;
+    for (const group of splitOutsideBrackets(sentence.replace(/\.$/, ""), ["; ", ";"])) {
+      const { role, rest } = leadingRole(group);
+      if (role) currentRole = role;
 
-      for (const name of names) {
-        const key = name.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        people.push({ name, role: role || defaultRole, org, title, topic: topic || null });
+      for (const entry of splitOutsideBrackets(rest, [", "])) {
+        const withAffiliation = entry.match(/^([^()]+?)\s*\(([^)]*)\)\s*(.*)$/);
+        if (withAffiliation) {
+          const [, namePart, affiliation, tail] = withAffiliation;
+          // "Steve Chappell/Robert Clarke/Joshua Dixon (Wood Mackenzie)" — one affiliation, three
+          // people. The "&" in "(CO2CRC & Adelaide University)" is inside the brackets, untouched.
+          const names = namePart.split(/\s*(?:\/|&| and )\s*/).map(clean).filter(Boolean);
+          if (names.length === 0 || !names.every(looksLikePersonName)) continue;
+          const { title, org } = splitAffiliation(affiliation);
+          const topicMatch = tail.match(/^[-–—]\s*(.+)$/);
+          const topic = topicMatch ? clean(topicMatch[1]).replace(/^['"“](.*)['"”]$/, "$1") : null;
+          for (const name of names) add(name, currentRole, org, title, topic || null);
+          continue;
+        }
+
+        // A bare name, accepted only because a heading said what these people are. Without one it
+        // stays refused: an unheaded line of prose is not a roster, and this is the rule that keeps
+        // "individual meeting-specific committee names not yet published" out of the committee.
+        if (currentRole && looksLikePersonName(entry)) add(clean(entry), currentRole, null, null, null);
       }
     }
   }

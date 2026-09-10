@@ -125,12 +125,20 @@ test("a role comes from the heading that introduced the person", () => {
   );
   assert.deepEqual(people.map((person) => [person.name, person.role]), [
     ["Mohammed Al-Mazrui", "Inaugural Keynote"],
+    // One heading, two people: the semicolon separates them, the full stop does not. Both are
+    // technical keynotes because that is what the sentence says they are.
     ["Simon Stewart", "Technical Keynotes"],
-    // No heading of its own, so it falls back to the column's own label rather than borrowing the
-    // previous person's.
-    ["Wilfried Bauer", "Keynote Speaker"],
+    ["Wilfried Bauer", "Technical Keynotes"],
   ]);
   assert.equal(people[1].topic, "Structural Style Frontiers");
+
+  // A heading's reach ends with its sentence. These two are separated by a full stop, so the second
+  // is not silently filed under the first's heading.
+  const acrossSentences = parsePeople(
+    "Opening Remarks: Ada Lovelace (Analytical Engine Co). Charles Babbage (Cambridge) - Difference Engines.",
+    "Keynote Speaker"
+  );
+  assert.deepEqual(acrossSentences.map((person) => person.role), ["Opening Remarks", "Keynote Speaker"]);
 });
 
 test("an initial is not the end of a sentence", () => {
@@ -359,4 +367,31 @@ test("a day with no year to resolve against keeps what the source wrote", () => 
   const { sessions } = parseProgramSchedule("Sat 9/12: Core Workshop.", null);
   assert.equal(sessions[0].date, null);
   assert.equal(sessions[0].dateText, "Sat 9/12");
+});
+
+test("a heading is what makes a bare list of names a roster", () => {
+  // This batch writes committees as "Advisory: Osamu Tabata; Arcady Zhukov. Program Chairs: …" with
+  // no affiliations at all. The heading is the evidence that these are people, so a name after one
+  // is kept — and a name with no heading anywhere near it still is not.
+  const people = parsePeople(
+    "Advisory: Osamu Tabata; Arcady Zhukov. Conference Chair: Akihiko Fujiwara. "
+    + "Program Chairs: Liang Li; Takashige Omatsu. Program Co-Chair: Yang He.",
+    "Committee Member"
+  );
+  assert.deepEqual(people.map((person) => [person.name, person.role]), [
+    ["Osamu Tabata", "Advisory"],
+    ["Arcady Zhukov", "Advisory"],
+    ["Akihiko Fujiwara", "Conference Chair"],
+    ["Liang Li", "Program Chairs"],
+    ["Takashige Omatsu", "Program Chairs"],
+    ["Yang He", "Program Co-Chair"],
+  ]);
+  // Nobody has an affiliation, and none is invented for them.
+  assert.equal(people.every((person) => person.org === null), true);
+
+  // Unheaded prose is still not a roster.
+  assert.deepEqual(parsePeople("IAFOR conference/program committee.", "Committee Member"), []);
+  assert.deepEqual(parsePeople("Osamu Tabata; Arcady Zhukov", "Committee Member"), []);
+  // And a heading does not turn an absence into a person.
+  assert.deepEqual(parsePeople("Keynote Speakers: Not yet announced.", "Keynote Speaker"), []);
 });
