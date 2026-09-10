@@ -295,60 +295,17 @@ const UNIVERSITIES: Seed[] = [
   ["unal.edu.co", "Universidad Nacional de Colombia", "university", "Colombia", "Latin America"],
 ];
 
-/**
- * Conference directories — leads, never sources.
- *
- * A society announces its own meeting; a directory lists everybody's. That makes directories the
- * widest net available for the long tail this registry structurally misses — a regional workshop
- * run by nobody's national society, a first-edition conference with no institution behind it —
- * and it is why a customer searching a niche found nothing while 246 society domains sat indexed.
- *
- * They are seeded at `conference_directory`, which the registry already trusts at 0.5 against a
- * society's 0.9, and the engine's existing rule does the rest: a listing is never promoted to
- * official, so a directory that yields a conference is read again for the link to the event's own
- * site, and that site becomes the source. The directory stays recorded as the directory.
- *
- * Every one of these is read under robots.txt like any other domain, and a blanket disallow skips
- * it entirely. Several of these hosts are already in `directoryHosts.ts` as places a canonical URL
- * may never point — seeding them as leads and refusing them as authorities is the same policy
- * stated from both ends, not a contradiction.
- */
-const CONFERENCE_DIRECTORIES: Seed[] = [
-  ["conferencelists.org", "Conference Lists", "conference_directory", "United States", "North America"],
-  ["conferenceindex.org", "ConferenceIndex", "conference_directory", "United Kingdom", "Europe"],
-  ["10times.com", "10Times", "conference_directory", "India", "Asia"],
-  ["clocate.com", "Clocate", "conference_directory", "Israel", "Middle East"],
-  ["conferencealerts.com", "Conference Alerts", "conference_directory", "India", "Asia"],
-  ["allconferencealert.com", "All Conference Alert", "conference_directory", "India", "Asia"],
-  ["waset.org", "WASET", "conference_directory", "United Arab Emirates", "Middle East"],
-  ["eventseye.com", "EventsEye", "conference_directory", "France", "Europe"],
-  ["biztradeshows.com", "BizTradeShows", "conference_directory", "India", "Asia"],
-  ["expodatabase.com", "ExpoDatabase", "conference_directory", "Germany", "Europe"],
-  ["conferenceineurope.net", "Conference in Europe", "conference_directory", "United Kingdom", "Europe"],
-  ["academicconferences.org", "Academic Conferences International", "conference_organizer", "United Kingdom", "Europe"],
-  ["wikicfp.com", "WikiCFP", "conference_directory", "United States", "North America"],
-  ["papercrowd.com", "PaperCrowd", "conference_directory", "United Kingdom", "Europe"],
-  ["conference-service.com", "Conference Service", "conference_directory", "Germany", "Europe"],
-  ["emedevents.com", "eMedEvents", "conference_directory", "United States", "North America"],
-  ["medicalconferences.com", "Medical Conferences", "conference_directory", "United States", "North America"],
-];
-
 const ALL: Seed[] = [
   ...GEOSCIENCE_AND_ENERGY, ...ENGINEERING, ...COMPUTING, ...PHYSICAL_SCIENCES,
   ...MEDICAL_AND_LIFE_SCIENCES, ...RESEARCH_INSTITUTES, ...UNIVERSITIES,
-  ...CONFERENCE_DIRECTORIES,
 ];
 
 export const SEED_DOMAINS: DomainInput[] = ALL.map(([domain, sourceName, sourceType, country, region]) => ({
   domain, sourceName, sourceType, country, region,
   // Weekly is often enough: a society announces next year's meeting once, not hourly. The
   // scheduler spreads domains out anyway, and robots.txt Crawl-delay still overrides downwards.
-  // A society announces next year's meeting once; a directory changes daily. Weekly is right for
-  // the first and far too slow for the second.
-  crawlFrequencyHours: sourceType === "conference_directory" ? 24 : 168,
-  notes: sourceType === "conference_directory"
-    ? `${sourceName} — directory listing, read as a lead to each event's own site.`
-    : `${sourceName} — authoritative conference announcements.`,
+  crawlFrequencyHours: 168,
+  notes: `${sourceName} — authoritative conference announcements.`,
 }));
 
 /** Registry composition, for the report a harvest prints and for tests to assert against. */
