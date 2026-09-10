@@ -317,6 +317,7 @@ function attachDetails(
         venueName: detail.venueName,
         venueAddress: detail.venueAddress,
         program: detail.program,
+        callForPapers: detail.callForPapers,
         keynotes: detail.keynotes,
         committee: detail.committee,
         fees: detail.fees,

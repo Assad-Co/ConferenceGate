@@ -14,8 +14,10 @@
 // So: a cell carrying a withdrawal is never structured, only quoted. And every cell is kept
 // verbatim whether or not anything parsed out of it, because the sentence is the evidence.
 
+import { parseCuratedDates } from "./curated";
 import type {
-  LaunchConferenceDetails, LaunchDetailFee, LaunchDetailPerson, LaunchDetailProse,
+  LaunchConferenceDetails, LaunchDetailCallForPapers, LaunchDetailFee, LaunchDetailPerson,
+  LaunchDetailProse,
   LaunchDetailSection, LaunchDetailSponsor, LaunchSectionAvailability, LaunchUnstructuredReason,
 } from "../types";
 
@@ -332,6 +334,43 @@ function sectionOf<T>(cell: string, items: T[]): DetailSection<T> {
   return { availability, items, text, unstructuredReason };
 }
 
+/**
+ * The call for papers, where the programme cell states one.
+ *
+ * These facts arrive buried in a paragraph about the programme — "Call for Papers: abstracts due
+ * 26 June 2026 to submissions@wtgs.org, 500-word max" — so a reader opening the Call for Papers tab
+ * saw nothing while the deadline and the submission address sat two tabs away inside a wall of
+ * prose. Nothing here is inferred: a value is read only from a clause that names a call for papers
+ * or abstracts, which is what stops a short course's registration deadline being published as the
+ * date abstracts are due.
+ */
+export function parseCallForPapers(programText: string): LaunchDetailCallForPapers | null {
+  const text = clean(programText);
+  if (!text) return null;
+
+  const relevant = segments(text).filter((segment) => /\bcall for\b|\babstracts?\b/i.test(segment));
+  if (relevant.length === 0) return null;
+  const joined = relevant.join(". ");
+
+  // "closed" and "open" are the source's own words about the call, not a comparison against today:
+  // a deadline that has passed is a date the reader can see for themselves, and calling it closed
+  // when the organiser has not would be this catalogue speaking for them.
+  let status: string | null = null;
+  if (/\bcall for [^.]{0,40}?\bclosed\b/i.test(joined)) status = "Closed";
+  else if (/\bcall for [^.]{0,40}?\bopen\b/i.test(joined)) status = "Open";
+
+  const email = joined.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)?.[0] ?? null;
+
+  let abstractDeadline: string | null = null;
+  const dateMatch = joined.match(/\b(\d{1,2}\s+[A-Za-z]{3,9}\s+20\d{2})\b/);
+  if (dateMatch) abstractDeadline = parseCuratedDates(dateMatch[1]).startDate;
+
+  const lengthLimit = joined.match(/\b\d+[-\s]word\s+(?:max(?:imum)?|limit)\b/i)?.[0] ?? null;
+
+  if (!status && !email && !abstractDeadline && !lengthLimit) return null;
+  return { status, abstractDeadline, submissionEmail: email, lengthLimit, text: joined };
+}
+
 export function rowsFromDetailCsv(rows: string[][]): CuratedDetailRow[] {
   const [header, ...rest] = rows;
   if (!header) return [];
@@ -356,6 +395,7 @@ export function mapCuratedDetailRow(row: CuratedDetailRow, recordCity: string | 
     venueName: venue.name,
     venueAddress: venue.address,
     program: { availability: availabilityOf(row.program, 0), text: clean(row.program) || null },
+    callForPapers: parseCallForPapers(row.program),
     keynotes: sectionOf(row.keynoteSpeakers, keynotes),
     committee: sectionOf(row.committee, committee),
     fees: sectionOf(row.pricing, fees),

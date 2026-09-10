@@ -241,8 +241,9 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
   // said it was — content, an organiser who has not announced it yet, or a page that could not be
   // read. Collapsing those three into one flag is what made the page tell every reader the same
   // thing about a conference with twelve named keynote speakers and one with none.
+  const cfp = details?.callForPapers ?? null;
   const availability: Record<string, LaunchSectionAvailability> = {
-    call_for_papers: "unread",
+    call_for_papers: cfp ? "stated" : "unread",
     program_agenda: details?.program.availability ?? "unread",
     keynote_speakers: details?.keynotes.availability ?? "unread",
     technical_committee: details?.committee.availability ?? "unread",
@@ -306,7 +307,14 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       official_url: record.officialUrl,
       source_url: record.sourceUrl,
     },
-    call_for_papers: {},
+    call_for_papers: cfp
+      ? {
+          status: cfp.status,
+          abstract_submission_deadline: cfp.abstractDeadline,
+          submission_email: cfp.submissionEmail,
+          length_limit: cfp.lengthLimit,
+        }
+      : {},
     program_agenda: { sessions: [], overview: details?.program.text ?? null },
     keynote_speakers: people(details?.keynotes.items ?? []),
     technical_committee: people(details?.committee.items ?? []),
@@ -343,6 +351,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
     // including the sentence that withdrew a value the parser therefore refused to store.
     section_notes: details
       ? {
+          call_for_papers: details.callForPapers?.text ?? null,
           program_agenda: details.program.text,
           keynote_speakers: details.keynotes.text,
           technical_committee: details.committee.text,

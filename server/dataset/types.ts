@@ -92,6 +92,18 @@ export interface LaunchDetailSection<T> {
   unstructuredReason: LaunchUnstructuredReason;
 }
 
+/** A call for papers, as the source stated it. Every field is null unless it said so. */
+export interface LaunchDetailCallForPapers {
+  /** "Open" or "Closed" — the organiser's own word, never derived from today's date. */
+  status: string | null;
+  abstractDeadline: string | null;
+  submissionEmail: string | null;
+  /** "500-word max", verbatim. */
+  lengthLimit: string | null;
+  /** The clause these were read from, kept so the reader sees the sentence behind the fields. */
+  text: string | null;
+}
+
 export interface LaunchDetailProse {
   availability: LaunchSectionAvailability;
   text: string | null;
@@ -109,6 +121,8 @@ export interface LaunchConferenceDetails {
   venueName: string | null;
   venueAddress: string | null;
   program: LaunchDetailProse;
+  /** Read out of the programme text, where the source stated one. */
+  callForPapers: LaunchDetailCallForPapers | null;
   keynotes: LaunchDetailSection<LaunchDetailPerson>;
   committee: LaunchDetailSection<LaunchDetailPerson>;
   fees: LaunchDetailSection<LaunchDetailFee>;

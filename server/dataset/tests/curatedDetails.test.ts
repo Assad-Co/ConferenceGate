@@ -4,7 +4,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  detailMatchKey, looksLikePersonName, mapCuratedDetailRow, parseFees, parsePeople, parseSponsors,
+  detailMatchKey, looksLikePersonName, mapCuratedDetailRow, parseCallForPapers, parseFees,
+  parsePeople, parseSponsors,
   rowsFromDetailCsv, splitOutsideBrackets, splitVenue,
 } from "../sources/curatedDetails";
 import { parseCsv } from "../sources/curated";
@@ -244,4 +245,42 @@ test("the supplied detail file parses into the columns it declares", () => {
   assert.equal(rows[0].safetyNote, "");
   assert.equal(detailMatchKey("AAPG International Conference & Exhibition (ICE) 2026"),
     "aapg international conference exhibition ice 2026");
+});
+
+test("a call for papers is read from the programme, and only from a clause about one", () => {
+  // WTGS, verbatim. The deadline, the address and the word limit were sitting in the Program tab's
+  // prose while the Call for Papers tab said nothing at all.
+  const wtgs = parseCallForPapers(
+    "Theme: 'A Century Beneath the Surface'. Sun 9/13: FREE all-day short course, Icebreaker. "
+    + "Call for Papers: abstracts due 26 June 2026 to submissions@wtgs.org, 500-word max, "
+    + "20+5 min oral slots."
+  );
+  assert.equal(wtgs?.abstractDeadline, "2026-06-26");
+  assert.equal(wtgs?.submissionEmail, "submissions@wtgs.org");
+  assert.equal(wtgs?.lengthLimit, "500-word max");
+  // The source said neither open nor closed, so neither is claimed — the reader has the date.
+  assert.equal(wtgs?.status, null);
+
+  assert.equal(parseCallForPapers("Call for Abstracts closed 1 September 2026 (no extensions).")?.status, "Closed");
+  const open = parseCallForPapers("Call for poster abstracts open, deadline 9 November 2026 (send to cnavarro@aapg.org).");
+  assert.equal(open?.status, "Open");
+  assert.equal(open?.abstractDeadline, "2026-11-09");
+  assert.equal(open?.submissionEmail, "cnavarro@aapg.org");
+});
+
+test("a short course's registration deadline is not the date abstracts are due", () => {
+  // Structural Styles of the Middle East, verbatim. Two dates, two fees, one email-shaped string —
+  // and not one word about a call for papers. Reading a date out of it would have published a
+  // submission deadline the conference never set.
+  const notACall = parseCallForPapers(
+    "Includes poster session, breakout sessions, and an optional one-day short course "
+    + "'Interpretation of Structural Styles - Enhanced Through Generative AI' (11 Oct, instructor "
+    + "Pascal Richard/PRgeology, fee $590, registration deadline 15 September 2026) and a 2-day "
+    + "field trip (15-16 Oct, fee $550; registration deadline 1 September 2026)."
+  );
+  assert.equal(notACall, null);
+
+  // A programme with no call for papers in it at all yields nothing rather than an empty shell.
+  assert.equal(parseCallForPapers("3-day program across 7 themes. Opening Ceremony, posters."), null);
+  assert.equal(parseCallForPapers(""), null);
 });

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T16:20:38.295Z",
+  "generatedAt": "2026-09-10T17:29:44.055Z",
   "horizonStart": "2026-09-10",
   "years": [
     2026,
@@ -185,6 +185,13 @@
         "program": {
           "availability": "stated",
           "text": "Theme: 'A Century Beneath the Surface' (WTGS 100th anniversary, est. 1926). Sat 9/12: 100-Year Anniversary Core Workshop (17 cores from 1920-1934 Permian Basin discoveries) + K-12 Teacher Workshop 'Rock Solid: Teaching with Energy'. Sun 9/13: Vendor Setup, FREE all-day short course 'Fundamentals of Siliciclastic Sequence Stratigraphy' (instructor John Holbrook, TCU), Icebreaker. Mon 9/14: Full-day SWS AAPG presentations, DPA Luncheon, Casino Night social at Petroleum Club of Midland (6-10pm). Tue 9/15: Full-day WTGS presentations, Networking Luncheon, Happy Hour. Wed 9/16: Half-day WTGS presentations, Ethics Luncheon. Thu 9/17: 58th Annual Rockhound Classic golf tournament + field trip departure. Call for Papers: abstracts due 26 June 2026 to submissions@wtgs.org, 500-word max, 20+5 min oral slots."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-06-26",
+          "submissionEmail": "submissions@wtgs.org",
+          "lengthLimit": "500-word max",
+          "text": "Call for Papers: abstracts due 26 June 2026 to submissions@wtgs.org, 500-word max, 20+5 min oral slots"
         },
         "keynotes": {
           "availability": "not_announced",
@@ -466,6 +473,7 @@
           "availability": "stated",
           "text": "3-day workshop. Objectives: move beyond thickness-only seal evaluation to cover rock mineralogy/lithofacies, brittle-ductile behavior, hydrocarbon phase/column height, structural reactivation/tilted fluid contacts, pressure regimes, CO2 storage seal assessment. Themes: regional/intraformational seals with field analogues; sequence stratigraphy/facies/diagenesis vs seal development; seal architecture in carbonate/evaporite/siliciclastic/mixed sequences; static & dynamic sealing capacity; integrating petrophysical/rock mechanics/seismic/engineering data; structural geology & geomechanics impact on seals; fault seal capacity; CCS seal evaluation. Oral presentations and posters."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -822,6 +830,7 @@
           "availability": "not_announced",
           "text": "Biennial Mid-Continent Section field conference; hosted via Tulsa Geological Society listing. Detailed technical agenda not yet published."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -1617,6 +1626,7 @@
           "availability": "stated",
           "text": "GTW on structural styles of the Arabian Plate & Zagros/Makran regions. 5 themes across half-day sessions: Latest Advances on Tectonic Evolution of the Middle East; Case Studies in Structural Evaluation of Complex Reservoirs/Traps/Storage; Salt Tectonics in the Middle East; Digital Tools/Data Analytics/AI in Structural Geology; Examples of Structurally Influenced Resource Plays & Hydrocarbon Fields. Includes poster session, breakout sessions, and an optional one-day short course 'Interpretation of Structural Styles - Enhanced Through Generative AI' (11 Oct, instructor Pascal Richard/PRgeology, fee $590, registration deadline 15 Sept 2026) and a 2-day field trip 'Structural Styles of Eastern Arabia - Jabal Akhdar Dome' (15-16 Oct, fee $550 incl. 1-night hotel, guided hike, meals, transport; registration deadline 1 Sept 2026)."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "stated",
           "items": [
@@ -2921,6 +2931,13 @@
           "availability": "stated",
           "text": "Theme: 'UNEARTH new OPPORTUNITIES.' 15+ proposed sessions: Rocky Mountain Petroliferous Basins (Big Horn, DJ, Paradox, Powder River, San Juan, Uinta-Piceance, Williston); Unconventional/Tight Reservoir geology & engineering (Bakken, Mancos-Mowry, Mesaverde, Niobrara-Mowry); Geothermal Resources in Montana/Mountain West; Geologic Hydrogen & Helium E&P; Carbon Sequestration & Natural Gas Storage; Petroleum-Critical Minerals intersection; Orphaned/Abandoned Wells remediation; Produced Water management. Call for Abstracts closed 1 September 2026 (no extensions)."
         },
+        "callForPapers": {
+          "status": "Closed",
+          "abstractDeadline": "2026-09-01",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for Abstracts closed 1 September 2026 (no extensions)"
+        },
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -3039,6 +3056,7 @@
           "availability": "not_announced",
           "text": "Annual meeting of AAPG's Eastern Section; program not yet published on AAPG's calendar listing."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -3753,6 +3771,7 @@
           "availability": "not_announced",
           "text": "Leadership-development summit for geoscience students and young professionals across AAPG's Latin America & Caribbean Region; agenda not yet published in detail."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -4792,6 +4811,7 @@
           "availability": "stated",
           "text": "Theme: 'The Emergence of the Guiana Basin in Global Exploration, Development and Production'. Builds on prior events (Jan 2024, May 2025). Program themes: Regional and Basin Studies; Emerging Play Concepts in Frontier Areas; Advancing Geoscience and AI Technologies; Data Acquisition Technologies; Oil and Gas Developments and Production; Environmental Considerations. Includes keynote talks from Staatsolie/Ministry reps, executive panels (e.g. 'Unlocking the Next Frontier: Exploration, Emerging Plays, and the Future of the Atlantic Margin'), technical presentations, poster sessions, student career development session, Q&A."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "stated",
           "items": [
@@ -5149,6 +5169,7 @@
           "availability": "unread",
           "text": "Workshop continuing prior editions' focus on stratigraphic trap exploration - case studies, emerging technologies, industry-academia collaboration. Detailed session-by-session agenda and downloadable brochure not fully accessible via search at time of research; check AAPG event page directly."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -5437,6 +5458,7 @@
           "availability": "stated",
           "text": "Executive-level summit on the business of unconventional resources in Argentina/Latin America (Vaca Muerta focus), hosted by YPF, jointly run by SPE, AAPG, SEG."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -5724,6 +5746,13 @@
           "availability": "stated",
           "text": "GTW theme: shifting from 'integration as best practice' to 'integration as a survival and capital-allocation imperative' - tightly integrating geoscience, reservoir engineering, and technology deployment to improve asset value across the full field lifecycle amid capital discipline and geopolitical risk. Detailed session schedule available via downloadable brochure on the AAPG page. Call for poster abstracts open, deadline 9 November 2026 (send to cnavarro@aapg.org)."
         },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": "2026-11-09",
+          "submissionEmail": "cnavarro@aapg.org",
+          "lengthLimit": null,
+          "text": "Call for poster abstracts open, deadline 9 November 2026 (send to cnavarro@aapg.org)"
+        },
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -5950,6 +5979,7 @@
           "availability": "stated",
           "text": "3-day program across 7 themes: (1) Exploration Opening New Frontiers & Emerging Plays, (2) Exploration in Mature Basins & Future Potential, (3) Digital Transformation & Data Management, (4) Unconventional Plays & Opportunities, (5) Basin Analysis & Petroleum Systems, (6) SEPM Research Symposium, (7) Energy Transition & CCS. Opening Ceremony, plenary sessions, parallel technical sessions, posters, field trips, short courses, Women in Energy panel, student/YP career sessions."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "stated",
           "items": [
@@ -18227,6 +18257,7 @@
           "availability": "not_announced",
           "text": "Regional AAPG Gulf Coast Section conference (successor to GCAGS); program not yet published."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -21650,6 +21681,7 @@
           "availability": "not_announced",
           "text": "Successor to the 2026 Rio de Janeiro edition (hosted by Petrobras); program not yet published."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -30591,6 +30623,7 @@
           "availability": "stated",
           "text": "Workshop theme: process-based geological modeling moving from specialist R&D groups into broader asset-team workflows, aiming toward fuller integration of stratigraphy, geomechanics, and diagenesis."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],
@@ -31304,6 +31337,7 @@
           "availability": "not_announced",
           "text": "Technical symposium on Venezuela's geology and E&P opportunities; program not yet published."
         },
+        "callForPapers": null,
         "keynotes": {
           "availability": "not_announced",
           "items": [],

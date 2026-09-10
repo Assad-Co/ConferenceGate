@@ -86,9 +86,22 @@ interface ExternalConferenceDetailProps {
   onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
 }
 
-const EmptyExtractState: React.FC<{ message: string; sourceUrl: string; note?: string | null }> = ({ message, note }) => (
+const EmptyExtractState: React.FC<{ message: string; sourceUrl: string; note?: string | null }> = ({ message, sourceUrl, note }) => (
   <div className="py-8 text-center space-y-3">
     <p className="text-xs text-slate-500 max-w-md mx-auto">{message}</p>
+    {/* The page was accepting this URL and never showing it, so every empty tab was a dead end.
+        Whatever we could not read, the organiser's own site is where a reader goes next. */}
+    {sourceUrl && (
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
+      >
+        <ExternalLink className="w-3 h-3" />
+        Check the organiser's site
+      </a>
+    )}
     {note && (
       <p className="text-[11px] text-slate-500 max-w-xl mx-auto text-left bg-slate-50 border border-slate-200 rounded-xl p-3 leading-relaxed">
         <span className="font-semibold text-slate-600">From the source: </span>{note}
