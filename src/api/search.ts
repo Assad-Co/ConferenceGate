@@ -242,7 +242,7 @@ export interface ExtractedConferenceDetails {
   crawlCoverage: CrawlCoverage;
   overview?: Record<string, any>;
   call_for_papers?: Record<string, any>;
-  program_agenda?: { sessions?: any[]; overview?: string | null };
+  program_agenda?: { sessions?: any[]; overview?: string | null; themes?: string[] };
   keynote_speakers?: any[];
   technical_committee?: any[];
   sponsors_exhibitors?: any[];

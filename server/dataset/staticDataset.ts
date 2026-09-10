@@ -315,7 +315,20 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
           length_limit: cfp.lengthLimit,
         }
       : {},
-    program_agenda: { sessions: [], overview: details?.program.text ?? null },
+    program_agenda: {
+      // A schedule the source wrote as prose is still a schedule; these are its rows, and the
+      // paragraph stays underneath because it says things no row can hold.
+      sessions: (details?.schedule.sessions ?? []).map((entry) => ({
+        date: entry.date || entry.dateText,
+        time: entry.time,
+        title: entry.title,
+        speakerName: null,
+        speakerImageUrl: null,
+        track: null,
+      })),
+      themes: details?.schedule.themes ?? [],
+      overview: details?.program.text ?? null,
+    },
     keynote_speakers: people(details?.keynotes.items ?? []),
     technical_committee: people(details?.committee.items ?? []),
     sponsors_exhibitors: (details?.sponsors.items ?? []).map((sponsor) => ({

@@ -92,6 +92,17 @@ export interface LaunchDetailSection<T> {
   unstructuredReason: LaunchUnstructuredReason;
 }
 
+/** One item on a conference's schedule, exactly as the source wrote it. */
+export interface LaunchDetailAgendaEntry {
+  /** ISO date, when the source's day marker gave a month and a day. */
+  date: string | null;
+  /** The marker verbatim — "Sat 9/12", "15-16 Oct" — so a reader sees what was written. */
+  dateText: string;
+  /** A clock time only where the source printed one. */
+  time: string | null;
+  title: string;
+}
+
 /** A call for papers, as the source stated it. Every field is null unless it said so. */
 export interface LaunchDetailCallForPapers {
   /** "Open" or "Closed" — the organiser's own word, never derived from today's date. */
@@ -123,6 +134,8 @@ export interface LaunchConferenceDetails {
   program: LaunchDetailProse;
   /** Read out of the programme text, where the source stated one. */
   callForPapers: LaunchDetailCallForPapers | null;
+  /** The day-by-day schedule and the themes, pulled out of the same programme paragraph. */
+  schedule: { sessions: LaunchDetailAgendaEntry[]; themes: string[] };
   keynotes: LaunchDetailSection<LaunchDetailPerson>;
   committee: LaunchDetailSection<LaunchDetailPerson>;
   fees: LaunchDetailSection<LaunchDetailFee>;

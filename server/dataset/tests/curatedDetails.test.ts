@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   detailMatchKey, looksLikePersonName, mapCuratedDetailRow, parseCallForPapers, parseFees,
-  parsePeople, parseSponsors,
+  parsePeople, parseProgramSchedule, parseSponsors,
   rowsFromDetailCsv, splitOutsideBrackets, splitVenue,
 } from "../sources/curatedDetails";
 import { parseCsv } from "../sources/curated";
@@ -283,4 +283,80 @@ test("a short course's registration deadline is not the date abstracts are due",
   // A programme with no call for papers in it at all yields nothing rather than an empty shell.
   assert.equal(parseCallForPapers("3-day program across 7 themes. Opening Ceremony, posters."), null);
   assert.equal(parseCallForPapers(""), null);
+});
+
+test("a schedule written as prose is still a schedule", () => {
+  // WTGS, verbatim. Six days, fifteen items and one clock time, rendered as one paragraph — which
+  // is what "PROGRAM AGENDA HAS TO BE LIKE A SCHEDULE" was about.
+  const { sessions } = parseProgramSchedule(
+    "Theme: 'A Century Beneath the Surface' (WTGS 100th anniversary, est. 1926). "
+    + "Sat 9/12: 100-Year Anniversary Core Workshop (17 cores) + K-12 Teacher Workshop 'Rock Solid'. "
+    + "Sun 9/13: Vendor Setup, FREE all-day short course 'Fundamentals' (instructor John Holbrook, TCU), Icebreaker. "
+    + "Mon 9/14: Full-day SWS AAPG presentations, DPA Luncheon, Casino Night social at Petroleum Club of Midland (6-10pm). "
+    + "Call for Papers: abstracts due 26 June 2026 to submissions@wtgs.org, 500-word max.",
+    2026
+  );
+
+  assert.deepEqual(sessions.map((entry) => [entry.date, entry.time, entry.title]), [
+    ["2026-09-12", null, "100-Year Anniversary Core Workshop (17 cores)"],
+    ["2026-09-12", null, "K-12 Teacher Workshop 'Rock Solid'"],
+    ["2026-09-13", null, "Vendor Setup"],
+    ["2026-09-13", null, "FREE all-day short course 'Fundamentals' (instructor John Holbrook, TCU)"],
+    ["2026-09-13", null, "Icebreaker"],
+    ["2026-09-14", null, "Full-day SWS AAPG presentations"],
+    ["2026-09-14", null, "DPA Luncheon"],
+    // The one time the source printed, kept out of the title and put in its own column.
+    ["2026-09-14", "6-10pm", "Casino Night social at Petroleum Club of Midland"],
+  ]);
+
+  // The call-for-papers sentence follows the last day and is not one of that day's sessions.
+  assert.equal(sessions.some((entry) => /Call for Papers|abstracts/i.test(entry.title)), false);
+  // "(instructor John Holbrook, TCU)" holds a comma and must not have split into two sessions.
+  assert.equal(sessions.filter((entry) => entry.title.includes("Holbrook")).length, 1);
+});
+
+test("a named item the source dated becomes a row on the day it named", () => {
+  const { sessions } = parseProgramSchedule(
+    "Includes an optional one-day short course 'Interpretation of Structural Styles' (11 Oct, "
+    + "instructor Pascal Richard, fee $590) and a 2-day field trip 'Jabal Akhdar Dome' (15-16 Oct, "
+    + "fee $550).",
+    2026
+  );
+  assert.deepEqual(sessions.map((entry) => [entry.date, entry.dateText, entry.title]), [
+    ["2026-10-11", "11 Oct", "Interpretation of Structural Styles"],
+    ["2026-10-15", "15-16 Oct", "Jabal Akhdar Dome"],
+  ]);
+});
+
+test("a programme that is only a paragraph yields no schedule at all", () => {
+  // Maximizing Asset Value, verbatim: real content, no schedule. Inventing rows with made-up times
+  // would be worse than the paragraph it already shows.
+  const { sessions } = parseProgramSchedule(
+    "GTW theme: shifting from 'integration as best practice' to 'integration as a survival and "
+    + "capital-allocation imperative'. Detailed session schedule available via downloadable brochure "
+    + "on the AAPG page. Call for poster abstracts open, deadline 9 November 2026.",
+    2026
+  );
+  assert.deepEqual(sessions, []);
+  assert.deepEqual(parseProgramSchedule("", 2026).sessions, []);
+});
+
+test("themes are what a conference is about, not when anything happens", () => {
+  const { sessions, themes } = parseProgramSchedule(
+    "3-day program across 7 themes: (1) Exploration Opening New Frontiers, (2) Digital "
+    + "Transformation & Data Management, (3) Energy Transition & CCS. Opening Ceremony, posters.",
+    2026
+  );
+  assert.deepEqual(themes, [
+    "Exploration Opening New Frontiers", "Digital Transformation & Data Management",
+    "Energy Transition & CCS",
+  ]);
+  // They are never dressed up as sessions with no times.
+  assert.deepEqual(sessions, []);
+});
+
+test("a day with no year to resolve against keeps what the source wrote", () => {
+  const { sessions } = parseProgramSchedule("Sat 9/12: Core Workshop.", null);
+  assert.equal(sessions[0].date, null);
+  assert.equal(sessions[0].dateText, "Sat 9/12");
 });

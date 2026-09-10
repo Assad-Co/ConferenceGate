@@ -311,13 +311,14 @@ function attachDetails(
         unmatched.push({ title: row.name, reason: "already_filled_by_another_list" });
         continue;
       }
-      const detail = mapCuratedDetailRow(row, record.city);
+      const detail = mapCuratedDetailRow(row, record.city, record.year);
       record.details = {
         source: supply.source,
         venueName: detail.venueName,
         venueAddress: detail.venueAddress,
         program: detail.program,
         callForPapers: detail.callForPapers,
+        schedule: detail.schedule,
         keynotes: detail.keynotes,
         committee: detail.committee,
         fees: detail.fees,

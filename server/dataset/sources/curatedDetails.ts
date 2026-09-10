@@ -16,7 +16,8 @@
 
 import { parseCuratedDates } from "./curated";
 import type {
-  LaunchConferenceDetails, LaunchDetailCallForPapers, LaunchDetailFee, LaunchDetailPerson,
+  LaunchConferenceDetails, LaunchDetailAgendaEntry, LaunchDetailCallForPapers, LaunchDetailFee,
+  LaunchDetailPerson,
   LaunchDetailProse,
   LaunchDetailSection, LaunchDetailSponsor, LaunchSectionAvailability, LaunchUnstructuredReason,
 } from "../types";
@@ -371,6 +372,96 @@ export function parseCallForPapers(programText: string): LaunchDetailCallForPape
   return { status, abstractDeadline, submissionEmail: email, lengthLimit, text: joined };
 }
 
+const MONTHS: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+function isoDate(year: number | null, month: number, day: number): string | null {
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** A clock time the source put in brackets: "(6-10pm)". */
+const BRACKETED_TIME = /\((\d{1,2}(?::\d{2})?\s*[-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))\)/i;
+
+/**
+ * The day-by-day schedule a programme paragraph is actually hiding.
+ *
+ * "Sat 9/12: Core Workshop + Teacher Workshop. Sun 9/13: Vendor Setup, short course, Icebreaker."
+ * is a schedule written as prose, and rendering it as prose is what made the Program tab a wall of
+ * text with the timings buried in it. Each day marker opens a day, the sentence after it lists that
+ * day's items, and each item becomes a row a reader can scan.
+ *
+ * Nothing is invented: a row exists only where the source wrote one, a time only where it printed
+ * one in brackets, and a date only where the day marker gave a month and a day. A programme with no
+ * such markers yields no rows at all and stays prose, which is the honest outcome for a conference
+ * whose schedule really is only a paragraph.
+ */
+export function parseProgramSchedule(
+  programText: string,
+  year: number | null
+): { sessions: LaunchDetailAgendaEntry[]; themes: string[] } {
+  const text = clean(programText);
+  if (!text) return { sessions: [], themes: [] };
+
+  const sessions: LaunchDetailAgendaEntry[] = [];
+
+  // Day markers: "Sat 9/12:", "Mon 9/14:".
+  const dayMarker = /\b((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*)\s+(\d{1,2})\/(\d{1,2}):\s*/g;
+  const days: Array<{ label: string; month: number; day: number; from: number }> = [];
+  for (let hit = dayMarker.exec(text); hit; hit = dayMarker.exec(text)) {
+    days.push({
+      label: `${hit[1]} ${hit[2]}/${hit[3]}`,
+      month: Number(hit[2]),
+      day: Number(hit[3]),
+      from: hit.index + hit[0].length,
+    });
+  }
+  days.forEach((entry, index) => {
+    const until = index + 1 < days.length ? text.lastIndexOf(days[index + 1].label, days[index + 1].from) : text.length;
+    // Each day is written as one sentence; anything after it belongs to the paragraph, not the day.
+    const sentence = splitOutsideBrackets(text.slice(entry.from, until), [". "])[0] ?? "";
+    for (const item of splitOutsideBrackets(sentence, [" + ", ", "])) {
+      const title = clean(item.replace(BRACKETED_TIME, "")).replace(/[.,;]$/, "");
+      if (!title || title.length < 3) continue;
+      sessions.push({
+        date: isoDate(year, entry.month, entry.day),
+        dateText: entry.label,
+        time: item.match(BRACKETED_TIME)?.[1] ?? null,
+        title,
+      });
+    }
+  });
+
+  // A named item the source dated in brackets: a short course on 11 Oct, a field trip on 15-16 Oct.
+  const datedItem = /'([^']{4,90})'\s*\((\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?\s+([A-Za-z]{3,9})[,)]/g;
+  for (let hit = datedItem.exec(text); hit; hit = datedItem.exec(text)) {
+    const month = MONTHS[hit[4].slice(0, 3).toLowerCase()];
+    if (!month) continue;
+    const span = hit[3] ? `${hit[2]}-${hit[3]} ${hit[4]}` : `${hit[2]} ${hit[4]}`;
+    if (sessions.some((session) => session.title === clean(hit![1]))) continue;
+    sessions.push({ date: isoDate(year, month, Number(hit[2])), dateText: span, time: null, title: clean(hit[1]) });
+  }
+
+  sessions.sort((left, right) => String(left.date ?? "").localeCompare(String(right.date ?? "")));
+
+  // Themes are what the conference is about, not when anything happens, so they are kept apart from
+  // the schedule rather than dressed up as sessions with no times. A numbered list is the source's
+  // own enumeration and wins outright; the "themes:" sentence is only read when there is no such
+  // list, because otherwise it matches the list itself and stores all seven as one theme.
+  const numbered = [...text.matchAll(/\((\d+)\)\s*([^,();.]{4,70})/g)].map((hit) => clean(hit[2]));
+  const introduced = text.match(/\bthemes[^:]{0,30}:\s*([^.]+)\./i);
+  const themes = (numbered.length > 0
+    ? numbered
+    : introduced
+      ? splitOutsideBrackets(introduced[1], ["; "])
+      : []
+  ).filter((theme) => theme.length > 3 && !/^\d/.test(theme));
+
+  return { sessions, themes: [...new Set(themes)].slice(0, 20) };
+}
+
 export function rowsFromDetailCsv(rows: string[][]): CuratedDetailRow[] {
   const [header, ...rest] = rows;
   if (!header) return [];
@@ -381,7 +472,11 @@ export function rowsFromDetailCsv(rows: string[][]): CuratedDetailRow[] {
   }));
 }
 
-export function mapCuratedDetailRow(row: CuratedDetailRow, recordCity: string | null): CuratedDetail {
+export function mapCuratedDetailRow(
+  row: CuratedDetailRow,
+  recordCity: string | null,
+  recordYear: number | null = null
+): CuratedDetail {
   const venue = splitVenue(row.venue, recordCity);
   const keynotes = parsePeople(row.keynoteSpeakers, "Keynote Speaker");
   const committee = parsePeople(row.committee, "Committee Member");
@@ -396,6 +491,7 @@ export function mapCuratedDetailRow(row: CuratedDetailRow, recordCity: string | 
     venueAddress: venue.address,
     program: { availability: availabilityOf(row.program, 0), text: clean(row.program) || null },
     callForPapers: parseCallForPapers(row.program),
+    schedule: parseProgramSchedule(row.program, recordYear),
     keynotes: sectionOf(row.keynoteSpeakers, keynotes),
     committee: sectionOf(row.committee, committee),
     fees: sectionOf(row.pricing, fees),

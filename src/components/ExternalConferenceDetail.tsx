@@ -404,8 +404,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // artwork.
   const heroImage = data?.overview?.image_url || result.thumbnail || null;
 
-  /** The programme as the source described it, when nobody published a session list. */
+  /** The programme as the source described it — the paragraph a schedule was read out of. */
   const programOverview = data?.program_agenda?.overview?.trim() || null;
+  /** What the conference is about, kept apart from when things happen. */
+  const programThemes: string[] = Array.isArray(data?.program_agenda?.themes)
+    ? data!.program_agenda!.themes!.filter((theme) => typeof theme === 'string' && theme.trim())
+    : [];
   /** Registration wording that says more than the fee rows do — refund terms, what a fee covers. */
   const pricingText = data?.fees_pricing?.pricing_text?.trim() || null;
 
@@ -1250,17 +1254,26 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'agenda' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Program & Agenda</h3>
-                {/* A description of the programme is not a session-by-session schedule, and the two
-                    are shown as what they are. For most of these conferences the description is
-                    everything anyone has published, and burying it under "no program found" hid
-                    seven themes, three field trips and a call for papers deadline. */}
-                {programOverview && (
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                    {programOverview}
-                  </p>
+                {/* Order matters here: the schedule is what a reader came for, so it goes first and
+                    the paragraph it was read out of sits underneath. A description of a programme is
+                    not a session-by-session schedule and the two are never presented as one. */}
+                {programThemes.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Themes</p>
+                    <div className="flex flex-wrap gap-2">
+                      {programThemes.map((theme, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px] font-semibold rounded-lg"
+                        >
+                          {theme}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {!data?.agendaSessions.length ? (
-                  programOverview ? null : data?.crawlComplete === true ? (
+                  programOverview || programThemes.length > 0 ? null : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("program_agenda", "a program", "The completed crawl found no session-by-session program.")}
                       note={sectionNote("program_agenda")}
@@ -1304,6 +1317,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+                {/* The sentence the schedule above was read out of. It stays because it carries
+                    what the rows cannot — what the conference is for, and where the rest of the
+                    programme lives when the organiser only published a brochure. */}
+                {programOverview && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      As the source described it
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      {programOverview}
+                    </p>
                   </div>
                 )}
               </div>
