@@ -11,7 +11,35 @@ const DIRECTORY_HOST = /(?:conferencealert|conferenceindex|allconferencealert|in
 const NEWS_PATH = /\/(?:news|article|blog|press|media)(?:\/|$)/i;
 const EVENT_NAV = /\b(?:registration|register|programme|program|agenda|call for papers|submit|venue|speakers?)\b/gi;
 const GENERIC_PATH = /\/(?:search|browse|listing|listings|categor(?:y|ies)|topics?|countries?|all-events?|all-conferences?|conference-list|event-list)(?:\/|$)/i;
-const GENERIC_END_PATH = /\/(?:conferences|events|calendar|event-calendar|conference-calendar)\/?$/i;
+// `meetings` belongs here as much as `conferences` and `events`, and a society CMS ends its
+// pages in .aspx or .html, which the bare `/?$` anchor let straight through.
+const GENERIC_END_PATH = /\/(?:conferences|events|meetings|calendar|event-calendar|conference-calendar)(?:\.[a-z]{2,5})?\/?$/i;
+
+/**
+ * A page that indexes many events rather than being one of them.
+ *
+ * Two of the first seven records this engine published were pages of this shape:
+ * iau.org/…/Future-Meetings.aspx and rsc.org/events/find-an-event. Both are on seeded professional
+ * societies at 0.9 trust, so every check passed — real domain, high trust, official classification.
+ * The anti-listing rules keyed on directory HOSTS, and a listing PAGE on a trusted host walked
+ * through a door nobody was watching.
+ *
+ * Deliberately narrow, because the near misses are real conferences: "annual-meeting",
+ * "fall-meeting" and "/events/icse-2027" must all survive. Only the index vocabulary is refused —
+ * a page that finds, lists or archives events, or names a whole tense of them — never a page that
+ * happens to sit under /events/ and names one.
+ */
+const INDEX_PAGE_PATH = /\/(?:[a-z0-9]+[-_])?(?:find[-_]an?[-_](?:event|meeting|conference)s?|(?:future|upcoming|past|current|all|our)[-_](?:events?|meetings?|conferences?)|(?:events?|meetings?|conferences?)[-_](?:list|listing|index|archive|finder|search|directory))(?:\.[a-z]{2,5})?\/?$/i;
+
+/**
+ * A title that is nothing but index vocabulary.
+ *
+ * "Future Meetings", "Scientific Meetings", "Find an Event" — a heading over a list, stored as the
+ * name of a conference. An organisation's acronym in front of it changes nothing, so one leading
+ * all-caps token is allowed before the phrase. A title that carries a year or any other word is
+ * left alone: "Future Power Grids Conference 2027" is a real conference and must not be caught.
+ */
+const INDEX_TITLE = /^\s*(?:[A-Z]{2,10}\s+)?(?:the\s+|our\s+|all\s+)?(?:future|upcoming|past|current|scientific|forthcoming)?\s*(?:meetings|events|conferences|congresses|symposia|workshops)\s*$|^\s*find\s+an?\s+(?:event|meeting|conference)\s*$/i;
 const GENERIC_NESTED_PATH = /\/(?:conferences?|events?)\/[^/?#]*(?:conferences|events)(?:[-_/]|$)|\/(?:calendar[-_]?of[-_]?)?(?:conferences|events)(?:[-_](?:in|by|for|20\d\d)\b)/i;
 const CALENDAR_PATH = /\/(?:[^/?#]*[-_])?(?:events?|conferences?)[-_]?calendar(?:\/|$)|\/(?:calendar)(?:\/|$)/i;
 const GENERIC_TITLE = /\b(?:top|best|upcoming|must[- ]attend)\b.{0,60}\bconferences?\b|\bconferences?\b.{0,60}\b(?:radar|list|roundup|calendar)\b|\blist of\b.{0,40}\bconferences?\b/i;
@@ -65,6 +93,10 @@ export function sourceAuthorityBlockReasons(input: {
   if (DIRECTORY_HOST.test(host) || input.registryType === "conference_directory") reasons.push("directory_source");
   if (NEWS_PATH.test(url.pathname)) reasons.push("article_or_news_page");
   if (GENERIC_PATH.test(url.pathname) || GENERIC_END_PATH.test(url.pathname) || GENERIC_NESTED_PATH.test(url.pathname)) reasons.push("generic_collection_page");
+  // Not gated on organizerOwned: a society's OWN index of its meetings is still an index, and it
+  // was precisely the trusted-owner bypass that let two of these reach readers.
+  if (INDEX_PAGE_PATH.test(url.pathname)) reasons.push("event_index_page");
+  if (INDEX_TITLE.test(String(input.title || ""))) reasons.push("event_index_title");
   if (!isPlausibleEventTitle(input.title)) reasons.push("malformed_event_title");
   if (GENERIC_TITLE.test(input.title || "")) reasons.push("roundup_or_list_title");
   if (CALENDAR_PATH.test(url.pathname) && !organizerOwned) reasons.push("third_party_calendar");

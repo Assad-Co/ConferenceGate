@@ -235,3 +235,41 @@ test("URL remediation restores authoritative provenance, preserves history, and 
   }
 });
 
+
+test("an index of events is refused as a conference, even on a trusted society domain", () => {
+  // Both of these were published to readers as if each were a single conference. They are on
+  // seeded professional societies at 0.9 trust, so domain reputation cleared them; the anti-listing
+  // rules keyed on directory HOSTS and never looked at the shape of the page.
+  const published: Array<[string, string]> = [
+    ["https://www.iau.org/IAU/Science/Scientific-Meetings/Future-Meetings.aspx", "Future Meetings"],
+    ["https://www.rsc.org/events/find-an-event", "Find an Event"],
+  ];
+  for (const [pageUrl, title] of published) {
+    const reasons = sourceAuthorityBlockReasons({ pageUrl, title, registryType: "professional_society" });
+    assert.ok(reasons.length > 0, `${pageUrl} was accepted as a conference's own page`);
+    assert.equal(
+      isEligibleOfficialSource({ pageUrl, title, registryType: "professional_society", ...classifySource({ pageUrl, title, registryType: "professional_society" }) }),
+      false,
+      `${pageUrl} is eligible to be published as a conference`
+    );
+  }
+});
+
+test("the index rule does not catch the real conferences that look like it", () => {
+  // Every one of these is a genuine single event whose URL or title shares vocabulary with an
+  // index. A rule that refuses these costs far more than the two records it was written to stop.
+  const realConferences: Array<[string, string]> = [
+    ["https://agu.org/fall-meeting", "AGU Fall Meeting 2027"],
+    ["https://www.example.org/annual-meeting", "ASME Annual Meeting 2027"],
+    ["https://conf.example.org/events/icse-2027", "ICSE 2027"],
+    ["https://inted2027.org/", "INTED 2027 International Technology, Education and Development Conference"],
+    ["https://example.org/future-power-grids-2027", "Future Power Grids Conference 2027"],
+  ];
+  for (const [pageUrl, title] of realConferences) {
+    const reasons = sourceAuthorityBlockReasons({ pageUrl, title, registryType: "professional_society" });
+    assert.deepEqual(
+      reasons, [],
+      `${pageUrl} ("${title}") was refused as an index page — the rule is too broad`
+    );
+  }
+});
