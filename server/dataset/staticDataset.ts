@@ -86,6 +86,15 @@ export interface LaunchSearchResult {
   favicon: null;
   prepared: boolean;
   startDate: string | null;
+  /**
+   * Where the conference is held, as data.
+   *
+   * City and country were only ever joined into `snippet` for display, so nothing downstream could
+   * filter on them: the discovery page reads `location.country`, got undefined for every catalogue
+   * record, and a country filter therefore excluded all 359 of them. A field a filter needs cannot
+   * live inside a sentence.
+   */
+  location: { city: string | null; country: string | null } | null;
 }
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
@@ -104,6 +113,9 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     // promise a detail page that has speakers and a programme behind it.
     prepared: false,
     startDate: record.startDate,
+    location: record.city || record.country
+      ? { city: record.city ?? null, country: record.country ?? null }
+      : null,
   };
 }
 

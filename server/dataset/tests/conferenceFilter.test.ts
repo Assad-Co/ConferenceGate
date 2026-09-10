@@ -79,3 +79,24 @@ test("a record with no country never matches a country filter, and never blocks 
   assert.equal(matchesCountry(noCountry, ""), true);
   assert.equal(matchesCountry(noCountry, "   "), true);
 });
+
+test("a catalogue search result is filtered by country like anything else", () => {
+  // The catalogue is where nearly every conference lives, and its results carried city and country
+  // only inside the display snippet — so `location.country` was undefined and a country filter
+  // excluded all 359. The field has to be data, not prose.
+  const catalogue = [
+    { title: "Future Power Grids Conference 2027", location: { city: "Berlin", country: "Germany" } },
+    { title: "Gastech 2026", location: { city: "Houston", country: "United States" } },
+    { title: "A conference with no stated place", location: null },
+  ];
+  assert.deepEqual(
+    catalogue.filter((r) => matchesCountry(r, "Germany")).map((r) => r.title),
+    ["Future Power Grids Conference 2027"]
+  );
+  // And the dropdown offers exactly the countries present across both sets, so it is never empty
+  // and never lists one that cannot match.
+  assert.deepEqual(
+    countryOptionsFor(catalogue, {}).map((o) => o.country),
+    ["Germany", "United States"]
+  );
+});

@@ -345,14 +345,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // conference has none.
   const sectionsUnread = Boolean(data?.fetchFailed || data?.sectionsNotRead);
 
-  /** Tabs removed from the row when nothing has read their section. */
-  const HIDDEN_WHEN_UNREAD: ExternalDetailTab[] = ['fees', 'agenda', 'speakers', 'committee', 'sponsors'];
-
-  // A visitor already standing on one of those tabs when the data arrives would otherwise be left
-  // looking at a panel with no tab selected above it.
-  useEffect(() => {
-    if (sectionsUnread && HIDDEN_WHEN_UNREAD.includes(activeTab)) setActiveTab('overview');
-  }, [sectionsUnread, activeTab]);
 
   // The conference's own picture of itself, when its page published one.
   //
@@ -536,43 +528,45 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'cfp', label: 'Call for Papers' },
               { id: 'fees', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? null
+                  ? 'Fees & Pricing'
                   : upcomingRegistrationFees.length > 0
                     ? `Fees & Pricing (${upcomingRegistrationFees.length})`
                     : 'Fees & Pricing'
                 : incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
               { id: 'agenda', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? null
+                  ? 'Program & Agenda'
                   : `Program & Agenda (${data.agendaSessions.length})`
                 : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
               { id: 'speakers', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? null
+                  ? 'Keynote Speakers'
                   : `Keynote Speakers (${data.speakers.length})`
                 : incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
               { id: 'committee', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? null
+                  ? 'Technical Committee'
                   : `Technical Committee (${data.committee.length})`
                 : incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
               { id: 'sponsors', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? null
+                  ? 'Sponsors & Exhibitors'
                   : `Sponsors & Exhibitors (${data.sponsors.length})`
                 : incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
               { id: 'venue', label: 'Venue & Accommodation' },
               { id: 'community', label: 'Community' },
-            ] as Array<{ id: ExternalDetailTab; label: string | null }>
+            ] as Array<{ id: ExternalDetailTab; label: string }>
           )
-            // A tab whose section was never read is removed, not labelled.
+            // Every tab is always shown.
             //
-            // "(not retrieved)" was written to replace "(0)", which asserted a conference had no
-            // speakers when in truth nobody had looked. It is more honest and still wrong to show
-            // a visitor: it is this pipeline's internal state, in this pipeline's words, on a page
-            // meant for somebody deciding whether to attend a conference. A tab that can say
-            // nothing is better not offered.
-            .filter((tab): tab is { id: ExternalDetailTab; label: string } => tab.label !== null)
+            // Three versions of this were wrong in three different ways. "(0)" asserted the
+            // conference had none. "(not retrieved)" was honest but told a visitor about our
+            // pipeline. Removing the tab left the page looking like the conference has no
+            // programme and no speakers at all, which is the first lie again in a worse form —
+            // and it took away the one place that could explain itself.
+            //
+            // So: the tab keeps its plain name, with no count beside it when nothing has been
+            // read, and the panel inside says what is and is not known.
             .map((tab) => (
             <button
               key={tab.id}

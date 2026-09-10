@@ -21,7 +21,7 @@ import {
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
-import { countryOptionsFor, withinDateWindow } from '../utils/conferenceFilter';
+import { countryOptionsFor, matchesCountry, withinDateWindow } from '../utils/conferenceFilter';
 import {
   searchConferencesOnTheWeb,
   LiveSearchResult,
@@ -372,20 +372,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [priceMin, priceMax] = priceRange ?? [priceBounds.min, priceBounds.max];
   const formatPrice = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
 
-  const locationOptions = useMemo(() => {
-    // Built from the conferences actually loaded, never from the static table.
-    //
-    // Seeding this from CONFERENCE_CITIES_BY_COUNTRY offered all fifty-seven countries whether or
-    // not a single loaded conference was held in one. Selecting Germany then filtered a set
-    // containing no German conference and showed nothing, with no way for a reader to tell an
-    // empty catalogue from a broken filter.
-    return countryOptionsFor(conferences, CONFERENCE_CITIES_BY_COUNTRY);
-  }, [conferences]);
-
-  const countryOptions = locationOptions.map((option) => option.country);
-  const cityOptions = countryFilter
-    ? locationOptions.find((option) => option.country === countryFilter)?.cities || []
-    : [];
 
   const savedIds = savedConferenceIds;
   const followedIds = followedConferenceIds;
@@ -451,6 +437,29 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // Live web results always populate the page — the typed search term if there is one,
   // otherwise a fixed default query so Discover is never empty.
   const [webResults, setWebResults] = useState<LiveSearchResult[] | null>(null);
+
+  const locationOptions = useMemo(() => {
+    // Built from the conferences actually loaded, never from the static table.
+    //
+    // Seeding this from CONFERENCE_CITIES_BY_COUNTRY offered all fifty-seven countries whether or
+    // not a single loaded conference was held in one. Selecting Germany then filtered a set
+    // containing no German conference and showed nothing, with no way for a reader to tell an
+    // empty catalogue from a broken filter.
+    // Both sets, because the reader sees both: the app's own conferences and the catalogue
+    // results beside them. Building it from `conferences` alone emptied the dropdown, since that
+    // array never held the catalogue; building it from a static table offered countries nothing
+    // could match. It has to come from what is actually on screen.
+    return countryOptionsFor(
+      [...(conferences || []), ...(webResults || [])],
+      CONFERENCE_CITIES_BY_COUNTRY
+    );
+  }, [conferences, webResults]);
+
+  const countryOptions = locationOptions.map((option) => option.country);
+  const cityOptions = countryFilter
+    ? locationOptions.find((option) => option.country === countryFilter)?.cities || []
+    : [];
+
   const [webSearchLoading, setWebSearchLoading] = useState(false);
   const [webSearchError, setWebSearchError] = useState<string | null>(null);
   const lastWebQueryRef = useRef<string | null>(null);
@@ -498,6 +507,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         const absorb = (results: LiveSearchResult[]) => {
           for (const result of results) {
             if (!liveResultFitsDateWindow(result, effectiveStartMonth, endAtMonth)) continue;
+            // The catalogue is where nearly every conference lives, and it was exempt from the
+            // country filter entirely — so choosing a country filtered the app's own handful of
+            // records and silently left all 359 catalogue results in place, or dropped them.
+            if (!matchesCountry(result, countryFilter)) continue;
             const identity = liveResultIdentity(result.title) || result.link;
             const existing = byIdentity.get(identity);
             if (!existing) {

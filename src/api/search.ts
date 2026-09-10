@@ -7,6 +7,10 @@ export interface LiveSearchResult {
   favicon: string | null;
   /** True when Conference Gate already has completed structured tab data for this conference. */
   prepared?: boolean;
+  /** Where it is held, when the catalogue knows. Needed as data, not prose, so filters can use it. */
+  location?: { city: string | null; country: string | null } | null;
+  /** ISO start date, when the catalogue knows one. */
+  startDate?: string | null;
 }
 
 export async function searchConferencesOnTheWeb(
