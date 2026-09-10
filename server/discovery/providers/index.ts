@@ -8,8 +8,12 @@ import type { DiscoveryProvider } from "../types";
 import { SitemapDiscoveryProvider, type SitemapProviderOptions } from "./sitemapProvider";
 import { SearchDiscoveryProvider, type SearchAccounting, type SearchProviderOptions } from "./searchProvider";
 import { CommonCrawlProvider, OpenAlexProvider } from "./phase2Providers";
+import { EventApiProvider } from "./eventApiProvider";
 
-export { SitemapDiscoveryProvider, SearchDiscoveryProvider, CommonCrawlProvider, OpenAlexProvider };
+export {
+  SitemapDiscoveryProvider, SearchDiscoveryProvider, CommonCrawlProvider, OpenAlexProvider,
+  EventApiProvider,
+};
 export type { SearchAccounting };
 
 export interface ProviderSetOptions {
@@ -24,6 +28,9 @@ export function allProviders(options: ProviderSetOptions = {}): DiscoveryProvide
     new SearchDiscoveryProvider(options.search),
     new CommonCrawlProvider(),
     new OpenAlexProvider(),
+    // Last in the list and off by default: it is the only provider that bills two APIs per lead,
+    // and the cost ordering everywhere else in this engine is that free routes are exhausted first.
+    new EventApiProvider(),
   ];
 }
 
