@@ -495,6 +495,15 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
         timeBudgetMs: enrichmentBudget, quiet: options.quiet,
       });
       enrichmentRunId = enrichment.runId;
+      // Why verification refused, broken out. "1,168 blocked" says a great deal less than which of
+      // the five refusals did it: a site that will not be read is a different problem from a page
+      // whose title disagrees with the record, and they call for opposite fixes.
+      const refusals = Object.entries(enrichment.providerUsage || {})
+        .filter(([key, count]) => key.startsWith("verify_") && Number(count) > 0)
+        .sort((a, b) => Number(b[1]) - Number(a[1]));
+      console.error(refusals.length
+        ? `[automation] verification refused: ${refusals.map(([k, v]) => `${k.replace(/^verify_/, "")}=${v}`).join("  ")}`
+        : "[automation] verification refused nothing this pass");
     }
 
     // A second, smaller pass over the conferences customers can actually open.

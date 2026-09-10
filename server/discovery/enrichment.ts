@@ -648,10 +648,27 @@ async function readAllowed(
   return read;
 }
 
+/**
+ * Records WHY a page did not verify.
+ *
+ * Every refusal below returned a bare null, so a run could report that 1,168 records were blocked
+ * on `official_source_not_verified` and nothing whatever about the cause. Four cycles cleared 23
+ * records and the only available explanation was a guess. These are five different problems with
+ * five different answers — a site that refuses robots is not a site whose title disagrees with
+ * ours — and counting them separately is the difference between fixing one and re-guessing.
+ */
+function noteVerifyFailure(metrics: Record<string, number>, reason: string): null {
+  const key = `verify_${reason}`;
+  metrics[key] = (metrics[key] || 0) + 1;
+  return null;
+}
+
 async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robots: Map<string, RobotsPolicy>, metrics: Record<string, number>, guard?: UrlGuard, provider = "existing_source", followDeclaredOfficial = true): Promise<VerifiedPage | null> {
-  if (!url || isDirectoryHost(host(url))) return null;
+  if (!url || isDirectoryHost(host(url))) return noteVerifyFailure(metrics, "url_is_a_directory");
   const read = await readAllowed(url, budget, robots, metrics, guard);
-  if (!read) return null;
+  // Unreachable, refused, robots-disallowed, or too little text to read — readAllowed already
+  // counts which of those in `robotsDisallowed` and `pagesUnreadable`.
+  if (!read) return noteVerifyFailure(metrics, "page_unreadable");
   const finalUrl = read.resolvedUrl || read.direct.finalUrl || url;
   const structured = extractStructuredEvents(read.html, finalUrl);
   const structuredMatch = structured.events
@@ -660,13 +677,16 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
   const seed = structuredMatch && titleEvidenceScore(event.title, structuredMatch.title!) >= 0.55 ? structuredMatch : null;
   const raw = extractFromHtml(read.html, finalUrl, { seed });
   const identityScore = raw.title ? titleEvidenceScore(event.title, raw.title) : 0;
-  if (!raw.title || identityScore < 0.55) return null;
+  // The page was read; it just does not appear to be this conference. Either the stored title is
+  // wrong, or the URL points somewhere else entirely.
+  if (!raw.title) return noteVerifyFailure(metrics, "page_states_no_title");
+  if (identityScore < 0.55) return noteVerifyFailure(metrics, "title_does_not_match_record");
   const declaredOfficial = normalizeNavigableUrl(raw.officialUrl);
   if (followDeclaredOfficial && declaredOfficial && host(declaredOfficial) !== host(finalUrl)) {
     // A page that explicitly hands the event off to another domain is a lead, not the final
     // authority. Replace the stale/third-party URL only after independently reading and matching
     // the declared page; if that verification fails, retain neither claim as publish-ready.
-    if (isDirectoryHost(host(declaredOfficial))) return null;
+    if (isDirectoryHost(host(declaredOfficial))) return noteVerifyFailure(metrics, "handed_off_to_a_directory");
     return verifyPage(event, declaredOfficial, budget, robots, metrics, guard, "declared_official_handoff", false);
   }
   const storedYear = Number(event.start_year || 0);
@@ -674,12 +694,18 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
   const sameKnownOfficial = [event.official_url, event.source_url]
     .filter(Boolean)
     .some((known) => comparable(String(known)) === comparable(finalUrl));
-  if (storedYear && extractedYear && storedYear !== extractedYear && !sameKnownOfficial) return null;
+  // The right conference, the wrong edition: this is the guard that stops one year's programme
+  // being filed under another's.
+  if (storedYear && extractedYear && storedYear !== extractedYear && !sameKnownOfficial) {
+    return noteVerifyFailure(metrics, "page_states_a_different_year");
+  }
   const registry = await getDomain(host(finalUrl));
   const source = classifySource({ pageUrl: finalUrl, officialUrl: raw.officialUrl, organizerUrl: raw.organizerUrl,
     title: raw.title, organizer: raw.organizer, pageText: read.html, registryType: registry?.source_type });
   if (!isEligibleOfficialSource({ pageUrl: finalUrl, title: raw.title, organizerUrl: raw.organizerUrl,
-    registryType: registry?.source_type, classification: source.classification, confidence: source.confidence })) return null;
+    registryType: registry?.source_type, classification: source.classification, confidence: source.confidence })) {
+    return noteVerifyFailure(metrics, `source_not_authoritative:${source.classification}`);
+  }
   return { url: finalUrl, html: read.html, classification: source.classification, authority: source.confidence,
     extraction: raw, route: read.route, identityScore, provider, classificationEvidence: source.evidence };
 }
