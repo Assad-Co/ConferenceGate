@@ -75,6 +75,27 @@ function numberFlag(value: string | boolean | undefined, fallback: number): numb
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/** One cycle's settings, read once and reused by every cycle in a repeated stretch. */
+function automationOptions(flags: Record<string, string | boolean>) {
+  return {
+    targetAccepted: numberFlag(flags.target, 5_000),
+    targetPublished: numberFlag(flags["published-target"], 1_000),
+    batchPages: numberFlag(flags["batch-pages"], 500),
+    enrichmentLimit: numberFlag(flags["enrichment-limit"], 250),
+    maxSearchQueries: numberFlag(flags["max-search-queries"], 14),
+    enrichmentSearchQueries: numberFlag(flags["enrichment-search-queries"], 6),
+    maxJinaPages: numberFlag(flags["max-jina-pages"], 100),
+    enrichmentJinaPages: numberFlag(flags["enrichment-jina-pages"], 50),
+    discoveryTimeBudgetMs: numberFlag(flags["discovery-time-budget-ms"], 25 * 60_000),
+    enrichmentTimeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 20 * 60_000),
+    // Ceiling on ONE cycle. Render kills a cron job that overruns, and a killed cycle never
+    // reaches publication, so the cycle has to stop itself first.
+    runTimeBudgetMs: numberFlag(flags["run-time-budget-ms"], 55 * 60_000),
+    scheduleHours: numberFlag(flags["schedule-hours"], 8),
+    quiet: flags.quiet === true,
+  };
+}
+
 const HELP = `Conference Gate — discovery engine
 
   preflight [--domains a,b] [--registry] [--skip-providers]
@@ -136,7 +157,7 @@ const HELP = `Conference Gate — discovery engine
                             Resume bounded production batches through discovery, run-scoped
                             enrichment, with AI and publication disabled.
   automate [--target 5000] [--batch-pages 500] [--enrichment-limit 250]
-           [--schedule-hours 8] [--run-time-budget-ms 3300000] [--quiet]
+           [--schedule-hours 8] [--run-time-budget-ms 3300000] [--repeat-for-ms 0] [--quiet]
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
@@ -549,24 +570,36 @@ async function main(): Promise<void> {
     }
 
     case "automate": {
-      const result = await runProductionAutomation({
-        targetAccepted: numberFlag(flags.target, 5_000),
-        targetPublished: numberFlag(flags["published-target"], 1_000),
-        batchPages: numberFlag(flags["batch-pages"], 500),
-        enrichmentLimit: numberFlag(flags["enrichment-limit"], 250),
-        maxSearchQueries: numberFlag(flags["max-search-queries"], 14),
-        enrichmentSearchQueries: numberFlag(flags["enrichment-search-queries"], 6),
-        maxJinaPages: numberFlag(flags["max-jina-pages"], 100),
-        enrichmentJinaPages: numberFlag(flags["enrichment-jina-pages"], 50),
-        discoveryTimeBudgetMs: numberFlag(flags["discovery-time-budget-ms"], 25 * 60_000),
-        enrichmentTimeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 20 * 60_000),
-        // Ceiling on the whole cycle. Render kills a cron job that overruns, and a killed cycle
-        // never reaches publication, so the cycle has to stop itself first.
-        runTimeBudgetMs: numberFlag(flags["run-time-budget-ms"], 55 * 60_000),
-        scheduleHours: numberFlag(flags["schedule-hours"], 8),
-        quiet: flags.quiet === true,
-      });
+      // How long this invocation keeps starting cycles for.
+      //
+      // A cycle is bounded so it cannot be killed mid-pipeline, which means one invocation does
+      // one pass and then the machine sits idle until the schedule comes round again. That is a
+      // strange thing for a backlog: there is work outstanding the whole time nothing is running.
+      // Repeating turns one firing into a working stretch — each cycle takes and releases its own
+      // lease, and publication runs at the end of every one, so records reach readers throughout
+      // rather than once every eight hours.
+      const repeatFor = numberFlag(flags["repeat-for-ms"], 0);
+      const repeatDeadline = Date.now() + repeatFor;
+      let cycle = 0;
+      let result = await runProductionAutomation(automationOptions(flags));
       console.log(JSON.stringify(result, null, 2));
+
+      while (repeatFor > 0 && Date.now() < repeatDeadline) {
+        // Another worker holding the lease means the work is being done by someone else, not that
+        // it is worth spinning. Stop rather than burn the rest of the stretch bouncing.
+        if (result.status === "locked") {
+          console.error("[automate] another worker holds the lease; ending this stretch.");
+          break;
+        }
+        // A cycle with nothing to do returns in seconds; without this a five-hour stretch would
+        // be thousands of empty passes over the same records.
+        await new Promise((resolve) => setTimeout(resolve, 60_000));
+        if (Date.now() >= repeatDeadline) break;
+        cycle += 1;
+        console.error(`[automate] ${new Date().toISOString()} starting cycle ${cycle + 1}`);
+        result = await runProductionAutomation(automationOptions(flags));
+        console.log(JSON.stringify(result, null, 2));
+      }
       break;
     }
 

@@ -181,6 +181,35 @@ export async function releaseStalePipelineLock(
   return { released: true, reason: after.held ? "taken_by_new_owner" : "released", status: after };
 }
 
+/**
+ * Takes the lease, clearing one first if its holder is provably gone.
+ *
+ * A lease outlives the process that took it. A redeploy or a kill leaves one held for up to ninety
+ * minutes, and until it lapses every cycle returns `another_worker_active` in eight seconds —
+ * including a run somebody triggered by hand precisely because they wanted work done now.
+ * Recovering that used to need a person at a terminal, which is the wrong thing to require of an
+ * unattended worker.
+ *
+ * Only a lease whose holder has stopped heartbeating for five minutes is cleared. A live holder
+ * beats every sixty seconds, so silence that long is evidence the process is gone rather than an
+ * assumption that enough time has passed — and a holder still beating keeps its lease, so this
+ * cycle stands down exactly as before. Two enrichment passes over the same records must never run
+ * at once, and that rule is not the one that was broken.
+ */
+export async function acquireOrRecoverPipelineLease(
+  ownerId: string,
+  leaseMinutes: number
+): Promise<PipelineLease> {
+  const first = await acquirePipelineLease(ownerId, leaseMinutes);
+  if (first.acquired) return first;
+
+  const recovered = await releaseStalePipelineLock();
+  if (!recovered.released) return first;
+
+  console.error(`[automation] cleared a lease abandoned by ${recovered.status.ownerId || "a killed run"}`);
+  return acquirePipelineLease(ownerId, leaseMinutes);
+}
+
 /** Applies the same database lease to manual/API heavy work, closing the race with automation. */
 export async function withPipelineLease<T>(stage: string, work: () => Promise<T>): Promise<T> {
   const ownerId = id("manual");
@@ -289,11 +318,12 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   // They are cheap, but they are last, so they are exactly what an overrun destroys.
   const CLOSING_RESERVE_MS = 10 * 60_000;
   const runDeadline = Date.now() + Math.max(5 * 60_000, options.runTimeBudgetMs ?? 55 * 60_000);
+  /** Time left for the expensive stages, once the closing stages have been kept back. */
+  const expensiveWindow = (): number => Math.max(0, runDeadline - CLOSING_RESERVE_MS - Date.now());
   /** What an expensive stage may spend: its own budget, capped by what the cycle has left over. */
-  const stageBudget = (requested: number): number =>
-    Math.min(requested, runDeadline - CLOSING_RESERVE_MS - Date.now());
+  const stageBudget = (requested: number): number => Math.min(requested, expensiveWindow());
 
-  const lease = await acquirePipelineLease(ownerId, leaseMinutes);
+  const lease = await acquireOrRecoverPipelineLease(ownerId, leaseMinutes);
   const initial = await buildInventoryReport();
   if (!lease.acquired) return { runId, status: "locked", stage: "another_worker_active", inventory: initial, publication: null, nextScheduledAt: next };
 
@@ -305,7 +335,14 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   let enrichmentRunId: string | null = null;
   let auditId: string | null = null;
   try {
-    const discoveryBudget = stageBudget(options.discoveryTimeBudgetMs ?? 25 * 60_000);
+    // Discovery grows inventory; enrichment, the deep pass and publication are what put a
+    // conference in front of a reader. Taken first-come-first-served, discovery's twenty-five
+    // minutes swallowed the window and left enrichment nothing — the stages a reader can actually
+    // see would have been starved by the one they cannot. It gets a third, and no more.
+    const discoveryBudget = Math.min(
+      options.discoveryTimeBudgetMs ?? 25 * 60_000,
+      Math.floor(expensiveWindow() / 3)
+    );
     if (initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
       await setStage(runId, ownerId, "discovery", leaseMinutes);
       const scale = await runProductionScale({

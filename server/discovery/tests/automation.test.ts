@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { dbGet, dbRun } from "../../db";
 import {
+  acquireOrRecoverPipelineLease,
   acquirePipelineLease,
   automationPublicationEnabled,
   nextScheduledAt,
@@ -90,6 +91,34 @@ test("releasing a stale lease does not disturb a lease a new owner has since tak
   assert.equal(held.ownerId, "worker-fresh");
   assert.equal(held.verdict, "live");
   await releasePipelineLease("worker-fresh");
+});
+
+test("a cycle recovers a lease a killed run abandoned, instead of standing down for 90 minutes", async () => {
+  await initDiscoverySchema();
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name='production_data_pipeline'");
+  // Exactly what a redeploy leaves: the lease has most of its 90 minutes left to run, and nothing
+  // is alive to heartbeat it. Until this, every cycle — including one triggered by hand — returned
+  // another_worker_active in seconds and did no work at all.
+  await acquirePipelineLease("worker-killed-by-deploy", 90);
+  await dbRun(`UPDATE discovery_pipeline_locks SET heartbeat_at=datetime('now','-11 minutes')
+    WHERE name='production_data_pipeline'`);
+
+  const lease = await acquireOrRecoverPipelineLease("worker-next-cycle", 90);
+  assert.equal(lease.acquired, true, "the abandoned lease was cleared and the cycle proceeded");
+  assert.equal((await readPipelineLock()).ownerId, "worker-next-cycle");
+  await releasePipelineLease("worker-next-cycle");
+});
+
+test("a cycle still stands down for a worker that is genuinely running", async () => {
+  await initDiscoverySchema();
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name='production_data_pipeline'");
+  // The guard this recovery must not weaken: two enrichment passes over the same records at once.
+  await acquirePipelineLease("worker-alive", 90);
+
+  const lease = await acquireOrRecoverPipelineLease("worker-intruder", 90);
+  assert.equal(lease.acquired, false);
+  assert.equal((await readPipelineLock()).ownerId, "worker-alive", "the live holder kept its lease");
+  await releasePipelineLease("worker-alive");
 });
 
 test("automation publication has a separate exact permit and unrestricted publishing is not implied", () => {
