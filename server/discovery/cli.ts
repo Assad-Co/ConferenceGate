@@ -166,6 +166,7 @@ const HELP = `Conference Gate — discovery engine
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
+                            CONFERENCEGATE_AUTOMATION_DISABLED=1 stops it doing anything at all.
   harvest [--orgs aapg.org,spe.org] [--max-org-domains 10] [--max-pages 120]
           [--org-pages 10] [--years 2026,2027,2028] [--allow-local-db] [--quiet]
                             Organisation-first harvest, and ONLY that: the sitemap and search
@@ -575,6 +576,20 @@ async function main(): Promise<void> {
     }
 
     case "automate": {
+      // The off switch.
+      //
+      // Stopping the unattended worker had no lever short of editing the schedule in a dashboard,
+      // which is not something this repository can do and not something anyone should have to
+      // remember. A stopped worker is also not a failed one: this returns cleanly so a paused
+      // stretch does not fill the run history with red.
+      if (process.env.CONFERENCEGATE_AUTOMATION_DISABLED === "1") {
+        console.error(
+          "[automate] stopped: CONFERENCEGATE_AUTOMATION_DISABLED=1. No pages are read, nothing is "
+          + "enriched and nothing is published. Unset it to resume."
+        );
+        return;
+      }
+
       // How long this invocation keeps starting cycles for.
       //
       // A cycle is bounded so it cannot be killed mid-pipeline, which means one invocation does
