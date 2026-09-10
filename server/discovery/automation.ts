@@ -30,6 +30,19 @@ export interface AutomationOptions {
   publishedDeepTimeBudgetMs?: number;
   leaseMinutes?: number;
   scheduleHours?: number;
+  /**
+   * Ceiling on the whole cycle, not on any one stage.
+   *
+   * Every stage was already bounded and the cycle still had to be killed at twelve hours three
+   * nights running, because a stage's budget is checked between records and cannot end a wait
+   * already in progress. The stages that matter to a reader — readiness, the audit, publication —
+   * are last, so an overrun anywhere earlier meant none of them ran at all.
+   *
+   * This reserves time for those closing stages and spends only what is left on the expensive
+   * ones. A cycle that runs out of room does less discovery and less enrichment; it still
+   * publishes what is already ready.
+   */
+  runTimeBudgetMs?: number;
   quiet?: boolean;
 }
 
@@ -185,6 +198,10 @@ export async function withPipelineLease<T>(stage: string, work: () => Promise<T>
 }
 
 async function setStage(runId: string, ownerId: string, stage: string, leaseMinutes: number): Promise<void> {
+  // Printed even under --quiet. Quiet suppresses per-record chatter; a stage boundary is not
+  // chatter, it is the only thing that says where an unattended cycle got to. Three consecutive
+  // twelve-hour kills left logs that named no stage at all, which is why this is unconditional.
+  console.error(`[automation] ${new Date().toISOString()} stage=${stage}`);
   await heartbeat(ownerId, stage, leaseMinutes);
   await dbRun("UPDATE discovery_automation_runs SET stage=? WHERE id=?", [stage, runId]);
   await dbRun(`UPDATE discovery_automation_state SET status='running',current_stage=?,current_run_id=?,
@@ -268,6 +285,14 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   const leaseMinutes = Math.max(15, Math.min(options.leaseMinutes ?? 90, 180));
   const scheduleHours = Math.max(1, options.scheduleHours ?? 8);
   const next = nextScheduledAt(new Date(), scheduleHours);
+  // Time set aside for the closing stages — readiness, the audit, publication, the checkpoint.
+  // They are cheap, but they are last, so they are exactly what an overrun destroys.
+  const CLOSING_RESERVE_MS = 10 * 60_000;
+  const runDeadline = Date.now() + Math.max(5 * 60_000, options.runTimeBudgetMs ?? 55 * 60_000);
+  /** What an expensive stage may spend: its own budget, capped by what the cycle has left over. */
+  const stageBudget = (requested: number): number =>
+    Math.min(requested, runDeadline - CLOSING_RESERVE_MS - Date.now());
+
   const lease = await acquirePipelineLease(ownerId, leaseMinutes);
   const initial = await buildInventoryReport();
   if (!lease.acquired) return { runId, status: "locked", stage: "another_worker_active", inventory: initial, publication: null, nextScheduledAt: next };
@@ -280,13 +305,14 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   let enrichmentRunId: string | null = null;
   let auditId: string | null = null;
   try {
-    if (initial.totalAccepted < (options.targetAccepted ?? 5_000)) {
+    const discoveryBudget = stageBudget(options.discoveryTimeBudgetMs ?? 25 * 60_000);
+    if (initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
       await setStage(runId, ownerId, "discovery", leaseMinutes);
       const scale = await runProductionScale({
         targetAccepted: options.targetAccepted ?? 5_000,
         batchPages: options.batchPages ?? 500,
         maxBatches: 1,
-        batchTimeBudgetMs: options.discoveryTimeBudgetMs ?? 25 * 60_000,
+        batchTimeBudgetMs: discoveryBudget,
         maxSearchQueries: options.maxSearchQueries ?? 14,
         maxJinaPages: options.maxJinaPages ?? 100,
         quiet: options.quiet,
@@ -295,14 +321,17 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       await dbRun("UPDATE discovery_automation_state SET last_discovery_at=datetime('now') WHERE id=1");
     }
 
-    await setStage(runId, ownerId, "enrichment", leaseMinutes);
-    const enrichment = await runEnrichment({
-      readiness: ["needs_enrichment"], limit: options.enrichmentLimit ?? 250,
-      maxSearchQueries: options.enrichmentSearchQueries ?? 6,
-      maxJinaPages: options.enrichmentJinaPages ?? 50,
-      timeBudgetMs: options.enrichmentTimeBudgetMs ?? 20 * 60_000, quiet: options.quiet,
-    });
-    enrichmentRunId = enrichment.runId;
+    const enrichmentBudget = stageBudget(options.enrichmentTimeBudgetMs ?? 20 * 60_000);
+    if (enrichmentBudget > 0) {
+      await setStage(runId, ownerId, "enrichment", leaseMinutes);
+      const enrichment = await runEnrichment({
+        readiness: ["needs_enrichment"], limit: options.enrichmentLimit ?? 250,
+        maxSearchQueries: options.enrichmentSearchQueries ?? 6,
+        maxJinaPages: options.enrichmentJinaPages ?? 50,
+        timeBudgetMs: enrichmentBudget, quiet: options.quiet,
+      });
+      enrichmentRunId = enrichment.runId;
+    }
 
     // A second, smaller pass over the conferences customers can actually open.
     //
@@ -312,12 +341,17 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // programme, speakers, committee and sponsors of every published conference were therefore the
     // one thing the schedule could never reach. This visits only publish_ready records that still
     // have an empty deep section, so it costs nothing once they are full.
-    await runEnrichment({
+    const deepBudget = stageBudget(options.publishedDeepTimeBudgetMs ?? 8 * 60_000);
+    if (deepBudget > 0) await runEnrichment({
       readiness: ["publish_ready"], missingDeepSectionsOnly: true,
+      // The deep pass reads a conference's own site. A record without one cannot yield a section,
+      // so asking for it spends a slot to learn nothing — which is what a forty-record production
+      // pass did, forty times over, before this narrowed what it asks for.
+      requireOfficialUrl: true,
       limit: options.publishedDeepLimit ?? 60,
       maxSearchQueries: 0,
       maxJinaPages: Math.floor((options.enrichmentJinaPages ?? 50) / 2),
-      timeBudgetMs: options.publishedDeepTimeBudgetMs ?? 8 * 60_000,
+      timeBudgetMs: deepBudget,
       quiet: options.quiet,
     });
 

@@ -323,7 +323,9 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
       ${readinessClause}${deepClause}${officialUrlClause}
-      ORDER BY e.last_verified IS NOT NULL, e.last_verified ASC, e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
+      ORDER BY e.last_checked IS NOT NULL, e.last_checked ASC,
+               e.last_verified IS NOT NULL, e.last_verified ASC,
+               e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
       [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
     const concurrency = Math.max(1, Math.min(
       options.conferenceConcurrency ?? Number(process.env.DISCOVERY_GLOBAL_CONCURRENCY || 4), 16));
@@ -370,6 +372,15 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
         errors.push(`deep sections for ${event.id}: ${String(error?.message || error).slice(0, 200)}`);
       }
 
+      // Record that this record was looked at, separately from whether looking taught us anything.
+      //
+      // `last_verified` moves only when a field is actually accepted, so a record whose page is
+      // unreadable, robots-disallowed or simply absent keeps it NULL — and the queue below orders
+      // NULLs first. Those records therefore came back at the head of every run forever, and the
+      // backlog behind them was never reached: a scheduled pass re-read the same unreadable
+      // directory listings every eight hours and nothing else ever moved. Stamping the attempt is
+      // what makes the queue rotate.
+      await dbRun(`UPDATE discovery_events SET last_checked=datetime('now') WHERE id=?`, [event.id]);
       await updateReadiness(event.id, unresolvedConflict);
     };
 

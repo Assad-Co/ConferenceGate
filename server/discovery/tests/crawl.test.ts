@@ -4,7 +4,10 @@ import http from "http";
 import { AddressInfo } from "net";
 import { isPathAllowed, parseRobotsTxt, fetchRobots, ROBOTS_AGENT_TOKEN } from "../robots";
 import { discoverSitemapUrls, entriesToCandidates, parseSitemapXml, scoreCandidateUrl } from "../sitemaps";
-import { configureDomainLimits, discoveryFetch, looksLikeLocalEgressBlock, resetDomainLimits } from "../httpClient";
+import {
+  configureDomainLimits, discoveryFetch, domainTooSlowToCrawl, looksLikeLocalEgressBlock,
+  resetDomainLimits, setDomainCrawlDelay,
+} from "../httpClient";
 
 // The SSRF guard in server/urlSafety.ts blocks loopback, which is exactly what it should do —
 // so these tests inject their own guard for the local fixture server rather than weakening it.
@@ -377,3 +380,43 @@ test("the real SSRF guard still refuses loopback", async () => {
   assert.equal(result.error, "blocked_by_url_guard");
 });
 
+
+test("a domain asking for more room than a run can give is declined, not waited on", async () => {
+  resetDomainLimits();
+  try {
+    // What a real robots.txt can say. Honoured as politeness, this is an hour between requests;
+    // acted on as scheduling, it parks a worker for an hour on a setTimeout that no time budget
+    // can interrupt, because budgets are checked between records and not during a wait.
+    setDomainCrawlDelay("slow.example", 3_600_000);
+    assert.equal(domainTooSlowToCrawl("slow.example"), true);
+
+    const startedAt = Date.now();
+    const result = await discoveryFetch("https://slow.example/program");
+    const elapsed = Date.now() - startedAt;
+
+    // The property that matters is the promptness: the call returns instead of blocking.
+    assert.ok(elapsed < 2_000, `declined in ${elapsed}ms, so nothing waited on the delay`);
+    assert.equal(result.ok, false);
+    assert.match(result.error || "", /^crawl_delay_exceeds_run_budget:3600s$/);
+    // The site behaved correctly by asking, so it must not be held responsible and backed off.
+    assert.equal(result.blockedByLocalPolicy, true);
+  } finally {
+    resetDomainLimits();
+  }
+});
+
+test("an ordinary Crawl-delay is still honoured rather than declined", async () => {
+  resetDomainLimits();
+  try {
+    // The common case: a site asking for ten seconds of room. That is well within a run, so it
+    // must keep working exactly as before — this guard drops domains, and dropping a domain that
+    // could have been read is the failure mode to avoid.
+    setDomainCrawlDelay("polite.example", 10_000);
+    assert.equal(domainTooSlowToCrawl("polite.example"), false);
+    // And a site asking for less than our own floor never lowers it.
+    setDomainCrawlDelay("brisk.example", 5);
+    assert.equal(domainTooSlowToCrawl("brisk.example"), false);
+  } finally {
+    resetDomainLimits();
+  }
+});

@@ -136,7 +136,7 @@ const HELP = `Conference Gate — discovery engine
                             Resume bounded production batches through discovery, run-scoped
                             enrichment, with AI and publication disabled.
   automate [--target 5000] [--batch-pages 500] [--enrichment-limit 250]
-           [--schedule-hours 8] [--quiet]
+           [--schedule-hours 8] [--run-time-budget-ms 3300000] [--quiet]
                             Run one resumable unattended production cycle under the durable
                             database lease. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
@@ -560,6 +560,9 @@ async function main(): Promise<void> {
         enrichmentJinaPages: numberFlag(flags["enrichment-jina-pages"], 50),
         discoveryTimeBudgetMs: numberFlag(flags["discovery-time-budget-ms"], 25 * 60_000),
         enrichmentTimeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 20 * 60_000),
+        // Ceiling on the whole cycle. Render kills a cron job that overruns, and a killed cycle
+        // never reaches publication, so the cycle has to stop itself first.
+        runTimeBudgetMs: numberFlag(flags["run-time-budget-ms"], 55 * 60_000),
         scheduleHours: numberFlag(flags["schedule-hours"], 8),
         quiet: flags.quiet === true,
       });

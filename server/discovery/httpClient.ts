@@ -124,11 +124,38 @@ function stateFor(domain: string): DomainState {
   return state;
 }
 
+/**
+ * The longest per-request interval this engine will queue against.
+ *
+ * `Crawl-delay` is honoured without an upper bound, which is correct as politeness and was
+ * catastrophic as scheduling: a site asking for an hour between requests parked a worker on a
+ * `setTimeout` for an hour, and the run's time budgets are checked between records rather than
+ * during a wait, so nothing noticed. Four such domains held all four workers and an unattended
+ * cycle that should take under an hour was killed at twelve, having never reached publication.
+ *
+ * The answer is not to fetch sooner than the site asked — that would break the one guarantee
+ * robots handling must keep. It is to accept that a domain asking for this much room cannot be
+ * read within a single run, and to decline it now rather than block on it, the same way a host
+ * that refuses three times is dropped for the rest of the run instead of being asked again.
+ */
+const MAX_CRAWLABLE_INTERVAL_MS = Number(process.env.DISCOVERY_MAX_CRAWL_DELAY_MS || 120_000);
+
 /** Applies a Crawl-delay the site itself asked for. A site asking for more space always wins;
  *  a site asking for less never lowers our own floor. */
 export function setDomainCrawlDelay(domain: string, delayMs: number | null): void {
   if (!delayMs || !Number.isFinite(delayMs)) return;
   stateFor(domain).minIntervalMs = Math.max(DEFAULT_MIN_INTERVAL_MS, delayMs);
+}
+
+/**
+ * True when this domain asked for more space between requests than a run can give it.
+ *
+ * Reported rather than silently worked around: the caller records an unreadable page with a
+ * reason naming the delay, so a site that simply wants to be crawled slowly is distinguishable
+ * from one that is broken or hostile.
+ */
+export function domainTooSlowToCrawl(domain: string): boolean {
+  return stateFor(domain).minIntervalMs > MAX_CRAWLABLE_INTERVAL_MS;
 }
 
 export function domainCrawlDelay(domain: string): number {
@@ -416,6 +443,20 @@ const RETRY_BASE_DELAY_MS = Number(process.env.DISCOVERY_RETRY_BASE_MS || 800);
 
 export async function discoveryFetch(url: string, options: FetchOptions = {}): Promise<FetchResult> {
   const domain = hostOf(url);
+  // Declined before queueing, never after: joining the queue is what parks the caller for the
+  // full interval, and the whole point is that nobody waits an hour for one page.
+  if (domainTooSlowToCrawl(domain)) {
+    return {
+      url, finalUrl: url, status: 0, ok: false, notModified: false, body: "",
+      contentType: null, etag: null, lastModified: null, contentHash: null, redirects: [],
+      error: `crawl_delay_exceeds_run_budget:${Math.round(stateFor(domain).minIntervalMs / 1000)}s`,
+      truncated: false,
+      // Not the domain's fault in the sense that matters: it answered robots.txt politely and
+      // asked for room. Holding it responsible would back it off for a week over good behaviour.
+      blockedByLocalPolicy: true,
+      elapsedMs: 0,
+    };
+  }
   return withDomainSlot(domain, async () => {
     let last: FetchResult | null = null;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
