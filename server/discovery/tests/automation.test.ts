@@ -5,7 +5,9 @@ import {
   acquirePipelineLease,
   automationPublicationEnabled,
   nextScheduledAt,
+  readPipelineLock,
   releasePipelineLease,
+  releaseStalePipelineLock,
 } from "../automation";
 import { buildOperationalStatus } from "../operations";
 import { initDiscoverySchema } from "../schema";
@@ -38,6 +40,56 @@ test("only one worker owns the production lease and a stale lease is recoverable
   const recovered = await acquirePipelineLease("worker-b", 15);
   assert.equal(recovered.acquired, true);
   await releasePipelineLease("worker-b");
+});
+
+test("a lease that is still heartbeating is never released, however long it has been held", async () => {
+  await initDiscoverySchema();
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name='production_data_pipeline'");
+  await acquirePipelineLease("worker-live", 90);
+
+  const status = await readPipelineLock();
+  assert.equal(status.verdict, "live");
+  const outcome = await releaseStalePipelineLock();
+  assert.equal(outcome.released, false);
+  assert.equal(outcome.reason, "holder_is_alive");
+  // The point of the refusal: the holder still owns it, so a second enrichment cannot start.
+  assert.equal((await readPipelineLock()).ownerId, "worker-live");
+  await releasePipelineLease("worker-live");
+});
+
+test("a lease whose holder stopped heartbeating is released, and reports why", async () => {
+  await initDiscoverySchema();
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name='production_data_pipeline'");
+  await acquirePipelineLease("worker-killed", 90);
+  // What a redeploy leaves behind: the lease has 90 minutes left to run, but nothing is alive to
+  // heartbeat it. Eight missed beats.
+  await dbRun(`UPDATE discovery_pipeline_locks SET heartbeat_at=datetime('now','-9 minutes')
+    WHERE name='production_data_pipeline'`);
+
+  const status = await readPipelineLock();
+  assert.equal(status.verdict, "stale");
+  assert.ok((status.secondsSinceHeartbeat ?? 0) > 300);
+  assert.ok(Date.parse(status.leaseExpiresAt!) > Date.now(), "lease has not expired on its own");
+
+  const outcome = await releaseStalePipelineLock();
+  assert.equal(outcome.released, true);
+  assert.equal(outcome.reason, "released");
+  assert.equal((await readPipelineLock()).held, false);
+  // And the lock is genuinely available again, not merely reported as free.
+  assert.equal((await acquirePipelineLease("worker-next", 15)).acquired, true);
+  await releasePipelineLease("worker-next");
+});
+
+test("releasing a stale lease does not disturb a lease a new owner has since taken", async () => {
+  await initDiscoverySchema();
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name='production_data_pipeline'");
+  assert.equal((await releaseStalePipelineLock()).reason, "nothing_held");
+
+  await acquirePipelineLease("worker-fresh", 90);
+  const held = await readPipelineLock();
+  assert.equal(held.ownerId, "worker-fresh");
+  assert.equal(held.verdict, "live");
+  await releasePipelineLease("worker-fresh");
 });
 
 test("automation publication has a separate exact permit and unrestricted publishing is not implied", () => {

@@ -31,7 +31,9 @@ import { isPublishEnabled, publishDiscoveredConferences, syncPublishedDeepSectio
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
-import { runProductionAutomation, withPipelineLease } from "./automation";
+import {
+  readPipelineLock, releaseStalePipelineLock, runProductionAutomation, withPipelineLease,
+} from "./automation";
 import {
   buildDeepCoverageReport, buildFieldCoverageReport, formatDeepCoverageReport, formatFieldCoverageReport,
 } from "./deepEnrichment";
@@ -168,6 +170,11 @@ const HELP = `Conference Gate — discovery engine
                             Which accepted conferences hold programme, speaker, committee, sponsor
                             and community data, and which page of the organiser's site stated each.
                             Reads stored records only: no fetching, no provider calls, no writes.
+  pipeline-lock [--release-stale]
+                            Show who holds the pipeline lease and whether it is still
+                            heartbeating. --release-stale clears a lease whose holder has stopped
+                            heartbeating for five minutes (what a killed or redeployed process
+                            leaves behind); it refuses a lease that is still alive.
   operations                Print the private operational status/checkpoint document as JSON.
   providers                 Show which discovery providers are available and why.
 `;
@@ -664,6 +671,26 @@ async function main(): Promise<void> {
         section: DEEP_SECTIONS.find((name) => name === section),
       });
       console.log(formatDeepCoverageReport(report));
+      break;
+    }
+
+    case "pipeline-lock": {
+      // Exists because a lease outlives the process that took it. A redeploy kills the holder
+      // mid-run and every heavy command then refuses for up to ninety minutes, with nothing to
+      // look at that says whether a worker is really running.
+      if (flags["release-stale"] === true) {
+        const outcome = await releaseStalePipelineLock();
+        console.log(JSON.stringify(outcome, null, 2));
+        if (!outcome.released && outcome.reason === "holder_is_alive") {
+          console.error(
+            "\nRefusing: the lease is still heartbeating, so a worker really is running. " +
+            "Wait for it rather than starting a second pass over the same records."
+          );
+          process.exitCode = 1;
+        }
+        break;
+      }
+      console.log(JSON.stringify(await readPipelineLock(), null, 2));
       break;
     }
 

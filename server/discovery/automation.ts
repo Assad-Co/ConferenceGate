@@ -90,6 +90,84 @@ export async function releasePipelineLease(ownerId: string): Promise<void> {
   await dbRun("DELETE FROM discovery_pipeline_locks WHERE name=? AND owner_id=?", [LOCK_NAME, ownerId]);
 }
 
+/**
+ * How long a lease may go without a heartbeat before its holder is presumed dead.
+ *
+ * A running holder heartbeats every 60 seconds, so five minutes is eight missed beats. That is
+ * positive evidence the process is gone rather than an assumption that enough time has passed —
+ * which matters, because the whole point of the lease is that two enrichment passes must never
+ * run at once.
+ */
+const STALE_HEARTBEAT_SECONDS = 300;
+
+export interface PipelineLockStatus {
+  held: boolean;
+  ownerId: string | null;
+  stage: string | null;
+  acquiredAt: string | null;
+  heartbeatAt: string | null;
+  leaseExpiresAt: string | null;
+  /** Seconds since the holder last proved it was alive. Null when nothing holds the lock. */
+  secondsSinceHeartbeat: number | null;
+  /**
+   * `live` — heartbeating now; wait for it. `stale` — the process is gone, but the lease it took
+   * still blocks everything until it expires. `expired` — the lease has run out and the next
+   * caller will take it unaided. `free` — nothing holds it.
+   */
+  verdict: "free" | "live" | "stale" | "expired";
+}
+
+export async function readPipelineLock(now = new Date()): Promise<PipelineLockStatus> {
+  const row = await dbGet<Record<string, any>>(
+    "SELECT * FROM discovery_pipeline_locks WHERE name=?", [LOCK_NAME]);
+  if (!row) {
+    return { held: false, ownerId: null, stage: null, acquiredAt: null, heartbeatAt: null,
+      leaseExpiresAt: null, secondsSinceHeartbeat: null, verdict: "free" };
+  }
+  const beat = Date.parse(row.heartbeat_at);
+  const expires = Date.parse(row.lease_expires_at);
+  const since = Number.isFinite(beat) ? Math.round((now.getTime() - beat) / 1000) : null;
+  // An unparseable heartbeat is treated as stale rather than live: a lock nobody can reason about
+  // should be recoverable, and the compare-and-swap below still protects a holder that is awake.
+  const verdict: PipelineLockStatus["verdict"] =
+    Number.isFinite(expires) && expires <= now.getTime() ? "expired"
+      : since === null || since > STALE_HEARTBEAT_SECONDS ? "stale"
+      : "live";
+  return {
+    held: true, ownerId: row.owner_id, stage: row.stage, acquiredAt: row.acquired_at,
+    heartbeatAt: row.heartbeat_at, leaseExpiresAt: row.lease_expires_at,
+    secondsSinceHeartbeat: since, verdict,
+  };
+}
+
+/**
+ * Releases a lease whose holder has stopped heartbeating — the state a killed process leaves
+ * behind, and which otherwise blocks every heavy command for up to ninety minutes.
+ *
+ * This is deliberately not a force-unlock. It refuses a lock that is still heartbeating, and the
+ * delete matches the exact owner and heartbeat that were read, so a holder that wakes up in
+ * between keeps its lease: the statement matches no row instead of taking it away mid-run.
+ */
+export async function releaseStalePipelineLock(
+  options: { now?: Date } = {}
+): Promise<{ released: boolean; reason: string; status: PipelineLockStatus }> {
+  const now = options.now ?? new Date();
+  const status = await readPipelineLock(now);
+  if (!status.held) return { released: false, reason: "nothing_held", status };
+  if (status.verdict === "live") {
+    return { released: false, reason: "holder_is_alive", status };
+  }
+  await dbRun("DELETE FROM discovery_pipeline_locks WHERE name=? AND owner_id=? AND heartbeat_at=?",
+    [LOCK_NAME, status.ownerId, status.heartbeatAt]);
+  const after = await readPipelineLock(now);
+  if (after.held && after.ownerId === status.ownerId && after.heartbeatAt === status.heartbeatAt) {
+    return { released: false, reason: "delete_matched_nothing", status: after };
+  }
+  // Either the row is gone, or a new owner legitimately took the lock in the meantime. Both mean
+  // this stale lease is no longer in anyone's way.
+  return { released: true, reason: after.held ? "taken_by_new_owner" : "released", status: after };
+}
+
 /** Applies the same database lease to manual/API heavy work, closing the race with automation. */
 export async function withPipelineLease<T>(stage: string, work: () => Promise<T>): Promise<T> {
   const ownerId = id("manual");
