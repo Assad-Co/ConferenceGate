@@ -2358,9 +2358,29 @@ Return JSON with exactly this shape:
       isFallback: false,
       fetchFailed: false,
       crawlComplete: true,
+      // Whether a reader is looking at "this conference has no speakers" or "nobody has opened
+      // its speakers page". The stored metadata knows; this payload used to drop the distinction,
+      // so a published record whose deep pages were never read rendered "(0)" across every tab —
+      // the exact claim the rest of this pipeline refuses to make.
+      //
+      // Set only when NOT ONE deep section was read. Where some were, the counts beside them are
+      // real and saying "not retrieved" would be its own kind of wrong.
+      sectionsNotRead: deepSectionsAllUnread(metadata),
       sourceUrl,
       pagesRead: Number(metadata.pages_crawled) || 0,
     };
+  }
+
+  /** True when the stored metadata says every deep section is one nobody has read. */
+  function deepSectionsAllUnread(metadata: any): boolean {
+    const unread = Array.isArray(metadata?.sections_not_read)
+      ? metadata.sections_not_read
+      : Array.isArray(metadata?.missing_sections)
+        ? metadata.missing_sections
+        : null;
+    if (!unread) return false;
+    return ["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors"]
+      .every((section) => unread.includes(section));
   }
 
   // The crawl walks the whole conference site, so it routinely outlives the request that started

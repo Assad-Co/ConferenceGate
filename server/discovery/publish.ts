@@ -80,6 +80,10 @@ export function toExtractedConferenceRecord(
     official_website: row.official_url,
     contact_email: row.contact_email,
     important_dates: importantDates,
+    // Captured from the conference's own og:image when its page was read (htmlExtract), stored on
+    // the event, and until now dropped at publication — so a record that HAD a picture of itself
+    // still rendered a grey globe. Null when the page published none; never a stand-in.
+    image_url: row.image_url || null,
   };
 
   const callForPapers = {
@@ -145,6 +149,11 @@ export function toExtractedConferenceRecord(
       conflicts: [],
       // Say which tabs are genuinely empty, rather than declaring all four missing regardless.
       missing_sections: ["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors"]
+        .filter((column) => !deep[column as keyof DeepSectionPayloads]),
+      // The same list under the name the reader-facing payload uses, so a consumer can tell a
+      // section nobody has read from one that was read and found empty. Without it the detail page
+      // rendered "(0) speakers" for a conference whose speakers page had never been opened.
+      sections_not_read: ["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors"]
         .filter((column) => !deep[column as keyof DeepSectionPayloads]),
       pages_failed: [],
       crawl_complete: true,

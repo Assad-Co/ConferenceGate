@@ -345,6 +345,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // conference has none.
   const sectionsUnread = Boolean(data?.fetchFailed || data?.sectionsNotRead);
 
+  // The conference's own picture of itself, when its page published one.
+  //
+  // The engine reads og:image off the official page and stores it; it simply never reached here,
+  // so a conference with a banner still showed the placeholder globe. The search thumbnail stays
+  // the fallback, and a record with neither keeps the globe rather than borrowing someone's
+  // artwork.
+  const heroImage = data?.overview?.image_url || result.thumbnail || null;
+
   const incompleteLabel = (name: string, count: number): string =>
     count > 0 ? `${name} (${count})` : name;
 
@@ -432,9 +440,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       {/* Hero Banner Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center">
-          {result.thumbnail ? (
+          {heroImage ? (
             <img
-              src={result.thumbnail}
+              src={heroImage}
               alt=""
               className="w-full h-full object-cover opacity-25 blur-[1px]"
             />
