@@ -106,6 +106,9 @@ const HELP = `Conference Gate — discovery engine
                             least-recently-verified first, which for a small sample means the
                             records least likely to have an authoritative page yet. --trace prints,
                             per conference, why deep pages were or were not read.
+                            --with-official-url visits only records that already hold a website,
+                            which is the only kind the deep pass can read anything from; pair it
+                            with --missing-deep-only to work the deep-section backlog.
   diagnose [--run <id>]     Break a run's fetch failures down by class and by domain, and say
                             what each class implies. Defaults to the most recent run.
   metrics                   Print database metrics as JSON.
@@ -298,6 +301,7 @@ async function main(): Promise<void> {
         maxJinaPages: numberFlag(flags["max-jina-pages"], 200),
         maxDeepPagesPerEvent: Number(flags["max-deep-pages"] ?? 4),
         missingDeepSectionsOnly: flags["missing-deep-only"] === true,
+        requireOfficialUrl: flags["with-official-url"] === true,
         // Records are otherwise taken least-recently-verified first, which is the right order for
         // working a backlog and the wrong one for a sample: those records are precisely the ones
         // with no authoritative page yet, so a five-record sample can legitimately read nothing.

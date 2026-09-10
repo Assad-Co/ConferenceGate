@@ -144,6 +144,20 @@ export interface EnrichmentOptions {
    */
   missingDeepSectionsOnly?: boolean;
   /**
+   * Visit only records that already hold a website to read.
+   *
+   * The deep pass follows a conference's own official page to its /program, /speakers, /committee
+   * and /sponsors. A record with no official URL therefore cannot yield a single deep field, no
+   * matter how long it is worked — and a queue ordered by how long a record has gone unverified
+   * puts exactly those records first, because nothing has ever managed to verify them.
+   *
+   * A production pass over forty records spent all forty on directory listing pages stored as
+   * events ("Conferences in UAE 2026/2027/2028"), read nothing, and reported it correctly as
+   * `no_authoritative_official_page` forty times. This is how a pass aimed at deep sections asks
+   * for the records where deep sections are actually possible.
+   */
+  requireOfficialUrl?: boolean;
+  /**
    * Conferences worked on at once.
    *
    * This is a ceiling on the engine, not a relaxation of politeness: `httpClient` still allows one
@@ -303,9 +317,12 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
       ? ` AND (${["program_agenda", "keynote_speakers", "technical_committee", "sponsors_exhibitors", "community"]
           .map((column) => `e.${column} IS NULL OR e.${column} IN ('','[]','{}')`).join(" OR ")})`
       : "";
+    const officialUrlClause = options.requireOfficialUrl
+      ? " AND e.official_url IS NOT NULL AND trim(e.official_url) != ''"
+      : "";
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
-      ${readinessClause}${deepClause}
+      ${readinessClause}${deepClause}${officialUrlClause}
       ORDER BY e.last_verified IS NOT NULL, e.last_verified ASC, e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
       [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
     const concurrency = Math.max(1, Math.min(

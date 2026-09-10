@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
-import { classifyPublishReadiness, decideEvidence } from "../enrichment";
+import { classifyPublishReadiness, decideEvidence, runEnrichment } from "../enrichment";
 import { dbAll, dbGet, dbRun } from "../../db";
 import { initDiscoverySchema } from "../schema";
 import { canonicalizeUrl, normalizeNavigableUrl } from "../normalize";
@@ -15,6 +15,55 @@ import {
 } from "../sourceClassification";
 
 const execFileAsync = promisify(execFile);
+
+
+test("a deep-section pass asks only for records that hold a page it could read", async () => {
+  await initDiscoverySchema();
+  // Reproduces the production shape exactly: a real conference with a website sitting behind a
+  // directory listing page that was stored as an event and has no website at all. The listing
+  // sorts first on every ordering the queue uses, so without the filter it takes the whole budget
+  // and the pass reads nothing.
+  const withSite = "dev_test_withsite";
+  const listing = "dev_test_listing";
+  const ids = [withSite, listing];
+  for (const [id, title, official] of [
+    [withSite, "International Conference on Applied Geophysics 2027", "https://example.org/icag2027"],
+    [listing, "Conferences in UAE 2026/2027/2028", null],
+  ] as Array<[string, string, string | null]>) {
+    await dbRun(`INSERT INTO discovery_events
+      (id,title,normalized_title,start_year,official_url,source_url,source_domain,status,extraction_method)
+      VALUES (?,?,?,?,?,?,?,'validated','derived')`,
+      [id, title, title.toLowerCase(), 2027, official, "https://example.org/source", "example.org"]);
+  }
+
+  try {
+    const report = await runEnrichment({
+      limit: 200,
+      // Nothing may be fetched, searched or read: this test is about which records are asked for.
+      urlGuard: async () => false,
+      maxSearchQueries: 0,
+      maxJinaPages: 0,
+      maxDeepPagesPerEvent: 0,
+      missingDeepSectionsOnly: true,
+      requireOfficialUrl: true,
+      trace: true,
+      quiet: true,
+    });
+    const examined = new Set((report.deepTrace || []).map((entry) => entry.eventId));
+    assert.ok(examined.has(withSite), "a record with a website is worked");
+    assert.equal(examined.has(listing), false, "a record with no website cannot yield deep sections");
+    // And every record the pass did ask for has something to read, which is the property that
+    // makes the budget meaningful rather than merely smaller.
+    for (const entry of report.deepTrace || []) {
+      const row = await dbGet<{ official_url: string | null }>(
+        "SELECT official_url FROM discovery_events WHERE id=?", [entry.eventId]);
+      assert.ok(row?.official_url && row.official_url.trim() !== "",
+        `${entry.eventId} was asked for without an official URL`);
+    }
+  } finally {
+    for (const id of ids) await dbRun("DELETE FROM discovery_events WHERE id=?", [id]);
+  }
+});
 
 test("Phase 1.4 schema is additive and exposes readiness plus append-only history", async () => {
   await initDiscoverySchema();
