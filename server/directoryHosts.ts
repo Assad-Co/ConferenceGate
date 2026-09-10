@@ -20,6 +20,15 @@ const DIRECTORY_DOMAINS = new Set([
   "internationalconferencealerts.com",
   "clocate.com",
   "conferenceindex.org",
+  // Seeded as leads in sources.seed.ts. A host read for leads must also be refused as an
+  // authority, or the listing that named a conference becomes that conference's official site.
+  "conferencelists.org",
+  "wikicfp.com",
+  "papercrowd.com",
+  "biztradeshows.com",
+  "expodatabase.com",
+  "conferenceineurope.net",
+  "medicalconferences.com",
   "conference-next.com",
   "conference-service.com",
   "dev.events",

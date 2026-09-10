@@ -8,6 +8,7 @@ import {
   organizationAcronym, scoreSitemapDocument, scoreSitemapEntry,
 } from "../providers/organizationProvider";
 import { SEED_DOMAINS, seedBreakdown } from "../sources.seed";
+import { isDirectoryHost } from "../../directoryHosts";
 import { configureDomainLimits } from "../httpClient";
 
 const localGuard = async (url: string) => /^http:\/\/127\.0\.0\.1:\d+\//.test(url);
@@ -254,4 +255,28 @@ test("a society that disallows crawling is skipped and recorded", async () => {
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+});
+
+test("directories are seeded as leads and still refused as authorities", async () => {
+  const directories = SEED_DOMAINS.filter((seed) => seed.sourceType === "conference_directory");
+  assert.ok(directories.length >= 15, `expected the directory net to be wide, got ${directories.length}`);
+
+  for (const seed of directories) {
+    // Seeded to be READ. This is the wide net for the long tail no society announces: a regional
+    // workshop, a first-edition conference with no institution behind it.
+    assert.ok(seed.domain.length > 0);
+    // And still refused as a place a canonical URL may point. Seeding a host as a lead and
+    // refusing it as an authority is the same policy stated from both ends — a listing is never
+    // promoted to official, however it entered the crawl.
+    assert.equal(
+      isDirectoryHost(seed.domain), true,
+      `${seed.domain} is seeded as a directory but not refused as one — a listing could be stored as a conference's official site`
+    );
+  }
+
+  // They must not outrank the societies, or a listing's version of a conference would win a
+  // disagreement with the organisation's own page.
+  const societies = SEED_DOMAINS.filter((seed) => seed.sourceType === "professional_society");
+  assert.ok(societies.length > 0);
+  assert.ok(directories.every((d) => (d.trustScore ?? 0.5) < 0.9));
 });
