@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { dbAll, dbGet, dbRun } from "../../db";
 import { initDiscoverySchema } from "../schema";
-import { syncPublishedDeepSections } from "../publish";
+import { retractIneligiblePublications, syncPublishedDeepSections } from "../publish";
 
 const SPEAKERS = JSON.stringify([
   { name: "Ines Marchetti", org: "Politecnico di Torino", role: "Keynote", source_url: "https://sync.example/speakers" },
@@ -136,5 +136,51 @@ test("the deep pass can be aimed at published records that are still missing sec
       "a record that already holds every section costs the pass nothing");
   } finally {
     for (const id of [full, empty]) await dbRun("DELETE FROM discovery_events WHERE id=?", [id]);
+  }
+});
+
+test("a published row is withdrawn once its record stops qualifying, and only this engine's rows", async () => {
+  const stamp = Date.now();
+  const badUrl = `https://iau.example/${stamp}/Future-Meetings.aspx`;
+  const badId = `retract-${stamp}`;
+  const goodUrl = `https://realconf.example/${stamp}/`;
+  const goodId = `keep-${stamp}`;
+  // Somebody else's row, for the same conference shape. Never ours to delete.
+  const foreignUrl = `https://foreign.example/${stamp}/`;
+
+  await dbRun(`INSERT INTO discovery_events (id,title,normalized_title,start_year,status,publish_readiness,extraction_method,source_url,source_domain)
+    VALUES (?,?,?,?,'validated','needs_enrichment','derived',?,?)`,
+    [badId, "Future Meetings", "future meetings", 2027, badUrl, "iau.example"]);
+  await dbRun(`INSERT INTO discovery_events (id,title,normalized_title,start_year,status,publish_readiness,extraction_method,source_url,source_domain)
+    VALUES (?,?,?,?,'validated','publish_ready','derived',?,?)`,
+    [goodId, "Real Conference 2027", "real conference 2027", 2027, goodUrl, "realconf.example"]);
+
+  const row = (url: string, meta: Record<string, unknown>) => dbRun(
+    `INSERT OR REPLACE INTO extracted_conferences (source_url, overview, extraction_metadata, updated_at)
+     VALUES (?,?,?,datetime('now'))`,
+    [url, JSON.stringify({ conference_name: "x" }), JSON.stringify(meta)]);
+  await row(badUrl, { origin: "discovery_engine", status: "success", discovery_event_id: badId });
+  await row(goodUrl, { origin: "discovery_engine", status: "success", discovery_event_id: goodId });
+  await row(foreignUrl, { origin: "site_crawl", status: "success", discovery_event_id: badId });
+
+  try {
+    const dry = await retractIneligiblePublications({ dryRun: true });
+    assert.ok(dry.urls.includes(badUrl), "the demoted record's row was not identified");
+    assert.ok(await dbGet("SELECT 1 FROM extracted_conferences WHERE source_url=?", [badUrl]),
+      "a dry run deleted something");
+
+    await retractIneligiblePublications({});
+    assert.equal(await dbGet("SELECT 1 FROM extracted_conferences WHERE source_url=?", [badUrl]), undefined,
+      "the index page is still published after it stopped qualifying");
+    // The two that must survive: one still qualifies, one this engine never wrote.
+    assert.ok(await dbGet("SELECT 1 FROM extracted_conferences WHERE source_url=?", [goodUrl]),
+      "a still-qualifying record was withdrawn");
+    assert.ok(await dbGet("SELECT 1 FROM extracted_conferences WHERE source_url=?", [foreignUrl]),
+      "a row this engine did not write was deleted — publication must never touch somebody else's record");
+  } finally {
+    for (const url of [badUrl, goodUrl, foreignUrl]) {
+      await dbRun("DELETE FROM extracted_conferences WHERE source_url=?", [url]);
+    }
+    for (const id of [badId, goodId]) await dbRun("DELETE FROM discovery_events WHERE id=?", [id]);
   }
 });

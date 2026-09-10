@@ -266,6 +266,51 @@ export interface DeepSectionSyncResult {
  * govern which conferences exist in `extracted_conferences` at all. The only thing that changes is
  * whether a tab on an already-visible conference shows what the organiser's own page said.
  */
+/**
+ * Withdraws a published row whose record no longer qualifies.
+ *
+ * Publication is a snapshot of a judgement, and judgements change. Two of the first seven records
+ * this engine published were indexes of many events — iau.org/…/Future-Meetings.aspx and
+ * rsc.org/events/find-an-event — accepted because their domains are trusted societies. The rule
+ * that refuses them now exists, and reclassification applies it: those records stop being
+ * publish_ready by themselves. But the rows already written stay written, so a reader keeps seeing
+ * a conference this engine has since decided is not one.
+ *
+ * Only rows this engine wrote are ever touched — the same `origin: discovery_engine` guard the
+ * deep-section sync uses. A conference Conference Gate crawled for itself is nobody's business
+ * here, and the promise never to overwrite somebody else's record extends to never deleting it.
+ */
+export async function retractIneligiblePublications(
+  options: { dryRun?: boolean; limit?: number } = {}
+): Promise<{ examined: number; retracted: number; dryRun: boolean; urls: string[] }> {
+  const { dbAll } = await import("../db");
+  const limit = Math.max(1, Math.min(options.limit ?? 500, 5000));
+  const result = { examined: 0, retracted: 0, dryRun: !!options.dryRun, urls: [] as string[] };
+
+  const rows = await dbAll<Record<string, any>>(
+    `SELECT ec.source_url, ec.extraction_metadata, e.id AS event_id, e.publish_readiness, e.status
+       FROM extracted_conferences ec
+       JOIN discovery_events e
+         ON e.id = json_extract(ec.extraction_metadata, '$.discovery_event_id')
+      WHERE json_extract(ec.extraction_metadata, '$.origin') = 'discovery_engine'
+        AND (e.publish_readiness <> 'publish_ready' OR e.status IN ('rejected','expired','cancelled'))
+      LIMIT ?`,
+    [limit]
+  );
+
+  for (const row of rows) {
+    result.examined += 1;
+    // Belt and braces: the SQL already restricts to this engine's rows, and this re-reads the
+    // stored metadata rather than trusting the join to have meant what it looked like.
+    if (!isDiscoveryEngineRow(row)) continue;
+    result.urls.push(String(row.source_url));
+    if (options.dryRun) continue;
+    await dbRun("DELETE FROM extracted_conferences WHERE source_url = ?", [row.source_url]);
+    result.retracted += 1;
+  }
+  return result;
+}
+
 export async function syncPublishedDeepSections(
   options: { limit?: number; dryRun?: boolean } = {}
 ): Promise<DeepSectionSyncResult> {

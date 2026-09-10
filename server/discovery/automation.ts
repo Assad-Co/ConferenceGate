@@ -5,7 +5,8 @@ import { auditDiscoveredConferences } from "./audit";
 import { reclassifyAllPublishReadiness, runEnrichment } from "./enrichment";
 import { buildInventoryReport, type InventoryReport } from "./inventory";
 import {
-  isPublishEnabled, publishDiscoveredConferences, syncPublishedDeepSections, type PublishResult,
+  isPublishEnabled, publishDiscoveredConferences, retractIneligiblePublications,
+  syncPublishedDeepSections, type PublishResult,
 } from "./publish";
 import { runProductionScale } from "./scale";
 
@@ -393,6 +394,13 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // mattered — what is blocking these conferences — could only be answered by someone opening
     // the database by hand.
     await reportReadinessBlockers(label);
+    // Readiness has just been recomputed, so a record that no longer qualifies says so now. Take
+    // its published row back before publishing anything else: a rule that stops the next bad
+    // record while leaving the last one on screen has only half worked.
+    const retracted = await retractIneligiblePublications({ limit: 500 });
+    if (retracted.retracted > 0) {
+      console.error(`[automation] ${label} withdrew ${retracted.retracted} published record(s) that no longer qualify`);
+    }
     // Empty tabs filled in on conferences this engine already published. Runs before the decision
     // below, and unconditionally: it publishes nothing and changes no readiness, so a cycle with
     // nothing new to publish must still deliver sections the deep pass has since read.
