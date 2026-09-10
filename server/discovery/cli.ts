@@ -589,13 +589,19 @@ async function main(): Promise<void> {
       // which is not something this repository can do and not something anyone should have to
       // remember. A stopped worker is also not a failed one: this returns cleanly so a paused
       // stretch does not fill the run history with red.
-      if (process.env.CONFERENCEGATE_AUTOMATION_DISABLED === "1") {
+      // Re-read every cycle, not once. A stretch runs for hours, and an off switch consulted only
+      // at the start cannot stop the run that is actually going — which is exactly what happened:
+      // the switch was set, the worker kept cycling the backlog for another hour and a half, and
+      // holding the pipeline lease the whole time blocked the run that was wanted instead.
+      const automationStopped = (): boolean => {
+        if (process.env.CONFERENCEGATE_AUTOMATION_DISABLED !== "1") return false;
         console.error(
           "[automate] stopped: CONFERENCEGATE_AUTOMATION_DISABLED=1. No pages are read, nothing is "
           + "enriched and nothing is published. Unset it to resume."
         );
-        return;
-      }
+        return true;
+      };
+      if (automationStopped()) return;
 
       // How long this invocation keeps starting cycles for.
       //
@@ -638,6 +644,10 @@ async function main(): Promise<void> {
         // be thousands of empty passes over the same records.
         await new Promise((resolve) => setTimeout(resolve, 60_000));
         if (Date.now() >= repeatDeadline) break;
+        // The switch may have been thrown while this stretch was running. Checking here means it
+        // takes effect within one cycle and the lease is handed back, instead of at the end of a
+        // seven-hour repeat.
+        if (automationStopped()) break;
         cycle += 1;
         console.error(`[automate] ${new Date().toISOString()} starting cycle ${cycle + 1}`);
         result = await runProductionAutomation(automationOptions(flags));
