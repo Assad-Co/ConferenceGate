@@ -345,6 +345,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // conference has none.
   const sectionsUnread = Boolean(data?.fetchFailed || data?.sectionsNotRead);
 
+  /** Tabs removed from the row when nothing has read their section. */
+  const HIDDEN_WHEN_UNREAD: ExternalDetailTab[] = ['fees', 'agenda', 'speakers', 'committee', 'sponsors'];
+
+  // A visitor already standing on one of those tabs when the data arrives would otherwise be left
+  // looking at a panel with no tab selected above it.
+  useEffect(() => {
+    if (sectionsUnread && HIDDEN_WHEN_UNREAD.includes(activeTab)) setActiveTab('overview');
+  }, [sectionsUnread, activeTab]);
+
   // The conference's own picture of itself, when its page published one.
   //
   // The engine reads og:image off the official page and stores it; it simply never reached here,
@@ -527,35 +536,44 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'cfp', label: 'Call for Papers' },
               { id: 'fees', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? 'Fees & Pricing (not retrieved)'
+                  ? null
                   : upcomingRegistrationFees.length > 0
                     ? `Fees & Pricing (${upcomingRegistrationFees.length})`
                     : 'Fees & Pricing'
                 : incompleteLabel('Fees & Pricing', upcomingRegistrationFees.length) },
               { id: 'agenda', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? 'Program & Agenda (not retrieved)'
+                  ? null
                   : `Program & Agenda (${data.agendaSessions.length})`
                 : incompleteLabel('Program & Agenda', data?.agendaSessions.length ?? 0) },
               { id: 'speakers', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? 'Keynote Speakers (not retrieved)'
+                  ? null
                   : `Keynote Speakers (${data.speakers.length})`
                 : incompleteLabel('Keynote Speakers', data?.speakers.length ?? 0) },
               { id: 'committee', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? 'Technical Committee (not retrieved)'
+                  ? null
                   : `Technical Committee (${data.committee.length})`
                 : incompleteLabel('Technical Committee', data?.committee.length ?? 0) },
               { id: 'sponsors', label: !loading && data?.crawlComplete
                 ? sectionsUnread
-                  ? 'Sponsors & Exhibitors (not retrieved)'
+                  ? null
                   : `Sponsors & Exhibitors (${data.sponsors.length})`
                 : incompleteLabel('Sponsors & Exhibitors', data?.sponsors.length ?? 0) },
               { id: 'venue', label: 'Venue & Accommodation' },
               { id: 'community', label: 'Community' },
-            ] as { id: ExternalDetailTab; label: string }[]
-          ).map((tab) => (
+            ] as Array<{ id: ExternalDetailTab; label: string | null }>
+          )
+            // A tab whose section was never read is removed, not labelled.
+            //
+            // "(not retrieved)" was written to replace "(0)", which asserted a conference had no
+            // speakers when in truth nobody had looked. It is more honest and still wrong to show
+            // a visitor: it is this pipeline's internal state, in this pipeline's words, on a page
+            // meant for somebody deciding whether to attend a conference. A tab that can say
+            // nothing is better not offered.
+            .filter((tab): tab is { id: ExternalDetailTab; label: string } => tab.label !== null)
+            .map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -636,8 +654,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         // guess from which code path failed. Falls back to the general wording only
                         // when an older response carries no diagnosis.
                         data.readFailureReason ||
-                        'The site blocked our request or was unreachable.'}{' '}
-                    The empty sections below mean "not retrieved" — not "not offered by this conference."
+                        'The site blocked our request or was unreachable.'}
                   </p>
                   <a
                     href={result.link}
@@ -1179,7 +1196,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   <EmptyExtractState
                     message={
                       data?.crawlComplete
-                        ? 'No registration prices were published on the pages we could read.'
+                        ? 'This conference has not listed registration prices on its website.'
                         : pollGaveUp || fastCheckedTabs.fees
                           ? 'No registration prices were found yet. They will appear automatically if the official site publishes them.'
                           : 'Checking the most likely registration and pricing pages now…'

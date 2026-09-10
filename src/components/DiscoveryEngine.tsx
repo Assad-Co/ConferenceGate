@@ -21,6 +21,7 @@ import {
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
+import { countryOptionsFor, withinDateWindow } from '../utils/conferenceFilter';
 import {
   searchConferencesOnTheWeb,
   LiveSearchResult,
@@ -372,19 +373,13 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const formatPrice = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
 
   const locationOptions = useMemo(() => {
-    const byCountry = new Map<string, Set<string>>(
-      Object.entries(CONFERENCE_CITIES_BY_COUNTRY).map(([country, cities]) => [country, new Set(cities)])
-    );
-    (conferences || []).forEach((conference) => {
-      const country = conference.location?.country?.trim();
-      const city = conference.location?.city?.trim();
-      if (!country) return;
-      if (!byCountry.has(country)) byCountry.set(country, new Set());
-      if (city) byCountry.get(country)!.add(city);
-    });
-    return [...byCountry.entries()]
-      .map(([country, cities]) => ({ country, cities: [...cities].sort((a, b) => a.localeCompare(b)) }))
-      .sort((a, b) => a.country.localeCompare(b.country));
+    // Built from the conferences actually loaded, never from the static table.
+    //
+    // Seeding this from CONFERENCE_CITIES_BY_COUNTRY offered all fifty-seven countries whether or
+    // not a single loaded conference was held in one. Selecting Germany then filtered a set
+    // containing no German conference and showed nothing, with no way for a reader to tell an
+    // empty catalogue from a broken filter.
+    return countryOptionsFor(conferences, CONFERENCE_CITIES_BY_COUNTRY);
   }, [conferences]);
 
   const countryOptions = locationOptions.map((option) => option.country);
@@ -414,7 +409,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     const locationTerm = locationFilter.trim().toLowerCase();
     const countryTerm = countryFilter.trim().toLowerCase();
     const formatTerm = formatFilter.trim().toLowerCase().replace(/[-\s]+/g, '');
-    const confMonth = (conf.dates.start || '').slice(0, 7);
+
     const confLocation = [
       conf.location?.city,
       conf.location?.venue,
@@ -433,8 +428,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       !(conf.description || '').toLowerCase().includes(term) &&
       !(conf.topics || []).some((topic) => topic.toLowerCase().includes(term))
     ) return false;
-    if (confMonth < effectiveStartMonth) return false;
-    if (endAtMonth && confMonth > endAtMonth) return false;
+    // An undated conference is not a past one: see withinDateWindow.
+    if (!withinDateWindow({ start: conf.dates.start }, { effectiveStartMonth, endAtMonth })) return false;
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
     if (formatTerm && confFormat !== formatTerm) return false;
