@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T14:38:09.524Z",
+  "generatedAt": "2026-09-10T16:20:38.295Z",
   "horizonStart": "2026-09-10",
   "years": [
     2026,
@@ -30500,6 +30500,123 @@
       },
       "corroboratingSourceUrls": [],
       "origin": "launch_dataset"
+    },
+    {
+      "id": "edition-geological-process-based-forward-modeling-2027",
+      "title": "3rd Edition Geological Process-Based Forward Modeling",
+      "acronym": null,
+      "series": "Edition Geological Process-Based Forward Modeling",
+      "edition": "3rd",
+      "year": 2027,
+      "startDate": null,
+      "endDate": null,
+      "datePrecision": "month",
+      "datesText": "May 2027",
+      "city": null,
+      "region": null,
+      "country": null,
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": null,
+      "format": "in-person",
+      "organization": "AAPG",
+      "category": "Geosciences & Earth Systems",
+      "categories": [
+        "Geosciences & Earth Systems",
+        "Petroleum & Energy"
+      ],
+      "topics": [
+        "geological",
+        "aapg",
+        "process-based",
+        "forward",
+        "modeling"
+      ],
+      "keywords": [
+        "2027",
+        "Geosciences & Earth Systems"
+      ],
+      "description": "3rd Edition Geological Process-Based Forward Modeling, Workshop (GTW), TBD, May 2027",
+      "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+      "sourceHost": "aapg.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+      "corroboratingSourceUrls": [],
+      "evidence": {
+        "query": "curated:aapg-2026-2027",
+        "resultTitle": "3rd Edition Geological Process-Based Forward Modeling",
+        "statedText": "3rd Edition Geological Process-Based Forward Modeling, May 2027, TBD, TBD",
+        "retrievedAt": "2026-09-10",
+        "method": "web_search",
+        "externalId": null
+      },
+      "origin": "launch_dataset",
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "Medium"
+        },
+        "city": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "Low"
+        },
+        "country": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "Low"
+        },
+        "venue": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "Low"
+        },
+        "organization": {
+          "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
+          "sourcePageTitle": "aapg-2026-2027",
+          "confidence": "High"
+        }
+      },
+      "details": {
+        "source": "aapg-2026-2027-details",
+        "venueName": null,
+        "venueAddress": null,
+        "program": {
+          "availability": "stated",
+          "text": "Workshop theme: process-based geological modeling moving from specialist R&D groups into broader asset-team workflows, aiming toward fuller integration of stratigraphy, geomechanics, and diagenesis."
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet published",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Not yet announced",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null
+      }
     },
     {
       "id": "bigdatasecurity-13th-ieee-international-conference-on-big-data-securit",

@@ -1,32 +1,28 @@
 {
-  "generatedAt": "2026-09-10T14:38:09.524Z",
+  "generatedAt": "2026-09-10T16:20:38.295Z",
   "horizonStart": "2026-09-10",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 374,
+  "accepted": 375,
   "duplicatesMerged": 1,
-  "rejected": 22,
+  "rejected": 21,
   "rejectionReasons": {
     "not_a_conference": 14,
     "already_finished": 4,
-    "no_location": 3,
+    "no_location": 2,
     "source_url_is_a_listing": 1
   },
-  "detailsAttached": 15,
+  "detailsAttached": 16,
   "detailsUnmatched": [
-    {
-      "title": "3rd Edition Geological Process-Based Forward Modeling",
-      "reason": "no_conference_with_this_title"
-    },
     {
       "title": "Latin America Geothermal Systems Workshop 2026",
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 374,
+  "total": 375,
   "byYear": {
     "2026": 61,
-    "2027": 299,
+    "2027": 300,
     "2028": 14
   },
   "countries": 52,
@@ -39,27 +35,28 @@
     "Middle East": 18,
     "South America": 10,
     "Oceania": 6,
-    "Africa": 3
+    "Africa": 3,
+    "(none)": 1
   },
   "formats": {
-    "in-person": 360,
+    "in-person": 361,
     "hybrid": 14
   },
   "sourceTypes": {
-    "official_site": 326,
+    "official_site": 327,
     "directory_listing": 41,
     "reference": 7
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "97.1%",
-    "monthOnlyDates": "2.9%",
-    "city": "99.5%",
-    "country": "100.0%",
+    "exactDates": "96.8%",
+    "monthOnlyDates": "3.2%",
+    "city": "99.2%",
+    "country": "99.7%",
     "officialUrl": "87.2%",
-    "venue": "35.3%",
-    "organization": "38.8%",
-    "category": "58.3%",
+    "venue": "35.2%",
+    "organization": "38.9%",
+    "category": "58.4%",
     "description": "100.0%",
     "corroborated": "0.3%"
   },
@@ -177,11 +174,6 @@
       "reason": "already_finished",
       "sourceUrl": "https://www.aapg.org/event-details/latin-america-geothermal-systems-workshop-2026/",
       "statedText": "Latin America Geothermal Systems Workshop 2026, 2-3 September 2026, Mexico City (Barceló México Reforma), Mexico"
-    },
-    {
-      "reason": "no_location",
-      "sourceUrl": "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/",
-      "statedText": "3rd Edition Geological Process-Based Forward Modeling, May 2027, TBD, TBD"
     }
   ]
 }

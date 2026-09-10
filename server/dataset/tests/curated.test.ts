@@ -90,15 +90,43 @@ test("a society's events calendar is where the conference was found, not where i
   }
 });
 
-test("a row with no stated place is refused rather than stored as nowhere", () => {
-  const refused = mapCuratedRow(
+test("a place the source says is undecided is not the same as a place it forgot to state", () => {
+  // A conference needs a place to be worth listing — a reader filtering by Germany must not be
+  // handed events that might be anywhere. But "TBD" is the organiser saying the venue is not chosen
+  // yet, which is a fact about a real conference with real dates, and refusing on it dropped AAPG's
+  // Geological Process-Based Forward Modeling out of the catalogue altogether.
+  const undecided = mapCuratedRow(
     row({ name: "3rd Edition Geological Process-Based Forward Modeling", dates: "May 2027",
           location: "TBD", country: "TBD", region: "TBD",
           website: "https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/" }),
     OPTIONS
   );
-  assert.equal(refused.ok, false);
-  if (!refused.ok) assert.equal(refused.reason, "no_location");
+  assert.equal(undecided.ok, true);
+  if (undecided.ok) {
+    // Kept, and still empty-handed about where it is. Nothing is guessed to fill the columns.
+    assert.equal(undecided.record.city, null);
+    assert.equal(undecided.record.country, null);
+    assert.equal(undecided.record.countryCode, null);
+    assert.equal(undecided.record.worldRegion, null);
+    assert.ok(undecided.record.officialUrl, "kept only because it carries the conference's own page");
+  }
+
+  // An empty cell is a gap in the list, not a statement about the conference, and is still refused.
+  const blank = mapCuratedRow(
+    row({ location: "", country: "", region: "", website: "https://example.org/some-conference/" }),
+    OPTIONS
+  );
+  assert.equal(blank.ok, false);
+  if (!blank.ok) assert.equal(blank.reason, "no_location");
+
+  // And a stated "TBD" with no page of its own gives a reader nowhere to go for the place we do
+  // not have, so it is refused too.
+  const noPage = mapCuratedRow(
+    row({ location: "TBD", country: "TBD", website: "https://www.aapg.org/events/calendar/" }),
+    OPTIONS
+  );
+  assert.equal(noPage.ok, false);
+  if (!noPage.ok) assert.equal(noPage.reason, "no_location");
 });
 
 test("a well-formed row keeps exactly what the list stated", () => {

@@ -16,6 +16,16 @@ const CHECKPOINTS = [2_000, 3_000, 5_000] as const;
 const id = (prefix: string) => `${prefix}_${crypto.randomUUID().replace(/-/g, "")}`;
 
 export interface AutomationOptions {
+  /**
+   * Narrow the whole cycle to conferences on these hosts.
+   *
+   * The worker's problem was never speed, it was order: 1,168 records that can never verify sat
+   * ahead of the ones anybody was waiting for, and a cycle cleared about twenty-three records an
+   * hour. Naming the hosts that matter turns eight hours of grinding into a pass that finishes.
+   * Discovery is skipped entirely when this is set — a scoped run is for filling conferences that
+   * already exist, not finding more.
+   */
+  onlyHosts?: string[];
   targetAccepted?: number;
   targetPublished?: number;
   batchPages?: number;
@@ -457,7 +467,9 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       options.discoveryTimeBudgetMs ?? 25 * 60_000,
       Math.floor(expensiveWindow() / 6)
     );
-    if (!options.skipDiscovery && initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
+    // A scoped run never discovers: naming hosts to fill is the opposite of asking for more.
+    const discovering = !options.skipDiscovery && !options.onlyHosts?.length;
+    if (discovering && initial.totalAccepted < (options.targetAccepted ?? 5_000) && discoveryBudget > 0) {
       await setStage(runId, ownerId, "discovery", leaseMinutes);
       const scale = await runProductionScale({
         targetAccepted: options.targetAccepted ?? 5_000,
@@ -484,7 +496,12 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     if (enrichmentBudget > 0) {
       await setStage(runId, ownerId, "enrichment", leaseMinutes);
       const enrichment = await runEnrichment({
-        readiness: ["needs_enrichment"], limit: options.enrichmentLimit ?? 250,
+        onlyHosts: options.onlyHosts,
+        // A scoped run wants every one of its conferences looked at, whatever readiness they sit
+        // at. Filtering to needs_enrichment here would skip exactly the ones already publishable,
+        // which on the AAPG list is most of them.
+        readiness: options.onlyHosts?.length ? undefined : ["needs_enrichment"],
+        limit: options.enrichmentLimit ?? 250,
         // 526 of the 1,192 blocked records have no absolute official URL, so there is no page to
         // fetch and no verification they can ever pass. They were still taking slots in a pass
         // capped at 250 records: nearly half the budget spent on records whose blocker this stage
@@ -527,6 +544,7 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
     // published later simply arrives with its sections already filled.
     const deepBudget = stageBudget(options.publishedDeepTimeBudgetMs ?? 25 * 60_000);
     if (deepBudget > 0) await runEnrichment({
+      onlyHosts: options.onlyHosts,
       missingDeepSectionsOnly: true,
       // The deep pass reads a conference's own site. A record without one cannot yield a section,
       // so asking for it spends a slot to learn nothing — which is what a forty-record production

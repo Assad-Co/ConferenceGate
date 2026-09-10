@@ -96,6 +96,11 @@ function automationOptions(flags: Record<string, string | boolean>) {
     // two percent have a programme anybody can read; a cycle that spends its window finding more
     // of what it cannot yet process makes the backlog worse.
     skipDiscovery: flags["skip-discovery"] === true,
+    // --only-hosts aapg.org,iceevent.org,urtec.org — fill these conferences and nothing else.
+    // Also settable as DISCOVERY_ONLY_HOSTS so a hosted worker can be pointed at a society
+    // without redeploying a new start command.
+    onlyHosts: String(flags["only-hosts"] ?? process.env.DISCOVERY_ONLY_HOSTS ?? "")
+      .split(",").map((host) => host.trim()).filter(Boolean),
     quiet: flags.quiet === true,
   };
 }
@@ -162,9 +167,11 @@ const HELP = `Conference Gate — discovery engine
                             enrichment, with AI and publication disabled.
   automate [--target 5000] [--batch-pages 500] [--enrichment-limit 250]
            [--schedule-hours 8] [--run-time-budget-ms 3300000] [--repeat-for-ms 0]
-           [--skip-discovery] [--quiet]
+           [--skip-discovery] [--only-hosts aapg.org,iceevent.org] [--quiet]
                             Run one resumable unattended production cycle under the durable
-                            database lease. Discovery and enrichment are bounded; publication is
+                            database lease. --only-hosts (or DISCOVERY_ONLY_HOSTS) narrows the
+                            cycle to conferences on those hosts and skips discovery entirely,
+                            so a society's events can be filled without waiting out the backlog. Discovery and enrichment are bounded; publication is
                             separately fail-closed by CONFERENCEGATE_AUTOMATION_PUBLICATION=1.
                             CONFERENCEGATE_AUTOMATION_DISABLED=1 stops it doing anything at all.
   harvest [--orgs aapg.org,spe.org] [--max-org-domains 10] [--max-pages 120]

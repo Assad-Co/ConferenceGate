@@ -145,6 +145,19 @@ export interface EnrichmentOptions {
    */
   missingDeepSectionsOnly?: boolean;
   /**
+   * Visit only conferences whose own page sits on one of these hosts.
+   *
+   * A backlog is not a queue you can wait out: with 1,168 records that can never pass verification
+   * ahead of them, the conferences somebody actually cares about were being reached at about one an
+   * hour. This narrows a run to the ones that matter now — the AAPG calendar, a single society,
+   * whatever the person watching needs filled — rather than asking them to wait for a queue to
+   * drain that never will. Subdomains count, so "aapg.org" reaches its event pages too.
+   *
+   * It narrows and never widens: a scoped run still obeys robots.txt, the same per-domain interval,
+   * the same failure classification and the same publication gate.
+   */
+  onlyHosts?: string[];
+  /**
    * Visit only records that already hold a website to read.
    *
    * The deep pass follows a conference's own official page to its /program, /speakers, /committee
@@ -322,13 +335,30 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     const officialUrlClause = options.requireOfficialUrl
       ? " AND e.official_url IS NOT NULL AND trim(e.official_url) != ''"
       : "";
+    // Host scope is matched against both the conference's own page and the page it was found on,
+    // because a society's conference often lives on its own domain while the record still points
+    // home — "aapg.org" has to reach iceevent.org's record, and it does so through source_url.
+    const hostScope = (options.onlyHosts ?? [])
+      .map((host) => host.trim().toLowerCase().replace(/^www\./, ""))
+      .filter(Boolean);
+    const hostClause = hostScope.length
+      ? ` AND (${hostScope.map(() =>
+          "lower(coalesce(e.official_url,'')) LIKE ? OR lower(coalesce(e.official_url,'')) LIKE ?"
+          + " OR lower(coalesce(e.source_url,'')) LIKE ? OR lower(coalesce(e.source_url,'')) LIKE ?"
+        ).join(" OR ")})`
+      : "";
+    const hostParams = hostScope.flatMap((host) => [
+      `%://${host}/%`, `%.${host}/%`, `%://${host}/%`, `%.${host}/%`,
+    ]);
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
-      ${readinessClause}${deepClause}${officialUrlClause}
+      ${readinessClause}${deepClause}${officialUrlClause}${hostClause}
       ORDER BY e.last_checked IS NOT NULL, e.last_checked ASC,
                e.last_verified IS NOT NULL, e.last_verified ASC,
                e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
-      [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), limit]);
+      // Placeholder order follows the clause order above: the run join, then readiness, then
+      // the host scope, then the limit.
+      [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), ...hostParams, limit]);
     const concurrency = Math.max(1, Math.min(
       options.conferenceConcurrency ?? Number(process.env.DISCOVERY_GLOBAL_CONCURRENCY || 4), 16));
     let cursor = 0;

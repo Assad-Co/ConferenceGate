@@ -189,6 +189,25 @@ export interface CuratedOptions extends ParseOptions {
   sourceUrl: string;
 }
 
+/**
+ * Whether the list said this conference's place is undecided, rather than simply not filling it in.
+ *
+ * A conference needs a place to be worth listing — a reader searching Germany must not be handed
+ * events that might be anywhere. But "TBD" is the organiser telling us the venue is not chosen yet,
+ * which is a fact about a real conference with real dates, and refusing the row over it lost AAPG's
+ * 3rd Edition Geological Process-Based Forward Modeling from the catalogue entirely.
+ *
+ * The distinction is the whole point: a cell that SAYS "TBD" is a statement, an empty cell is a gap
+ * in the list, and only the first is trusted. Even then the row is kept only when it carries the
+ * conference's own page, so a reader has somewhere authoritative to go for the place we do not have.
+ * Both city and country stay null; nothing is guessed.
+ */
+function locationDeclaredUndecided(row: CuratedRow): boolean {
+  const cells = [row.location, row.country].map((cell) => String(cell ?? "").trim());
+  if (cells.every((cell) => cell === "")) return false;
+  return cells.every((cell) => cell === "" || NOT_STATED.test(cell));
+}
+
 export function mapCuratedRow(row: CuratedRow, options: CuratedOptions): ParseOutcome {
   const title = String(row.name || "").replace(/\s+/g, " ").trim();
   if (!title || title.length < 4) return { ok: false, reason: "no_title" };
@@ -211,7 +230,9 @@ export function mapCuratedRow(row: CuratedRow, options: CuratedOptions): ParseOu
 
   const { city, venue } = splitCuratedLocation(row.location);
   const countryRecord = normalizeCountry(statedOrNull(row.country));
-  if (!city && !countryRecord) return { ok: false, reason: "no_location" };
+  if (!city && !countryRecord && !(officialUrl && locationDeclaredUndecided(row))) {
+    return { ok: false, reason: "no_location" };
+  }
 
   const { title: cleanTitle, acronym, edition } = splitTitleParts(title);
   const organization = statedOrNull(row.partners);
