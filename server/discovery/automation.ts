@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { dbAll, dbGet, dbRun } from "../db";
-import { auditPublishReady } from "./controlledPublish";
+import { auditPublishReady, latestPassingPublicationAudit } from "./controlledPublish";
 import { auditDiscoveredConferences } from "./audit";
 import { reclassifyAllPublishReadiness, runEnrichment } from "./enrichment";
 import { buildInventoryReport, type InventoryReport } from "./inventory";
@@ -334,7 +334,63 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
   let scaleRunId: string | null = null;
   let enrichmentRunId: string | null = null;
   let auditId: string | null = null;
+  /**
+   * Readiness, the audit gate, publication, and the deep-tab sync — the stages that actually put
+   * a conference in front of a reader.
+   *
+   * Extracted so a cycle can run it at both ends. It used to run only last, which meant a
+   * conference whose page verified in the first two minutes still waited out discovery, enrichment
+   * and the deep pass — three quarters of an hour — before anyone could see it. Nothing about the
+   * work required that; it was a stage boundary.
+   *
+   * `stale` reuses a passing audit from the last thirty days rather than re-reading ten live pages
+   * every time. That is not a relaxation: it is the same gate publishDiscoveredConferences enforces
+   * for itself, and the late pass still takes a fresh sample.
+   */
+  const deliverReadyRecords = async (
+    label: "early" | "late"
+  ): Promise<{ publication: PublishResult | null; auditId: string | null }> => {
+    await setStage(runId, ownerId, `readiness_${label}`, leaseMinutes);
+    await reclassifyAllPublishReadiness();
+    // Empty tabs filled in on conferences this engine already published. Runs before the decision
+    // below, and unconditionally: it publishes nothing and changes no readiness, so a cycle with
+    // nothing new to publish must still deliver sections the deep pass has since read.
+    await syncPublishedDeepSections({ limit: 1_000 });
+    const candidates = await countPublishCandidates();
+    if (candidates === 0 || !automationPublicationEnabled()) return { publication: null, auditId: null };
+
+    let passed = true;
+    let id: string | null = null;
+    const reuseable = label === "early" ? await latestPassingPublicationAudit() : undefined;
+    if (!reuseable) {
+      await setStage(runId, ownerId, `publication_audit_${label}`, leaseMinutes);
+      const audit = await auditPublishReady({ sample: 10 });
+      id = audit.id;
+      passed = audit.passed;
+      if (!passed) await quarantineAuditFailures(audit.failures);
+    }
+
+    if (!passed) {
+      return {
+        publication: { considered: candidates, written: 0, skippedExisting: 0, skippedIneligible: candidates, urls: [] },
+        auditId: id,
+      };
+    }
+    await setStage(runId, ownerId, `controlled_publication_${label}`, leaseMinutes);
+    const written = await publishDiscoveredConferences({ limit: 500, requirePassingAudit: true });
+    await dbRun("UPDATE discovery_automation_state SET last_publication_at=datetime('now') WHERE id=1");
+    console.error(`[automation] ${label} publication wrote ${written.written} record(s)`);
+    return { publication: written, auditId: id };
+  };
+
   try {
+    // Whatever is already ready goes out before this cycle starts crawling, not after it finishes.
+    // On the first cycle of a stretch that is every record earlier work left ready, delivered in
+    // about a minute instead of three quarters of an hour.
+    const early = await deliverReadyRecords("early");
+    if (early.publication) publication = early.publication;
+    if (early.auditId) auditId = early.auditId;
+
     // Discovery grows inventory; enrichment, the deep pass and publication are what put a
     // conference in front of a reader. Taken first-come-first-served, discovery's twenty-five
     // minutes swallowed the window and left enrichment nothing — the stages a reader can actually
@@ -392,29 +448,11 @@ export async function runProductionAutomation(options: AutomationOptions = {}): 
       quiet: options.quiet,
     });
 
-    // Enrichment is what learns a conference's sections, so enrichment is what delivers them to
-    // the page. This fills empty tabs on rows this engine already published; it publishes nothing,
-    // changes no readiness, and leaves the permit, the audit and the eligibility SQL untouched.
-    await syncPublishedDeepSections({ limit: 1_000 });
-
     await dbRun("UPDATE discovery_automation_state SET last_enrichment_at=datetime('now') WHERE id=1");
 
-    await setStage(runId, ownerId, "readiness", leaseMinutes);
-    await reclassifyAllPublishReadiness();
-    const candidates = await countPublishCandidates();
-    if (candidates > 0 && automationPublicationEnabled()) {
-      await setStage(runId, ownerId, "publication_audit", leaseMinutes);
-      const audit = await auditPublishReady({ sample: 10 });
-      auditId = audit.id;
-      if (audit.passed) {
-        await setStage(runId, ownerId, "controlled_publication", leaseMinutes);
-        publication = await publishDiscoveredConferences({ limit: 500, requirePassingAudit: true });
-      } else {
-        await quarantineAuditFailures(audit.failures);
-        publication = { considered: candidates, written: 0, skippedExisting: 0, skippedIneligible: candidates, urls: [] };
-      }
-      await dbRun("UPDATE discovery_automation_state SET last_publication_at=datetime('now') WHERE id=1");
-    }
+    const late = await deliverReadyRecords("late");
+    if (late.publication) publication = late.publication;
+    if (late.auditId) auditId = late.auditId;
 
     await setStage(runId, ownerId, "checkpoint", leaseMinutes);
     const inventory = await buildInventoryReport();
