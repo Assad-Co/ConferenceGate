@@ -469,6 +469,7 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
       provenance,
       corroboratingSourceUrls: [],
       origin: "launch_dataset",
+    supply: "web_harvest",
     },
   };
 }

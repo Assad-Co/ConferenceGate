@@ -216,6 +216,15 @@ export interface LaunchConferenceRecord {
 
   /** Marks these as launch-dataset records so stored Turso records stay distinguishable. */
   origin: "launch_dataset";
+  /**
+   * Whether a person supplied this conference or a search found it.
+   *
+   * The distinction turned out to matter more than any other: of 330 records the web harvest
+   * produced, not one has a single deep tab behind it — no programme, no speakers, no committee,
+   * no fees — because a search result states a name, a date and a place and stops there. A curated
+   * list is written by somebody who knows the field, and 153 of 181 such records carry content.
+   */
+  supply: "curated_list" | "web_harvest";
 
   /** Programme, speakers, committee, fees and sponsors, when a curated list supplied them.
    *  Absent means nobody supplied them, which is not the same as the conference having none. */

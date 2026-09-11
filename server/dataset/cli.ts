@@ -218,11 +218,14 @@ function main(): void {
   const evidence = readHarvest();
   const now = new Date();
   const horizonStart = now.toISOString().slice(0, 10);
-  // Hold back only a record that cannot say what it is, when it runs and where. `--all` publishes
-  // even those.
+  // Hold back a record that cannot say what it is, when it runs and where, and one that a search
+  // found rather than a person supplied — the harvest produced 330 conferences and not one tab
+  // between them. `--all` publishes everything; `--include-harvest` keeps the search results.
   const publishOnlyUsable = !process.argv.includes("--all");
+  const publishOnlyCuratedLists = publishOnlyUsable && !process.argv.includes("--include-harvest");
   const options = {
-    retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028], publishOnlyUsable,
+    retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028],
+    publishOnlyUsable, publishOnlyCuratedLists,
   };
   const structured = [...structuredFromPredictHq(options), ...structuredFromCuratedLists(options)];
   const indexed = indexRecordsFromDisk(options);

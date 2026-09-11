@@ -200,6 +200,15 @@ export interface BuildOptions extends ParseOptions {
    * go. Off by default, because a fixture catalogue must come back as the thing it was built from.
    */
   publishOnlyUsable?: boolean;
+  /**
+   * Ship only conferences a person supplied, not ones a search found.
+   *
+   * Of the 330 records the web harvest produced, not one carries a single deep tab — a search
+   * result states a name, a date and a place and stops there, and no amount of rebuilding turns
+   * that into a programme. A curated list is written by somebody who knows the field, and 153 of
+   * 181 such records have content behind their tabs. Also off by default.
+   */
+  publishOnlyCuratedLists?: boolean;
 }
 
 export function buildLaunchDataset(
@@ -280,7 +289,10 @@ export function buildLaunchDataset(
   // Publishing is a choice about what to ship, not about what the evidence says, so it is an
   // option rather than the builder's own rule: a fixture catalogue must still come back as the
   // thing it was built from.
-  const published = options.publishOnlyUsable ? records.filter(hasSomethingToShow) : records;
+  const usable = options.publishOnlyUsable ? records.filter(hasSomethingToShow) : records;
+  const published = options.publishOnlyCuratedLists
+    ? usable.filter((record) => record.supply === "curated_list")
+    : usable;
   const heldBack = records.length - published.length;
 
   const generatedAt = new Date().toISOString();

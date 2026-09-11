@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-11T12:44:39.893Z",
+  "generatedAt": "2026-09-11T12:50:06.154Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 511,
+  "accepted": 181,
   "duplicatesMerged": 8,
   "rejected": 22,
   "rejectionReasons": {
@@ -19,7 +19,7 @@
     "no_location": 1
   },
   "detailsAttached": 16,
-  "heldBackWithNothingToShow": 29,
+  "heldBackWithNothingToShow": 359,
   "websitesResolved": {
     "applied": 18,
     "alreadyKnown": 0,
@@ -32,47 +32,46 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 511,
+  "total": 181,
   "byYear": {
-    "2026": 104,
-    "2027": 394,
-    "2028": 13
+    "2026": 56,
+    "2027": 125
   },
-  "countries": 53,
-  "cities": 203,
-  "categories": 44,
+  "countries": 35,
+  "cities": 102,
+  "categories": 39,
   "worldRegions": {
-    "North America": 179,
-    "Asia": 150,
-    "Europe": 139,
-    "Middle East": 20,
-    "South America": 10,
-    "Oceania": 9,
-    "Africa": 4
+    "Asia": 96,
+    "Europe": 41,
+    "North America": 28,
+    "Middle East": 7,
+    "South America": 5,
+    "Oceania": 3,
+    "Africa": 1
   },
   "formats": {
-    "in-person": 490,
-    "hybrid": 18,
+    "in-person": 173,
+    "hybrid": 5,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 411,
-    "directory_listing": 61,
-    "third_party": 30,
-    "reference": 9
+    "official_site": 105,
+    "directory_listing": 50,
+    "third_party": 20,
+    "reference": 6
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "97.3%",
-    "monthOnlyDates": "2.7%",
-    "city": "99.6%",
+    "exactDates": "97.8%",
+    "monthOnlyDates": "2.2%",
+    "city": "100.0%",
     "country": "100.0%",
-    "officialUrl": "80.4%",
-    "venue": "31.3%",
-    "organization": "50.1%",
-    "category": "71.4%",
+    "officialUrl": "58.0%",
+    "venue": "16.0%",
+    "organization": "68.5%",
+    "category": "100.0%",
     "description": "100.0%",
-    "corroborated": "0.8%"
+    "corroborated": "0.0%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

@@ -304,6 +304,7 @@ export function mapCuratedRow(row: CuratedRow, options: CuratedOptions): ParseOu
       externalId: null,
     },
     origin: "launch_dataset",
+    supply: "curated_list",
     provenance: {
       title: { sourceUrl, sourcePageTitle: options.sourceName, confidence: "High" },
       dates: { sourceUrl, sourcePageTitle: options.sourceName, confidence: dates.precision === "day" ? "High" : "Medium" },

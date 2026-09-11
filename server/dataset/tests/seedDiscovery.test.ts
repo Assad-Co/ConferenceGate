@@ -48,6 +48,7 @@ function record(overrides: Partial<LaunchConferenceRecord> = {}): LaunchConferen
     provenance: {},
     corroboratingSourceUrls: [],
     origin: "launch_dataset",
+    supply: "curated_list",
     ...overrides,
   };
 }

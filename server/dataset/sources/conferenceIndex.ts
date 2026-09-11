@@ -321,6 +321,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     // conference. Where these facts were read is `provenance`, which is set above and survives.
     corroboratingSourceUrls: [],
     origin: "launch_dataset",
+    supply: "curated_list",
     details: {
       source: options.sourceName,
       venueName: parsed.venueName,

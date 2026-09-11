@@ -441,6 +441,7 @@ export function mapPredictHqEvent(event: PredictHqEvent, options: PredictHqMapOp
       provenance,
       corroboratingSourceUrls: [],
       origin: "launch_dataset",
+    supply: "web_harvest",
     },
   };
 }
