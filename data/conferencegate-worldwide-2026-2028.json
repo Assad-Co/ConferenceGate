@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T12:50:06.154Z",
+  "generatedAt": "2026-09-11T13:08:23.751Z",
   "horizonStart": "2026-09-11",
   "years": [
     2026,
@@ -358,6 +358,280 @@
         },
         "safetyNote": null,
         "registrationUrl": null
+      }
+    },
+    {
+      "id": "gastech-2026-bangkok",
+      "title": "Gastech 2026",
+      "acronym": null,
+      "series": "Gastech",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-09-14",
+      "endDate": "2026-09-17",
+      "datePrecision": "day",
+      "startMonth": 9,
+      "datesText": null,
+      "city": "Bangkok",
+      "region": null,
+      "country": "Thailand",
+      "countryCode": "TH",
+      "worldRegion": "Asia",
+      "venue": "BITEC — Bangkok International Trade & Exhibition Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": "Petroleum & Energy",
+      "categories": [
+        "Petroleum & Energy",
+        "Energy & Geosciences"
+      ],
+      "topics": [
+        "natural gas",
+        "gastech",
+        "lng",
+        "hydrogen"
+      ],
+      "keywords": [
+        "natural gas",
+        "gastech",
+        "lng",
+        "hydrogen",
+        "Bangkok",
+        "Thailand",
+        "TH",
+        "THA",
+        "Asia",
+        "2026",
+        "Petroleum & Energy"
+      ],
+      "description": "Global energy exhibition and conference connecting natural gas, LNG, hydrogen, low-carbon solutions, electrification and AI-for-energy companies with policymakers, industry leaders, financiers and technology providers.",
+      "sourceUrl": "https://www.gastechevent.com/",
+      "sourceHost": "gastechevent.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.gastechevent.com/",
+      "logoUrl": null,
+      "evidence": {
+        "query": "webharvest-verified-2026",
+        "resultTitle": "Gastech 2026",
+        "statedText": "Global energy exhibition and conference connecting natural gas, LNG, hydrogen, low-carbon solutions, electrification and AI-for-energy companies with policymakers, industry leaders, financiers and technology providers.",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search",
+        "externalId": "OFFICIAL VERIFIED"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.gastechevent.com/",
+          "sourcePageTitle": null,
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.gastechevent.com/",
+          "sourcePageTitle": null,
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.gastechevent.com/",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        },
+        "country": {
+          "sourceUrl": "https://www.gastechevent.com/",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        }
+      },
+      "corroboratingSourceUrls": [
+        "https://www.rogtecmagazine.com/events-calendar/"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "BITEC — Bangkok International Trade & Exhibition Centre",
+        "venueAddress": "Bangkok, Thailand",
+        "program": {
+          "availability": "stated",
+          "text": "Four-day exhibition and conference, 14–17 September 2026. Published daily exhibition hours are 09:00–18:00 on 14 Sep, 09:00–19:00 on 15 Sep, 09:00–18:00 on 16 Sep and 09:00–14:00 on 17 Sep. Conference areas include Hydrogen, Decarbonisation, EPC & Gas Processing, Shipping & Marine, Commercial, Electrification and AI for Energy."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Gastech is a curated industry conference and exhibition. Conference participation, delegate, exhibitor and sponsorship opportunities are managed through the official Gastech event site.",
+          "url": "https://www.gastechevent.com/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Gastech states that its speaker programme brings together ministers, CEOs and other senior energy-industry leaders; individual 2026 speaker names are published through the official conference programme.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Gastech publishes an Executive Committee through its official event site and the conference programme is managed by dmg events with industry leadership participation.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Visitor registration and paid delegate passes are offered through the official Gastech registration system; sponsorship and exhibition packages are separately available.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Hosted by Thailand's Ministry of Energy. Co-hosts include Chevron and Shell. National Consortium Partners shown by the official site include PTT and Gulf, with additional official partners and sponsors.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.gastechevent.com/"
+      }
+    },
+    {
+      "id": "annual-eurofinance-international-treasury-management-2026-barcelona",
+      "title": "Annual EuroFinance International Treasury Management",
+      "acronym": null,
+      "series": "Annual EuroFinance International Treasury Management",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-09-16",
+      "endDate": "2026-09-18",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Barcelona",
+      "region": "Catalunya",
+      "country": "Spain",
+      "countryCode": "ES",
+      "worldRegion": "Europe",
+      "venue": "Barcelona International Convention Centre",
+      "format": "in-person",
+      "organization": null,
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance",
+        "Telecommunications & Networking"
+      ],
+      "topics": [
+        "management",
+        "finance",
+        "strategy",
+        "eurofinance",
+        "treasury",
+        "networking"
+      ],
+      "keywords": [
+        "Barcelona",
+        "Catalunya",
+        "Spain",
+        "ES",
+        "ESP",
+        "españa",
+        "espana",
+        "Europe",
+        "2026",
+        "Business & Finance",
+        "management",
+        "finance",
+        "strategy",
+        "networking",
+        "eurofinance",
+        "treasury"
+      ],
+      "description": "Sourced from predicthq.com - Annual EuroFinance International Treasury Management is a leading professional conference for corporate treasurers and finance professionals focused on treasury strategy, cash and risk manage",
+      "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+      "sourceHost": "eurofinance.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.eurofinance.com/international-treasury-event/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual EuroFinance International Treasury Management",
+        "statedText": "Annual EuroFinance International Treasury Management, Barcelona International Convention Centre, Barcelona, Catalunya, Spain, 2026-09-16 to 2026-09-18",
+        "retrievedAt": "2026-09-11",
+        "method": "event_api",
+        "externalId": "5wLZqYb8NeVW86SQ2K"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.eurofinance.com/international-treasury-event/",
+          "sourcePageTitle": "Annual EuroFinance International Treasury Management",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": null,
+        "venueAddress": "Barcelona, Spain — official conference venue information is provided through the EuroFinance event site.",
+        "program": {
+          "availability": "stated",
+          "text": "Three-day main conference, 16–18 September 2026, plus optional pre-conference training on 15 September. Agenda includes Main Stage sessions, six streams, Treasury Inspiration stage, roundtables, exhibition, Innovation Hub and networking. Published sessions include geopolitical-risk scenarios, European competitiveness and managing corporate FX risk with automation and AI."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Curated professional conference rather than an academic proceedings event; programme content is developed by EuroFinance with invited corporate treasury leaders, economists and solution providers.",
+          "url": "https://www.eurofinance.com/international-treasury-event/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "The official EuroFinance 2026 agenda publishes named corporate treasury, economics, policy and industry speakers across the Main Stage and specialist streams.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Programme is curated by EuroFinance's editorial and conference team; this is a professional treasury conference rather than an academic technical-committee event.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Corporate treasurer/finance professional: €3,500 + 21% VAT for the 3-day conference; €4,795 + VAT for conference plus pre-conference training; €1,595 + VAT for training only. Solution providers: €5,855 + VAT conference; €7,150 + VAT conference plus training. Corporate group discounts: 5% for 2, 10% for 3–4, 15% for 5+ delegates.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "100+ partners participate in the exhibition and Innovation Hub. Goldman Sachs is identified on the official agenda as a sponsor of a networking break; additional sponsors and exhibitors are listed by EuroFinance.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.eurofinance.com/international-treasury-event/registration/"
       }
     },
     {
@@ -1656,6 +1930,206 @@
       }
     },
     {
+      "id": "annual-meeting-with-materials-science-technology-2026-pittsburgh",
+      "title": "Annual Meeting with Materials Science & Technology",
+      "acronym": null,
+      "series": "Annual Meeting with Materials Science & Technology",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-04",
+      "endDate": "2026-10-07",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Pittsburgh",
+      "region": "Pennsylvania",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "David L. Lawrence Convention Center",
+      "format": "in-person",
+      "organization": "The American Ceramic Society (ACerS)",
+      "category": "Chemistry & Materials",
+      "categories": [
+        "Chemistry & Materials"
+      ],
+      "topics": [
+        "materials science",
+        "materials",
+        "science",
+        "technology"
+      ],
+      "keywords": [
+        "Pittsburgh",
+        "Pennsylvania",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Chemistry & Materials",
+        "materials science",
+        "materials",
+        "science",
+        "technology"
+      ],
+      "description": "Sourced from predicthq.com - The Annual Meeting with Materials Science & Technology is a major conference that brings together researchers, engineers, and industry professionals to present and discuss advances in materia",
+      "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+      "sourceHost": "ceramics.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Annual Meeting with Materials Science & Technology",
+        "statedText": "Annual Meeting with Materials Science & Technology, David L. Lawrence Convention Center, Pittsburgh, Pennsylvania, United States, 2026-10-04 to 2026-10-07",
+        "retrievedAt": "2026-09-11",
+        "method": "event_api",
+        "externalId": "6BYiHE6EAwPn9AZY6e"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://ceramics.org/event/acers-128th-annual-meeting-with-materials-science-and-technology-2026/",
+          "sourcePageTitle": "Annual Meeting with Materials Science & Technology",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "David L. Lawrence Convention Center",
+        "venueAddress": "1000 Fort Duquesne Blvd, Pittsburgh, Pennsylvania",
+        "program": {
+          "availability": "stated",
+          "text": "4–7 Oct 2026. Published sessions include ACerS award lectures, bioceramics sessions, the Edward Orton Jr. Memorial Lecture, annual business meeting, honors and awards banquet, Alfred R. Cooper Award sessions and a Starlab Materials Workshop."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Technical presentation and abstract participation are coordinated through the co-located MS&T technical programme and ACerS divisions; accepted contributors present in the joint meeting programme.",
+          "url": "https://www.matscitech.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Sabyasachi Sen",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yang Bai",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ngoc Huu Nguyen",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Robert Graham Hill",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Maziar Montazerian",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Alexander Michaelis",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Vincenzo M. Sglavo",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Makio Naito",
+              "role": "Featured lecturers",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Featured lecturers include Sabyasachi Sen; Yang Bai; Ngoc Huu Nguyen; Robert Graham Hill; Maziar Montazerian; Alexander Michaelis; Vincenzo M. Sglavo; Makio Naito.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Program is organized by The American Ceramic Society through its technical divisions and award/program committees in conjunction with MS&T.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Co-located with Materials Science & Technology 2026 and the Advanced Materials Show USA.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.matscitech.org/"
+      }
+    },
+    {
       "id": "cell-press-symposia-hallmarks-of-aging-2026-seville",
       "title": "Cell Press Symposia: Hallmarks of Aging",
       "acronym": "Hallmarks of Aging 2026",
@@ -1779,6 +2253,390 @@
         },
         "safetyNote": null,
         "registrationUrl": null
+      }
+    },
+    {
+      "id": "entrepreneur-2026-new-delhi",
+      "title": "Entrepreneur",
+      "acronym": null,
+      "series": "Entrepreneur",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-05",
+      "endDate": "2026-10-05",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "New Delhi",
+      "region": null,
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Bharat Mandapam",
+      "format": "in-person",
+      "organization": "Entrepreneur India / Entrepreneur Media",
+      "category": "Business & Finance",
+      "categories": [
+        "Business & Finance"
+      ],
+      "topics": [
+        "entrepreneur",
+        "entrepreneurship"
+      ],
+      "keywords": [
+        "New Delhi",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "entrepreneurship",
+        "entrepreneur"
+      ],
+      "description": "Sourced from predicthq.com - Entrepreneur is a one-day business conference held at Bharat Mandapam in New Delhi that brings together founders, investors, policymakers, and industry leaders to discuss startup growth, inno",
+      "sourceUrl": "https://www.entrepreneurindia.com/",
+      "sourceHost": "entrepreneurindia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.entrepreneurindia.com/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Entrepreneur",
+        "statedText": "Entrepreneur, Bharat Mandapam, New Delhi, India, 2026-10-05",
+        "retrievedAt": "2026-09-11",
+        "method": "event_api",
+        "externalId": "8HvAzEvLcgo4MbQfTB"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.entrepreneurindia.com/",
+          "sourcePageTitle": "Entrepreneur",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "Bharat Mandapam Convention Centre",
+        "venueAddress": "New Delhi, India",
+        "program": {
+          "availability": "stated",
+          "text": "One-day conference on 5 Oct 2026 with welcome address, keynote and leadership discussions, six thematic summits, startup/investor content, exhibition and awards programming."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "This is a curated business conference rather than an academic-paper venue. The official site accepts speaker applications, award nominations, exhibitors and partnership applications.",
+          "url": "https://www.entrepreneurindia.com/speaker-registration.php"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Beerud Sheth",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Gaurav Gupta",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ahshad Jussawala",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Satya Chakravarthy",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Gaurav Mangla",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Geetika Mehta",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Nipun Marya",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ankush Sabharwal",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "C.P. Gurnani",
+              "role": "Published 2026 speakers",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Published 2026 speakers include Beerud Sheth; Gaurav Gupta; Ahshad Jussawala; Satya Chakravarthy; Gaurav Mangla; Geetika Mehta; Nipun Marya; Ankush Sabharwal; C.P. Gurnani; Ramanan Ramanathan and many more.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Conference programme is led by Entrepreneur India & APAC editorial leadership; Sachin Marya is Editorial Director, Entrepreneur India & APAC.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Entrepreneur India is the official licensee of Entrepreneur USA; the event operates formal Partner with Us, Partners & Associations, exhibition and awards programmes.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.entrepreneurindia.com/conference-registration.php"
+      }
+    },
+    {
+      "id": "hacking-cyber-security-briefing-conference-2026-kochi",
+      "title": "Hacking & Cyber Security Briefing Conference",
+      "acronym": null,
+      "series": "Hacking & Cyber Security Briefing Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-06",
+      "endDate": "2026-10-13",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Kochi",
+      "region": "Kerala",
+      "country": "India",
+      "countryCode": "IN",
+      "worldRegion": "Asia",
+      "venue": "Grand Hyatt Kochi Bolgatty",
+      "format": "in-person",
+      "organization": "Kerala Police / Information Security Research Association (ISRA)",
+      "category": "Cybersecurity & Privacy",
+      "categories": [
+        "Cybersecurity & Privacy"
+      ],
+      "topics": [
+        "cybersecurity",
+        "cyber security",
+        "hacking",
+        "cyber",
+        "security",
+        "briefing",
+        "information security",
+        "privacy"
+      ],
+      "keywords": [
+        "Kochi",
+        "Kerala",
+        "India",
+        "IN",
+        "IND",
+        "bharat",
+        "republic of india",
+        "Asia",
+        "2026",
+        "Cybersecurity & Privacy",
+        "cybersecurity",
+        "cyber security",
+        "information security",
+        "privacy",
+        "hacking",
+        "cyber",
+        "security",
+        "briefing"
+      ],
+      "description": "Sourced from predicthq.com - Hacking & Cyber Security Briefing Conference (c0c0n) is a major cybersecurity event in Kochi that brings together researchers, security practitioners, industry vendors, and policymakers to di",
+      "sourceUrl": "https://www.c0c0n.org/",
+      "sourceHost": "c0c0n.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.c0c0n.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "Hacking & Cyber Security Briefing Conference",
+        "statedText": "Hacking & Cyber Security Briefing Conference, Grand Hyatt Kochi Bolgatty, Kochi, Kerala, India, 2026-10-06 to 2026-10-13",
+        "retrievedAt": "2026-09-11",
+        "method": "event_api",
+        "externalId": "FDsHrYjE8XjJ9dDg2Y"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.c0c0n.org/",
+          "sourcePageTitle": "Hacking & Cyber Security Briefing Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "Grand Hyatt",
+        "venueAddress": "Bolgatty, Kochi, Kerala, India",
+        "program": {
+          "availability": "stated",
+          "text": "Pre-conference training 6–8 Oct; main conference 9–10 Oct with talks, panels, villages, CTFs and exhibition; post-conference training 11–13 Oct. Event also includes networking and gala activities."
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Official CFP tracks are published for the main conference and a dedicated Law Enforcement Agency track through the c0c0n participation pages.",
+          "url": "https://www.c0c0n.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "EC-Council",
+              "role": "Published featured participants",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "V. D. Satheesan",
+              "role": "Published featured participants",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ramesh Chennithala",
+              "role": "Published featured participants",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sanju V Samson",
+              "role": "Published featured participants",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Published featured participants include Jay Bavisi — President & CEO, EC-Council; V. D. Satheesan; Ramesh Chennithala; Sanju V Samson, with 200+ speakers across the event.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Hosted by Kerala Police and Information Security Research Association (ISRA) with conference tracks, CFP review and technical training coordinated by the c0c0n organizing team.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Conference Individual: INR 9,999 regular / INR 6,499 discounted; Corporate INR 14,999; Student INR 4,999. Pre-conference training INR 44,999. Conference + training combos start at INR 51,498. Volume discounts apply for groups of 6–10 and 11+.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Alibi - Cyber Forensics",
+              "tier": "Diamond Partner"
+            },
+            {
+              "name": "Federal Bank Hormis Memorial Foundation",
+              "tier": "Platinum Partner"
+            },
+            {
+              "name": "Foresight Software Solutions; Prudent Consulting | Strike48",
+              "tier": "Silver"
+            },
+            {
+              "name": "Indian Oil; Spharaka Networks; Cochin International Airport",
+              "tier": "Bronze"
+            }
+          ],
+          "text": "Diamond Partner: Alibi - Cyber Forensics. Platinum Partner: Federal Bank Hormis Memorial Foundation. Silver: Foresight Software Solutions; Prudent Consulting | Strike48. Bronze: Indian Oil; Spharaka Networks; Cochin International Airport. Other partners include OffSec, SICCI, CODE BLUE and BSides Bangalore.",
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.c0c0n.org/register"
       }
     },
     {
@@ -2317,6 +3175,398 @@
       }
     },
     {
+      "id": "spe-asia-pacific-oil-gas-conference-and-exhibition-2026-brisbane",
+      "title": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026",
+      "acronym": null,
+      "series": "SPE Asia Pacific Oil & Gas Conference and Exhibition",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-13",
+      "endDate": "2026-10-15",
+      "datePrecision": "day",
+      "startMonth": 10,
+      "datesText": null,
+      "city": "Brisbane",
+      "region": null,
+      "country": "Australia",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
+      "venue": "Brisbane Convention & Exhibition Centre (BCEC)",
+      "format": "in-person",
+      "organization": "SPE",
+      "category": "Petroleum & Energy",
+      "categories": [
+        "Petroleum & Energy",
+        "Energy & Geosciences",
+        "Environment & Sustainability"
+      ],
+      "topics": [
+        "oil & gas",
+        "spe",
+        "asia",
+        "pacific",
+        "petroleum",
+        "upstream",
+        "apogce",
+        "energy transition",
+        "sustainability"
+      ],
+      "keywords": [
+        "SPE",
+        "Brisbane",
+        "Australia",
+        "AU",
+        "AUS",
+        "Oceania",
+        "2026",
+        "Petroleum & Energy",
+        "petroleum",
+        "oil & gas",
+        "upstream",
+        "spe",
+        "apogce",
+        "energy transition",
+        "sustainability",
+        "asia"
+      ],
+      "description": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026, Brisbane, Australia, October 13-15, 2026",
+      "sourceUrl": "https://www.spe-events.org/apogce2026",
+      "sourceHost": "spe-events.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.spe-events.org/apogce2026",
+      "evidence": {
+        "query": "SPE oil gas conference 2026 2027 2028",
+        "resultTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+        "statedText": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026, Brisbane, Australia, October 13-15, 2026",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.spe-events.org/apogce2026",
+          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.spe-events.org/apogce2026",
+          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.spe-events.org/apogce2026",
+          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.spe-events.org/apogce2026",
+          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://www.spe-events.org/apogce2026",
+          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "Brisbane Convention & Exhibition Centre (BCEC)",
+        "venueAddress": "South Brisbane, Australia",
+        "program": {
+          "availability": "stated",
+          "text": "Opening and keynote session, executive plenary, panel sessions, technical sessions, knowledge-sharing ePosters, exhibition, daily networking lunches and coffee breaks, welcome reception and digital proceedings."
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Manuscript submission is compulsory for accepted authors. Accepted abstracts are reviewed by the programme committee, and final manuscripts are published in OnePetro on the first day of the event.",
+          "url": "https://www.spe-events.org/apogce2026/author-kit"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Steve Trench",
+              "role": "Conference Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Santos",
+              "role": "Conference Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bre Murillo",
+              "role": "Technical Programme Co-Chairs",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pankaj Bhavnani",
+              "role": "Technical Programme Co-Chairs",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Shell QGC",
+              "role": "Technical Programme Co-Chairs",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Adelaide University",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Arrow Energy",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "ExxonMobil",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Halliburton",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Honeywell",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "INPEX",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "PETRONAS",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "PTTEP",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Shell",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "SLB",
+              "role": "Committee",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Conference Chair: Steve Trench, Santos. Technical Programme Co-Chairs: Bre Murillo, Santos; Pankaj Bhavnani, Shell QGC. Committee includes representatives from ADNOC, Adelaide University, Arrow Energy, ExxonMobil, Halliburton, Honeywell, INPEX, PETRONAS, PTTEP, Santos, Shell, SLB, Wood and others.",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Standard full conference: SPE Member USD 1,020; Non-Member USD 1,170; Speaker/Author/Committee/Session Chair USD 960. One-day: Member USD 665; Non-Member USD 715. Student complimentary with valid ID; visitor complimentary in advance / USD 50 onsite.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.spe-events.org/apogce2026/register-now"
+      }
+    },
+    {
+      "id": "all-things-open-conference-2026-raleigh",
+      "title": "All Things Open Conference",
+      "acronym": null,
+      "series": "All Things Open Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-18",
+      "endDate": "2026-10-20",
+      "datePrecision": "day",
+      "datesText": null,
+      "city": "Raleigh",
+      "region": "North Carolina",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Raleigh Convention Center",
+      "format": "in-person",
+      "organization": "All Things Open Network",
+      "category": "Technology & Consumer Electronics",
+      "categories": [
+        "Technology & Consumer Electronics"
+      ],
+      "topics": [
+        "open source",
+        "things",
+        "open"
+      ],
+      "keywords": [
+        "Raleigh",
+        "North Carolina",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Technology & Consumer Electronics",
+        "open source",
+        "things",
+        "open"
+      ],
+      "description": "Sourced from predicthq.com - All Things Open is an annual conference in Raleigh that focuses on open source software, the open web, and the broader open-technology community.",
+      "sourceUrl": "https://2026.allthingsopen.org/",
+      "sourceHost": "2026.allthingsopen.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://2026.allthingsopen.org/",
+      "evidence": {
+        "query": "predicthq:category=conferences",
+        "resultTitle": "All Things Open Conference",
+        "statedText": "All Things Open Conference, Raleigh Convention Center, Raleigh, North Carolina, United States, 2026-10-18 to 2026-10-20",
+        "retrievedAt": "2026-09-11",
+        "method": "event_api",
+        "externalId": "HEPXoA8fJb26nASd6Z"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://2026.allthingsopen.org/",
+          "sourcePageTitle": "All Things Open Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "Raleigh Convention Center",
+        "venueAddress": "Raleigh, North Carolina, United States",
+        "program": {
+          "availability": "stated",
+          "text": "19–20 Oct 2026. Day 1 features premium extended workshops, deep-dive sessions and four co-located events; Day 2 features 100+ speakers in keynotes and 30-minute sessions across multiple tracks."
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Speaker programming is curated through All Things Open's conference speaker process and includes workshops, deep dives and traditional conference sessions.",
+          "url": "https://2026.allthingsopen.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Angie Jones; Kent C. Dodds; Mark Techson; Nitya Narasimhan; Brooke Jamieson; Abdel Sghiouar; Dawn Wages; Lena Hall.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Program is curated by the All Things Open conference team and invited open-source/technology experts.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Paid registration is available through the official 2026 conference registration portal, including access options for workshops/deep dives and the conference.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Official 2026 Sponsors + Partners programme includes major technology companies supporting the event.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://2026.allthingsopen.org/"
+      }
+    },
+    {
       "id": "food-structure-functionality-symposium-2026-grado",
       "title": "Food Structure & Functionality Symposium",
       "acronym": "FSFS 2026",
@@ -2561,6 +3811,161 @@
         },
         "safetyNote": null,
         "registrationUrl": null
+      }
+    },
+    {
+      "id": "spe-atce-annual-technical-conference-and-exhibition-2026-houston",
+      "title": "SPE ATCE 2026 Annual Technical Conference and Exhibition",
+      "acronym": null,
+      "series": "SPE ATCE Annual Technical Conference and Exhibition",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-21",
+      "endDate": "2026-10-23",
+      "datePrecision": "day",
+      "startMonth": 10,
+      "datesText": null,
+      "city": "Houston",
+      "region": "Texas",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "George R. Brown Convention Center",
+      "format": "in-person",
+      "organization": "SPE",
+      "category": "Petroleum & Energy",
+      "categories": [
+        "Petroleum & Energy",
+        "Telecommunications & Networking",
+        "Education & EdTech"
+      ],
+      "topics": [
+        "spe",
+        "atce",
+        "technical",
+        "petroleum",
+        "networking",
+        "learning"
+      ],
+      "keywords": [
+        "SPE",
+        "Houston",
+        "Texas",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Petroleum & Energy",
+        "petroleum",
+        "spe",
+        "networking",
+        "learning",
+        "atce",
+        "technical"
+      ],
+      "description": "SPE ATCE 2026 Annual Technical Conference and Exhibition, George R. Brown Convention Center, Houston, Texas, USA, October 21-23, 2026",
+      "sourceUrl": "https://www.atce.org/",
+      "sourceHost": "atce.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.atce.org/",
+      "evidence": {
+        "query": "SPE oil gas conference 2026 2027 2028",
+        "resultTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+        "statedText": "SPE ATCE 2026 Annual Technical Conference and Exhibition, George R. Brown Convention Center, Houston, Texas, USA, October 21-23, 2026",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://www.atce.org/",
+          "sourcePageTitle": "SPE ATCE 2026 Conference & Exhibition | 21-23 October 2026",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "George R. Brown Convention Center",
+        "venueAddress": "Houston, Texas, United States",
+        "program": {
+          "availability": "stated",
+          "text": "21–23 Oct 2026; 300+ technical paper presentations, multidisciplinary technical sessions, exhibition, networking and special events."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "ATCE technical papers and presentations are managed through SPE's peer-reviewed technical-program process.",
+          "url": "https://www.atce.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Technical programme managed by Society of Petroleum Engineers committees and discipline specialists.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Paid conference registration is available through SPE, with member and attendee-category pricing through the official registration portal.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "150+ exhibitors and sponsors participate in ATCE 2026.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.atce.org/"
       }
     },
     {
@@ -3579,6 +4984,151 @@
       }
     },
     {
+      "id": "adipec-abu-dhabi-international-petroleum-exhibition-and-conference-202",
+      "title": "ADIPEC 2026 Abu Dhabi International Petroleum Exhibition and Conference",
+      "acronym": null,
+      "series": "ADIPEC Abu Dhabi International Petroleum Exhibition and Conference",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-02",
+      "endDate": "2026-11-05",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": null,
+      "city": "Abu Dhabi",
+      "region": null,
+      "country": "United Arab Emirates",
+      "countryCode": "AE",
+      "worldRegion": "Middle East",
+      "venue": "ADNEC Centre Abu Dhabi",
+      "format": "in-person",
+      "organization": "dmg events / ADIPEC",
+      "category": "Petroleum & Energy",
+      "categories": [
+        "Petroleum & Energy"
+      ],
+      "topics": [
+        "petroleum",
+        "adipec",
+        "dhabi"
+      ],
+      "keywords": [
+        "Abu Dhabi",
+        "United Arab Emirates",
+        "AE",
+        "ARE",
+        "uae",
+        "u.a.e.",
+        "emirates",
+        "the emirates",
+        "Middle East",
+        "2026",
+        "Petroleum & Energy",
+        "petroleum",
+        "adipec",
+        "dhabi"
+      ],
+      "description": "ADIPEC 2026 Abu Dhabi International Petroleum Exhibition and Conference, Abu Dhabi, United Arab Emirates, November 2-5, 2026",
+      "sourceUrl": "https://www.adipec.com/",
+      "sourceHost": "adipec.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.adipec.com/",
+      "evidence": {
+        "query": "World Petroleum Congress ADIPEC Gastech 2026 2027",
+        "resultTitle": "ADIPEC 2026 Exhibition and Conference",
+        "statedText": "ADIPEC 2026 Abu Dhabi International Petroleum Exhibition and Conference, Abu Dhabi, United Arab Emirates, November 2-5, 2026",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.adipec.com/",
+          "sourcePageTitle": "ADIPEC 2026 Exhibition and Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.adipec.com/",
+          "sourcePageTitle": "ADIPEC 2026 Exhibition and Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.adipec.com/",
+          "sourcePageTitle": "ADIPEC 2026 Exhibition and Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.adipec.com/",
+          "sourcePageTitle": "ADIPEC 2026 Exhibition and Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "ADNEC Centre Abu Dhabi",
+        "venueAddress": "Abu Dhabi, United Arab Emirates",
+        "program": {
+          "availability": "stated",
+          "text": "2–5 Nov 2026; 13 conference programmes and 380+ sessions, plus exhibition, Global Energy Club, leadership roundtables, AI Leadership Roundtables, gala dinner and Young ADIPEC."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "ADIPEC operates strategic and technical conference programmes with speaker and technical participation managed through its official conference process.",
+          "url": "https://www.adipec.com/conferences/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "H.E. Suhail Mohamed Al Mazrouei",
+              "role": "Confirmed global voices",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "H.E. Dr",
+              "role": "Confirmed global voices",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Confirmed global voices include H.E. Suhail Mohamed Al Mazrouei; H.E. Dr. Mohamed bin Mubarak Bin Daina; H.E. Karim Badawi; Dr. Georg Stamatelopoulos; Dr. Markus Steilemann; Hunter L. Hunt.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "ADIPEC conference programmes are curated with global energy-industry leadership and technical experts under dmg events.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Visitor registration and paid delegate passes are available through the official ADIPEC registration system.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "54 NOCs, IOCs, NECs and IECs participate; official site lists ADNOC, Bapco Energies, Bharat Petroleum, bp, Chevron, CNPC, Dolphin Energy and other partners/sponsors.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.adipec.com/visit/"
+      }
+    },
+    {
       "id": "cell-press-symposia-biological-function-in-3d-structure-dynamics-and-a",
       "title": "Cell Press Symposia: Biological Function in 3D — Structure, Dynamics, and AI",
       "acronym": "Biological Function in 3D 2026",
@@ -4089,6 +5639,171 @@
       }
     },
     {
+      "id": "aiche-annual-meeting-2026-minneapolis",
+      "title": "2026 AIChE Annual Meeting",
+      "acronym": null,
+      "series": "AIChE Annual Meeting",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-08",
+      "endDate": "2026-11-12",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": null,
+      "city": "Minneapolis",
+      "region": "MN",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Minneapolis Convention Center",
+      "format": "in-person",
+      "organization": "AIChE",
+      "category": "Chemistry & Materials",
+      "categories": [
+        "Chemistry & Materials"
+      ],
+      "topics": [
+        "aiche"
+      ],
+      "keywords": [
+        "AIChE",
+        "Minneapolis",
+        "MN",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Chemistry & Materials",
+        "aiche"
+      ],
+      "description": "2026 AIChE Annual Meeting, Minneapolis Convention Center, Minneapolis, MN, USA, November 8-12, 2026",
+      "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+      "sourceHost": "aiche.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+      "evidence": {
+        "query": "AIChE annual meeting 2026 2027 dates location official",
+        "resultTitle": "2026 AIChE Annual Meeting | AIChE",
+        "statedText": "2026 AIChE Annual Meeting, Minneapolis Convention Center, Minneapolis, MN, USA, November 8-12, 2026",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026",
+          "sourcePageTitle": "2026 AIChE Annual Meeting | AIChE",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": "Minneapolis Convention Center",
+        "venueAddress": "Minneapolis, Minnesota, United States",
+        "program": {
+          "availability": "stated",
+          "text": "8–12 Nov 2026; technical program, invited and contributed sessions, professional events and sponsor/exhibitor activities."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Technical contributions are organized through AIChE's Annual Meeting technical program and participating divisions/forums.",
+          "url": "https://www.aiche.org/conferences/aiche-annual-meeting/2026"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Prodromos Daoutidis",
+              "role": "Meeting Program Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Cordell Hardy",
+              "role": "Meeting Program Co-Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Cargill",
+              "role": "Meeting Program Co-Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Meeting Program Chair: Prodromos Daoutidis, University of Minnesota. Meeting Program Co-Chair: Cordell Hardy, Cargill.",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Registration is sold through AIChE with member discounts; annual AIChE membership provides conference registration savings.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Official AIChE sponsor and exhibitor program with multiple published 2026 sponsors.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.aiche.org/conferences/aiche-annual-meeting/2026"
+      }
+    },
+    {
       "id": "11th-international-conference-on-power-electronics-systems-and-applica",
       "title": "2026 11th International Conference on Power Electronics Systems and Applications",
       "acronym": "PESA 2026",
@@ -4473,6 +6188,131 @@
         },
         "safetyNote": null,
         "registrationUrl": null
+      }
+    },
+    {
+      "id": "gartner-it-symposium-xpo-2026-orlando",
+      "title": "Gartner IT Symposium/Xpo",
+      "acronym": null,
+      "series": "Gartner IT Symposium/Xpo",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-16",
+      "endDate": "2026-11-18",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": null,
+      "city": "Orlando",
+      "region": null,
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": null,
+      "format": "in-person",
+      "organization": "Gartner",
+      "category": "Cybersecurity & Privacy",
+      "categories": [
+        "Cybersecurity & Privacy",
+        "Data Science & Analytics",
+        "Business & Finance"
+      ],
+      "topics": [
+        "cybersecurity",
+        "analytics",
+        "strategy",
+        "gartner"
+      ],
+      "keywords": [
+        "cybersecurity",
+        "analytics",
+        "strategy",
+        "gartner"
+      ],
+      "description": "Gartner's flagship gathering for CIOs and IT executives, focused on technology strategy, AI, cybersecurity, data and analytics, customer experience, transformation and emerging technology.",
+      "sourceUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+      "sourceHost": "gartner.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+      "logoUrl": null,
+      "evidence": {
+        "query": "webharvest-verified-2026",
+        "resultTitle": "Gartner IT Symposium/Xpo",
+        "statedText": "Gartner's flagship gathering for CIOs and IT executives, focused on technology strategy, AI, cybersecurity, data and analytics, customer experience, transformation and emerging technology.",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search",
+        "externalId": "OFFICIAL VERIFIED"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+          "sourcePageTitle": null,
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+          "sourcePageTitle": null,
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        },
+        "country": {
+          "sourceUrl": "https://www.gartner.com/en/conferences/na/symposium-us",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "webharvest-verified-2026",
+        "venueName": null,
+        "venueAddress": "Orlando, Florida, United States",
+        "program": {
+          "availability": "stated",
+          "text": "19–22 Oct 2026 in Orlando; analyst-led sessions, strategic tracks, workshops, roundtables, one-on-one analyst meetings and technology/solution-provider exhibition."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Curated Gartner analyst and invited executive conference; no academic paper CFP.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Program is shaped by Gartner's research organization and 130+ on-site Gartner analysts.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Paid conference registration is offered through Gartner's official registration portal.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Technology solution providers participate through Gartner's Symposium/Xpo exhibition and sponsorship programme.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.gartner.com/en/conferences/na/symposium-us/register"
       }
     },
     {
@@ -7394,6 +9234,155 @@
       }
     },
     {
+      "id": "agu-fall-meeting-agu26-annual-meeting-2026-san-francisco",
+      "title": "AGU Fall Meeting 2026 (AGU26 Annual Meeting)",
+      "acronym": "AGU26",
+      "series": "AGU Fall Meeting (AGU26 Annual Meeting)",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-12-07",
+      "endDate": "2026-12-11",
+      "datePrecision": "day",
+      "startMonth": 12,
+      "datesText": null,
+      "city": "San Francisco",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Moscone Center",
+      "format": "in-person",
+      "organization": "AGU",
+      "category": "Geosciences & Earth Systems",
+      "categories": [
+        "Geosciences & Earth Systems",
+        "Science",
+        "Earth & Space Sciences"
+      ],
+      "topics": [
+        "agu",
+        "fall",
+        "agu26",
+        "Science",
+        "Earth & Space Sciences"
+      ],
+      "keywords": [
+        "AGU",
+        "San Francisco",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2026",
+        "Geosciences & Earth Systems",
+        "Science",
+        "Earth & Space Sciences",
+        "agu",
+        "agu26"
+      ],
+      "description": "AGU Fall Meeting 2026 (AGU26 Annual Meeting), San Francisco, California, USA, 7-11 December 2026",
+      "sourceUrl": "https://www.agu.org/annual-meeting",
+      "sourceHost": "agu.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.agu.org/annual-meeting",
+      "evidence": {
+        "query": "AGU American Geophysical Union Fall Meeting 2026 2027 dates location",
+        "resultTitle": "AGU26 Annual Meeting | AGU",
+        "statedText": "AGU Fall Meeting 2026 (AGU26 Annual Meeting), San Francisco, California, USA, 7-11 December 2026",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.agu.org/annual-meeting",
+          "sourcePageTitle": "AGU26 Annual Meeting | AGU",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.agu.org/annual-meeting",
+          "sourcePageTitle": "AGU26 Annual Meeting | AGU",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.agu.org/annual-meeting",
+          "sourcePageTitle": "AGU26 Annual Meeting | AGU",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.agu.org/annual-meeting",
+          "sourcePageTitle": "AGU26 Annual Meeting | AGU",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://www.agu.org/annual-meeting",
+          "sourcePageTitle": "AGU26 Annual Meeting | AGU",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [
+        "https://www.agu.org/agu26"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": "Moscone Center",
+        "venueAddress": "747 Howard St, San Francisco, CA 94103, USA",
+        "program": {
+          "availability": "stated",
+          "text": "Thousands of research presentations; workshops; panel discussions; hands-on learning; mentoring; career programming; networking; exhibits. Scientific program goes live in early October 2026."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-09-29",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Main abstract cycle completed; late-breaking abstract submission deadline 29 Sep 2026.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Registration is open with early-rate pricing; category-by-category rates are published in the AGU registration portal but were not exposed in the public source extract used for this dataset.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
       "id": "black-hat-europe-2026-london",
       "title": "Black Hat Europe 2026",
       "acronym": "Black Hat Europe",
@@ -9540,6 +11529,140 @@
         "callForPapers": {
           "status": "Open",
           "abstractDeadline": "2026-10-10",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for papers / abstract submissions published.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
+      "id": "icsca-2027-putrajaya",
+      "title": "ICSCA 2027 International Conference on Software and Computer Applications",
+      "acronym": "ICSCA",
+      "series": "ICSCA International Conference on Software and Computer Applications",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-01-22",
+      "endDate": "2027-01-24",
+      "datePrecision": "day",
+      "startMonth": 1,
+      "datesText": null,
+      "city": "Putrajaya",
+      "region": null,
+      "country": "Malaysia",
+      "countryCode": "MY",
+      "worldRegion": "Asia",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": "Technology",
+      "categories": [
+        "Technology",
+        "Software & Computer Applications"
+      ],
+      "topics": [
+        "icsca",
+        "software",
+        "computer",
+        "applications",
+        "Technology",
+        "Software & Computer Applications",
+        "16th"
+      ],
+      "keywords": [
+        "ICSCA",
+        "Putrajaya",
+        "Malaysia",
+        "MY",
+        "MYS",
+        "Asia",
+        "2027",
+        "Technology",
+        "Software & Computer Applications",
+        "16th",
+        "software",
+        "computer",
+        "applications"
+      ],
+      "description": "ICSCA 2027 International Conference on Software and Computer Applications, Putrajaya, Malaysia, January 22-24, 2027",
+      "sourceUrl": "https://www.icsca.org/",
+      "sourceHost": "icsca.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icsca.org/",
+      "evidence": {
+        "query": "Southeast Asia conference 2027 dates venue",
+        "resultTitle": "ICSCA 2027 Putrajaya Malaysia Software and Computer Applications",
+        "statedText": "ICSCA 2027 International Conference on Software and Computer Applications, Putrajaya, Malaysia, January 22-24, 2027",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.icsca.org/",
+          "sourcePageTitle": "ICSCA 2027 Putrajaya Malaysia Software and Computer Applications",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.icsca.org/",
+          "sourcePageTitle": "ICSCA 2027 Putrajaya Malaysia Software and Computer Applications",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.icsca.org/",
+          "sourcePageTitle": "ICSCA 2027 Putrajaya Malaysia Software and Computer Applications",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.icsca.org/",
+          "sourcePageTitle": "ICSCA 2027 Putrajaya Malaysia Software and Computer Applications",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": null,
+        "venueAddress": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": "2026-09-10",
           "submissionEmail": null,
           "lengthLimit": null,
           "text": "Call for papers / abstract submissions published.",
@@ -12907,6 +15030,149 @@
       }
     },
     {
+      "id": "ic4e-18th-international-conference-on-e-education-e-business-e-managem",
+      "title": "IC4e 2027, 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+      "acronym": "IC4e 2027",
+      "series": "IC4e , 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-03-26",
+      "endDate": "2027-03-29",
+      "datePrecision": "day",
+      "startMonth": 3,
+      "datesText": null,
+      "city": "Fukuoka",
+      "region": null,
+      "country": "Japan",
+      "countryCode": "JP",
+      "worldRegion": "Asia",
+      "venue": null,
+      "format": "in-person",
+      "organization": "IC4e Organizing Committee / academic partners",
+      "category": "Education & EdTech",
+      "categories": [
+        "Education & EdTech",
+        "Education & Business",
+        "E-Education, E-Business & E-Learning"
+      ],
+      "topics": [
+        "education",
+        "e-learning",
+        "learning",
+        "ic4e",
+        "18th",
+        "e-education",
+        "e-business",
+        "e-management",
+        "Education & Business",
+        "E-Education, E-Business & E-Learning"
+      ],
+      "keywords": [
+        "Fukuoka",
+        "Japan",
+        "JP",
+        "JPN",
+        "nippon",
+        "nihon",
+        "日本",
+        "Asia",
+        "2027",
+        "Education & EdTech",
+        "Education & Business",
+        "E-Education, E-Business & E-Learning",
+        "education",
+        "e-learning",
+        "learning",
+        "18th",
+        "e-education",
+        "e-business"
+      ],
+      "description": "IC4e 2027, 18th International Conference on E-Education, E-Business, E-Management and E-Learning, Fukuoka, Japan, March 26-29, 2027",
+      "sourceUrl": "https://www.ic4e.net/",
+      "sourceHost": "ic4e.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.ic4e.net/",
+      "evidence": {
+        "query": "education e-learning higher education conference 2027",
+        "resultTitle": "IC4e 2027|The 2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+        "statedText": "IC4e 2027, 18th International Conference on E-Education, E-Business, E-Management and E-Learning, Fukuoka, Japan, March 26-29, 2027",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.ic4e.net/",
+          "sourcePageTitle": "IC4e 2027|The 2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.ic4e.net/",
+          "sourcePageTitle": "IC4e 2027|The 2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.ic4e.net/",
+          "sourcePageTitle": "IC4e 2027|The 2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.ic4e.net/",
+          "sourcePageTitle": "IC4e 2027|The 2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": null,
+        "venueAddress": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": "2026-10-20",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for papers / abstract submissions published.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Sponsored by Rajamangala University of Technology Tawan-ok; patrons include Meeting Place Fukuoka, Purdue University Northwest, De La Salle University-Manila, China West Normal University, Bulacan State University and Prince Sultan University.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
       "id": "11th-international-conference-on-materials-engineering-and-nano-scienc",
       "title": "2027 11th International Conference on Materials Engineering and Nano Sciences",
       "acronym": "ICMENS 2027",
@@ -13566,6 +15832,151 @@
           "items": [],
           "text": "HIMSS Global Health Education Committee (peer-review/selection body); individual 2027 committee member names were not yet published in the official CFP page checked.",
           "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
+      "id": "rsa-2027-san-francisco",
+      "title": "RSA Conference 2027",
+      "acronym": "RSA",
+      "series": "RSA Conference",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-04-05",
+      "endDate": "2027-04-08",
+      "datePrecision": "day",
+      "startMonth": 4,
+      "datesText": null,
+      "city": "San Francisco",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Moscone Center and Yerba Buena Center for the Arts",
+      "format": "in-person",
+      "organization": "RSA Conference",
+      "category": "Cybersecurity & Privacy",
+      "categories": [
+        "Cybersecurity & Privacy",
+        "Cybersecurity",
+        "Information Security"
+      ],
+      "topics": [
+        "rsa conference",
+        "Cybersecurity",
+        "Information Security",
+        "cybersecurity",
+        "information security"
+      ],
+      "keywords": [
+        "RSA",
+        "San Francisco",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2027",
+        "Cybersecurity & Privacy",
+        "Cybersecurity",
+        "Information Security",
+        "cybersecurity",
+        "information security",
+        "rsa conference"
+      ],
+      "description": "RSA Conference 2027, San Francisco, California, USA, April 5-8, 2027",
+      "sourceUrl": "https://www.rsaconference.com/",
+      "sourceHost": "rsaconference.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.rsaconference.com/",
+      "evidence": {
+        "query": "cybersecurity security conference 2027 dates location official website",
+        "resultTitle": "Where the World Talks Security | RSA Conference",
+        "statedText": "RSA Conference 2027, San Francisco, California, USA, April 5-8, 2027",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.rsaconference.com/",
+          "sourcePageTitle": "Where the World Talks Security | RSA Conference",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://www.rsaconference.com/",
+          "sourcePageTitle": "Where the World Talks Security | RSA Conference",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.rsaconference.com/",
+          "sourcePageTitle": "Where the World Talks Security | RSA Conference",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://www.rsaconference.com/",
+          "sourcePageTitle": "Where the World Talks Security | RSA Conference",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [
+        "https://www.rsaconference.com/usa"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": "Moscone Center and Yerba Buena Center for the Arts",
+        "venueAddress": "San Francisco, California, USA",
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for Submissions opens 15 Sep 2026. Speakers are selected by the independent RSA Conference Program Committee, composed of volunteer judges from enterprise, government, academia and vendor communities.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "unread",
@@ -20890,6 +23301,206 @@
       }
     },
     {
+      "id": "kdd-acm-sigkdd-conference-on-knowledge-discovery-and-data-mining-2027-",
+      "title": "KDD 2027 ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "acronym": "ACM KDD 2027",
+      "series": "KDD ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-08-01",
+      "endDate": "2027-08-05",
+      "datePrecision": "day",
+      "startMonth": 8,
+      "datesText": null,
+      "city": "San Jose",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "San Jose McEnery Convention Center",
+      "format": "in-person",
+      "organization": "ACM",
+      "category": "Artificial Intelligence & Machine Learning",
+      "categories": [
+        "Artificial Intelligence & Machine Learning",
+        "Mining & Metallurgy",
+        "Data Science & Analytics",
+        "Technology",
+        "Data Science & Knowledge Discovery"
+      ],
+      "topics": [
+        "data mining",
+        "mining",
+        "sigkdd",
+        "knowledge",
+        "discovery",
+        "data",
+        "Technology",
+        "Data Science & Knowledge Discovery",
+        "data science"
+      ],
+      "keywords": [
+        "ACM",
+        "San Jose",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2027",
+        "Artificial Intelligence & Machine Learning",
+        "Technology",
+        "Data Science & Knowledge Discovery",
+        "data science"
+      ],
+      "description": "KDD 2027 ACM SIGKDD Conference on Knowledge Discovery and Data Mining, San Jose McEnery Convention Center, San Jose, California, USA, August 1-5, 2027",
+      "sourceUrl": "https://kdd2027.kdd.org/",
+      "sourceHost": "kdd2027.kdd.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://kdd2027.kdd.org/",
+      "evidence": {
+        "query": "ACM SIGGRAPH KDD MICCAI RecSys 2027 dates location",
+        "resultTitle": "KDD 2027 San Jose",
+        "statedText": "KDD 2027 ACM SIGKDD Conference on Knowledge Discovery and Data Mining, San Jose McEnery Convention Center, San Jose, California, USA, August 1-5, 2027",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        },
+        "dates": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        },
+        "country": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        },
+        "venue": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://kdd2027.kdd.org/",
+          "sourcePageTitle": "KDD 2027 San Jose",
+          "confidence": "High"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": "San Jose McEnery Convention Center",
+        "venueAddress": "San Jose, California, USA",
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-07-26",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "First-cycle Research Track: abstract deadline 19 Jul 2026; paper deadline 26 Jul 2026; rebuttal 29 Sep–13 Oct 2026; notification 14 Nov 2026.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "James Caverlee",
+              "role": "Research Track Program Committee Co-Chairs",
+              "org": "Texas A&M University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jingrui He",
+              "role": "Research Track Program Committee Co-Chairs",
+              "org": "University of Illinois Urbana-Champaign",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Xiangliang Zhang",
+              "role": "Research Track Program Committee Co-Chairs",
+              "org": "University of Notre Dame",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yan Liu",
+              "role": "Datasets & Benchmarks Co-Chairs",
+              "org": "USC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sayan Ranu",
+              "role": "Datasets & Benchmarks Co-Chairs",
+              "org": "IIT Delhi",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Evgeniy Gabrilovich",
+              "role": "Datasets & Benchmarks Co-Chairs",
+              "org": "Microsoft",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Research Track Program Committee Co-Chairs: James Caverlee (Texas A&M University); Jingrui He (University of Illinois Urbana-Champaign); Xiangliang Zhang (University of Notre Dame). Datasets & Benchmarks Co-Chairs: Yan Liu (USC); Sayan Ranu (IIT Delhi); Evgeniy Gabrilovich (Microsoft).",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
       "id": "5th-international-conference-on-mechatronics-and-electrical-engineerin",
       "title": "2027 5th International Conference on Mechatronics and Electrical Engineering",
       "acronym": "ICMEE 2027",
@@ -21118,6 +23729,161 @@
           "availability": "unread",
           "items": [],
           "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
+      "id": "siggraph-2027-anaheim",
+      "title": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques",
+      "acronym": "SIGGRAPH",
+      "series": "SIGGRAPH International Conference on Computer Graphics and Interactive Techniques",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-08-08",
+      "endDate": "2027-08-12",
+      "datePrecision": "day",
+      "startMonth": 8,
+      "datesText": null,
+      "city": "Anaheim",
+      "region": "California",
+      "country": "United States",
+      "countryCode": "US",
+      "worldRegion": "North America",
+      "venue": "Anaheim Convention Center",
+      "format": "in-person",
+      "organization": "ACM",
+      "category": "Technology & Creative",
+      "categories": [
+        "Technology & Creative",
+        "Computer Graphics & Interactive Techniques"
+      ],
+      "topics": [
+        "siggraph",
+        "computer",
+        "graphics",
+        "interactive",
+        "techniques",
+        "Technology & Creative",
+        "Computer Graphics & Interactive Techniques"
+      ],
+      "keywords": [
+        "SIGGRAPH",
+        "ACM",
+        "Anaheim",
+        "California",
+        "United States",
+        "US",
+        "USA",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "us",
+        "united states of america",
+        "america",
+        "the united states",
+        "the us",
+        "u s a",
+        "North America",
+        "2027",
+        "Technology & Creative",
+        "Computer Graphics & Interactive Techniques",
+        "siggraph"
+      ],
+      "description": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques, Anaheim Convention Center, Anaheim, California, USA, August 8-12, 2027",
+      "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+      "sourceHost": "dl.acm.org",
+      "sourceType": "third_party",
+      "officialUrl": null,
+      "evidence": {
+        "query": "ACM SIGGRAPH KDD MICCAI RecSys 2027 dates location",
+        "resultTitle": "SIGGRAPH - Upcoming Events",
+        "statedText": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques, Anaheim Convention Center, Anaheim, California, USA, August 8-12, 2027",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        },
+        "dates": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        },
+        "city": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        },
+        "country": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        },
+        "venue": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        },
+        "organization": {
+          "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+          "sourcePageTitle": "SIGGRAPH - Upcoming Events",
+          "confidence": "Medium"
+        }
+      },
+      "corroboratingSourceUrls": [
+        "https://www.siggraph.org/siggraph-events/conferences/"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": null,
+        "venueAddress": "Anaheim, California, USA; exact convention venue not yet announced on the official SIGGRAPH conference listing.",
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": null,
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Kristy Pron",
+              "role": "Conference Chair",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Conference Chair: Kristy Pron. Papers Chair selection: Tamy Boubekeur was approved/advanced through ACM SIGGRAPH leadership process for SIGGRAPH 2027.",
           "unstructuredReason": null
         },
         "fees": {

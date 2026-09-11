@@ -292,3 +292,40 @@ test("a record that cannot say where it is stays out of the catalogue", () => {
   // And the builder says how many it held back, because those are real conferences either way.
   assert.equal(built.heldBack + built.rejections.length, 1);
 });
+
+test("a conference somebody described stays described when it merges with a search result", () => {
+  // The same conference reaches the builder twice: once from a search, which knows its name, date
+  // and place, and once from a list somebody wrote, which knows its programme and its fees. Which
+  // of the two wins on source strength is a separate question from which of them was described —
+  // and when the merged record inherited the search result's tag, eight of eleven verified
+  // conferences vanished from the build. The publish filter dropped exactly the ones written up.
+  const harvest: StructuredOutcome[] = rowsFromCsv(CONFERENCES).map((row) => ({
+    outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "harvest", sourceUrl: row.website }),
+    sourceUrl: row.website,
+    statedText: row.name,
+  }));
+  for (const item of harvest) {
+    if (item.outcome.ok) {
+      (item.outcome.record as any).supply = "web_harvest";
+      item.outcome.record.details = null;
+    }
+  }
+  const described: StructuredOutcome[] = rowsFromCsv(CONFERENCES).map((row) => ({
+    outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "described", sourceUrl: row.website }),
+    sourceUrl: row.website,
+    statedText: row.name,
+  }));
+
+  const built = buildLaunchDataset(
+    [], { ...OPTIONS, publishOnlyUsable: true, publishOnlyCuratedLists: true },
+    [...harvest, ...described],
+    [{ source: "aapg-test-details", rows: rowsFromDetailCsv(parseCsv(DETAILS)) }]
+  );
+
+  const ice = find(built.dataset.records, "AAPG International");
+  assert.ok(ice, "a described conference was dropped for having merged with a search result");
+  assert.equal(ice.supply, "curated_list");
+  // And the description itself survives rather than being lost to the record that had none.
+  assert.ok(ice.details, "the merge kept the record with no details and discarded the one with them");
+  assert.equal(ice.details!.keynotes.availability, "stated");
+});

@@ -73,14 +73,25 @@ const COLUMNS = [
   "program_agenda", "keynote_speakers", "technical_committee", "sponsors", "venue",
   "accommodation", "organizer", "website_or_source", "record_status", "data_quality_notes",
   "source_url", "official_url", "domain_type", "logo_url", "logo_source_type", "cfp_url",
-  "registration_url", "program_url", "committee_url",
+  "registration_url", "program_url", "committee_url", "sponsors_partners", "verification_status",
 ] as const;
 
-/** Whether a header is this shape, so a file in the wrong directory fails loudly rather than
- *  becoming two hundred conferences with no country. */
+/**
+ * Whether a header is this shape, so a file in the wrong directory fails loudly rather than
+ * becoming two hundred conferences with no country.
+ *
+ * Three revisions of this batch have arrived and each renamed something. The first named the
+ * conference's page `website_or_source` and its state `record_status`; the third dropped both,
+ * resolving the site into `official_url` and the state into `verification_status`, and renamed the
+ * sponsors column. What every revision has is a name, a date, somewhere the conference lives, and
+ * an assertion about how well that was established.
+ */
 export function isIndexHeader(header: string[]): boolean {
   const seen = new Set(header.map((cell) => cell.replace(/^﻿/, "").trim().toLowerCase()));
-  return ["conference_name", "start_date", "website_or_source", "record_status"].every((column) => seen.has(column));
+  const has = (...columns: string[]) => columns.some((column) => seen.has(column));
+  return seen.has("conference_name") && seen.has("start_date")
+    && has("website_or_source", "official_url")
+    && has("record_status", "verification_status");
 }
 
 export function rowsFromIndexCsv(rows: string[][]): IndexRow[] {
@@ -99,9 +110,10 @@ export function rowsFromIndexCsv(rows: string[][]): IndexRow[] {
       overview: value("overview"), callForPapers: value("call_for_papers"),
       cfpDeadline: value("cfp_deadline"), fees: value("fees_and_pricing"),
       program: value("program_agenda"), keynoteSpeakers: value("keynote_speakers"),
-      committee: value("technical_committee"), sponsors: value("sponsors"), venue: value("venue"),
+      committee: value("technical_committee"),
+      sponsors: value("sponsors") || value("sponsors_partners"), venue: value("venue"),
       accommodation: value("accommodation"), organizer: value("organizer"),
-      website: value("website_or_source"), recordStatus: value("record_status"),
+      website: value("website_or_source"), recordStatus: value("record_status") || value("verification_status"),
       qualityNotes: value("data_quality_notes"),
       sourceUrl: value("source_url"), officialUrl: value("official_url"),
       domainType: value("domain_type"), logoUrl: value("logo_url"),

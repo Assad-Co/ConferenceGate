@@ -116,6 +116,14 @@ function mergeRecords(strong: LaunchConferenceRecord, weak: LaunchConferenceReco
     ...new Set([...merged.corroboratingSourceUrls, ...weak.corroboratingSourceUrls, weak.sourceUrl]),
   ].filter((url) => url !== merged.sourceUrl);
   if (!merged.officialUrl && weak.officialUrl) merged.officialUrl = weak.officialUrl;
+  // A conference somebody described stays described, whichever of the two records won on source
+  // strength. Eight of eleven verified conferences vanished from a build because their curated
+  // record merged into a harvest record of the same event, and the merged record inherited the
+  // harvest tag — so the publish filter dropped exactly the conferences that had been written up.
+  if (weak.supply === "curated_list") merged.supply = "curated_list";
+  // The detail a person wrote is the reason that record exists. It is never dropped for a stronger
+  // source that has none, and never overwrites one the stronger source already carries.
+  if (!merged.details && weak.details) merged.details = weak.details;
   for (const [field, entry] of Object.entries(weak.provenance)) {
     if (!merged.provenance[field]) merged.provenance[field] = entry;
   }
