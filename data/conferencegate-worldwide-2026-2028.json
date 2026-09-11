@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T12:29:04.947Z",
+  "generatedAt": "2026-09-11T12:38:34.734Z",
   "horizonStart": "2026-09-11",
   "years": [
     2026,
@@ -5486,10 +5486,10 @@
         "engineering"
       ],
       "description": "International conference focused on ai & power engineering.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=artificial+intelligence",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.aipe.org/",
+      "sourceHost": "aipe.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.aipe.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -5611,10 +5611,10 @@
         "applications"
       ],
       "description": "International conference focused on robotic systems.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=artificial+intelligence",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icrsa.org/",
+      "sourceHost": "icrsa.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icrsa.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -7496,10 +7496,10 @@
         "power"
       ],
       "description": "International conference focused on mechanical & power engineering.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Mechanical+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.mepe.org/",
+      "sourceHost": "mepe.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.mepe.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -8010,10 +8010,10 @@
         "processing"
       ],
       "description": "International conference focused on image & video processing.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Computer+Science+and+Technologies",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://icivp.org/",
+      "sourceHost": "icivp.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://icivp.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
