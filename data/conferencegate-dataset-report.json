@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T11:01:10.816Z",
+  "generatedAt": "2026-09-11T11:38:09.545Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
@@ -50,9 +50,9 @@
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 373,
-    "directory_listing": 149,
-    "reference": 12,
+    "official_site": 422,
+    "directory_listing": 101,
+    "reference": 11,
     "third_party": 1
   },
   "coverage": {
@@ -61,12 +61,12 @@
     "monthOnlyDates": "2.6%",
     "city": "99.6%",
     "country": "100.0%",
-    "officialUrl": "69.7%",
+    "officialUrl": "78.9%",
     "venue": "29.9%",
     "organization": "47.1%",
     "category": "71.4%",
     "description": "100.0%",
-    "corroborated": "1.5%"
+    "corroborated": "0.7%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

@@ -113,6 +113,8 @@ export interface LaunchDetailCallForPapers {
   lengthLimit: string | null;
   /** The clause these were read from, kept so the reader sees the sentence behind the fields. */
   text: string | null;
+  /** The organiser's call-for-papers page, where the source named one of its own. */
+  url?: string | null;
 }
 
 export interface LaunchDetailProse {
@@ -142,6 +144,8 @@ export interface LaunchConferenceDetails {
   sponsors: LaunchDetailSection<LaunchDetailSponsor>;
   /** A travel advisory the list's compiler wrote. Not the organiser speaking, and shown as such. */
   safetyNote: string | null;
+  /** Where to register, where the source named a page of its own for it. */
+  registrationUrl?: string | null;
 }
 
 export interface LaunchConferenceRecord {
@@ -186,6 +190,15 @@ export interface LaunchConferenceRecord {
   sourceType: LaunchSourceType;
   /** The conference's own website, when the source was that website. Null for every listing. */
   officialUrl: string | null;
+  /**
+   * A logo the source actually supplied.
+   *
+   * Distinct from the one derived from the official domain, which is what most records show. A
+   * list that names an image the organiser publishes is stating a fact; a list that hands back a
+   * favicon service's URL for that same domain is doing what this server already does, only
+   * through a third party. Only the first is kept here.
+   */
+  logoUrl?: string | null;
 
   evidence: LaunchEvidence;
   provenance: Record<string, LaunchFieldProvenance>;

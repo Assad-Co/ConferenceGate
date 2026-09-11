@@ -3,7 +3,8 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isIndexHeader, mapIndexRow, readIndexCsv, rowsFromIndexCsv } from "../sources/conferenceIndex";
+import { isIndexHeader, mapIndexRow, readIndexCsv, rowsFromIndexCsv, suppliedLogoUrl } from "../sources/conferenceIndex";
+import { siteIconUrl } from "../staticDataset";
 import { parseCsv, usableAsOfficialUrl } from "../sources/curated";
 
 const OPTIONS = {
@@ -29,6 +30,10 @@ const row = (over: Partial<Record<string, string>> = {}) => ({
   venue: "Paris, France", accommodation: ABSENT, organizer: ABSENT,
   website: "https://www.iconf.com/conference/ICCMB2027_9677",
   recordStatus: "DISCOVERY VERIFIED", qualityNotes: "Actual conference name taken from the cited source.",
+  // The second revision's columns. Blank here, which is the first revision's shape and must keep
+  // reading exactly as it did.
+  sourceUrl: "", officialUrl: "", domainType: "", logoUrl: "", logoSourceType: "",
+  cfpUrl: "", registrationUrl: "", programUrl: "", committeeUrl: "",
   ...over,
 });
 
@@ -210,4 +215,85 @@ test("two ISO dates are a range, not a phrase that hides the end date", () => {
   assert.equal(outcome.record.datesText, null, "a bare start date was stored as the dates phrase");
   assert.equal(outcome.record.startDate, "2027-02-17");
   assert.equal(outcome.record.endDate, "2027-02-19");
+});
+
+test("a later revision's resolved official site is used, and the listing it was found on is kept", () => {
+  // The second revision of this batch went back and resolved each conference's own site, leaving
+  // the directory behind in a column of its own. Both matter: the resolved site is where a reader
+  // should be sent and what the engine should read, and the listing is where these dates were
+  // actually stated — a record claiming the organiser's page said them would be wrong.
+  const outcome = mapIndexRow(row({
+    website: "https://www.iccfi.org/",
+    sourceUrl: "https://www.iconf.com/conference?tags=Communication+Engineering",
+    officialUrl: "https://www.iccfi.org/",
+    domainType: "conference_owned_domain",
+  }), OPTIONS);
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.officialUrl, "https://www.iccfi.org/");
+  assert.equal(outcome.record.sourceUrl, "https://www.iccfi.org/");
+  assert.equal(outcome.record.sourceType, "official_site");
+  assert.equal(outcome.record.provenance.dates.sourceUrl,
+    "https://www.iconf.com/conference?tags=Communication+Engineering",
+    "the dates were credited to a page that never stated them");
+});
+
+test("a column calling a URL official does not make it so", () => {
+  // domain_type is the compiler's finding, and a finding is screened rather than believed. Thirty-
+  // six of these rows resolve to an entry in a publisher's event index; it is the best page there
+  // is for that conference and worth linking, but it is not the conference's own site, so nothing
+  // may take a logo from the publisher's domain.
+  const outcome = mapIndexRow(row({
+    website: "", sourceUrl: "https://www.elsevier.com/events/conferences/all",
+    officialUrl: "https://www.elsevier.com/events/conferences/all/food-chemistry-conference",
+    domainType: "conference_owned_domain",
+  }), OPTIONS);
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(siteIconUrl(outcome.record.officialUrl), null, "a publisher's icon became a conference's logo");
+
+  // And a row that resolved nothing keeps the listing as its source, rather than being refused.
+  const unresolved = mapIndexRow(row({
+    website: "", officialUrl: "", domainType: "listing_only_unresolved",
+    sourceUrl: "https://www.iconf.com/conference?tags=Mechanical+Engineering",
+  }), OPTIONS);
+  assert.equal(unresolved.ok, true);
+  if (!unresolved.ok) return;
+  assert.equal(unresolved.record.officialUrl, null);
+  assert.equal(unresolved.record.sourceUrl, "https://www.iconf.com/conference?tags=Mechanical+Engineering");
+});
+
+test("a favicon service's URL is not a logo the source supplied", () => {
+  // Every logo_url in this revision is Google's favicon service pointed at the resolved domain, and
+  // the file says so itself in logo_source_type. It is not the organiser's image, and taking it
+  // would put a request to a third party on the page for every card a reader scrolls past — for an
+  // icon this catalogue already derives from the organiser's own server.
+  assert.equal(suppliedLogoUrl("https://www.google.com/s2/favicons?domain=www.iccfi.org&sz=256",
+    "official-domain favicon fallback"), null);
+  assert.equal(suppliedLogoUrl("https://www.google.com/s2/favicons?domain=x.org&sz=256", ""), null);
+  assert.equal(suppliedLogoUrl("https://icons.duckduckgo.com/ip3/x.org.ico", ""), null);
+  assert.equal(suppliedLogoUrl("", ""), null);
+  assert.equal(suppliedLogoUrl("Not yet announced", ""), null);
+
+  // An image the organiser actually publishes is a fact, and is kept.
+  assert.equal(
+    suppliedLogoUrl("https://www.iccfi.org/images/logo.png", "organiser logo"),
+    "https://www.iccfi.org/images/logo.png"
+  );
+  const outcome = mapIndexRow(row({
+    website: "https://www.iccfi.org/", officialUrl: "https://www.iccfi.org/",
+    logoUrl: "https://www.iccfi.org/images/logo.png", logoSourceType: "organiser logo",
+  }), OPTIONS);
+  if (outcome.ok) assert.equal(outcome.record.logoUrl, "https://www.iccfi.org/images/logo.png");
+});
+
+test("a page the source named for a section is carried to that section", () => {
+  const outcome = mapIndexRow(row({
+    website: "https://www.iccfi.org/", officialUrl: "https://www.iccfi.org/",
+    cfpUrl: "https://www.iccfi.org/cfp", registrationUrl: "https://www.iccfi.org/register",
+  }), OPTIONS);
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.details!.callForPapers!.url, "https://www.iccfi.org/cfp");
+  assert.equal(outcome.record.details!.registrationUrl, "https://www.iccfi.org/register");
 });

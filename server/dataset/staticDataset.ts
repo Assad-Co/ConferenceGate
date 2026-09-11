@@ -163,7 +163,9 @@ export function siteIconUrl(officialUrl: string | null): string | null {
 }
 
 export function conferenceLogoUrl(record: LaunchConferenceRecord): string | null {
-  return siteIconUrl(record.officialUrl);
+  // An image the source actually named beats one derived from a domain, and is the only case where
+  // this is a fact rather than a derivation. Everything else falls back to the organiser's own icon.
+  return record.logoUrl ?? siteIconUrl(record.officialUrl);
 }
 
 export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {
@@ -414,6 +416,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
           abstract_submission_deadline: cfp.abstractDeadline,
           submission_email: cfp.submissionEmail,
           length_limit: cfp.lengthLimit,
+          submission_url: cfp.url ?? null,
         }
       : {},
     program_agenda: {
@@ -449,7 +452,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       travel_advisory_source: details?.safetyNote ? details.source : null,
     },
     fees_pricing: {
-      registration_url: null,
+      registration_url: details?.registrationUrl ?? null,
       registration_fees: (details?.fees.items ?? []).map((fee) => ({
         category: fee.category,
         amount: fee.amount,

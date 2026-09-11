@@ -48,6 +48,23 @@ export interface IndexRow {
   website: string;
   recordStatus: string;
   qualityNotes: string;
+
+  // A later revision of this batch went back and resolved the conference's own site, keeping the
+  // listing it was found on in a column of its own. Every one is optional: the first revision had
+  // none of them and must keep reading.
+  /** The listing the conference was found on, once `website_or_source` became the official site. */
+  sourceUrl: string;
+  /** The conference's own site, as resolved. Still screened here — a column name is not evidence. */
+  officialUrl: string;
+  /** The compiler's judgement of what `officialUrl` is: a conference's own domain, an organiser's
+   *  page for it, or nothing resolved. Recorded as their finding, cross-checked against ours. */
+  domainType: string;
+  logoUrl: string;
+  logoSourceType: string;
+  cfpUrl: string;
+  registrationUrl: string;
+  programUrl: string;
+  committeeUrl: string;
 }
 
 const COLUMNS = [
@@ -55,6 +72,8 @@ const COLUMNS = [
   "country", "format", "overview", "call_for_papers", "cfp_deadline", "fees_and_pricing",
   "program_agenda", "keynote_speakers", "technical_committee", "sponsors", "venue",
   "accommodation", "organizer", "website_or_source", "record_status", "data_quality_notes",
+  "source_url", "official_url", "domain_type", "logo_url", "logo_source_type", "cfp_url",
+  "registration_url", "program_url", "committee_url",
 ] as const;
 
 /** Whether a header is this shape, so a file in the wrong directory fails loudly rather than
@@ -84,8 +103,38 @@ export function rowsFromIndexCsv(rows: string[][]): IndexRow[] {
       accommodation: value("accommodation"), organizer: value("organizer"),
       website: value("website_or_source"), recordStatus: value("record_status"),
       qualityNotes: value("data_quality_notes"),
+      sourceUrl: value("source_url"), officialUrl: value("official_url"),
+      domainType: value("domain_type"), logoUrl: value("logo_url"),
+      logoSourceType: value("logo_source_type"), cfpUrl: value("cfp_url"),
+      registrationUrl: value("registration_url"), programUrl: value("program_url"),
+      committeeUrl: value("committee_url"),
     };
   });
+}
+
+/**
+ * Hosts that hand back an icon for a domain rather than an image the organiser published.
+ *
+ * Asking one of these for a conference's logo works, and the second revision of this batch uses
+ * Google's for all ninety-four of its resolved domains. Two reasons not to keep it. It is not the
+ * organiser's statement — the file says as much in `logo_source_type`, which calls every one a
+ * fallback — and it puts a request to a third party on the page for every card a reader scrolls
+ * past. The same domain yields the same icon from the organiser's own server, which is what this
+ * catalogue derives, so nothing is lost by refusing these.
+ */
+const ICON_SERVICE_HOST = /(?:^|\.)(?:google\.com|gstatic\.com|duckduckgo\.com|clearbit\.com|logo\.dev|icons?\.duckduckgo\.com|besticon[^/]*)$/i;
+
+/** A logo only where the source supplied an image of its own, never a service's rendering of one. */
+export function suppliedLogoUrl(logoUrl: string, logoSourceType: string): string | null {
+  const value = statedOrNull(logoUrl);
+  if (!value || !/^https:\/\//i.test(value)) return null;
+  if (/fallback/i.test(logoSourceType)) return null;
+  try {
+    if (ICON_SERVICE_HOST.test(new URL(value).hostname)) return null;
+  } catch {
+    return null;
+  }
+  return value;
 }
 
 /** ISO, or a year/month the source stopped short at. Nothing else is guessed into a date. */
@@ -148,7 +197,15 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
   );
   if (refusal) return { ok: false, reason: refusal };
 
-  const website = statedOrNull(row.website);
+  // Where this conference lives, from a file that may state it in one column or three.
+  //
+  // The first revision of this batch put a directory link in `website_or_source` and stopped. The
+  // second went back and resolved the organiser's own site, leaving the directory behind in
+  // `source_url`. So the best page is whichever of the two is stated, and the listing is kept as
+  // where the facts were actually read — dropping it would leave the record claiming a page that
+  // never carried these dates.
+  const resolved = statedOrNull(row.officialUrl);
+  const website = resolved || statedOrNull(row.website) || statedOrNull(row.sourceUrl);
   if (!website || !/^https?:\/\//i.test(website)) return { ok: false, reason: "no_source_url" };
   let host: string;
   try {
@@ -156,7 +213,13 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
   } catch {
     return { ok: false, reason: "unparseable_source_url" };
   }
+  // The compiler's `domain_type` is their finding, not a permit. A column asserting that a URL is
+  // the conference's own is exactly the claim this file screens rather than believes, so the URL
+  // still has to pass on its own shape — which is what refuses the thirty-six rows whose "official"
+  // page is an entry in a publisher's event index.
   const officialUrl = usableAsOfficialUrl(website) ? website : null;
+  // The page the facts were read off, which is the listing wherever one is named.
+  const statedOn = statedOrNull(row.sourceUrl) || website;
 
   const city = statedOrNull(row.city);
   const countryRecord = normalizeCountry(statedOrNull(row.country));
@@ -200,6 +263,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
         submissionEmail: fromProgram?.submissionEmail ?? null,
         lengthLimit: fromProgram?.lengthLimit ?? null,
         text: statedCfp ?? fromProgram?.text ?? null,
+        url: statedOrNull(row.cfpUrl),
       }
     : null;
 
@@ -234,6 +298,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     sourceHost: host,
     sourceType: sourceTypeFor(host, officialUrl),
     officialUrl,
+    logoUrl: suppliedLogoUrl(row.logoUrl, row.logoSourceType),
     evidence: {
       query: options.sourceName,
       resultTitle: title,
@@ -245,11 +310,14 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
       externalId: statedOrNull(row.recordStatus),
     },
     provenance: {
-      title: { sourceUrl: website, sourcePageTitle: null, confidence: /official/i.test(row.recordStatus) ? "High" : "Medium" },
-      dates: { sourceUrl: website, sourcePageTitle: null, confidence: start.date ? "High" : "Low" },
-      city: { sourceUrl: website, sourcePageTitle: null, confidence: city ? "Medium" : "Low" },
-      country: { sourceUrl: website, sourcePageTitle: null, confidence: countryRecord ? "Medium" : "Low" },
+      title: { sourceUrl: statedOn, sourcePageTitle: null, confidence: /official/i.test(row.recordStatus) ? "High" : "Medium" },
+      dates: { sourceUrl: statedOn, sourcePageTitle: null, confidence: start.date ? "High" : "Low" },
+      city: { sourceUrl: statedOn, sourcePageTitle: null, confidence: city ? "Medium" : "Low" },
+      country: { sourceUrl: statedOn, sourcePageTitle: null, confidence: countryRecord ? "Medium" : "Low" },
     },
+    // Not the listing: the builder owns this field and blanks it on intake, because what belongs
+    // here is what deduplication finds — another page that independently stated the same
+    // conference. Where these facts were read is `provenance`, which is set above and survives.
     corroboratingSourceUrls: [],
     origin: "launch_dataset",
     details: {
@@ -264,6 +332,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
       fees: parsed.fees,
       sponsors: parsed.sponsors,
       safetyNote: null,
+      registrationUrl: statedOrNull(row.registrationUrl),
     },
   };
 
