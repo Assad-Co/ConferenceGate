@@ -322,6 +322,12 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       country: record.country,
       world_region: record.worldRegion,
       venue: details?.venueName || record.venue,
+      // The one line the page puts under the title. The record holds the parts; if nobody joins
+      // them here the page has a city and a country in its payload and no place on its screen.
+      location_text:
+        [details?.venueName || record.venue, record.city, record.region, record.country]
+          .filter(Boolean)
+          .join(", ") || null,
       format: record.format,
       organizer: record.organization,
       topics: record.topics,

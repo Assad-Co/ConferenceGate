@@ -200,6 +200,15 @@ test("a city in the venue column stays a city", () => {
   assert.deepEqual(splitVenue("Houston, Texas", "Houston"), { name: null, address: "Houston, Texas" });
   assert.deepEqual(splitVenue("TBD", null), { name: null, address: null });
 
+  // And where the column restates the record's own city and country and nothing else, there is no
+  // venue to show. Kept as an address it made the venue tab announce a venue, then print the hero's
+  // place line back at the reader as though a second source had said it.
+  assert.deepEqual(splitVenue("Phuket, Thailand", "Phuket", "Thailand"), { name: null, address: null });
+  assert.deepEqual(splitVenue("Phuket", "Phuket", "Thailand"), { name: null, address: null });
+  // A district the record does not hold is a real address, even under the city's own name.
+  assert.deepEqual(splitVenue("Kuwait City, Al Ahmadi, Kuwait", "Kuwait City", "Kuwait"),
+    { name: null, address: "Kuwait City, Al Ahmadi, Kuwait" });
+
   // And a real venue is still read as one.
   assert.deepEqual(splitVenue("Bush Convention Center, Midland, Texas", "Midland"),
     { name: "Bush Convention Center", address: "Midland, Texas" });

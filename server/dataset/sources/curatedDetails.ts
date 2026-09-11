@@ -313,9 +313,14 @@ export function parseSponsors(cell: string): DetailSponsor[] {
  * Half the rows of this list put a place in the venue column — "Kuwait City, Al Ahmadi, Kuwait",
  * "Houston, Texas" — because no venue has been chosen yet. Storing the first comma-separated piece
  * as the venue name would put the city in the venue field of every one of them, so the record's
- * own city is what decides: where the cell opens with it, the cell is an address and nothing else.
+ * own city is what decides: where the cell opens with it, the cell is an address and nothing else —
+ * and where the whole cell is the city and country the record already holds, not even that.
  */
-export function splitVenue(cell: string, recordCity: string | null): { name: string | null; address: string | null } {
+export function splitVenue(
+  cell: string,
+  recordCity: string | null,
+  recordCountry: string | null = null
+): { name: string | null; address: string | null } {
   const text = clean(cell);
   const parts = splitOutsideBrackets(text, [", "]);
   // "TBD" on its own is not an address either.
@@ -325,8 +330,17 @@ export function splitVenue(cell: string, recordCity: string | null): { name: str
 
   const head = parts[0];
   const city = clean(recordCity || "").toLowerCase();
-  const headIsThePlace = city !== "" && head.toLowerCase().replace(/\s*\(.*\)$/, "") === city;
-  if (headIsThePlace || parts.length === 1) return { name: null, address: text };
+  const bare = (part: string) => part.toLowerCase().replace(/\s*\(.*\)$/, "");
+  const headIsThePlace = city !== "" && bare(head) === city;
+  if (headIsThePlace || parts.length === 1) {
+    // Half of one batch fills this column with the city and country the record already states.
+    // Kept as an address it makes the venue tab report a venue and then show the reader back the
+    // place line from the hero, so a section with nothing in it looks like a section with
+    // something in it. Anything beyond the city and country — a district, a state — is an address.
+    const country = clean(recordCountry || "").toLowerCase();
+    const beyond = parts.filter((part) => bare(part) !== city && (country === "" || bare(part) !== country));
+    return { name: null, address: beyond.length ? text : null };
+  }
   return { name: head, address: parts.slice(1).join(", ") || null };
 }
 
@@ -490,9 +504,10 @@ export function rowsFromDetailCsv(rows: string[][]): CuratedDetailRow[] {
 export function mapCuratedDetailRow(
   row: CuratedDetailRow,
   recordCity: string | null,
-  recordYear: number | null = null
+  recordYear: number | null = null,
+  recordCountry: string | null = null
 ): CuratedDetail {
-  const venue = splitVenue(row.venue, recordCity);
+  const venue = splitVenue(row.venue, recordCity, recordCountry);
   const keynotes = parsePeople(row.keynoteSpeakers, "Keynote Speaker");
   const committee = parsePeople(row.committee, "Committee Member");
   const { fees } = parseFees(row.pricing);

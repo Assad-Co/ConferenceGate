@@ -335,7 +335,7 @@ function attachDetails(
         unmatched.push({ title: row.name, reason: "already_filled_by_another_list" });
         continue;
       }
-      const detail = mapCuratedDetailRow(row, record.city, record.year);
+      const detail = mapCuratedDetailRow(row, record.city, record.year, record.country);
       record.details = {
         source: supply.source,
         venueName: detail.venueName,

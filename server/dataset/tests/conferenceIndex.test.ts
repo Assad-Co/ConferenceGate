@@ -199,3 +199,15 @@ test("the supplied file reads end to end, and reports what it refused", () => {
   assert.equal(records[0].officialUrl, "https://realconf.example/2027/");
   assert.equal(records[0].details?.source, "conferencegate-200");
 });
+
+test("two ISO dates are a range, not a phrase that hides the end date", () => {
+  // This shape states dates as start_date and end_date and never as prose. Copying the start date
+  // into the dates phrase gave the page something to print, so it printed that — and every one of
+  // these two hundred conferences showed a single day where the source had given three.
+  const outcome = mapIndexRow(row({ startDate: "2027-02-17", endDate: "2027-02-19" }), OPTIONS);
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  assert.equal(outcome.record.datesText, null, "a bare start date was stored as the dates phrase");
+  assert.equal(outcome.record.startDate, "2027-02-17");
+  assert.equal(outcome.record.endDate, "2027-02-19");
+});

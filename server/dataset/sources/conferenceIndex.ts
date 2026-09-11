@@ -185,7 +185,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     keynoteSpeakers: row.keynoteSpeakers, committee: row.committee, pricing: row.fees,
     sponsors: row.sponsors, website, safetyNote: "",
   };
-  const parsed = mapCuratedDetailRow(detailRow, city, start.year);
+  const parsed = mapCuratedDetailRow(detailRow, city, start.year, countryRecord?.name ?? null);
 
   // This shape states the call for papers in two columns of its own, which beats reading it out of
   // the programme paragraph — but the programme is still read, so a deadline stated only there is
@@ -213,7 +213,10 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     startDate: start.date,
     endDate: end.date,
     datePrecision: start.date ? "day" : start.month ? "month" : null,
-    datesText: statedOrNull(row.startDate),
+    // This shape states dates as two ISO fields, not as a phrase, so there is no "dates text" to
+    // keep. Leaving it null lets the page compose the range; setting it to the bare start date made
+    // every one of these conferences display a single day when the source had given an end date.
+    datesText: null,
     city,
     region: null,
     country: countryRecord?.name ?? null,

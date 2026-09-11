@@ -339,6 +339,14 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
     datesText: overview.dates_text ?? data?.datesText ?? null,
     city: overview.city ?? data?.city ?? null,
     country: overview.country ?? data?.country ?? null,
+    // The hero's one line about where a conference is. Nothing was deriving it from the city and
+    // country the record already held, so every catalogue conference showed its dates and no place
+    // at all — the two facts sat in the payload next to each other, and only one reached the page.
+    locationText:
+      data?.locationText
+      || overview.location_text
+      || [overview.venue, overview.city, overview.region, overview.country].filter(Boolean).join(", ")
+      || null,
     format: overview.format ?? data?.format ?? null,
     organizingInstitution: overview.organizer ?? data?.organizingInstitution ?? null,
     topics: overview.topics ?? data?.topics ?? [],

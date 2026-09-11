@@ -172,3 +172,30 @@ test("an acronym matches where a word starts with it, not inside somebody else's
     assert.ok(results[0].title.includes("EAGE"));
   });
 });
+
+test("a conference the page can place, from a record that only holds the parts", () => {
+  // The detail page renders one location line and one date line under the title. A record with a
+  // city, a country and two ISO dates showed neither: nothing joined the place into a line, and a
+  // start date parked in datesText preempted the range this composes. Both facts were in the
+  // payload; neither reached the screen.
+  withFixtureDataset(() => {
+    const record = findLaunchRecordByUrl("https://www.atce.org/")!;
+    const overview = (launchRecordToTabbedExtraction(record) as any).overview;
+    assert.equal(overview.location_text, "George R. Brown Convention Center, Houston, Texas, United States");
+    assert.equal(overview.dates_text, "2026-10-21 – 2026-10-23");
+  });
+});
+
+test("a record with nowhere stated says nothing rather than an empty line", () => {
+  const nowhere: any = {
+    title: "Unplaced Conference 2027", acronym: null, edition: null, description: null,
+    datesText: null, startDate: "2027-04-01", endDate: "2027-04-01",
+    city: null, region: null, country: null, worldRegion: null, venue: null,
+    format: null, organization: null, topics: [], categories: [], keywords: [],
+    officialUrl: null, sourceUrl: "https://example.org/", details: null,
+  };
+  const overview = (launchRecordToTabbedExtraction(nowhere) as any).overview;
+  assert.equal(overview.location_text, null);
+  // A one-day conference is one date, not a range repeating itself.
+  assert.equal(overview.dates_text, "2027-04-01");
+});
