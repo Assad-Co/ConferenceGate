@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-11T11:38:09.545Z",
+  "generatedAt": "2026-09-11T11:53:48.722Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 535,
+  "accepted": 539,
   "duplicatesMerged": 8,
   "rejected": 22,
   "rejectionReasons": {
@@ -12,11 +12,11 @@
     "no_location": 2,
     "source_url_is_a_listing": 1
   },
-  "indexRecordsAccepted": 169,
+  "indexRecordsAccepted": 173,
   "indexRecordsRefused": {
-    "no_start_date": 15,
-    "already_finished": 14,
-    "date_precision_too_coarse": 2
+    "no_start_date": 11,
+    "date_precision_too_coarse": 1,
+    "no_location": 1
   },
   "detailsAttached": 16,
   "heldBackWithNothingToShow": 1,
@@ -26,31 +26,31 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 535,
+  "total": 539,
   "byYear": {
-    "2026": 103,
-    "2027": 418,
+    "2026": 104,
+    "2027": 421,
     "2028": 14
   },
   "countries": 53,
   "cities": 205,
-  "categories": 43,
+  "categories": 44,
   "worldRegions": {
-    "North America": 184,
-    "Europe": 154,
+    "North America": 185,
+    "Europe": 156,
     "Asia": 154,
-    "Middle East": 20,
+    "Middle East": 21,
     "South America": 10,
     "Oceania": 9,
     "Africa": 4
   },
   "formats": {
-    "in-person": 514,
-    "hybrid": 18,
+    "in-person": 517,
+    "hybrid": 19,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 422,
+    "official_site": 426,
     "directory_listing": 101,
     "reference": 11,
     "third_party": 1
@@ -61,10 +61,10 @@
     "monthOnlyDates": "2.6%",
     "city": "99.6%",
     "country": "100.0%",
-    "officialUrl": "78.9%",
-    "venue": "29.9%",
-    "organization": "47.1%",
-    "category": "71.4%",
+    "officialUrl": "79.0%",
+    "venue": "29.7%",
+    "organization": "47.5%",
+    "category": "71.6%",
     "description": "100.0%",
     "corroborated": "0.7%"
   },
