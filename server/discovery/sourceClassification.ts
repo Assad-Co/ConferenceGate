@@ -59,15 +59,63 @@ export function isPlausibleEventTitle(value: string | null | undefined): boolean
   return tokens.length >= 2 || (tokens.length === 1 && /^[a-z][a-z0-9-]{3,}$/i.test(tokens[0]));
 }
 
+/** Words that join a conference's name together without being part of it. */
+const TITLE_JOINER = /^(?:of|on|for|and|in|at|to|the|a|an|its|&)$/i;
+
+/**
+ * The acronyms a title could be written as: initials of its words, and of every suffix of them.
+ *
+ * "2026 4th International Conference on Power and Renewable Energy Engineering" is published by
+ * its organisers as PREE, which is the initials of its last four words — while ICCS, ICITES and
+ * ICHSM are the initials of the whole thing from "International" onwards. Both shapes are common
+ * and neither is derivable from the other, so every suffix is offered.
+ */
+export function titleAcronyms(title: string): Set<string> {
+  const words = String(title)
+    .split(/\s+/)
+    .map((word) => word.replace(/[^A-Za-z0-9]/g, ""))
+    .filter((word) => word && !TITLE_JOINER.test(word) && !/^\d+(?:st|nd|rd|th)?$/i.test(word));
+  const acronyms = new Set<string>();
+  for (let start = 0; start < words.length; start += 1) {
+    const acronym = words.slice(start).map((word) => word[0]).join("").toLowerCase();
+    // Two letters is a coincidence; three is a name.
+    if (acronym.length >= 3 && acronym.length <= 12) acronyms.add(acronym);
+  }
+  return acronyms;
+}
+
 /**
  * Symmetric Jaccard alone unfairly rejects an authoritative short title when the stored title
  * merely has a publisher/organisation suffix. This score also accepts strong containment, but
  * only after both sides have at least two meaningful title tokens.
+ *
+ * Two kinds of true match scored zero and were refused, and between them they were most of what
+ * the unattended pass threw away. A conference titles its own page with its acronym — the stored
+ * "International Conference on Intelligent Technology and Embedded Systems" against a page headed
+ * "ICITES 2026" shares no token at all. And a conference whose name is one distinctive word could
+ * never match anything, because two shared tokens were required unless both sides were a single
+ * token: "Gastech" against "Gastech Exhibition & Conference 2026" scored zero.
+ *
+ * Both additions demand specific evidence rather than relaxing the threshold: an exact acronym of
+ * at least three letters, or an exact match of a distinctive word that is the whole of the stored
+ * name. The guard that actually stops one edition's data reaching another's record is the year
+ * check in `verifyPage`, which is untouched.
  */
 export function titleEvidenceScore(stored: string | null | undefined, evidence: string | null | undefined): number {
   if (!isPlausibleEventTitle(stored) || !isPlausibleEventTitle(evidence)) return 0;
   const a = new Set(normalizeTitle(String(stored)).split(/\s+/).filter(Boolean));
   const b = new Set(normalizeTitle(String(evidence)).split(/\s+/).filter(Boolean));
+
+  // The name one side writes out and the other abbreviates.
+  const storedAcronyms = titleAcronyms(String(stored));
+  const evidenceAcronyms = titleAcronyms(String(evidence));
+  for (const token of b) if (storedAcronyms.has(token)) return 1;
+  for (const token of a) if (evidenceAcronyms.has(token)) return 1;
+
+  // A one-word name, present in full on the page. Distinctive by construction: normalizeTitle has
+  // already removed the words every conference shares, so what survives alone is the name itself.
+  const only = [...a];
+  if (only.length === 1 && only[0].length >= 5 && b.has(only[0])) return 1;
   let shared = 0;
   for (const token of a) if (b.has(token)) shared += 1;
   if (shared === 1 && a.size === 1 && b.size === 1) return 1;
