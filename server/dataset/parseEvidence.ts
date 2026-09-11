@@ -439,6 +439,7 @@ export function parseHarvestEvidence(evidence: HarvestEvidence, options: ParseOp
       startDate: dates.startDate,
       endDate: dates.endDate,
       datePrecision: dates.precision === "day" ? "day" : "month",
+      startMonth: dates.startMonth,
       datesText: dates.rawText === stated ? null : dates.rawText,
       city,
       region,

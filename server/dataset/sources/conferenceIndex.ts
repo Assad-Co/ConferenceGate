@@ -277,6 +277,7 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     startDate: start.date,
     endDate: end.date,
     datePrecision: start.date ? "day" : start.month ? "month" : null,
+    startMonth: start.month,
     // This shape states dates as two ISO fields, not as a phrase, so there is no "dates text" to
     // keep. Leaving it null lets the page compose the range; setting it to the bare start date made
     // every one of these conferences display a single day when the source had given an end date.

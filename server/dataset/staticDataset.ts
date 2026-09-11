@@ -217,6 +217,31 @@ export interface LaunchSearchResult {
   description: string | null;
 }
 
+const MONTH_NAME = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * The one line the page writes about when a conference runs.
+ *
+ * Three cases, and only the first two were handled. A conference with both days gets a range; one
+ * whose days are the same gets a single date. A conference whose source stated a month and no day
+ * — "listed for November 2026" — got nothing at all, because the range was built from `startDate`
+ * and that is null by design for a month. The month is a fact the source stated and is written as
+ * one; the day is not invented to carry it.
+ */
+export function datesLineFor(record: LaunchConferenceRecord): string | null {
+  if (record.datesText) return record.datesText;
+  if (record.startDate) {
+    const end = record.endDate && record.endDate !== record.startDate ? ` – ${record.endDate}` : "";
+    return `${record.startDate}${end}`;
+  }
+  const month = record.startMonth;
+  if (month && month >= 1 && month <= 12 && record.year) return `${MONTH_NAME[month - 1]} ${record.year}`;
+  return record.year ? String(record.year) : null;
+}
+
 const MONTH_WORD = /^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*$/i;
 
 /**
@@ -248,9 +273,7 @@ export function descriptionWorthShowing(record: LaunchConferenceRecord): string 
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
   const place = [record.city, record.country].filter(Boolean).join(", ");
-  const when = record.startDate
-    ? [record.startDate, record.endDate].filter(Boolean).join(" – ")
-    : record.datesText || String(record.year);
+  const when = datesLineFor(record) ?? "";
   return {
     title: record.title,
     link: record.sourceUrl,
@@ -420,7 +443,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       acronym: record.acronym,
       edition: record.edition,
       description: record.description,
-      dates_text: record.datesText || (record.startDate ? `${record.startDate}${record.endDate && record.endDate !== record.startDate ? ` – ${record.endDate}` : ""}` : null),
+      dates_text: datesLineFor(record),
       start_date: record.startDate,
       end_date: record.endDate,
       city: record.city,

@@ -8,6 +8,7 @@ import type { HarvestEvidence } from "../parseEvidence";
 import {
   browseLaunchDataset,
   conferenceLogoUrl,
+  datesLineFor,
   descriptionWorthShowing,
   hasSomethingToShow,
   siteIconUrl,
@@ -302,4 +303,24 @@ test("a description that restates the title is not a description", () => {
     descriptionWorthShowing({ ...base, description: "Sourced from predicthq.com - A gathering of treasury professionals worldwide." }),
     "A gathering of treasury professionals worldwide."
   );
+});
+
+
+test("a conference that stated a month says the month, rather than saying nothing", () => {
+  // Every parser worked the month out and every one dropped it, so fourteen conferences whose
+  // source said "listed for November 2026" reached the page with no date line at all — the year
+  // survived and the month did not, leaving nothing a date could be written from.
+  const base: any = { year: 2026, startDate: null, endDate: null, datesText: null, startMonth: 11 };
+  assert.equal(datesLineFor(base), "November 2026");
+
+  // A day is still never invented to carry it.
+  assert.equal(datesLineFor({ ...base, startMonth: null }), "2026");
+
+  // And the cases that already worked are unchanged.
+  assert.equal(datesLineFor({ ...base, startDate: "2027-02-17", endDate: "2027-02-19" }), "2027-02-17 – 2027-02-19");
+  assert.equal(datesLineFor({ ...base, startDate: "2027-04-01", endDate: "2027-04-01" }), "2027-04-01");
+  assert.equal(datesLineFor({ ...base, datesText: "12-16 September 2026" }), "12-16 September 2026");
+  // A month outside the calendar is not a month.
+  assert.equal(datesLineFor({ ...base, startMonth: 13 }), "2026");
+  assert.equal(datesLineFor({ ...base, startMonth: 0 }), "2026");
 });

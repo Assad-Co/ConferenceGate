@@ -163,6 +163,14 @@ export interface LaunchConferenceRecord {
   endDate: string | null;
   /** "day" when both days are known, "month" when only the month was stated. */
   datePrecision: "day" | "month" | null;
+  /**
+   * The month, 1-12, where the source stated one but not a day.
+   *
+   * Every parser worked this out and every one dropped it, so fourteen conferences whose source
+   * said "November 2026" reached the page with no date line at all — the year survived in `year`
+   * and the month did not, leaving nothing a date could be written from.
+   */
+  startMonth?: number | null;
   /** The date exactly as the source wrote it. */
   datesText: string | null;
 

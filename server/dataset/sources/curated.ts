@@ -266,6 +266,7 @@ export function mapCuratedRow(row: CuratedRow, options: CuratedOptions): ParseOu
     startDate: dates.startDate,
     endDate: dates.endDate,
     datePrecision: dates.precision,
+    startMonth: dates.startMonth,
     datesText: String(row.dates || "").trim() || null,
     city,
     region: null,
