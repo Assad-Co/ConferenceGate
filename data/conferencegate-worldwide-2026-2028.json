@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T11:53:48.722Z",
+  "generatedAt": "2026-09-11T12:00:33.179Z",
   "horizonStart": "2026-09-11",
   "years": [
     2026,
@@ -280,8 +280,8 @@
       "description": "International conference focused on vaccines & immunology.",
       "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -394,8 +394,8 @@
       "description": "Gastech 2026, Bangkok, Thailand, September 14-17, 2026",
       "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
       "sourceHost": "rogtecmagazine.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.rogtecmagazine.com/events-calendar/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "World Petroleum Congress ADIPEC Gastech 2026 2027",
         "resultTitle": "Oil and Gas Events Calendar 2026",
@@ -407,22 +407,22 @@
         "title": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
           "sourcePageTitle": "Oil and Gas Events Calendar 2026",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -2102,8 +2102,8 @@
       "description": "International conference focused on aging biology.",
       "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -3516,8 +3516,8 @@
       "description": "Sourced from predicthq.com - The National Frozen & Refrigerated Foods Convention is the premier industry conference and trade show organized by the National Frozen & Refrigerated Foods Association (NFRA).",
       "sourceUrl": "https://nfraweb.org/events/",
       "sourceHost": "nfraweb.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://nfraweb.org/events/",
+      "sourceType": "event_api",
+      "officialUrl": null,
       "evidence": {
         "query": "predicthq:category=conferences",
         "resultTitle": "National Frozen & Refrigerated Foods Convention",
@@ -3776,8 +3776,8 @@
       "description": "International conference focused on food structure & functionality.",
       "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -4545,8 +4545,8 @@
       "description": "International conference focused on cell death & therapeutics.",
       "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -6042,8 +6042,8 @@
       "description": "International conference focused on structural biology & ai.",
       "sourceUrl": "https://www.elsevier.com/en-au/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-au/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -10156,8 +10156,8 @@
       "description": "International conference focused on single cell biology & ai.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -18394,8 +18394,8 @@
       "description": "Nexus Summit and Expo 2027, Las Vegas, Nevada, USA, February 23-25, 2027",
       "sourceUrl": "https://quantumcomputingreport.com/conferences/",
       "sourceHost": "quantumcomputingreport.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://quantumcomputingreport.com/conferences/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "physics quantum photonics conference 2027",
         "resultTitle": "Conferences of Quantum Technology - Quantum Computing Report",
@@ -18407,22 +18407,22 @@
         "title": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22012,8 +22012,8 @@
       "description": "International conference focused on bioresource technology.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -27729,8 +27729,8 @@
       "description": "ARCC 2027 International Conference, Architecture of Performance, New Orleans, Louisiana, USA, April 7-10, 2027",
       "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
       "sourceHost": "arcc-arch.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.arcc-arch.org/category/conferences/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "architecture built environment conference 2027",
         "resultTitle": "Conferences ARCC",
@@ -27742,27 +27742,27 @@
         "title": {
           "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
           "sourcePageTitle": "Conferences ARCC",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
           "sourcePageTitle": "Conferences ARCC",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
           "sourcePageTitle": "Conferences ARCC",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
           "sourcePageTitle": "Conferences ARCC",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://www.arcc-arch.org/category/conferences/",
           "sourcePageTitle": "Conferences ARCC",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -27887,8 +27887,8 @@
       "description": "Quantum Networks Summit 2027, Palais des Congres de Paris, Paris, France, April 7-8, 2027",
       "sourceUrl": "https://quantumcomputingreport.com/conferences/",
       "sourceHost": "quantumcomputingreport.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://quantumcomputingreport.com/conferences/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "physics quantum photonics conference 2027",
         "resultTitle": "Conferences of Quantum Technology - Quantum Computing Report",
@@ -27900,27 +27900,27 @@
         "title": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "venue": {
           "sourceUrl": "https://quantumcomputingreport.com/conferences/",
           "sourcePageTitle": "Conferences of Quantum Technology - Quantum Computing Report",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -31082,8 +31082,8 @@
       "description": "Global conference on food security, systems and resilience.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -32037,8 +32037,8 @@
       "description": "Symposium on neurometabolism and its roles in health and disease.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -32457,8 +32457,8 @@
       "description": "WCX 2027 SAE World Congress Experience, Detroit, Michigan, USA, April 27-29, 2027",
       "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
       "sourceHost": "sae.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "SAE International conference 2027 World Congress",
         "resultTitle": "2027 WCX SAE World Congress Experience",
@@ -32470,27 +32470,27 @@
         "title": {
           "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
           "sourcePageTitle": "2027 WCX SAE World Congress Experience",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
           "sourcePageTitle": "2027 WCX SAE World Congress Experience",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
           "sourcePageTitle": "2027 WCX SAE World Congress Experience",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
           "sourcePageTitle": "2027 WCX SAE World Congress Experience",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://www.sae.org/events/2027/wcx-sae-world-congress-experience/index",
           "sourcePageTitle": "2027 WCX SAE World Congress Experience",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -32883,8 +32883,8 @@
       "description": "Symposium on advanced human biology models, organoids and new approach methodologies.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -33550,8 +33550,8 @@
       "description": "SEG Geothermal Workshop 2027, Houston, Texas, USA, May 3-5, 2027",
       "sourceUrl": "https://seg.org/events/",
       "sourceHost": "seg.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://seg.org/events/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "SEG exploration geophysicists workshop 2027",
         "resultTitle": "SEG Events",
@@ -33563,27 +33563,27 @@
         "title": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -33645,8 +33645,8 @@
       "description": "URTeC 2027 Unconventional Resources Technology Conference, Reliant Park, Houston, Texas, USA, May 3-5, 2027",
       "sourceUrl": "https://seg.org/events/",
       "sourceHost": "seg.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://seg.org/events/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "SEG exploration geophysicists workshop 2027",
         "resultTitle": "SEG Events",
@@ -33658,32 +33658,32 @@
         "title": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "venue": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://seg.org/events/",
           "sourcePageTitle": "SEG Events",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -36095,8 +36095,8 @@
       "description": "Symposium on advanced imaging, AI and cellular engineering in next-generation cell biology.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -39721,8 +39721,8 @@
       "description": "ANS 2027 Annual Conference, Hilton Orlando Buena Vista Palace, Lake Buena Vista, Florida, USA, June 13-16, 2027",
       "sourceUrl": "https://www.ans.org/meetings/",
       "sourceHost": "ans.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.ans.org/meetings/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "nuclear power reactor conference 2027",
         "resultTitle": "Conferences ANS",
@@ -39734,32 +39734,32 @@
         "title": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "venue": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://www.ans.org/meetings/",
           "sourcePageTitle": "Conferences ANS",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -40164,8 +40164,8 @@
       "description": "International conference integrating human, animal and environmental health.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -43430,8 +43430,8 @@
       "description": "Major sensory science symposium covering food, consumer and sensory research.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -44244,8 +44244,8 @@
       "description": "ISPP 2027 Annual Meeting of the International Society of Political Psychology, Amsterdam, Netherlands, July 6-9, 2027",
       "sourceUrl": "https://ispp.org/meetings/",
       "sourceHost": "ispp.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://ispp.org/meetings/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "psychology sociology humanities conference 2027",
         "resultTitle": "Annual Meetings - ISPP",
@@ -44257,27 +44257,27 @@
         "title": {
           "sourceUrl": "https://ispp.org/meetings/",
           "sourcePageTitle": "Annual Meetings - ISPP",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://ispp.org/meetings/",
           "sourcePageTitle": "Annual Meetings - ISPP",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://ispp.org/meetings/",
           "sourcePageTitle": "Annual Meetings - ISPP",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://ispp.org/meetings/",
           "sourcePageTitle": "Annual Meetings - ISPP",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://ispp.org/meetings/",
           "sourcePageTitle": "Annual Meetings - ISPP",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -44826,8 +44826,8 @@
       "description": "International transportation research symposium.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -44952,8 +44952,8 @@
       "description": "International conference focused on drug discovery.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -45753,8 +45753,8 @@
       "description": "NUTRITION 2027 Annual Meeting of the American Society for Nutrition, Las Vegas, Nevada, USA, July 26-29, 2027",
       "sourceUrl": "https://nutrition.org/meetings/",
       "sourceHost": "nutrition.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://nutrition.org/meetings/",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "food science nutrition conference 2027",
         "resultTitle": "Meetings and Education - American Society for Nutrition",
@@ -45766,27 +45766,27 @@
         "title": {
           "sourceUrl": "https://nutrition.org/meetings/",
           "sourcePageTitle": "Meetings and Education - American Society for Nutrition",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://nutrition.org/meetings/",
           "sourcePageTitle": "Meetings and Education - American Society for Nutrition",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://nutrition.org/meetings/",
           "sourcePageTitle": "Meetings and Education - American Society for Nutrition",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://nutrition.org/meetings/",
           "sourcePageTitle": "Meetings and Education - American Society for Nutrition",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://nutrition.org/meetings/",
           "sourcePageTitle": "Meetings and Education - American Society for Nutrition",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -46581,8 +46581,8 @@
       "description": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques, Anaheim Convention Center, Anaheim, California, USA, August 8-12, 2027",
       "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
       "sourceHost": "dl.acm.org",
-      "sourceType": "official_site",
-      "officialUrl": "https://dl.acm.org/sig/siggraph/upcoming",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "evidence": {
         "query": "ACM SIGGRAPH KDD MICCAI RecSys 2027 dates location",
         "resultTitle": "SIGGRAPH - Upcoming Events",
@@ -46594,32 +46594,32 @@
         "title": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "city": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "venue": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "organization": {
           "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
           "sourcePageTitle": "SIGGRAPH - Upcoming Events",
-          "confidence": "High"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [
@@ -48021,8 +48021,8 @@
       "description": "International conference focused on neuroimmunology.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -48261,8 +48261,8 @@
       "description": "Conference on shaping future food systems through sustainability and digital innovation.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -49067,8 +49067,8 @@
       "description": "International conference focused on emergency nursing.",
       "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -49269,8 +49269,8 @@
       "description": "International conference focused on rna biology.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -49955,8 +49955,8 @@
       "description": "International conference focused on desalination.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -50824,8 +50824,8 @@
       "description": "International conference focused on infectious disease dynamics.",
       "sourceUrl": "https://www.elsevier.com/events/conferences/all",
       "sourceHost": "elsevier.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceType": "third_party",
+      "officialUrl": null,
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",

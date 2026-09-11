@@ -12,7 +12,9 @@
 
 import type { LaunchConferenceRecord, LaunchSourceType } from "../types";
 import type { ParseOutcome, ParseOptions } from "../parseEvidence";
-import { refuseByDateWindow, seriesName, slugify, splitTitleParts, topicsFromTitle } from "../parseEvidence";
+import {
+  isEventIndexPath, refuseByDateWindow, seriesName, slugify, splitTitleParts, topicsFromTitle,
+} from "../parseEvidence";
 import { classifyCategories, primaryCategory } from "../../discovery/categories";
 import { normalizeCountry, regionForCountry } from "../../discovery/countries";
 import { isDirectoryHost, isReferenceHost } from "../../directoryHosts";
@@ -182,9 +184,10 @@ export function usableAsOfficialUrl(url: string | null): boolean {
   // returns whatever matches that tag today, so storing it as a conference's website sends a reader
   // to a list and calls it the organiser's own page.
   if (/[?&](?:tags?|search|q|query|category|keyword|filter|type|page)=/i.test(url)) return false;
-  // An index of events on any host, however trustworthy the host.
-  return !/\/(?:events?|meetings?|conferences?)\/(?:calendar|list|index)?\/?$/.test(path)
-    && !/\/calendar\/?$/.test(path);
+  // An index of events on any host, however trustworthy the host. Shared with the evidence parser,
+  // because the same URL arriving by a different route must get the same answer — Gastech reached a
+  // reader through that other route while this one was already refusing its URL.
+  return !isEventIndexPath(url);
 }
 
 export interface CuratedOptions extends ParseOptions {

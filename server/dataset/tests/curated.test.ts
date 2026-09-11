@@ -160,3 +160,22 @@ test("the supplied file parses, quoted commas and all", () => {
   assert.equal(rows[0].partners, "AAPG, EAGE");
   assert.equal(rows[0].website, "https://example.org/gtw/");
 });
+
+test("an index of many conferences is never one conference's own page", () => {
+  // Both of these reached a reader as the conference's own website. Gastech 2026's card linked to
+  // a trade magazine's events calendar, and the 20th Vaccine Congress's to a list of every
+  // conference its publisher runs — each marked as the organiser's page, which is what makes it
+  // worse than an ordinary bad link.
+  assert.equal(usableAsOfficialUrl("https://www.rogtecmagazine.com/events-calendar/"), false);
+  assert.equal(usableAsOfficialUrl("https://www.elsevier.com/en-gb/events/conferences/all"), false);
+  assert.equal(usableAsOfficialUrl("https://www.siggraph.org/siggraph-events/conferences/"), false);
+  assert.equal(usableAsOfficialUrl("https://example.org/events/upcoming"), false);
+  assert.equal(usableAsOfficialUrl("https://example.org/conference-listings"), false);
+
+  // A page about one conference on that same publisher's site is still that conference's page.
+  assert.equal(usableAsOfficialUrl("https://www.elsevier.com/events/conferences/all/food-chemistry-conference"), true);
+  // And a conference's own site is untouched, year segment and all.
+  assert.equal(usableAsOfficialUrl("https://www.adipec.com/"), true);
+  assert.equal(usableAsOfficialUrl("https://iceevent.org/2026/"), true);
+  assert.equal(usableAsOfficialUrl("https://www.blackhat.com/us-26/"), true);
+});

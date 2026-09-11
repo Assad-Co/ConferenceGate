@@ -134,11 +134,37 @@ function hostOf(url: string): string | null {
   }
 }
 
+/**
+ * Whether a URL's path is an index of events rather than a page about one.
+ *
+ * The host alone cannot tell: rogtecmagazine.com is a trade magazine, elsevier.com a publisher,
+ * siggraph.org a society, and none is a directory — yet "/events-calendar/",
+ * "/events/conferences/all" and "/siggraph-events/conferences/" are each a list. Gastech 2026
+ * reached a reader's screen linked to the first of those and labelled the organiser's own page.
+ */
+export function isEventIndexPath(url: string): boolean {
+  let path: string;
+  try {
+    path = new URL(url).pathname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const segments = path.split("/").filter(Boolean);
+  const last = segments[segments.length - 1] ?? "";
+  if (/^(?:all|calendar|list(?:ing)?s?|index|upcoming|archives?|past|directory)$/.test(last)) return true;
+  if (/^(?:events?|meetings?|conferences?)[-_](?:calendars?|list(?:ing)?s?|index|directory)$/.test(last)) return true;
+  return /\/(?:events?|meetings?|conferences?)\/(?:calendar|list|index)?\/?$/.test(path)
+    || /\/calendar\/?$/.test(path);
+}
+
 export function classifySource(url: string): LaunchSourceType {
   const host = hostOf(url);
   if (!host) return "third_party";
   if (isDirectoryHost(host)) return "directory_listing";
   if (isReferenceHost(host)) return "reference";
+  // A trustworthy host's list of everything it runs is still a list. Classified as official it
+  // became the conference's own website, which is the one thing a listing must never become.
+  if (isEventIndexPath(url)) return "third_party";
   return "official_site";
 }
 
