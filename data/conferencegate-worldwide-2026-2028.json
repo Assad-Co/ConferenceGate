@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T13:24:54.881Z",
+  "generatedAt": "2026-09-11T13:31:19.722Z",
   "horizonStart": "2026-09-11",
   "years": [
     2026,
@@ -9328,9 +9328,9 @@
     },
     {
       "id": "agu-fall-meeting-agu26-annual-meeting-2026-san-francisco",
-      "title": "AGU Fall Meeting 2026 (AGU26 Annual Meeting)",
+      "title": "AGU26 Annual Meeting",
       "acronym": "AGU26",
-      "series": "AGU Fall Meeting (AGU26 Annual Meeting)",
+      "series": "AGU26 Annual Meeting",
       "edition": null,
       "year": 2026,
       "startDate": "2026-12-07",
@@ -11679,9 +11679,9 @@
     },
     {
       "id": "icsca-2027-putrajaya",
-      "title": "ICSCA 2027 International Conference on Software and Computer Applications",
-      "acronym": "ICSCA",
-      "series": "ICSCA International Conference on Software and Computer Applications",
+      "title": "2027 16th International Conference on Software and Computer Applications",
+      "acronym": "ICSCA 2027",
+      "series": "16th International Conference on Software and Computer Applications",
       "edition": null,
       "year": 2027,
       "startDate": "2027-01-22",
@@ -15040,143 +15040,10 @@
       }
     },
     {
-      "id": "international-conference-on-green-civil-engineering-2027-kyoto",
-      "title": "2027 International Conference on Green Civil Engineering",
-      "acronym": "ICGCE 2027",
-      "series": "International Conference on Green Civil Engineering",
-      "edition": null,
-      "year": 2027,
-      "startDate": "2027-03-26",
-      "endDate": "2027-03-29",
-      "datePrecision": "day",
-      "startMonth": 3,
-      "datesText": null,
-      "city": "Kyoto",
-      "region": null,
-      "country": "Japan",
-      "countryCode": "JP",
-      "worldRegion": "Asia",
-      "venue": null,
-      "format": "in-person",
-      "organization": null,
-      "category": "Engineering",
-      "categories": [
-        "Engineering",
-        "Environment & Sustainability",
-        "Engineering & Sustainability",
-        "Green Civil Engineering"
-      ],
-      "topics": [
-        "Engineering & Sustainability",
-        "Green Civil Engineering",
-        "civil engineering",
-        "sustainability",
-        "green",
-        "civil",
-        "engineering"
-      ],
-      "keywords": [
-        "Engineering & Sustainability",
-        "Green Civil Engineering",
-        "civil engineering",
-        "sustainability",
-        "green",
-        "civil",
-        "engineering"
-      ],
-      "description": "International conference focused on green civil engineering.",
-      "sourceUrl": "https://www.iconf.com/news/1195",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
-      "logoUrl": null,
-      "evidence": {
-        "query": "conferencegate-200-2026-2027-v3",
-        "resultTitle": "2027 International Conference on Green Civil Engineering",
-        "statedText": "International conference focused on green civil engineering. — missing official URL; venue not verified",
-        "retrievedAt": "2026-09-11",
-        "method": "web_search",
-        "externalId": "DISCOVERY VERIFIED"
-      },
-      "provenance": {
-        "title": {
-          "sourceUrl": "https://www.iconf.com/news/1195",
-          "sourcePageTitle": null,
-          "confidence": "Medium"
-        },
-        "dates": {
-          "sourceUrl": "https://www.iconf.com/news/1195",
-          "sourcePageTitle": null,
-          "confidence": "High"
-        },
-        "city": {
-          "sourceUrl": "https://www.iconf.com/news/1195",
-          "sourcePageTitle": null,
-          "confidence": "Medium"
-        },
-        "country": {
-          "sourceUrl": "https://www.iconf.com/news/1195",
-          "sourcePageTitle": null,
-          "confidence": "Medium"
-        }
-      },
-      "corroboratingSourceUrls": [],
-      "origin": "launch_dataset",
-      "supply": "curated_list",
-      "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
-        "accommodation": null,
-        "program": {
-          "availability": "unread",
-          "text": null
-        },
-        "callForPapers": {
-          "status": "Open",
-          "abstractDeadline": "2026-11-05",
-          "submissionEmail": null,
-          "lengthLimit": null,
-          "text": "Call for papers / abstract submissions published.",
-          "url": null
-        },
-        "schedule": {
-          "sessions": [],
-          "themes": []
-        },
-        "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
-          "unstructuredReason": null
-        },
-        "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
-          "unstructuredReason": null
-        },
-        "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
-          "unstructuredReason": null
-        },
-        "sponsors": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
-          "unstructuredReason": null
-        },
-        "safetyNote": null,
-        "registrationUrl": null
-      }
-    },
-    {
       "id": "ic4e-18th-international-conference-on-e-education-e-business-e-managem",
-      "title": "IC4e 2027, 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+      "title": "2027 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
       "acronym": "IC4e 2027",
-      "series": "IC4e , 18th International Conference on E-Education, E-Business, E-Management and E-Learning",
+      "series": "18th International Conference on E-Education, E-Business, E-Management and E-Learning",
       "edition": null,
       "year": 2027,
       "startDate": "2027-03-26",
@@ -15311,6 +15178,139 @@
           "items": [],
           "text": "Sponsored by Rajamangala University of Technology Tawan-ok; patrons include Meeting Place Fukuoka, Purdue University Northwest, De La Salle University-Manila, China West Normal University, Bulacan State University and Prince Sultan University.",
           "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": null
+      }
+    },
+    {
+      "id": "international-conference-on-green-civil-engineering-2027-kyoto",
+      "title": "2027 International Conference on Green Civil Engineering",
+      "acronym": "ICGCE 2027",
+      "series": "International Conference on Green Civil Engineering",
+      "edition": null,
+      "year": 2027,
+      "startDate": "2027-03-26",
+      "endDate": "2027-03-29",
+      "datePrecision": "day",
+      "startMonth": 3,
+      "datesText": null,
+      "city": "Kyoto",
+      "region": null,
+      "country": "Japan",
+      "countryCode": "JP",
+      "worldRegion": "Asia",
+      "venue": null,
+      "format": "in-person",
+      "organization": null,
+      "category": "Engineering",
+      "categories": [
+        "Engineering",
+        "Environment & Sustainability",
+        "Engineering & Sustainability",
+        "Green Civil Engineering"
+      ],
+      "topics": [
+        "Engineering & Sustainability",
+        "Green Civil Engineering",
+        "civil engineering",
+        "sustainability",
+        "green",
+        "civil",
+        "engineering"
+      ],
+      "keywords": [
+        "Engineering & Sustainability",
+        "Green Civil Engineering",
+        "civil engineering",
+        "sustainability",
+        "green",
+        "civil",
+        "engineering"
+      ],
+      "description": "International conference focused on green civil engineering.",
+      "sourceUrl": "https://www.iconf.com/news/1195",
+      "sourceHost": "iconf.com",
+      "sourceType": "directory_listing",
+      "officialUrl": null,
+      "logoUrl": null,
+      "evidence": {
+        "query": "conferencegate-200-2026-2027-v3",
+        "resultTitle": "2027 International Conference on Green Civil Engineering",
+        "statedText": "International conference focused on green civil engineering. — missing official URL; venue not verified",
+        "retrievedAt": "2026-09-11",
+        "method": "web_search",
+        "externalId": "DISCOVERY VERIFIED"
+      },
+      "provenance": {
+        "title": {
+          "sourceUrl": "https://www.iconf.com/news/1195",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        },
+        "dates": {
+          "sourceUrl": "https://www.iconf.com/news/1195",
+          "sourcePageTitle": null,
+          "confidence": "High"
+        },
+        "city": {
+          "sourceUrl": "https://www.iconf.com/news/1195",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        },
+        "country": {
+          "sourceUrl": "https://www.iconf.com/news/1195",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
+        }
+      },
+      "corroboratingSourceUrls": [],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "conferencegate-200-2026-2027-v3",
+        "venueName": null,
+        "venueAddress": null,
+        "accommodation": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": "2026-11-05",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for papers / abstract submissions published.",
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
         },
         "safetyNote": null,
         "registrationUrl": null
@@ -16001,7 +16001,7 @@
     {
       "id": "rsa-2027-san-francisco",
       "title": "RSA Conference 2027",
-      "acronym": "RSA",
+      "acronym": "RSAC 2027",
       "series": "RSA Conference",
       "edition": null,
       "year": 2027,
@@ -23507,9 +23507,9 @@
     },
     {
       "id": "kdd-acm-sigkdd-conference-on-knowledge-discovery-and-data-mining-2027-",
-      "title": "KDD 2027 ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "title": "KDD 2027",
       "acronym": "ACM KDD 2027",
-      "series": "KDD ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      "series": "KDD",
       "edition": null,
       "year": 2027,
       "startDate": "2027-08-01",
@@ -23957,9 +23957,9 @@
     },
     {
       "id": "siggraph-2027-anaheim",
-      "title": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques",
-      "acronym": "SIGGRAPH",
-      "series": "SIGGRAPH International Conference on Computer Graphics and Interactive Techniques",
+      "title": "SIGGRAPH 2027",
+      "acronym": "SIGGRAPH 2027",
+      "series": "SIGGRAPH",
       "edition": null,
       "year": 2027,
       "startDate": "2027-08-08",

@@ -121,6 +121,15 @@ function mergeRecords(strong: LaunchConferenceRecord, weak: LaunchConferenceReco
   // record merged into a harvest record of the same event, and the merged record inherited the
   // harvest tag — so the publish filter dropped exactly the conferences that had been written up.
   if (weak.supply === "curated_list") merged.supply = "curated_list";
+  // And it keeps the name that person gave it. A search result's wording of a title won this merge
+  // on source strength alone, so one conference appeared on the site under a name its own supplied
+  // row never used — which makes the catalogue impossible to check against the file it came from.
+  if (weak.supply === "curated_list" && strong.supply !== "curated_list") {
+    merged.title = weak.title;
+    merged.acronym = weak.acronym ?? merged.acronym;
+    merged.series = weak.series ?? merged.series;
+    merged.edition = weak.edition ?? merged.edition;
+  }
   // The detail a person wrote is the reason that record exists. It is never dropped for a stronger
   // source that has none, and never overwrites one the stronger source already carries.
   if (!merged.details && weak.details) merged.details = weak.details;
