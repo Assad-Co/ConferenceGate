@@ -11,6 +11,7 @@ import {
   datesLineFor,
   descriptionWorthShowing,
   hasSomethingToShow,
+  isBareListing,
   siteIconUrl,
   findLaunchRecordByUrl,
   launchRecordToTabbedExtraction,
@@ -323,4 +324,37 @@ test("a conference that stated a month says the month, rather than saying nothin
   // A month outside the calendar is not a month.
   assert.equal(datesLineFor({ ...base, startMonth: 13 }), "2026");
   assert.equal(datesLineFor({ ...base, startMonth: 0 }), "2026");
+});
+
+
+test("an aggregator's generated entry is a listing, and a real conference in the same state is not", () => {
+  // Some aggregators generate an entry for every pairing of a subject and a city: the same
+  // "International Conference on Desalination and Renewable Energy" appears in Montreal, Athens,
+  // Las Vegas and Honolulu, none with an organiser, a venue, a description or a website, and a
+  // search for one finds nothing but more listings of itself.
+  const listing: any = {
+    title: "ICDRE 2027 International Conference on Desalination and Renewable Energy",
+    year: 2027, startDate: "2027-01-09", endDate: null, datePrecision: "day", datesText: null,
+    city: "Honolulu", region: null, country: "United States", venue: null, organization: null,
+    description: null, officialUrl: null, sourceType: "directory_listing",
+    sourceUrl: "https://conferenceindex.org/event/...", details: null,
+  };
+  assert.equal(isBareListing(listing), true);
+  assert.equal(hasSomethingToShow(listing), false, "a generated listing was published as a conference");
+
+  // Any one trace of a real event keeps it. The Ukraine Recovery Conference reached exactly this
+  // state — found on Wikipedia, nothing else stored — and is real: one search found urc27.org.
+  // That is a correction to make, not a record to drop.
+  assert.equal(isBareListing({ ...listing, officialUrl: "https://urc27.org/" }), false);
+  assert.equal(isBareListing({ ...listing, organization: "RenewableUK" }), false);
+  assert.equal(isBareListing({ ...listing, venue: "P&J Live" }), false);
+  assert.equal(
+    isBareListing({ ...listing, description: "A conference on rebuilding Ukraine's economy and infrastructure." }),
+    false
+  );
+
+  // And the test only ever applies to a record found on a directory or an encyclopaedia. A
+  // conference read off its own site is never one of these, however little else is known.
+  assert.equal(isBareListing({ ...listing, sourceType: "official_site" }), false);
+  assert.equal(isBareListing({ ...listing, sourceType: "third_party" }), false);
 });

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-11T12:38:34.734Z",
+  "generatedAt": "2026-09-11T12:44:39.893Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 539,
+  "accepted": 511,
   "duplicatesMerged": 8,
   "rejected": 22,
   "rejectionReasons": {
@@ -19,9 +19,9 @@
     "no_location": 1
   },
   "detailsAttached": 16,
-  "heldBackWithNothingToShow": 1,
+  "heldBackWithNothingToShow": 29,
   "websitesResolved": {
-    "applied": 15,
+    "applied": 18,
     "alreadyKnown": 0,
     "refused": [],
     "matchedNoConference": []
@@ -32,47 +32,47 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 539,
+  "total": 511,
   "byYear": {
     "2026": 104,
-    "2027": 421,
-    "2028": 14
+    "2027": 394,
+    "2028": 13
   },
   "countries": 53,
-  "cities": 205,
+  "cities": 203,
   "categories": 44,
   "worldRegions": {
-    "North America": 185,
-    "Europe": 156,
-    "Asia": 154,
-    "Middle East": 21,
+    "North America": 179,
+    "Asia": 150,
+    "Europe": 139,
+    "Middle East": 20,
     "South America": 10,
     "Oceania": 9,
     "Africa": 4
   },
   "formats": {
-    "in-person": 517,
-    "hybrid": 19,
+    "in-person": 490,
+    "hybrid": 18,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 408,
-    "directory_listing": 91,
+    "official_site": 411,
+    "directory_listing": 61,
     "third_party": 30,
-    "reference": 10
+    "reference": 9
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "97.4%",
-    "monthOnlyDates": "2.6%",
+    "exactDates": "97.3%",
+    "monthOnlyDates": "2.7%",
     "city": "99.6%",
     "country": "100.0%",
-    "officialUrl": "75.7%",
-    "venue": "29.7%",
-    "organization": "47.5%",
-    "category": "71.6%",
+    "officialUrl": "80.4%",
+    "venue": "31.3%",
+    "organization": "50.1%",
+    "category": "71.4%",
     "description": "100.0%",
-    "corroborated": "0.7%"
+    "corroborated": "0.8%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

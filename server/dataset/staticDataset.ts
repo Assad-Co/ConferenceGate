@@ -174,7 +174,34 @@ export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {
   const somethingToRead =
     Boolean(record.description || record.officialUrl || record.venue || record.organization)
     || filledSections(record).length > 0;
-  return whenKnown && whereKnown && somethingToRead;
+  return whenKnown && whereKnown && somethingToRead && !isBareListing(record);
+}
+
+/**
+ * A listing rather than a conference.
+ *
+ * Some aggregators generate an entry for every pairing of a subject and a city: the same
+ * "International Conference on Desalination and Renewable Energy" is listed in Montreal, Athens,
+ * Las Vegas and Honolulu, each with a different date and none with an organiser, a venue, a
+ * description or a website. Searching for one finds nothing but more listings of itself.
+ *
+ * What separates those from a real conference that simply has not been written up yet is that the
+ * real one leaves a trace somewhere — its own site, its organiser, its venue, a sentence about
+ * itself. The Ukraine Recovery Conference reached this same state and is real, and a search found
+ * urc27.org in one query; so did the Energy Geoscience Conference. Those are corrections to make,
+ * not records to drop.
+ *
+ * So the test is narrow on purpose: found on a directory or an encyclopaedia, and offering nothing
+ * beyond the name, the date and the city that the directory itself supplied. A record with any one
+ * of those traces stays.
+ */
+export function isBareListing(record: LaunchConferenceRecord): boolean {
+  if (record.sourceType !== "directory_listing" && record.sourceType !== "reference") return false;
+  return !record.officialUrl
+    && !record.venue
+    && !record.organization
+    && !descriptionWorthShowing(record)
+    && filledSections(record).length === 0;
 }
 
 export interface LaunchSearchResult {
