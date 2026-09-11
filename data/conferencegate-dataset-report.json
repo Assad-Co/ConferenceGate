@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-10T19:04:14.595Z",
-  "horizonStart": "2026-09-10",
+  "generatedAt": "2026-09-11T05:04:12.793Z",
+  "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 537,
+  "accepted": 536,
   "duplicatesMerged": 8,
-  "rejected": 21,
+  "rejected": 22,
   "rejectionReasons": {
     "not_a_conference": 14,
-    "already_finished": 4,
+    "already_finished": 5,
     "no_location": 2,
     "source_url_is_a_listing": 1
   },
@@ -25,9 +25,9 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 537,
+  "total": 536,
   "byYear": {
-    "2026": 104,
+    "2026": 103,
     "2027": 419,
     "2028": 14
   },
@@ -35,7 +35,7 @@
   "cities": 205,
   "categories": 43,
   "worldRegions": {
-    "North America": 185,
+    "North America": 184,
     "Europe": 154,
     "Asia": 154,
     "Middle East": 20,
@@ -45,12 +45,12 @@
     "(none)": 1
   },
   "formats": {
-    "in-person": 516,
+    "in-person": 515,
     "hybrid": 18,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 375,
+    "official_site": 374,
     "directory_listing": 149,
     "reference": 12,
     "third_party": 1
@@ -62,9 +62,9 @@
     "city": "99.4%",
     "country": "99.8%",
     "officialUrl": "69.8%",
-    "venue": "29.8%",
-    "organization": "47.1%",
-    "category": "71.3%",
+    "venue": "29.9%",
+    "organization": "47.2%",
+    "category": "71.5%",
     "description": "100.0%",
     "corroborated": "1.5%"
   },
@@ -127,6 +127,11 @@
       "reason": "not_a_conference",
       "sourceUrl": "https://www.facebook.com/groups/1771911893152721/posts/3066212810389283/",
       "statedText": "Mexi-Con 2026, McAllen, US, 2026-09-12T12:00:00"
+    },
+    {
+      "reason": "already_finished",
+      "sourceUrl": "https://www.alibabacocreate.com/us",
+      "statedText": "Alibaba.com CoCreate, Los Angeles, US, 2026-09-09T00:00:00"
     },
     {
       "reason": "not_a_conference",
