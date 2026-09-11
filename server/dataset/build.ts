@@ -16,6 +16,7 @@ import type {
 import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions, type ParseOutcome } from "./parseEvidence";
 import { flattenStoredConferenceText } from "../storedConferenceSearch";
 import { hasSomethingToShow } from "./staticDataset";
+import { applyResolvedUrls, type ResolutionOutcome, type ResolvedUrl } from "./sources/resolvedUrls";
 import { parseCuratedDates } from "./sources/curated";
 import {
   detailMatchKey, mapCuratedDetailRow, type CuratedDetailRow,
@@ -43,6 +44,8 @@ export interface BuildResult {
   /** Real conferences held back because their page could say nothing — no date, no place, or
    *  nothing at all to read. Reported rather than silently dropped: they are real either way. */
   heldBack: number;
+  /** What the resolved-website file corrected, refused and could not match. */
+  resolvedUrls: ResolutionOutcome;
 }
 
 function identityKey(record: LaunchConferenceRecord): string {
@@ -203,7 +206,8 @@ export function buildLaunchDataset(
   evidence: HarvestEvidence[],
   options: BuildOptions,
   structured: StructuredOutcome[] = [],
-  details: DetailSupply[] = []
+  details: DetailSupply[] = [],
+  resolutions: ResolvedUrl[] = []
 ): BuildResult {
   const rejections: LaunchRejection[] = [];
   const parsed: LaunchConferenceRecord[] = [];
@@ -269,6 +273,9 @@ export function buildLaunchDataset(
   });
 
   const attachment = attachDetails(records, details);
+  // Applied after deduplication, so a conference that survived a merge is the one corrected, and
+  // before publication, so a record that gains its own site gains the logo that comes with it.
+  const resolvedUrls = applyResolvedUrls(records, resolutions);
 
   // Publishing is a choice about what to ship, not about what the evidence says, so it is an
   // option rather than the builder's own rule: a fixture catalogue must still come back as the
@@ -285,6 +292,7 @@ export function buildLaunchDataset(
     detailsAttached: attachment.attached,
     detailsUnmatched: attachment.unmatched,
     heldBack,
+    resolvedUrls,
   };
 }
 

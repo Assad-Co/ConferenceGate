@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T12:20:10.369Z",
+  "generatedAt": "2026-09-11T12:29:04.947Z",
   "horizonStart": "2026-09-11",
   "years": [
     2026,
@@ -280,10 +280,10 @@
         "20th"
       ],
       "description": "International conference focused on vaccines & immunology.",
-      "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/vaccine-congress",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/vaccine-congress",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -395,10 +395,10 @@
         "Petroleum & Energy"
       ],
       "description": "Gastech 2026, Bangkok, Thailand, September 14-17, 2026",
-      "sourceUrl": "https://www.rogtecmagazine.com/events-calendar/",
-      "sourceHost": "rogtecmagazine.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://www.gastechevent.com/",
+      "sourceHost": "gastechevent.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.gastechevent.com/",
       "evidence": {
         "query": "World Petroleum Congress ADIPEC Gastech 2026 2027",
         "resultTitle": "Oil and Gas Events Calendar 2026",
@@ -558,10 +558,10 @@
         "systems"
       ],
       "description": "International conference focused on embedded systems.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Communication+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icites.net/",
+      "sourceHost": "icites.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icites.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -681,10 +681,10 @@
         "systems"
       ],
       "description": "International conference focused on circuits & systems.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Communication+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://iccs.org/",
+      "sourceHost": "iccs.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://iccs.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -808,10 +808,10 @@
         "processing"
       ],
       "description": "International conference focused on signal processing & communications.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Communication+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icsp.org/",
+      "sourceHost": "icsp.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icsp.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -938,10 +938,10 @@
         "management"
       ],
       "description": "International conference on healthcare service management.",
-      "sourceUrl": "https://worldconferencecalendar.com/",
-      "sourceHost": "worldconferencecalendar.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.ichsm.org/",
+      "sourceHost": "ichsm.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.ichsm.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -1814,10 +1814,10 @@
         "engineering"
       ],
       "description": "International conference on power and renewable energy engineering.",
-      "sourceUrl": "https://worldconferencecalendar.com/",
-      "sourceHost": "worldconferencecalendar.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.pree.net/",
+      "sourceHost": "pree.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.pree.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -3532,10 +3532,10 @@
         "2026"
       ],
       "description": "Sourced from predicthq.com - The National Frozen & Refrigerated Foods Convention is the premier industry conference and trade show organized by the National Frozen & Refrigerated Foods Association (NFRA).",
-      "sourceUrl": "https://nfraweb.org/events/",
-      "sourceHost": "nfraweb.org",
-      "sourceType": "event_api",
-      "officialUrl": null,
+      "sourceUrl": "https://nfraconvention.org/",
+      "sourceHost": "nfraconvention.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://nfraconvention.org/",
       "evidence": {
         "query": "predicthq:category=conferences",
         "resultTitle": "National Frozen & Refrigerated Foods Convention",
@@ -3793,10 +3793,10 @@
         "functionality"
       ],
       "description": "International conference focused on food structure & functionality.",
-      "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/food-structure-and-functionality-forum-symposium",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/food-structure-and-functionality-forum-symposium",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -4817,10 +4817,10 @@
         "systems"
       ],
       "description": "International conference focused on computational intelligence.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=artificial+intelligence",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://ciis.net/",
+      "sourceHost": "ciis.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://ciis.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -5059,10 +5059,10 @@
         "Petroleum & Energy"
       ],
       "description": "AAPG Eastern Section Annual Meeting 2026, Section Meeting, Canonsburg, 26-27 October 2026",
-      "sourceUrl": "https://www.aapg.org/events/calendar/",
-      "sourceHost": "aapg.org",
-      "sourceType": "reference",
-      "officialUrl": null,
+      "sourceUrl": "https://www.esaapg.org/",
+      "sourceHost": "esaapg.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.esaapg.org/",
       "corroboratingSourceUrls": [],
       "evidence": {
         "query": "curated:aapg-2026-2027",

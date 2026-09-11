@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T12:20:10.369Z",
+  "generatedAt": "2026-09-11T12:29:04.947Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
@@ -20,6 +20,12 @@
   },
   "detailsAttached": 16,
   "heldBackWithNothingToShow": 1,
+  "websitesResolved": {
+    "applied": 11,
+    "alreadyKnown": 0,
+    "refused": [],
+    "matchedNoConference": []
+  },
   "detailsUnmatched": [
     {
       "title": "Latin America Geothermal Systems Workshop 2026",
@@ -50,11 +56,10 @@
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 393,
-    "directory_listing": 101,
-    "third_party": 33,
-    "reference": 11,
-    "event_api": 1
+    "official_site": 404,
+    "directory_listing": 95,
+    "third_party": 30,
+    "reference": 10
   },
   "coverage": {
     "title": "100.0%",
@@ -62,7 +67,7 @@
     "monthOnlyDates": "2.6%",
     "city": "99.6%",
     "country": "100.0%",
-    "officialUrl": "72.9%",
+    "officialUrl": "75.0%",
     "venue": "29.7%",
     "organization": "47.5%",
     "category": "71.6%",

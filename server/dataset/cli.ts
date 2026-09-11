@@ -12,6 +12,7 @@ import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
 import { mapCuratedRow, parseCsv, rowsFromCsv, statedOrNull } from "./sources/curated";
 import { isIndexHeader, readIndexCsv } from "./sources/conferenceIndex";
+import { isResolvedUrlHeader, rowsFromResolvedCsv, type ResolvedUrl } from "./sources/resolvedUrls";
 import { rowsFromDetailCsv } from "./sources/curatedDetails";
 import { readPortableEvents, readPredictHqCache, readResolvedUrls } from "./ingest";
 
@@ -80,11 +81,12 @@ export function structuredFromCuratedLists(options: ParseOptions): StructuredOut
   for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".csv")).sort()) {
     const full = path.join(dir, file);
     const text = fs.readFileSync(full, "utf8");
-    // Two shapes share this directory. This one is read by column position, so handing it a file
-    // with different columns would not fail — it would quietly file a category as a date and an
-    // acronym as an event type. The header decides, and the other shape is left to the reader that
-    // understands it.
-    if (isIndexHeader(parseCsv(text)[0] ?? [])) continue;
+    // Three shapes share this directory now. This one is read by column position, so handing it a
+    // file with different columns would not fail — it would quietly file a category as a date and
+    // an acronym as an event type. The header decides, and the other two shapes are left to the
+    // readers that understand them.
+    const header = parseCsv(text)[0] ?? [];
+    if (isIndexHeader(header) || isResolvedUrlHeader(header)) continue;
     const rows = rowsFromCsv(text);
     for (const row of rows) {
       const outcome = mapCuratedRow(row, {
@@ -135,6 +137,13 @@ export function indexRecordsFromDisk(options: ParseOptions): {
  * conferences, they do not create them, and a file that lands in the wrong place should fail to
  * parse rather than quietly invent events with no country.
  */
+/** Websites found after the batch that named them was compiled. One file, read by name. */
+export function resolvedUrlsFromDisk(): ResolvedUrl[] {
+  const file = path.resolve(process.cwd(), "data/sources/resolved-official-urls.csv");
+  if (!fs.existsSync(file)) return [];
+  return rowsFromResolvedCsv(parseCsv(fs.readFileSync(file, "utf8")));
+}
+
 export function detailSuppliesFromDisk(): DetailSupply[] {
   const dir = path.resolve(process.cwd(), "data/sources/details");
   if (!fs.existsSync(dir)) return [];
@@ -224,7 +233,8 @@ function main(): void {
       sourceUrl: record.sourceUrl,
       statedText: record.evidence.statedText,
     }))],
-    detailSuppliesFromDisk()
+    detailSuppliesFromDisk(),
+    resolvedUrlsFromDisk()
   );
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -245,6 +255,12 @@ function main(): void {
     indexRecordsRefused: tally(indexed.refused.map((entry) => entry.reason)),
     detailsAttached: result.detailsAttached,
     heldBackWithNothingToShow: result.heldBack,
+    websitesResolved: {
+      applied: result.resolvedUrls.applied,
+      alreadyKnown: result.resolvedUrls.alreadyKnown,
+      refused: result.resolvedUrls.refused,
+      matchedNoConference: result.resolvedUrls.unmatched,
+    },
     detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),
   };
