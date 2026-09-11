@@ -404,3 +404,43 @@ test("a heading is what makes a bare list of names a roster", () => {
   // And a heading does not turn an absence into a person.
   assert.deepEqual(parsePeople("Keynote Speakers: Not yet announced.", "Keynote Speaker"), []);
 });
+
+test("opening hours stated against a date become a schedule, not a paragraph", () => {
+  // The most precise thing a programme cell ever says is a clock time against a date, and it was
+  // reaching the page as prose: the day markers this parser knew expect "Mon 9/14:" and nothing
+  // in "09:00-18:00 on 14 Sep" looks like that.
+  const { sessions } = parseProgramSchedule(
+    "Four-day exhibition and conference, 14–17 September 2026. Published daily exhibition hours are "
+    + "09:00–18:00 on 14 Sep, 09:00–19:00 on 15 Sep, 09:00–18:00 on 16 Sep and 09:00–14:00 on 17 Sep.",
+    2026
+  );
+  assert.deepEqual(sessions.map((entry) => [entry.date, entry.time]), [
+    ["2026-09-14", "09:00–18:00"],
+    ["2026-09-15", "09:00–19:00"],
+    ["2026-09-16", "09:00–18:00"],
+    ["2026-09-17", "09:00–14:00"],
+  ]);
+  // "Four-day exhibition and conference" describes the whole event and is not a session in it.
+  assert.ok(!sessions.some((entry) => /four-day/i.test(entry.title)));
+});
+
+test("a named part of the event against its own dates is a session", () => {
+  const { sessions } = parseProgramSchedule(
+    "Pre-conference training 6–8 Oct; main conference 9–10 Oct with talks, panels, villages and "
+    + "exhibition; post-conference training 11–13 Oct. Event also includes networking.",
+    2026
+  );
+  assert.deepEqual(sessions.map((entry) => [entry.date, entry.title]), [
+    ["2026-10-06", "Pre-conference training"],
+    ["2026-10-09", "main conference"],
+    ["2026-10-11", "post-conference training"],
+  ]);
+});
+
+test("a sentence about the whole event does not become a session in it", () => {
+  // A comma inside the name is what separates the two: a description of the event runs on into its
+  // dates, a part of the event is named right up against them.
+  const { sessions } = parseProgramSchedule("Three-day main conference, 16–18 September 2026, plus training.", 2026);
+  assert.deepEqual(sessions, []);
+  assert.deepEqual(parseProgramSchedule("An international conference on robotics, 3–5 June 2027.", 2027).sessions, []);
+});

@@ -428,7 +428,8 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
     keynote_speakers: details?.keynotes.availability ?? "unread",
     technical_committee: details?.committee.availability ?? "unread",
     sponsors_exhibitors: details?.sponsors.availability ?? "unread",
-    venue_accommodation: details?.venueName || details?.venueAddress || record.venue ? "stated" : "unread",
+    venue_accommodation:
+      details?.venueName || details?.venueAddress || details?.accommodation || record.venue ? "stated" : "unread",
     fees_pricing: details?.fees.availability ?? "unread",
     community: "unread",
   };
@@ -533,6 +534,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
     venue_accommodation: {
       venue_name: details?.venueName || record.venue || null,
       address: details?.venueAddress ?? null,
+      accommodation: details?.accommodation ?? null,
       hotels: [],
       // Named as an advisory from the list's compiler, because it is not the organiser speaking and
       // a reader deciding whether to travel needs to know whose word it is.

@@ -146,6 +146,14 @@ export interface LaunchConferenceDetails {
   safetyNote: string | null;
   /** Where to register, where the source named a page of its own for it. */
   registrationUrl?: string | null;
+  /**
+   * Where to stay: the official hotel block, its rates, the housing partner.
+   *
+   * Its own field because it is its own fact. Folded into `venueAddress` it was silently lost —
+   * the venue parser fills that first, so Gastech's housing partner and its published room rates
+   * were replaced by "Bangkok, Thailand", which the page already said twice.
+   */
+  accommodation?: string | null;
 }
 
 export interface LaunchConferenceRecord {

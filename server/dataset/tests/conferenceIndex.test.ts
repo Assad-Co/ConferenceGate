@@ -297,3 +297,25 @@ test("a page the source named for a section is carried to that section", () => {
   assert.equal(outcome.record.details!.callForPapers!.url, "https://www.iccfi.org/cfp");
   assert.equal(outcome.record.details!.registrationUrl, "https://www.iccfi.org/register");
 });
+
+test("where to stay is its own fact, not the venue's address", () => {
+  // Folded into venueAddress it was silently lost: the venue parser fills that field first, so
+  // Gastech's housing partner and its published room rates were replaced by "Bangkok, Thailand" —
+  // which the page already said twice, in the header and on the venue line.
+  const outcome = mapIndexRow(row({
+    venue: "BITEC — Bangkok International Trade & Exhibition Centre, Bangkok, Thailand",
+    city: "Bangkok", country: "Thailand",
+    accommodation: "Official housing partner CDM Thailand provides preferential hotel rates. "
+      + "Hyatt Place Bangkok Sukhumvit 24 from THB 2,900.",
+  }), OPTIONS);
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+  const details = outcome.record.details!;
+  assert.equal(details.venueName, "BITEC — Bangkok International Trade & Exhibition Centre");
+  assert.match(details.accommodation ?? "", /CDM Thailand/);
+  assert.match(details.accommodation ?? "", /THB 2,900/);
+
+  // An absence phrase in that column is still an absence.
+  const none = mapIndexRow(row({ accommodation: "Not yet announced as of 10 Sep 2026" }), OPTIONS);
+  if (none.ok) assert.equal(none.record.details!.accommodation, null);
+});

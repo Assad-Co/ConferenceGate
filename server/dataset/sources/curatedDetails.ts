@@ -473,6 +473,43 @@ export function parseProgramSchedule(
     sessions.push({ date: isoDate(year, month, Number(hit[2])), dateText: span, time: null, title: clean(hit[1]) });
   }
 
+  // Opening hours the source stated per day: "09:00-18:00 on 14 Sep, 09:00-19:00 on 15 Sep".
+  //
+  // This is the most precise thing a programme cell ever says — an actual clock time against an
+  // actual date — and it was reaching the page as a paragraph, because the day markers above expect
+  // "Mon 9/14:" and nothing here looks like that.
+  const hoursOnDay =
+    /(\d{1,2}[:.]\d{2}\s*(?:[-–—]\s*\d{1,2}[:.]\d{2})?)\s+on\s+(\d{1,2})\s+([A-Za-z]{3,9})\b/g;
+  for (let hit = hoursOnDay.exec(text); hit; hit = hoursOnDay.exec(text)) {
+    const month = MONTHS[hit[3].slice(0, 3).toLowerCase()];
+    if (!month) continue;
+    const date = isoDate(year, month, Number(hit[2]));
+    const time = hit[1].replace(/\s*[-–—]\s*/, "–").replace(/\./g, ":");
+    if (sessions.some((session) => session.date === date && session.time === time)) continue;
+    sessions.push({ date, dateText: `${hit[2]} ${hit[3]}`, time, title: "Exhibition and conference open" });
+  }
+
+  // A named part of the event against its own dates: "Pre-conference training 6-8 Oct; main
+  // conference 9-10 Oct; post-conference training 11-13 Oct". The name has to be short and has to
+  // start after a separator, so a sentence about the programme does not become a session title.
+  // No comma inside the name, which is what separates a part of the event from a sentence about the
+  // whole of it: "Four-day exhibition and conference, 14-17 September" describes the event and is
+  // not a session in it, while "post-conference training 11-13 Oct" is.
+  const namedSpan =
+    /(?:^|[;.]\s+)([A-Za-z][^;.,]{3,58}?)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+([A-Za-z]{3,9})\b/g;
+  for (let hit = namedSpan.exec(text); hit; hit = namedSpan.exec(text)) {
+    const month = MONTHS[hit[4].slice(0, 3).toLowerCase()];
+    if (!month) continue;
+    const title = clean(hit[1]).replace(/[,;:]$/, "");
+    // "Four-day", "Three-day": a duration is the shape of the event, not the name of a part of it.
+    if (!title || title.length < 4 || /^(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)[-\s]day\b/i.test(title)) {
+      continue;
+    }
+    const date = isoDate(year, month, Number(hit[2]));
+    if (sessions.some((session) => session.title === title)) continue;
+    sessions.push({ date, dateText: `${hit[2]}-${hit[3]} ${hit[4]}`, time: null, title });
+  }
+
   sessions.sort((left, right) => String(left.date ?? "").localeCompare(String(right.date ?? "")));
 
   // Themes are what the conference is about, not when anything happens, so they are kept apart from

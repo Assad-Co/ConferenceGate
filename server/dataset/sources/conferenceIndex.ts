@@ -337,7 +337,8 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     details: {
       source: options.sourceName,
       venueName: parsed.venueName,
-      venueAddress: parsed.venueAddress ?? statedOrNull(row.accommodation),
+      venueAddress: parsed.venueAddress,
+      accommodation: statedOrNull(row.accommodation),
       program: parsed.program,
       callForPapers,
       schedule: parseProgramSchedule(row.program, start.year),
