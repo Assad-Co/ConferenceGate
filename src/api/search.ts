@@ -11,6 +11,9 @@ export interface LiveSearchResult {
   location?: { city: string | null; country: string | null } | null;
   /** ISO start date, when the catalogue knows one. */
   startDate?: string | null;
+  /** Which tabs have something behind them. A card offers only these, because a chip for an
+   *  empty tab is a promise the detail page cannot keep. */
+  sections?: string[];
 }
 
 export async function searchConferencesOnTheWeb(

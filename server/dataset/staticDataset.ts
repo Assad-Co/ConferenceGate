@@ -89,6 +89,27 @@ export function resetLaunchDatasetCache(): void {
   cached = null;
 }
 
+/**
+ * The deep sections this record actually has something to show in.
+ *
+ * "Something" means the source stated it — a list, or the sentence it described the section in.
+ * A section whose cell says "Not yet announced" is not in here, because a card that offers a
+ * Speakers chip for it promises a tab that opens on nothing. Venue is excluded: it comes from the
+ * record's core details rather than from anybody supplying a section.
+ */
+export function filledSections(record: LaunchConferenceRecord): string[] {
+  const details = record.details;
+  if (!details) return [];
+  const filled: string[] = [];
+  if (details.program.availability === "stated" || details.schedule.sessions.length) filled.push("agenda");
+  if (details.callForPapers) filled.push("cfp");
+  if (details.keynotes.availability === "stated") filled.push("speakers");
+  if (details.committee.availability === "stated") filled.push("committee");
+  if (details.sponsors.availability === "stated") filled.push("sponsors");
+  if (details.fees.availability === "stated") filled.push("fees");
+  return filled;
+}
+
 export interface LaunchSearchResult {
   title: string;
   link: string;
@@ -116,6 +137,8 @@ export interface LaunchSearchResult {
    * conferences, not one seen three times.
    */
   linkIsConferencePage: boolean;
+  /** Which tabs actually have something behind them, so the card offers only those. */
+  sections: string[];
 }
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
@@ -130,10 +153,11 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     displayLink: record.sourceHost,
     thumbnail: null,
     favicon: null,
-    // True only where a curated list actually filled the deep sections. The flag drives the badge
-    // on the results card, so claiming it for a record carrying core details alone would promise a
-    // detail page with speakers and a programme behind it and then not have them.
-    prepared: Boolean(record.details),
+    // True only where a section actually holds something. The flag drives the badge on the results
+    // card, so claiming it for a record whose every section says "not announced yet" would promise
+    // a detail page with speakers and a programme behind it and then not have them.
+    prepared: filledSections(record).length > 0,
+    sections: filledSections(record),
     startDate: record.startDate,
     location: record.city || record.country
       ? { city: record.city ?? null, country: record.country ?? null }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CalendarDays,
   Search,
   Bookmark,
   Users,
@@ -1156,23 +1157,27 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
                     {/* Quick-Tab Shortcuts — jump straight into a specific section of the
                         detail page instead of always landing on the overview. */}
+                    {/* Only the tabs that have something behind them.
+                        Every card used to claim "Stored details available" and offer all five
+                        chips, whether or not a single one of those tabs had anything in it — so a
+                        reader clicked Speakers on a conference whose speakers nobody has published
+                        and found an empty page. A chip is a promise the detail page has to keep. */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border ${
-                        result.prepared
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-blue-50 border-blue-200 text-blue-700'
-                      }`}>
-                        {result.prepared ? 'Stored conference details' : 'Stored details available'}
-                      </span>
+                      {(result.sections?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700">
+                          Stored conference details
+                        </span>
+                      )}
                       {(
                         [
                           { tab: 'cfp', label: 'Call for Papers', icon: FileText },
+                          { tab: 'agenda', label: 'Program', icon: CalendarDays },
                           { tab: 'speakers', label: 'Speakers', icon: Users },
                           { tab: 'committee', label: 'Committee', icon: UserCheck },
                           { tab: 'sponsors', label: 'Sponsors', icon: Briefcase },
-                          { tab: 'venue', label: 'Venue', icon: MapPin },
+                          { tab: 'fees', label: 'Fees', icon: MapPin },
                         ] as { tab: ExternalDetailTab; label: string; icon: typeof FileText }[]
-                      ).map(({ tab, label, icon: Icon }) => (
+                      ).filter(({ tab }) => result.sections?.includes(tab)).map(({ tab, label, icon: Icon }) => (
                         <button
                           key={tab}
                           onClick={(e) => {

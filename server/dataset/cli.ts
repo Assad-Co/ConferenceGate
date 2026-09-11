@@ -209,7 +209,12 @@ function main(): void {
   const evidence = readHarvest();
   const now = new Date();
   const horizonStart = now.toISOString().slice(0, 10);
-  const options = { retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028] };
+  // Ship only conferences whose tabs have something behind them. `--all` publishes the full
+  // catalogue instead, core details and all.
+  const publishOnlyDescribed = !process.argv.includes("--all");
+  const options = {
+    retrievedAt: horizonStart, horizonStart, years: [2026, 2027, 2028], publishOnlyDescribed,
+  };
   const structured = [...structuredFromPredictHq(options), ...structuredFromCuratedLists(options)];
   const indexed = indexRecordsFromDisk(options);
   const result = buildLaunchDataset(
@@ -239,6 +244,7 @@ function main(): void {
     indexRecordsAccepted: indexed.records.length,
     indexRecordsRefused: tally(indexed.refused.map((entry) => entry.reason)),
     detailsAttached: result.detailsAttached,
+    heldBackWithoutDetail: result.withoutDetail,
     detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),
   };

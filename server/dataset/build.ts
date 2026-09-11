@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions, type ParseOutcome } from "./parseEvidence";
 import { flattenStoredConferenceText } from "../storedConferenceSearch";
+import { filledSections } from "./staticDataset";
 import { parseCuratedDates } from "./sources/curated";
 import {
   detailMatchKey, mapCuratedDetailRow, type CuratedDetailRow,
@@ -39,6 +40,8 @@ export interface BuildResult {
   /** Detail rows that reached no conference. Reported rather than dropped, because a row that
    *  matches nothing usually means a title was rewritten, not that the conference is gone. */
   detailsUnmatched: Array<{ title: string; reason: string }>;
+  /** Real conferences held back because no section of theirs has been described yet. */
+  withoutDetail: number;
 }
 
 function identityKey(record: LaunchConferenceRecord): string {
@@ -184,9 +187,21 @@ export interface DetailSupply {
   rows: CuratedDetailRow[];
 }
 
+export interface BuildOptions extends ParseOptions {
+  /**
+   * Ship only conferences some section of which has been described.
+   *
+   * A conference nobody has supplied a programme, speakers, committee, sponsors, fees or a call for
+   * papers for has nothing behind its tabs, and a card offering them makes a promise the detail
+   * page cannot keep. Off by default: every one of these records is a real conference, and the only
+   * thing wrong with them is that nobody has described them yet.
+   */
+  publishOnlyDescribed?: boolean;
+}
+
 export function buildLaunchDataset(
   evidence: HarvestEvidence[],
-  options: ParseOptions,
+  options: BuildOptions,
   structured: StructuredOutcome[] = [],
   details: DetailSupply[] = []
 ): BuildResult {
@@ -255,14 +270,23 @@ export function buildLaunchDataset(
 
   const attachment = attachDetails(records, details);
 
+  // Publishing only described conferences is a choice about what to ship, not about what the
+  // evidence says, so it is an option rather than the builder's own rule: a fixture catalogue must
+  // still come back as the thing it was built from.
+  const published = options.publishOnlyDescribed
+    ? records.filter((record) => filledSections(record).length > 0)
+    : records;
+  const withoutDetail = records.length - published.length;
+
   const generatedAt = new Date().toISOString();
   return {
-    dataset: { generatedAt, horizonStart: options.horizonStart, years: options.years, records },
-    index: { generatedAt, count: records.length, entries: records.map(buildSearchIndexEntry) },
+    dataset: { generatedAt, horizonStart: options.horizonStart, years: options.years, records: published },
+    index: { generatedAt, count: published.length, entries: published.map(buildSearchIndexEntry) },
     rejections,
     duplicatesMerged,
     detailsAttached: attachment.attached,
     detailsUnmatched: attachment.unmatched,
+    withoutDetail,
   };
 }
 

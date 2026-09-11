@@ -246,3 +246,42 @@ test("a section the source described in a sentence keeps that sentence as its co
   // The one that genuinely says nothing is still an absence.
   assert.equal(payload.sectionAvailability.fees_pricing, "not_announced");
 });
+
+test("shipping only described conferences holds back the rest rather than losing them", () => {
+  // The catalogue ships only conferences whose tabs have something behind them, because a card
+  // offering a Speakers chip for a conference nobody has described is a promise the detail page
+  // cannot keep. What is held back is real, so the builder still reports how much.
+  const described = build();
+  const all = buildLaunchDataset(
+    [],
+    { ...OPTIONS },
+    rowsFromCsv(CONFERENCES).map((row) => ({
+      outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
+      sourceUrl: row.website,
+      statedText: row.name,
+    })),
+    [{ source: "aapg-test-details", rows: rowsFromDetailCsv(parseCsv(DETAILS)) }]
+  );
+  assert.equal(all.withoutDetail, 0, "nothing is held back unless asked for");
+  assert.equal(all.dataset.records.length, described.dataset.records.length);
+
+  // ICE 2026 has a programme, speakers, a committee and sponsors; GeoGulf's every section says the
+  // organiser has announced nothing yet, so only one of the two is shipped.
+  const shipped = buildLaunchDataset(
+    [],
+    { ...OPTIONS, publishOnlyDescribed: true },
+    rowsFromCsv(CONFERENCES).map((row) => ({
+      outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
+      sourceUrl: row.website,
+      statedText: row.name,
+    })),
+    [{ source: "aapg-test-details", rows: rowsFromDetailCsv(parseCsv(DETAILS)) }]
+  );
+  assert.deepEqual(shipped.dataset.records.map((record) => record.title), [
+    "AAPG International Conference & Exhibition (ICE) 2026",
+  ]);
+  assert.equal(shipped.withoutDetail, 1);
+  // The search index is built from what ships, not from what was held back.
+  assert.equal(shipped.index.count, 1);
+  assert.equal(shipped.index.entries.length, 1);
+});
