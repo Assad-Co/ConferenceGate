@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { conferenceInitials, markSizeClass } from '../utils/conferenceMark';
 import {
   Calendar,
   MapPin,
@@ -555,7 +556,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               className="w-full h-full object-cover opacity-25 blur-[1px]"
             />
           ) : !logoUrl || logoFailed ? (
-            <Globe className="w-16 h-16 text-slate-700" />
+            // The conference's own initials, not a globe. Two thirds of the catalogue has no logo
+            // to derive — its organiser's page is on somebody else's site, or there is no page —
+            // and a generic world icon on every one of those made them look like records with
+            // nothing behind them rather than conferences whose mark we simply do not have.
+            <span className={`${markSizeClass(conferenceInitials(displayTitle), 'hero')} font-black tracking-wide text-slate-700 px-6 text-center leading-none`}>
+              {conferenceInitials(displayTitle)}
+            </span>
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-900/20"></div>
           {logoUrl && !logoFailed && (

@@ -8,6 +8,7 @@ import type { HarvestEvidence } from "../parseEvidence";
 import {
   browseLaunchDataset,
   conferenceLogoUrl,
+  descriptionWorthShowing,
   hasSomethingToShow,
   siteIconUrl,
   findLaunchRecordByUrl,
@@ -275,5 +276,30 @@ test("a conference is worth showing on what it can say, not on which tabs are fi
   assert.equal(
     hasSomethingToShow({ ...base, description: "An overview.", startDate: null, datePrecision: "month" }),
     true
+  );
+});
+
+
+test("a description that restates the title is not a description", () => {
+  // The card shows the title, the date and the place as data. Under that, a harvested record's
+  // "description" is often those same three things in a sentence, and an API record's carries the
+  // provider's name in front of it — one says nothing twice, the other shows a reader some plumbing.
+  const base: any = {
+    title: "Gastech 2026", city: "Bangkok", country: "Thailand", region: null, venue: null,
+    organization: null, description: "Gastech 2026, Bangkok, Thailand, September 14-17, 2026",
+  };
+  assert.equal(descriptionWorthShowing(base), null);
+  assert.equal(descriptionWorthShowing({ ...base, description: "Sourced from predicthq.com" }), null);
+  assert.equal(descriptionWorthShowing({ ...base, description: "" }), null);
+
+  // One that says what the conference is about earns its line.
+  const real = { ...base, title: "20th Vaccine Congress", city: "Seville", country: "Spain",
+    description: "International conference focused on vaccines & immunology." };
+  assert.equal(descriptionWorthShowing(real), "International conference focused on vaccines & immunology.");
+
+  // And the provider prefix is stripped from one that does say something.
+  assert.equal(
+    descriptionWorthShowing({ ...base, description: "Sourced from predicthq.com - A gathering of treasury professionals worldwide." }),
+    "A gathering of treasury professionals worldwide."
   );
 });

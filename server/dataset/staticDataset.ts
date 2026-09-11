@@ -207,6 +207,43 @@ export interface LaunchSearchResult {
   linkIsConferencePage: boolean;
   /** Which tabs actually have something behind them, so the card offers only those. */
   sections: string[];
+  /**
+   * What the conference is, in the source's own words.
+   *
+   * The card had one line of prose and it was `snippet`, which for these records is the date and
+   * the place — the two facts the card already shows as data. So every catalogue card repeated
+   * itself and said nothing about the conference, while the description sat in the record unused.
+   */
+  description: string | null;
+}
+
+const MONTH_WORD = /^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*$/i;
+
+/**
+ * The description, when it describes something.
+ *
+ * Not every record's description is one. A harvested result often restates its own title with the
+ * date and place appended — "Gastech 2026, Bangkok, Thailand, September 14-17, 2026" — and an API
+ * record carries its provider's name in front of it. Printed under a card that already shows the
+ * title, the date and the place, the first says nothing twice and the second shows a reader some
+ * plumbing. So a description has to add words of its own to earn its line.
+ */
+export function descriptionWorthShowing(record: LaunchConferenceRecord): string | null {
+  // The separator is optional because the prefix is sometimes the whole description: a record whose
+  // only "description" is "Sourced from predicthq.com" has none, and printing that shows a reader
+  // which API this came from and nothing about the conference.
+  const text = (record.description ?? "").replace(/^sourced from\s+\S+\s*(?:[-–—:]\s*)?/i, "").trim();
+  if (!text) return null;
+  const words = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+  const known = new Set([
+    ...words(record.title),
+    ...words([record.city, record.region, record.country, record.venue, record.organization].filter(Boolean).join(" ")),
+  ]);
+  const novel = words(text).filter(
+    (word) => !known.has(word) && !/^\d+(?:st|nd|rd|th)?$/.test(word) && !MONTH_WORD.test(word)
+  );
+  // Three words the title and the place did not already supply. Below that it is a restatement.
+  return novel.length >= 3 ? text : null;
 }
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
@@ -218,6 +255,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     title: record.title,
     link: record.sourceUrl,
     snippet: [when, place].filter(Boolean).join(" · ") || record.description || "",
+    description: descriptionWorthShowing(record),
     displayLink: record.sourceHost,
     thumbnail: null,
     favicon: conferenceLogoUrl(record),

@@ -14,6 +14,9 @@ export interface LiveSearchResult {
   /** Which tabs have something behind them. A card offers only these, because a chip for an
    *  empty tab is a promise the detail page cannot keep. */
   sections?: string[];
+  /** What the conference is, where the catalogue holds a description of its own. Separate from
+   *  `snippet`, which for those records is the date and place the card already shows as data. */
+  description?: string | null;
 }
 
 export async function searchConferencesOnTheWeb(

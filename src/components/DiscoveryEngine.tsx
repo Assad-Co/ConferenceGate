@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { conferenceInitials, markSizeClass } from '../utils/conferenceMark';
 import {
   CalendarDays,
   Search,
@@ -163,8 +164,12 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
   const [failed, setFailed] = React.useState(false);
   const abbreviation = fallbackConferenceAbbreviation(result);
   if (!result.favicon || failed) {
+    // "GASTECH" does not fit where "G2" did, so the mark is sized to its length rather than
+    // overflowing the panel it sits in.
     return (
-      <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">{abbreviation}</span>
+      <span className={`${markSizeClass(abbreviation)} font-black tracking-wide text-black text-center leading-none`}>
+        {abbreviation}
+      </span>
     );
   }
   return (
@@ -188,24 +193,14 @@ function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
   // The requested ASEE annual-conference card uses this public-facing abbreviation.
   if (/(^|\.)asee\.org$/i.test(host)) return 'AAESE';
 
-  const explicit = result.title.match(/\b[A-Z][A-Z0-9&-]{1,7}\b/g)?.find(
-    (value) => !/^\d+$/.test(value)
-  );
-  if (explicit) return explicit.replace(/[^A-Z0-9]/g, '').slice(0, 7);
-
+  const fromTitle = conferenceInitials(result.title);
+  // A host brand beats bare initials, but never a word the title itself supplied.
+  if (fromTitle.length >= 3) return fromTitle;
   const hostBrand = host.split('.')[0]?.replace(/[^a-z0-9]/gi, '') || '';
-  if (hostBrand.length >= 2 && hostBrand.length <= 7 && !/^www$/i.test(hostBrand)) {
+  if (hostBrand.length >= 2 && hostBrand.length <= 9 && !/^www$/i.test(hostBrand)) {
     return hostBrand.toUpperCase();
   }
-
-  const initials = result.title
-    .replace(/^\d{4}\s*/, '')
-    .split(/\s+/)
-    .filter((word) => !/^(the|and|of|for|in|on|at|conference|congress|symposium|annual)$/i.test(word))
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-  return initials.slice(0, 7) || 'CONF';
+  return fromTitle;
 }
 
 const DISCOVERY_SUGGESTIONS = [
@@ -1167,8 +1162,31 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       </div>
                     </div>
 
+                    {/* When and where, as data rather than prose.
+                        The card's one line was `snippet`, which for a catalogue record is exactly
+                        this date and place — so it repeated what the card already knew and left no
+                        room for anything about the conference itself. Both facts are structured
+                        fields, so the card reads them directly and keeps the prose for the
+                        description underneath. */}
+                    {(result.startDate || result.location?.city || result.location?.country) && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-700">
+                        {result.startDate && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            {result.startDate}
+                          </span>
+                        )}
+                        {(result.location?.city || result.location?.country) && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                            {[result.location?.city, result.location?.country].filter(Boolean).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                      {result.snippet}
+                      {result.description || result.snippet}
                     </p>
 
                     {/* Quick-Tab Shortcuts — jump straight into a specific section of the
