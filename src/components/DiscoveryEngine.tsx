@@ -150,6 +150,33 @@ function rankLiveSearchResults(results: LiveSearchResult[], query: string): Live
     .map(({ result }) => result);
 }
 
+/**
+ * A conference's logo, or its initials.
+ *
+ * The icon is derived from the organiser's own site rather than read from it, so the file may not
+ * be there — a site that declares its icon in markup alone answers /favicon.ico with a 404. Hiding
+ * the broken image was not enough: it left the card's logo panel empty and white, which reads as a
+ * conference with no identity rather than one whose icon did not load. Falling back to the initials
+ * puts the same mark there that a conference with no site of its own gets.
+ */
+const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
+  const [failed, setFailed] = React.useState(false);
+  const abbreviation = fallbackConferenceAbbreviation(result);
+  if (!result.favicon || failed) {
+    return (
+      <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">{abbreviation}</span>
+    );
+  }
+  return (
+    <img
+      src={result.favicon}
+      alt={`${abbreviation} logo`}
+      onError={() => setFailed(true)}
+      className={className ?? 'w-16 h-16 object-contain'}
+    />
+  );
+};
+
 function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
   let host = result.displayLink || '';
   try {
@@ -1125,18 +1152,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     />
                   )}
                   <div className="relative z-10 min-w-24 min-h-24 px-5 py-4 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
-                    {result.favicon ? (
-                      <img
-                        src={result.favicon}
-                        alt={`${fallbackConferenceAbbreviation(result)} logo`}
-                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                        className="w-16 h-16 object-contain"
-                      />
-                    ) : (
-                      <span className="text-3xl sm:text-4xl font-black tracking-wider text-black">
-                        {fallbackConferenceAbbreviation(result)}
-                      </span>
-                    )}
+                    <ConferenceLogo result={result} />
                   </div>
                 </div>
 

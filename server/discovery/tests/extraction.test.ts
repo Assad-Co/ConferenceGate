@@ -86,6 +86,19 @@ test("deterministic HTML: labelled values are read by label, not by position", (
   assert.equal(raw.registrationUrl, "https://gcwdr2027.example.org/register");
 });
 
+test("the picture a conference published of itself is read, and resolved against its page", () => {
+  // The conference's own banner. Sites state it relative to the page far more often than not, so
+  // storing the attribute verbatim would save "/media/..." and render a broken image on a host
+  // that is not the conference's own.
+  const raw = extractFromHtml(fixture("plain-html-conference.html"), "https://gcwdr2027.example.org/about/");
+  assert.equal(raw.imageUrl, "https://gcwdr2027.example.org/media/gcwdr-2027-banner.jpg");
+
+  // A page that published none says none. The hero shows its placeholder rather than borrowing
+  // artwork from somewhere else on the web.
+  const bare = extractFromHtml("<html><head><title>A Conference</title></head><body><h1>A Conference</h1></body></html>", "https://bare.example/");
+  assert.equal(bare.imageUrl, null);
+});
+
 test("contact name and phone stay separate fields", () => {
   const raw = extractFromHtml(fixture("plain-html-conference.html"), "https://gcwdr2027.example.org/");
   assert.ok(!/\d/.test(raw.contactName!), "a contact name never absorbs a phone number");

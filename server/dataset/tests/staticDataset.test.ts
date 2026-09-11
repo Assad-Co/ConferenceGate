@@ -7,6 +7,9 @@ import { buildLaunchDataset } from "../build";
 import type { HarvestEvidence } from "../parseEvidence";
 import {
   browseLaunchDataset,
+  conferenceLogoUrl,
+  hasSomethingToShow,
+  siteIconUrl,
   findLaunchRecordByUrl,
   launchRecordToTabbedExtraction,
   loadLaunchDataset,
@@ -198,4 +201,79 @@ test("a record with nowhere stated says nothing rather than an empty line", () =
   assert.equal(overview.location_text, null);
   // A one-day conference is one date, not a range repeating itself.
   assert.equal(overview.dates_text, "2027-04-01");
+});
+
+
+test("a conference's logo comes from the conference's own site, never from a listing", () => {
+  // Derived rather than read, which is the whole reason it has to be careful about where it points.
+  // A record found on emedevents.com has no official site of its own, and serving that directory's
+  // icon as the conference's mark would put a brand on the page the conference has nothing to do
+  // with — the initials the card already falls back to are a better answer than someone else's logo.
+  withFixtureDataset(() => {
+    const own = findLaunchRecordByUrl("https://www.atce.org/")!;
+    assert.equal(conferenceLogoUrl(own), "https://www.atce.org/favicon.ico");
+
+    const listed = { ...own, officialUrl: null };
+    assert.equal(conferenceLogoUrl(listed), null);
+  });
+
+  // A site's icon is the site's mark, so it is the conference's only where the site is. Gastech's
+  // stated page is an article on a trade magazine and the 20th Vaccine Congress's is on its
+  // publisher's site; taking an icon from either puts a brand on the page that has nothing to do
+  // with the conference, which is worse than the initials the card falls back to.
+  assert.equal(siteIconUrl("https://www.rogtecmagazine.com/events-calendar/"), null);
+  assert.equal(siteIconUrl("https://www.elsevier.com/en-gb/events/conferences/all"), null);
+  assert.equal(siteIconUrl("https://www.aapg.org/event-details/5th-edition-gtw/"), null);
+  assert.equal(siteIconUrl("https://eageannual.org/2027/programme?day=2"), null);
+
+  // A conference that owns its domain keeps its icon, and a bare year segment is still its own
+  // site's root rather than a page on somebody else's.
+  assert.equal(siteIconUrl("https://eageannual.org/"), "https://eageannual.org/favicon.ico");
+  assert.equal(siteIconUrl("https://iceevent.org/2026/"), "https://iceevent.org/favicon.ico");
+  assert.equal(siteIconUrl("https://www.blackhat.com/us-26/"), "https://www.blackhat.com/favicon.ico");
+
+  // And nothing is derived from something that is not a site.
+  assert.equal(siteIconUrl(null), null);
+  assert.equal(siteIconUrl("not a url"), null);
+  assert.equal(siteIconUrl("javascript:alert(1)"), null);
+});
+
+test("the catalogue hands the page the logo alongside the rest of the record", () => {
+  withFixtureDataset(() => {
+    const record = findLaunchRecordByUrl("https://www.atce.org/")!;
+    const payload = launchRecordToTabbedExtraction(record) as any;
+    assert.equal(payload.overview.logo_url, "https://www.atce.org/favicon.ico");
+    // The picture is a different thing: it can only come from a page somebody read, and nothing has
+    // read this one, so it stays null rather than borrowing the logo and calling it a banner.
+    assert.equal(payload.overview.image_url, null);
+
+    const results = searchLaunchDataset("ATCE");
+    assert.equal(results[0].favicon, "https://www.atce.org/favicon.ico");
+  });
+});
+
+test("a conference is worth showing on what it can say, not on which tabs are filled", () => {
+  const base: any = {
+    title: "Some Conference 2027", acronym: null, edition: null, description: null,
+    datesText: null, startDate: "2027-04-01", endDate: "2027-04-03", datePrecision: "day",
+    city: "Lisbon", region: null, country: "Portugal", worldRegion: "Europe", venue: null,
+    format: null, organization: null, topics: [], categories: [], keywords: [],
+    officialUrl: null, sourceUrl: "https://example.org/", details: null,
+  };
+  // A date, a place and an overview is a page worth opening even with every tab empty.
+  assert.equal(hasSomethingToShow({ ...base, description: "An overview." }), true);
+  // So is a date, a place and the organiser's own site.
+  assert.equal(hasSomethingToShow({ ...base, officialUrl: "https://someconf.example/" }), true);
+  // A name and a date, with nowhere and nothing to read, is not.
+  assert.equal(hasSomethingToShow(base), false);
+  assert.equal(hasSomethingToShow({ ...base, description: "An overview.", city: null, country: null }), false);
+  assert.equal(
+    hasSomethingToShow({ ...base, description: "An overview.", startDate: null, datePrecision: null }),
+    false
+  );
+  // A month is enough to place it in a catalogue ordered by date.
+  assert.equal(
+    hasSomethingToShow({ ...base, description: "An overview.", startDate: null, datePrecision: "month" }),
+    true
+  );
 });

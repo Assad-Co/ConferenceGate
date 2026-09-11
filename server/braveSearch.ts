@@ -4,7 +4,7 @@ import { isSerperConfigured, serperSearch } from "./serperSearch";
 import { dbAll } from "./db";
 import { scoreStoredConferenceRecord } from "./storedConferenceSearch";
 import { isDirectoryHost } from "./directoryHosts";
-import { browseLaunchDataset, searchLaunchDataset } from "./dataset/staticDataset";
+import { browseLaunchDataset, searchLaunchDataset, siteIconUrl } from "./dataset/staticDataset";
 
 export interface LiveSearchResult {
   title: string;
@@ -335,7 +335,9 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
             : [overview.dates_text, overview.city, overview.country].filter(Boolean).join(" · "),
         displayLink: host,
         thumbnail: null,
-        favicon: null,
+        // A published record's source is the conference's own site — publication refuses a listing
+        // — so the icon that site serves is the conference's own mark rather than a directory's.
+        favicon: siteIconUrl(row.source_url),
         prepared: detailsReady,
         startDate: typeof overview.start_date === "string" ? overview.start_date : null,
       },

@@ -110,13 +110,79 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   return filled;
 }
 
+/**
+ * Whether there is enough here to be worth opening.
+ *
+ * The first version of this gate asked one question — does any of the six deep tabs hold
+ * something? — and held back 386 conferences that state a date, a city, a country, an overview, a
+ * venue, an organiser and their own website, because nobody had published their speaker list yet.
+ * That is a conference missing one tab, not a conference missing everything, and hiding it loses a
+ * real event a reader was looking for.
+ *
+ * So the question is what the page can say. A reader needs to know what it is, when it runs and
+ * where, and then to have something to read or somewhere to go. A record that cannot answer those
+ * is a name and nothing else, and that is the only thing held back.
+ */
+/** A path that is the site's root, or the root plus a bare edition segment: "/", "/2027/",
+ *  "/us-26/". Anything else is a page on a site that carries other things too. */
+const OWN_SITE_PATH = /^\/(?:(?:[a-z]{1,6}-)?(?:19|20)?\d{2}\/?)?$/i;
+
+/**
+ * The conference's own icon, derived from the conference's own website.
+ *
+ * Derived, not read — so it follows the same rule the hotel distances do: a value this server
+ * worked out is never allowed to claim more than it knows. What it knows is that every browser asks
+ * a site for /favicon.ico, and that the icon it gets back is *that site's* mark.
+ *
+ * Which is the whole difficulty, because a site's mark is the conference's only when the site is
+ * the conference's. The first version of this asked only whether an official URL was known, and put
+ * a trade magazine's logo on Gastech (its stated page was an article on rogtecmagazine.com) and
+ * Elsevier's on the 20th Vaccine Congress. Both are exactly the failure the rest of this file
+ * exists to prevent: a reader shown a brand the conference has nothing to do with.
+ *
+ * So the test is the one `eventIdentityFrom` already makes for deep pages — a conference that owns
+ * its domain has its page at the root of it, and anything deeper means the host carries other
+ * things too. A year segment is still the root of the conference's own site ("/2027/"), and that is
+ * the only path allowed past. Everywhere else the card and the page show the conference's initials,
+ * which say nothing rather than something false.
+ *
+ * The icon may still not exist: a site that declares its icon in markup alone answers this path
+ * with a 404. That is a rendering concern rather than a data one, and both the card and the detail
+ * page fall back to the initials when the image does not load.
+ */
+export function siteIconUrl(officialUrl: string | null): string | null {
+  if (!officialUrl) return null;
+  try {
+    const site = new URL(officialUrl);
+    if (site.protocol !== "https:" && site.protocol !== "http:") return null;
+    if (!OWN_SITE_PATH.test(site.pathname)) return null;
+    return new URL("/favicon.ico", site.origin).toString();
+  } catch {
+    return null;
+  }
+}
+
+export function conferenceLogoUrl(record: LaunchConferenceRecord): string | null {
+  return siteIconUrl(record.officialUrl);
+}
+
+export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {
+  const whenKnown = Boolean(record.startDate || record.datePrecision === "month");
+  const whereKnown = Boolean(record.city || record.country);
+  const somethingToRead =
+    Boolean(record.description || record.officialUrl || record.venue || record.organization)
+    || filledSections(record).length > 0;
+  return whenKnown && whereKnown && somethingToRead;
+}
+
 export interface LaunchSearchResult {
   title: string;
   link: string;
   snippet: string;
   displayLink: string;
   thumbnail: null;
-  favicon: null;
+  /** The conference's own icon, where it has its own site to take one from. See conferenceLogoUrl. */
+  favicon: string | null;
   prepared: boolean;
   startDate: string | null;
   /**
@@ -152,7 +218,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     snippet: [when, place].filter(Boolean).join(" · ") || record.description || "",
     displayLink: record.sourceHost,
     thumbnail: null,
-    favicon: null,
+    favicon: conferenceLogoUrl(record),
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
@@ -336,6 +402,11 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       important_dates: importantDates,
       official_url: record.officialUrl,
       source_url: record.sourceUrl,
+      // The conference's own mark, and the picture from its own page. The logo is derived from the
+      // site (see conferenceLogoUrl); the picture can only come from a page somebody read, so it
+      // is null here until the worker reads one and stores it.
+      logo_url: conferenceLogoUrl(record),
+      image_url: null,
     },
     call_for_papers: cfp
       ? {

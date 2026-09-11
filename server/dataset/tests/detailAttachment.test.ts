@@ -247,29 +247,15 @@ test("a section the source described in a sentence keeps that sentence as its co
   assert.equal(payload.sectionAvailability.fees_pricing, "not_announced");
 });
 
-test("shipping only described conferences holds back the rest rather than losing them", () => {
-  // The catalogue ships only conferences whose tabs have something behind them, because a card
-  // offering a Speakers chip for a conference nobody has described is a promise the detail page
-  // cannot keep. What is held back is real, so the builder still reports how much.
-  const described = build();
-  const all = buildLaunchDataset(
-    [],
-    { ...OPTIONS },
-    rowsFromCsv(CONFERENCES).map((row) => ({
-      outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
-      sourceUrl: row.website,
-      statedText: row.name,
-    })),
-    [{ source: "aapg-test-details", rows: rowsFromDetailCsv(parseCsv(DETAILS)) }]
-  );
-  assert.equal(all.withoutDetail, 0, "nothing is held back unless asked for");
-  assert.equal(all.dataset.records.length, described.dataset.records.length);
-
-  // ICE 2026 has a programme, speakers, a committee and sponsors; GeoGulf's every section says the
-  // organiser has announced nothing yet, so only one of the two is shipped.
+test("a conference is held back only when there is nothing to show, not when one tab is empty", () => {
+  // The first version of this gate shipped only conferences with a filled tab, and hid 386 real
+  // events whose every fact was known — date, city, country, overview, venue, organiser, own
+  // website — because nobody had announced their speakers yet. GeoGulf is exactly that conference:
+  // every section says "not yet announced" and it is still a conference somebody is looking for.
+  const all = build();
   const shipped = buildLaunchDataset(
     [],
-    { ...OPTIONS, publishOnlyDescribed: true },
+    { ...OPTIONS, publishOnlyUsable: true },
     rowsFromCsv(CONFERENCES).map((row) => ({
       outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
       sourceUrl: row.website,
@@ -277,11 +263,32 @@ test("shipping only described conferences holds back the rest rather than losing
     })),
     [{ source: "aapg-test-details", rows: rowsFromDetailCsv(parseCsv(DETAILS)) }]
   );
-  assert.deepEqual(shipped.dataset.records.map((record) => record.title), [
+  assert.deepEqual(shipped.dataset.records.map((record) => record.title).sort(), [
     "AAPG International Conference & Exhibition (ICE) 2026",
+    "GeoGulf 2027",
   ]);
-  assert.equal(shipped.withoutDetail, 1);
-  // The search index is built from what ships, not from what was held back.
-  assert.equal(shipped.index.count, 1);
-  assert.equal(shipped.index.entries.length, 1);
+  assert.equal(shipped.heldBack, 0, "a conference was hidden over an unannounced section");
+  assert.equal(shipped.dataset.records.length, all.dataset.records.length);
+  assert.equal(shipped.index.count, shipped.dataset.records.length);
+  assert.equal(shipped.index.entries.length, shipped.dataset.records.length);
+});
+
+test("a record that cannot say where it is stays out of the catalogue", () => {
+  // The gate is not a formality. What it is for is the record that has a name and little else: no
+  // page can be built from it, so shipping it would put an empty result in front of a reader.
+  const placeless = [
+    "Conference Name,Event Type,Dates,Location,Country,Region,Partner Organizations,Website,Keynote Speakers,Technical/Program Committee",
+    "Placeless Conference 2027,Conference,3-5 June 2027,TBD,TBD,,,https://placeless.example/,Not yet announced,Not yet announced",
+  ].join("\n");
+
+  const options = { ...OPTIONS, publishOnlyUsable: true };
+  const structured: StructuredOutcome[] = rowsFromCsv(placeless).map((row) => ({
+    outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
+    sourceUrl: row.website,
+    statedText: row.name,
+  }));
+  const built = buildLaunchDataset([], options, structured, []);
+  assert.deepEqual(built.dataset.records.map((record) => record.title), []);
+  // And the builder says how many it held back, because those are real conferences either way.
+  assert.equal(built.heldBack + built.rejections.length, 1);
 });

@@ -15,7 +15,7 @@ import type {
 } from "./types";
 import { parseHarvestEvidence, type HarvestEvidence, type ParseOptions, type ParseOutcome } from "./parseEvidence";
 import { flattenStoredConferenceText } from "../storedConferenceSearch";
-import { filledSections } from "./staticDataset";
+import { hasSomethingToShow } from "./staticDataset";
 import { parseCuratedDates } from "./sources/curated";
 import {
   detailMatchKey, mapCuratedDetailRow, type CuratedDetailRow,
@@ -40,8 +40,9 @@ export interface BuildResult {
   /** Detail rows that reached no conference. Reported rather than dropped, because a row that
    *  matches nothing usually means a title was rewritten, not that the conference is gone. */
   detailsUnmatched: Array<{ title: string; reason: string }>;
-  /** Real conferences held back because no section of theirs has been described yet. */
-  withoutDetail: number;
+  /** Real conferences held back because their page could say nothing — no date, no place, or
+   *  nothing at all to read. Reported rather than silently dropped: they are real either way. */
+  heldBack: number;
 }
 
 function identityKey(record: LaunchConferenceRecord): string {
@@ -189,14 +190,13 @@ export interface DetailSupply {
 
 export interface BuildOptions extends ParseOptions {
   /**
-   * Ship only conferences some section of which has been described.
+   * Ship only conferences whose page can say something.
    *
-   * A conference nobody has supplied a programme, speakers, committee, sponsors, fees or a call for
-   * papers for has nothing behind its tabs, and a card offering them makes a promise the detail
-   * page cannot keep. Off by default: every one of these records is a real conference, and the only
-   * thing wrong with them is that nobody has described them yet.
+   * Not "conferences with a filled tab" — that hid 386 real events over one unannounced speaker
+   * list. `hasSomethingToShow` is the rule: a date, a place, and something to read or somewhere to
+   * go. Off by default, because a fixture catalogue must come back as the thing it was built from.
    */
-  publishOnlyDescribed?: boolean;
+  publishOnlyUsable?: boolean;
 }
 
 export function buildLaunchDataset(
@@ -270,13 +270,11 @@ export function buildLaunchDataset(
 
   const attachment = attachDetails(records, details);
 
-  // Publishing only described conferences is a choice about what to ship, not about what the
-  // evidence says, so it is an option rather than the builder's own rule: a fixture catalogue must
-  // still come back as the thing it was built from.
-  const published = options.publishOnlyDescribed
-    ? records.filter((record) => filledSections(record).length > 0)
-    : records;
-  const withoutDetail = records.length - published.length;
+  // Publishing is a choice about what to ship, not about what the evidence says, so it is an
+  // option rather than the builder's own rule: a fixture catalogue must still come back as the
+  // thing it was built from.
+  const published = options.publishOnlyUsable ? records.filter(hasSomethingToShow) : records;
+  const heldBack = records.length - published.length;
 
   const generatedAt = new Date().toISOString();
   return {
@@ -286,7 +284,7 @@ export function buildLaunchDataset(
     duplicatesMerged,
     detailsAttached: attachment.attached,
     detailsUnmatched: attachment.unmatched,
-    withoutDetail,
+    heldBack,
   };
 }
 

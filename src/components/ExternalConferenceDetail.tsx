@@ -217,6 +217,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // "still genuinely checking" from "we stopped checking and don't actually know the final
   // state", so a slow site doesn't sit forever under a label that's no longer true.
   const [pollGaveUp, setPollGaveUp] = useState(false);
+  // A logo derived from a site rather than read off one may 404, and a banner a page published can
+  // be taken down; either leaves a broken image where the conference's identity should be.
+  const [logoFailed, setLogoFailed] = useState(false);
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [fastCheckedTabs, setFastCheckedTabs] = useState<Partial<Record<ExternalDetailTab, boolean>>>({});
   const requestedFastTabsRef = useRef(new Set<ExternalDetailTab>());
   const mountedRef = useRef(true);
@@ -435,7 +439,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // so a conference with a banner still showed the placeholder globe. The search thumbnail stays
   // the fallback, and a record with neither keeps the globe rather than borrowing someone's
   // artwork.
-  const heroImage = data?.overview?.image_url || result.thumbnail || null;
+  const heroImage = (heroImageFailed ? null : data?.overview?.image_url || result.thumbnail) || null;
+
+  // Its mark. A page that was actually read supplies one; otherwise it is derived from the
+  // organiser's own site, so the file may simply not be there and the load has to be allowed to
+  // fail back to the globe rather than leave a broken image in a white box.
+  const logoUrl = data?.overview?.logo_url || result.favicon || null;
 
   /** The programme as the source described it — the paragraph a schedule was read out of. */
   const programOverview = data?.program_agenda?.overview?.trim() || null;
@@ -542,24 +551,26 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             <img
               src={heroImage}
               alt=""
+              onError={() => setHeroImageFailed(true)}
               className="w-full h-full object-cover opacity-25 blur-[1px]"
             />
-          ) : !result.favicon ? (
+          ) : !logoUrl || logoFailed ? (
             <Globe className="w-16 h-16 text-slate-700" />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-900/20"></div>
-          {result.favicon && (
+          {logoUrl && !logoFailed && (
             <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
               <img
-                src={result.favicon}
+                src={logoUrl}
                 alt={`${displayTitle} logo`}
+                onError={() => setLogoFailed(true)}
                 className="w-full h-full object-contain"
               />
             </div>
           )}
 
           <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
-            {result.favicon && <img src={result.favicon} alt="" className="w-5 h-5 rounded shrink-0" />}
+            {logoUrl && !logoFailed && <img src={logoUrl} alt="" className="w-5 h-5 rounded shrink-0" />}
             <div>
               <div className="text-[10px] uppercase font-bold text-slate-300">Source</div>
               <div className="text-xs font-bold text-white">{result.displayLink}</div>

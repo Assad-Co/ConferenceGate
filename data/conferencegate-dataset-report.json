@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-11T05:37:21.283Z",
+  "generatedAt": "2026-09-11T11:01:10.816Z",
   "horizonStart": "2026-09-11",
   "evidenceRows": 325,
   "apiEventRows": 72,
-  "accepted": 150,
+  "accepted": 535,
   "duplicatesMerged": 8,
   "rejected": 22,
   "rejectionReasons": {
@@ -19,54 +19,54 @@
     "date_precision_too_coarse": 2
   },
   "detailsAttached": 16,
-  "heldBackWithoutDetail": 386,
+  "heldBackWithNothingToShow": 1,
   "detailsUnmatched": [
     {
       "title": "Latin America Geothermal Systems Workshop 2026",
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 150,
+  "total": 535,
   "byYear": {
-    "2026": 44,
-    "2027": 106
+    "2026": 103,
+    "2027": 418,
+    "2028": 14
   },
-  "countries": 32,
-  "cities": 85,
-  "categories": 36,
+  "countries": 53,
+  "cities": 205,
+  "categories": 43,
   "worldRegions": {
-    "Asia": 89,
-    "Europe": 28,
-    "North America": 21,
-    "Middle East": 5,
-    "Oceania": 3,
-    "South America": 2,
-    "(none)": 1,
-    "Africa": 1
+    "North America": 184,
+    "Europe": 154,
+    "Asia": 154,
+    "Middle East": 20,
+    "South America": 10,
+    "Oceania": 9,
+    "Africa": 4
   },
   "formats": {
-    "in-person": 145,
-    "hybrid": 3,
-    "online": 2
+    "in-person": 514,
+    "hybrid": 18,
+    "online": 3
   },
   "sourceTypes": {
-    "directory_listing": 108,
-    "official_site": 36,
-    "reference": 5,
+    "official_site": 373,
+    "directory_listing": 149,
+    "reference": 12,
     "third_party": 1
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "97.3%",
-    "monthOnlyDates": "2.7%",
-    "city": "99.3%",
-    "country": "99.3%",
-    "officialUrl": "24.0%",
-    "venue": "14.0%",
-    "organization": "62.0%",
-    "category": "100.0%",
+    "exactDates": "97.4%",
+    "monthOnlyDates": "2.6%",
+    "city": "99.6%",
+    "country": "100.0%",
+    "officialUrl": "69.7%",
+    "venue": "29.9%",
+    "organization": "47.1%",
+    "category": "71.4%",
     "description": "100.0%",
-    "corroborated": "0.7%"
+    "corroborated": "1.5%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

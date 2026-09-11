@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { dbAll, dbGet, dbRun } from "../../db";
 import { initDiscoverySchema } from "../schema";
-import { retractIneligiblePublications, syncPublishedDeepSections } from "../publish";
+import { retractIneligiblePublications, syncPublishedDeepSections, toExtractedConferenceRecord } from "../publish";
 
 const SPEAKERS = JSON.stringify([
   { name: "Ines Marchetti", org: "Politecnico di Torino", role: "Keynote", source_url: "https://sync.example/speakers" },
@@ -183,4 +183,22 @@ test("a published row is withdrawn once its record stops qualifying, and only th
     }
     for (const id of [badId, goodId]) await dbRun("DELETE FROM discovery_events WHERE id=?", [id]);
   }
+});
+
+test("a conference's own picture and site survive publication", () => {
+  // The banner is read off the organiser's page (og:image, or schema.org image) and stored on the
+  // event. Publication is where it was being dropped, so a conference that HAD a picture of itself
+  // still rendered the grey placeholder. The detail page reads it from here.
+  const published = toExtractedConferenceRecord({
+    title: "Sync Congress 2027", start_date: "2027-05-04", city: "Turin", country: "Italy",
+    official_url: "https://syncongress.example/",
+    image_url: "https://syncongress.example/media/banner.jpg",
+  });
+  const overview = JSON.parse(published.overview);
+  assert.equal(overview.image_url, "https://syncongress.example/media/banner.jpg");
+  assert.equal(overview.official_website, "https://syncongress.example/");
+
+  // A page that published no picture publishes no picture: null, never a stand-in.
+  const bare = JSON.parse(toExtractedConferenceRecord({ title: "Bare Congress 2027" }).overview);
+  assert.equal(bare.image_url, null);
 });
