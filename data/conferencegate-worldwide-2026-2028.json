@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T05:12:58.165Z",
+  "generatedAt": "2026-09-12T05:27:29.225Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -432,7 +432,7 @@
       "sourceHost": "gastechevent.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.gastechevent.com/",
-      "logoUrl": null,
+      "logoUrl": "https://www.gastechevent.com/media/aqpcl4x4/gastech-2026-logo-black.png",
       "evidence": {
         "query": "webharvest-verified-2026",
         "resultTitle": "Gastech 2026",
@@ -1238,7 +1238,7 @@
       "sourceHost": "cccis.org",
       "sourceType": "official_site",
       "officialUrl": "https://cccis.org/",
-      "logoUrl": null,
+      "logoUrl": "https://cccis.org/htmlimg/cccis_logo.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 6th International Conference on Computer Communication and Information Systems",
@@ -3880,7 +3880,7 @@
       "sourceHost": "iccfi.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccfi.org/",
-      "logoUrl": null,
+      "logoUrl": "https://www.iccfi.org/style/images/ICCFI-logo.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 10th International Conference on Communications and Future Internet",
@@ -4117,7 +4117,8 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.atce.org/"
-      }
+      },
+      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/26ATCE/media/logos/NEW-SPE-ATCE-LOGO-GRADIENT.png"
     },
     {
       "id": "cell-symposia-taking-programmed-cell-death-from-mechanisms-to-interven",
@@ -7488,7 +7489,7 @@
       "sourceHost": "meae.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.meae.org/",
-      "logoUrl": null,
+      "logoUrl": "https://www.meae.org/images/logo.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 12th International Conference on Mechanical Engineering and Aerospace Engineering",
@@ -7746,7 +7747,7 @@
       "sourceHost": "rsna.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.rsna.org/annual-meeting",
-      "logoUrl": null,
+      "logoUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/2026/RSNA_2026_Logo_Color_FIN",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "RSNA Annual Meeting 2026",
@@ -7906,7 +7907,7 @@
       "sourceHost": "aws.amazon.com",
       "sourceType": "official_site",
       "officialUrl": "https://aws.amazon.com/events/reinvent/",
-      "logoUrl": null,
+      "logoUrl": "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/events/approved/images/26fb240213f80570ec3ab8d25f2f82bc-aws-reinvent-2024-logo-white-2332x508.ef167bec9458463187b57895480739161b7f15f5.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "AWS re:Invent 2026",
@@ -8170,7 +8171,7 @@
       "sourceHost": "asia.siggraph.org",
       "sourceType": "official_site",
       "officialUrl": "https://asia.siggraph.org/2026/",
-      "logoUrl": null,
+      "logoUrl": "https://p15.projs.ifdemo.com/siggraph2026/wp-content/uploads/2026/02/1_Logo_Standard_Horizontal.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "SIGGRAPH Asia 2026",
@@ -11215,7 +11216,7 @@
       "sourceHost": "icess.org",
       "sourceType": "official_site",
       "officialUrl": "https://icess.org/",
-      "logoUrl": null,
+      "logoUrl": "https://icess.org/htmlimg/logo.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Environmental Systems and Sustainability",
@@ -11471,7 +11472,7 @@
       "sourceHost": "apct.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.apct.net/",
-      "logoUrl": null,
+      "logoUrl": "https://www.apct.net/img/logo-big-02.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 6th Asia-Pacific Computer Technology Conference",
@@ -12245,7 +12246,7 @@
       "sourceHost": "worldgovernmentssummit.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.worldgovernmentssummit.org/",
-      "logoUrl": null,
+      "logoUrl": "https://www.worldgovernmentssummit.org/assets/images/logo-white.svg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Government Summit 2027",
@@ -27191,7 +27192,7 @@
       "sourceHost": "pmac2027.com",
       "sourceType": "official_site",
       "officialUrl": "https://pmac2027.com/",
-      "logoUrl": null,
+      "logoUrl": "https://pmac2027.com/assets/pmac2027/img/banner.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Prince Mahidol Award Conference 2027",

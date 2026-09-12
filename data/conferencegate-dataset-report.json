@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T05:12:58.165Z",
+  "generatedAt": "2026-09-12T05:27:29.225Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -32,7 +32,7 @@
         "now": "2027-10-13"
       }
     ],
-    "logosSupplied": 0,
+    "logosSupplied": 12,
     "logosRefused": []
   },
   "detailsUnmatched": [
