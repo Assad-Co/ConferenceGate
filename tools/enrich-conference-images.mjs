@@ -10,12 +10,24 @@
  *
  * Nothing is guessed. A URL is only kept after a HEAD (or ranged GET) comes back with an
  * `image/*` content type, so a path that 404s is never written into the file.
+ *
+ * Two flags exist for running it somewhere you cannot read the filesystem afterwards, which is the
+ * case on a Render cron job: `--concurrency=N` works N conferences at once, and `--emit` prints the
+ * finished CSV to stdout as numbered base64 chunks so the file can be rebuilt from the run's logs.
  */
 import { readFile, writeFile } from "node:fs/promises";
 
-const [, , INPUT, OUTPUT = "ConferenceGate_AI_FINAL_CLAUDE_ENRICHED.csv"] = process.argv;
+const ARGS = process.argv.slice(2);
+const FLAGS = ARGS.filter((a) => a.startsWith("--"));
+const [INPUT, OUTPUT = "ConferenceGate_AI_FINAL_CLAUDE_ENRICHED.csv"] = ARGS.filter((a) => !a.startsWith("--"));
+/** How many conferences to work at once. Five is polite enough that hosts do not start
+ *  answering 403, and fast enough to finish 174 rows in a few minutes. */
+const CONCURRENCY = Number(FLAGS.find((f) => f.startsWith("--concurrency="))?.split("=")[1] ?? 5);
+/** Print the finished CSV to stdout as numbered base64 chunks, so a run on a host whose
+ *  filesystem disappears afterwards can still be reassembled from its logs. */
+const EMIT = FLAGS.includes("--emit");
 if (!INPUT) {
-  console.error("usage: node tools/enrich-conference-images.mjs <input.csv> [output.csv]");
+  console.error("usage: node tools/enrich-conference-images.mjs <input.csv> [output.csv] [--concurrency=5] [--emit]");
   process.exit(1);
 }
 
@@ -224,12 +236,13 @@ for (const r of upcoming) {
 
 const accepted = [];
 const distribution = { 7: 0, 8: 0, 9: 0 };
-let index = 0;
-for (const row of byIdentity.values()) {
-  index += 1;
+const queue = [...byIdentity.values()];
+
+/** One conference: score its tabs, then go looking for its images if it earned the trip. */
+async function handle(row, index) {
   const name = get(row, "conference_name");
   const score = TABS.filter(([, col]) => substantive(get(row, col))).length;
-  if (score < 7) { stats.lowTabs += 1; console.log(`[${index}] ${score}/9  SKIP  ${name}`); continue; }
+  if (score < 7) { stats.lowTabs += 1; console.log(`[${index}] ${score}/9  SKIP  ${name}`); return; }
 
   let logo = get(row, "logo_url");
   let banner = get(row, "banner_url");
@@ -253,8 +266,8 @@ for (const row of byIdentity.values()) {
     }
   }
 
-  if (!logo) { stats.noLogo += 1; console.log(`[${index}] ${score}/9  NO LOGO    ${name}`); continue; }
-  if (!banner) { stats.noBanner += 1; console.log(`[${index}] ${score}/9  NO BANNER  ${name}`); continue; }
+  if (!logo) { stats.noLogo += 1; console.log(`[${index}] ${score}/9  NO LOGO    ${name}`); return; }
+  if (!banner) { stats.noBanner += 1; console.log(`[${index}] ${score}/9  NO BANNER  ${name}`); return; }
 
   const out = {};
   for (const col of COLUMNS) out[col] = get(row, col);
@@ -262,10 +275,22 @@ for (const row of byIdentity.values()) {
   out.banner_url = banner;
   accepted.push(out);
   distribution[score] += 1;
-  console.log(`[${index}] ${score}/9  ACCEPT ${name}`);
+  console.log(`[${index}] ${score}/9  ACCEPT ${name}  logo=${logo.slice(0, 70)} banner=${banner.slice(0, 70)}`);
 }
 
-await writeFile(OUTPUT, [COLUMNS.join(","), ...accepted.map((r) => COLUMNS.map((c) => q(r[c])).join(","))].join("\n") + "\n");
+// Workers pull from a shared queue, so a slow site holds up only its own lane rather than the run.
+let cursor = 0;
+await Promise.all(Array.from({ length: Math.max(1, CONCURRENCY) }, async () => {
+  while (cursor < queue.length) {
+    const index = cursor;
+    cursor += 1;
+    try { await handle(queue[index], index + 1); }
+    catch (error) { console.log(`[${index + 1}] ERROR ${get(queue[index], "conference_name")} — ${error.message}`); }
+  }
+}));
+
+const csv = [COLUMNS.join(","), ...accepted.map((r) => COLUMNS.map((c) => q(r[c])).join(","))].join("\n") + "\n";
+await writeFile(OUTPUT, csv);
 
 console.log(`\n================ REPORT ================`);
 console.log(`input rows              ${stats.input}`);
@@ -280,3 +305,17 @@ console.log(`   9/9  ${distribution[9]}`);
 console.log(`   8/9  ${distribution[8]}`);
 console.log(`   7/9  ${distribution[7]}`);
 console.log(`written -> ${OUTPUT}`);
+
+// The run's filesystem is gone the moment it exits, so the file leaves through the log stream.
+// Base64 because a CSV full of commas, quotes and accents does not survive a log pipeline intact;
+// numbered because the reader fetches log pages out of order and has to put them back together.
+if (EMIT) {
+  const payload = Buffer.from(csv, "utf8").toString("base64");
+  const size = 1200;
+  const total = Math.ceil(payload.length / size);
+  console.log(`CSVBEGIN total=${total} chars=${csv.length}`);
+  for (let part = 0; part < total; part += 1) {
+    console.log(`CSVPART ${String(part + 1).padStart(4, "0")}/${total} ${payload.slice(part * size, (part + 1) * size)}`);
+  }
+  console.log(`CSVEND total=${total}`);
+}
