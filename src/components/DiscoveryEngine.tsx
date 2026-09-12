@@ -185,6 +185,13 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
         src={icon}
         alt={`${abbreviation} logo`}
         onError={() => setFailed(true)}
+        // A conference's logo is served by the conference's own host, and a good number of them
+        // refuse a request whose Referer is somebody else's site — which arrives here as a load
+        // error and silently demotes a real logo to initials. Sending no referrer at all is what
+        // stops a hotlink rule turning a fact the source stated into a fallback.
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        decoding="async"
         className={className ?? 'max-w-full max-h-full object-contain'}
       />
     );
