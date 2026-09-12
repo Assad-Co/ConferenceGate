@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T11:38:31.442Z",
+  "generatedAt": "2026-09-12T12:07:12.254Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -234,7 +234,9 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://www.wtgs.org/sites/default/files/WTGS_logo.png",
+      "imageUrl": "https://www.wtgs.org/sites/default/files/2025-02/WTGS%20Publications%20Banner-01%20%281%29%20%281%29.jpg"
     },
     {
       "id": "vaccine-congress-2026-seville",
@@ -285,8 +287,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/vaccine-congress",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "20th Vaccine Congress",
@@ -820,7 +822,9 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.eurofinance.com/international-treasury-event/registration/"
-      }
+      },
+      "logoUrl": "https://www.eurofinance.com/international-treasury-event/wp-content/uploads/sites/23/2026/04/EE-EuroFinance-Black.svg",
+      "imageUrl": "https://www.eurofinance.com/international-treasury-event/wp-content/uploads/sites/23/2026/03/50-corporate-treasury-tehcnology-case-studies.png"
     },
     {
       "id": "6th-international-conference-on-intelligent-technology-and-embedded-sy",
@@ -868,8 +872,8 @@
       "sourceHost": "icites.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.icites.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icites.net/images/logo.png",
+      "imageUrl": "https://www.icites.net/images/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 6th International Conference on Intelligent Technology and Embedded Systems",
@@ -994,8 +998,8 @@
       "sourceHost": "iccs.org",
       "sourceType": "official_site",
       "officialUrl": "https://iccs.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iccs.org/images/logo.png",
+      "imageUrl": "https://iccs.org/images/ICCS-banner-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 8th International Conference on Circuits and Systems",
@@ -1124,8 +1128,8 @@
       "sourceHost": "icsp.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icsp.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icsp.org/htmlimg/logo/header1.png",
+      "imageUrl": "https://www.icsp.org/htmlimg/logo/header2.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Information Communication and Signal Processing",
@@ -1257,8 +1261,8 @@
       "sourceHost": "ichsm.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.ichsm.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.ichsm.org/images/IOS-logo.png",
+      "imageUrl": "https://www.ichsm.org/images/001.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Healthcare Service Management",
@@ -2122,7 +2126,8 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://tulsageologicalsociety.wildapricot.org/resources/Pictures/TGS_LOGOv2.png"
     },
     {
       "id": "4th-international-conference-on-power-and-renewable-energy-engineering",
@@ -2173,8 +2178,8 @@
       "sourceHost": "pree.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.pree.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.pree.net/style/images/logo/logo2.png",
+      "imageUrl": "https://www.pree.net/style/images/banner-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 4th International Conference on Power and Renewable Energy Engineering",
@@ -2503,7 +2508,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/hallmarksofaging-2026/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/hallmarksofaging-2026/_common/updateable/img/Aging_SI_banner_square.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Hallmarks of Aging",
@@ -2801,7 +2806,9 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.entrepreneurindia.com/conference-registration.php"
-      }
+      },
+      "logoUrl": "https://www.entrepreneurindia.com/assets/img/logonew.png",
+      "imageUrl": "https://www.entrepreneurindia.com/assets/img/bg/feature_bg_1.jpg"
     },
     {
       "id": "hacking-cyber-security-briefing-conference-2026-kochi",
@@ -3011,7 +3018,8 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.c0c0n.org/register"
-      }
+      },
+      "imageUrl": "https://www.c0c0n.org/img/whyattend.png"
     },
     {
       "id": "world-summit-ai-amsterdam-2026-amsterdam",
@@ -3442,8 +3450,8 @@
       "sourceHost": "worldhealthsummit.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.worldhealthsummit.org/events/annual-whs/2026",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://a.storyblok.com/f/305196/2086x1132/e04ca8084e/whs_academic_alliance_logo_blue_type_rgb.png/m/1280x720/filters:quality(45):format(webp)",
+      "imageUrl": "https://a.storyblok.com/f/305196/4000x2667/86470ea3c7/whs_pd05_2025_-1045-2.jpg/m/1280x0/filters:quality(35):format(webp)",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Health Summit 2026",
@@ -3864,7 +3872,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://nizoplantproteinconference.com/",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://nizoplantproteinconference.com/resources/updateable/img/organisers/nizo.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "4th NIZO Plant Protein Functionality Conference",
@@ -4355,7 +4363,9 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.spe-events.org/apogce2026/register-now"
-      }
+      },
+      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/spe-apogce-2026/media/logos/SPE_Tagline_Logo_Blue_NEW.png",
+      "imageUrl": "https://assets.spe.org/dims4/default/2775462/2147483647/resize/x564%3E/quality/90/?url=http%3A%2F%2Fspe-brightspot.s3.us-east-2.amazonaws.com%2F89%2F15%2F73f80abd413588c8cbeee9b93d65%2Fjpt-2026-9-globalhero.jpg"
     },
     {
       "id": "mit-ai-conference-ai-the-age-of-agency-2026-mountain-view",
@@ -4660,8 +4670,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/food-structure-and-functionality-forum-symposium",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Food Structure & Functionality Symposium",
@@ -5744,7 +5754,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/cell-death-2026/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/cell-death-2026/_common/updateable/img/CPSymposia_CellDeath_Slider_View_Program_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Symposia: Taking Programmed Cell Death from Mechanisms to Interventions",
@@ -5973,7 +5983,9 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://irp.cdn-website.com/d81dc6c8/dms3rep/multi/opt/RMS-AAPG2026_logo-573h.png",
+      "imageUrl": "https://irp.cdn-website.com/d81dc6c8/dms3rep/multi/opt/DIG+geochem+for+energy+logo+table+cover-427w.png"
     },
     {
       "id": "9th-international-conference-on-computational-intelligence-and-intelli",
@@ -6021,8 +6033,8 @@
       "sourceHost": "ciis.net",
       "sourceType": "official_site",
       "officialUrl": "https://ciis.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://ciis.net/style/images/logo_2.gif",
+      "imageUrl": "https://ciis.net/style/images/SCIEI%20LOGO.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Computational Intelligence and Intelligent Systems",
@@ -6150,8 +6162,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/global-cleaner-production-conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2nd Global Cleaner Production Conference",
@@ -6350,7 +6362,9 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://www.esaapg.org/wp-content/uploads/2019/04/logo-7.png",
+      "imageUrl": "https://www.esaapg.org/wp-content/uploads/2019/05/background1-1.png"
     },
     {
       "id": "black-hat-india-2026-bengaluru",
@@ -6527,8 +6541,8 @@
       "sourceHost": "aipe.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.aipe.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.aipe.org/img/AIPE-logo.png",
+      "imageUrl": "https://www.aipe.org/img/slider/AIPE-banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 4th International Conference on Artificial Intelligence and Power Engineering",
@@ -6655,8 +6669,8 @@
       "sourceHost": "icrsa.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icrsa.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icrsa.org/style/images/logo/mlogo.png",
+      "imageUrl": "https://www.icrsa.org/style/images/banner.gif",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Robotic Systems and Applications",
@@ -7063,7 +7077,9 @@
         },
         "safetyNote": null,
         "registrationUrl": "https://www.adipec.com/visit/"
-      }
+      },
+      "logoUrl": "https://www.adipec.com/media/bzvko2ou/adipeclogo.png",
+      "imageUrl": "https://www.adipec.com/media/50ufjpxx/970x90.gif"
     },
     {
       "id": "cell-press-symposia-biological-function-in-3d-structure-dynamics-and-a",
@@ -7117,7 +7133,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/3Dbiologicalfunction-2026/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/3Dbiologicalfunction-2026/_common/updateable/img/CPSymposia_BiologicalFunction_Register_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Biological Function in 3D — Structure, Dynamics, and AI",
@@ -7239,8 +7255,8 @@
       "sourceHost": "icimt.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icimt.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icimt.org/images/LOGO.png",
+      "imageUrl": "https://www.icimt.org/images/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 16th International Conference on Information and Multimedia Technology",
@@ -7373,8 +7389,8 @@
       "sourceHost": "jcrai.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.jcrai.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://siteoss.forwardacademy.org.cn/images/site/logo/a76024b32b4c4fddbdeea3b263d3c510.png",
+      "imageUrl": "https://siteoss.forwardacademy.org.cn/images/site/banner/4e10143976235b7313ab25a32e322212.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 6th International Joint Conference on Robotics and Artificial Intelligence",
@@ -7796,8 +7812,8 @@
       "sourceHost": "icpesa.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.icpesa.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icpesa.net/style/images/logo/ieee.png",
+      "imageUrl": "https://www.icpesa.net/style/images/banner/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 11th International Conference on Power Electronics Systems and Applications",
@@ -7926,8 +7942,8 @@
       "sourceHost": "iccip.org",
       "sourceType": "official_site",
       "officialUrl": "https://iccip.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iccip.org/img/logo/logo.png",
+      "imageUrl": "https://iccip.org/img/logo/bjyddx.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 12th International Conference on Communication and Information Processing",
@@ -8056,8 +8072,8 @@
       "sourceHost": "mepe.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.mepe.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.mepe.org/img/logo.png",
+      "imageUrl": "https://www.mepe.org/img/slides/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 5th International Conference on Mechanical Engineering and Power Engineering",
@@ -8316,8 +8332,8 @@
       "sourceHost": "iscmi.us",
       "sourceType": "official_site",
       "officialUrl": "https://www.iscmi.us/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iscmi.us/static/image/IEEE_logo.png",
+      "imageUrl": "https://www.iscmi.us/static/image/EIS_cover.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 13th International Conference on Soft Computing & Machine Intelligence",
@@ -8444,8 +8460,8 @@
       "sourceHost": "icivp.org",
       "sourceType": "official_site",
       "officialUrl": "https://icivp.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icivp.org/static/picture/logo.png",
+      "imageUrl": "https://icivp.org/static/image/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 2nd International Conference on Image and Video Processing",
@@ -8859,8 +8875,8 @@
       "sourceHost": "icaisg.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icaisg.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icaisg.org/images/logo.png",
+      "imageUrl": "https://www.icaisg.org/images/icons/pdf.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 2nd International Conference on Artificial Intelligence Security and Governance",
@@ -8989,8 +9005,8 @@
       "sourceHost": "icmsc.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmsc.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmsc.org/style/htmlimg/logo/logo.png",
+      "imageUrl": "https://www.icmsc.org/style/htmlimg/LNME.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Mechanical, System and Control Engineering",
@@ -9383,8 +9399,8 @@
       "sourceHost": "iceoe.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iceoe.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iceoe.org/static/image/logo.png",
+      "imageUrl": "https://www.iceoe.org/static/picture/Home-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 9th International Conference on Environment and Ocean Engineering",
@@ -10059,8 +10075,8 @@
       "sourceHost": "aws.amazon.com",
       "sourceType": "official_site",
       "officialUrl": "https://aws.amazon.com/events/reinvent/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/events/approved/reinvent26/RIV-navlogo-v2.f95e8a33c69deb053e79828b0806c68944922fd7.png",
+      "imageUrl": "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/events/approved/images/26fb240213f80570ec3ab8d25f2f82bc-aws-reinvent-2024-logo-white-2332x508.011aa6873f2b27743b29f3949e73173285f8436c.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "AWS re:Invent 2026",
@@ -10538,7 +10554,9 @@
           "unstructuredReason": "withdrawn_in_source"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/07/URTeC-latinamerica-logo-white-scaled.png",
+      "imageUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/07/Horacio-Marin.png"
     },
     {
       "id": "17th-asia-conference-on-mechanical-and-aerospace-engineering-2026-phuk",
@@ -10589,8 +10607,8 @@
       "sourceHost": "acmae.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.acmae.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.acmae.com/assets/img/logo.png",
+      "imageUrl": "https://www.acmae.com/assets/img/slider.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 17th Asia Conference on Mechanical and Aerospace Engineering",
@@ -10727,7 +10745,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/single-cell-biology-2026/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/single-cell-biology-2026/_common/updateable/img/CPSymposia_CellularComplexity_Slider_530x207px_V1-RegisterEarly.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Symposia: Decoding Cellular Complexity — Single Cell Biology in the Era of AI",
@@ -10874,8 +10892,8 @@
       "sourceHost": "aiat.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.aiat.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.aiat.org/images/logos/ACM.png",
+      "imageUrl": "https://www.aiat.org/images/slider/slider-bg1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 6th International Conference on Artificial Intelligence and Application Technologies",
@@ -12011,7 +12029,9 @@
           "unstructuredReason": null
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://iceevent.org/2026/wp-content/uploads/sites/2/2026/02/ICE-Jakarta-logo.png",
+      "imageUrl": "https://iceevent.org/2026/wp-content/uploads/sites/2/2026/02/ICE26-website-background.jpg"
     },
     {
       "id": "agu-fall-meeting-agu26-annual-meeting-2026-san-francisco",
@@ -27224,8 +27244,8 @@
       "sourceHost": "icmame.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmame.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmame.com/img/logo_1.png",
+      "imageUrl": "https://www.icmame.com/img/photos/CMAME-banner_01.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 13th International Conference on Mechanical, Automotive and Materials Engineering",
@@ -27358,8 +27378,8 @@
       "sourceHost": "raai.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.raai.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.raai.net/img/intro-carousel/logo.png",
+      "imageUrl": "https://www.raai.net/img/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 6th International Conference on Robotics, Automation, and Artificial Intelligence",
@@ -27489,8 +27509,8 @@
       "sourceHost": "pmae.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.pmae.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.pmae.org/img/logo/NUS_1.png",
+      "imageUrl": "https://www.pmae.org/img/photos/PMAE-2026-banenr.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 8th International Conference on Progress in Mechanical and Aerospace Engineering",
@@ -27620,8 +27640,8 @@
       "sourceHost": "icmee.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmee.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmee.org/Assets/images/logo.png",
+      "imageUrl": "https://www.icmee.org/Assets/upload/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2026 12th International Conference on Mechanical and Electronics Engineering",
@@ -27753,8 +27773,8 @@
       "sourceHost": "cop31.tr",
       "sourceType": "official_site",
       "officialUrl": "https://cop31.tr/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://cop31.tr/assets/images/cop31-logo.svg",
+      "imageUrl": "https://cop31.tr/api/media/file/cop31-banner-3.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "UN Climate Change Conference COP31",
@@ -27883,8 +27903,8 @@
       "sourceHost": "iicehawaii.iafor.org",
       "sourceType": "official_site",
       "officialUrl": "https://iicehawaii.iafor.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iicehawaii.iafor.org/wp-content/uploads/sites/29/2026/04/IICE2027-1500x525-1.jpg",
+      "imageUrl": "https://iicehawaii.iafor.org/wp-content/uploads/sites/29/2026/06/IICE-IICAH2027-Logos.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "12th IAFOR International Conference on Education in Hawaii",
@@ -28015,8 +28035,8 @@
       "sourceHost": "iicahhawaii.iafor.org",
       "sourceType": "official_site",
       "officialUrl": "https://iicahhawaii.iafor.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iicahhawaii.iafor.org/wp-content/uploads/sites/57/2026/04/IICAH2027-1500x525-1.jpg",
+      "imageUrl": "https://iicahhawaii.iafor.org/wp-content/uploads/sites/57/2026/06/IICE-IICAH2027-Logos.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "7th IAFOR International Conference on Arts & Humanities in Hawaii",
@@ -28147,8 +28167,8 @@
       "sourceHost": "academicx.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.academicx.org/ATFC/2027/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.academicx.org/images/Acdemic_logo.svg",
+      "imageUrl": "https://www.academicx.org/images/Scientific.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "11th International Conference on Advanced Thin Films and Coatings",
@@ -28279,8 +28299,8 @@
       "sourceHost": "academicx.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.academicx.org/ANEA/2027/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.academicx.org/images/Acdemic_logo.svg",
+      "imageUrl": "https://www.academicx.org/images/Scientific.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "14th International Conference on Advanced Nanomaterials and Emerging Applications",
@@ -28401,8 +28421,8 @@
       "sourceHost": "icaer.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icaer.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icaer.org/images/logo-wide@2x.png",
+      "imageUrl": "https://www.icaer.org/images/bg/slide1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Architecture and Environmental Research",
@@ -28532,8 +28552,8 @@
       "sourceHost": "academicx.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.academicx.org/ICMPC/2027/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.academicx.org/images/Acdemic_logo.svg",
+      "imageUrl": "https://www.academicx.org/images/Scientific.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "7th International Conference on Materials Physics and Chemistry",
@@ -28790,8 +28810,8 @@
       "sourceHost": "iccrd.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccrd.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccrd.org/image/logo.png",
+      "imageUrl": "https://www.iccrd.org/image/history/ICCRD12.cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 19th International Conference on Computer Research and Development",
@@ -29047,8 +29067,8 @@
       "sourceHost": "icmt.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmt.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmt.org/img/proceeding/gt-logo-gold_1.png",
+      "imageUrl": "https://www.icmt.org/img/ICMT-banner_01.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Manufacturing Technologies",
@@ -29180,8 +29200,8 @@
       "sourceHost": "icnms.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icnms.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icnms.org/img/proceeding/MEMS%20logo.jpg",
+      "imageUrl": "https://www.icnms.org/img/ICNMS-banner_01.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 15th International Conference on Nano and Materials Science",
@@ -29522,7 +29542,9 @@
         },
         "safetyNote": null,
         "registrationUrl": null
-      }
+      },
+      "logoUrl": "https://www.icsca.org/images/sch-banner/logo.png",
+      "imageUrl": "https://www.icsca.org/images/banner.png"
     },
     {
       "id": "17th-international-conference-on-advanced-materials-research-2027-phuk",
@@ -29570,8 +29592,8 @@
       "sourceHost": "icamr.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icamr.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icamr.org/assets/images/logo/ttp.png",
+      "imageUrl": "https://www.icamr.org/assets/images/banner-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 17th International Conference on Advanced Materials Research",
@@ -29698,8 +29720,8 @@
       "sourceHost": "iccbm.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccbm.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccbm.org/style/images/banner1.jpg",
+      "imageUrl": "https://www.iccbm.org/style/images/banner2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Civil and Building Materials",
@@ -29822,8 +29844,8 @@
       "sourceHost": "worldgovernmentssummit.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.worldgovernmentssummit.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.worldgovernmentssummit.org/assets/images/logo-blue.svg",
+      "imageUrl": "https://www.worldgovernmentssummit.org/assets/images/default-image.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Government Summit 2027",
@@ -30295,7 +30317,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://teacherforum.org/dubai-ictel-16-17-feb-2027",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://teacherforum.org/public/uploads/Banners/2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Dubai International Conference on Teaching, Education & Learning",
@@ -30428,8 +30450,8 @@
       "sourceHost": "iccde.org",
       "sourceType": "official_site",
       "officialUrl": "https://iccde.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iccde.org/images/logo.png",
+      "imageUrl": "https://iccde.org/images/history/ICCDE%202022-Cover_2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Computing and Data Engineering",
@@ -30557,8 +30579,8 @@
       "sourceHost": "icric.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icric.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icric.org/images/logos/logo.png",
+      "imageUrl": "https://www.icric.org/images/slider/slider-bg1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Robotics and Intelligent Control",
@@ -30687,8 +30709,8 @@
       "sourceHost": "iccmb.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccmb.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccmb.org/images/logo.png",
+      "imageUrl": "https://www.iccmb.org/images/main-slider/image-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 10th International Conference on Computers in Management and Business",
@@ -30816,8 +30838,8 @@
       "sourceHost": "icbmc.org",
       "sourceType": "official_site",
       "officialUrl": "https://icbmc.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icbmc.org/style/img/logos/must.png",
+      "imageUrl": "https://icbmc.org/style/img/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Building Materials and Construction",
@@ -30948,8 +30970,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/international-brain-stimulation-conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "7th International Brain Stimulation Conference",
@@ -31104,8 +31126,8 @@
       "sourceHost": "icmlc.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmlc.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmlc.org/images/banner/logo.png",
+      "imageUrl": "https://www.icmlc.org/images/banner/banner3.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 19th International Conference on Machine Learning and Computing",
@@ -31373,8 +31395,8 @@
       "sourceHost": "icmfm.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmfm.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmfm.org/img/logo.png",
+      "imageUrl": "https://www.icmfm.org/img/logo-springer.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Materials and Functional Manufacturing",
@@ -31505,8 +31527,8 @@
       "sourceHost": "icmre.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmre.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmre.org/images/logos/logo.png",
+      "imageUrl": "https://www.icmre.org/images/banner/banner-img1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Mechatronics and Robotics Engineering",
@@ -31724,8 +31746,8 @@
       "sourceHost": "iata.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iata.org/en/events/all/world-cargo-symposium",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iata.org/contentassets/3e83770142a040d688e269bb2f709b7b/iata-logo-header.svg?height=127&amp;rmode=crop&amp;v=20260518075759",
+      "imageUrl": "https://www.iata.org/contentassets/4e4d3b50f3614011aef57357e594801e/wcs-2027.jpg?width=2048&amp;height=465&amp;rmode=crop&amp;v=20260326143218",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Cargo Symposium 2027",
@@ -31855,8 +31877,8 @@
       "sourceHost": "ceac.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.ceac.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.ceac.net/style/images/logo/hanoi1.png",
+      "imageUrl": "https://www.ceac.net/style/images/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 Civil Engineering and Architecture Conference",
@@ -31991,8 +32013,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-bioresource-technology-for-bioenergy-bioproducts-and-environmental-sustainability",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/1efa33a23b3543fc9926b4df12905e94?mod=v1/resize=3840/output=webp/quality=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "5th International Conference on Bioresource Technology for Bioenergy, Bioproducts & Environmental Sustainability",
@@ -32388,8 +32410,8 @@
       "sourceHost": "inovscitechconferences.com",
       "sourceType": "official_site",
       "officialUrl": "https://inovscitechconferences.com/2027/paris/matscieng/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://inovscitechconferences.com/2027/paris/matscieng/images/logo.png",
+      "imageUrl": "https://inovscitechconferences.com/group-photo.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "14th Global Conference & Expo on Materials Science and Engineering",
@@ -32822,8 +32844,8 @@
       "sourceHost": "icbea.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icbea.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icbea.org/images/logo.png",
+      "imageUrl": "https://www.icbea.org/images/monitor.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Biomedical Engineering and Applications",
@@ -32953,8 +32975,8 @@
       "sourceHost": "icrca.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icrca.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icrca.org/static/logo/logo.png",
+      "imageUrl": "https://www.icrca.org/history/2025/cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Robotics, Control and Automation",
@@ -33172,7 +33194,9 @@
         },
         "safetyNote": null,
         "registrationUrl": null
-      }
+      },
+      "logoUrl": "https://www.ic4e.net/images/logo.png",
+      "imageUrl": "https://www.ic4e.net/images/publication/cover.jpg"
     },
     {
       "id": "international-conference-on-green-civil-engineering-2027-kyoto",
@@ -33224,8 +33248,8 @@
       "sourceHost": "icgce.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icgce.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icgce.org/img/logo.png",
+      "imageUrl": "https://www.icgce.org/img/img2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Green Civil Engineering",
@@ -33359,8 +33383,8 @@
       "sourceHost": "icmens.org",
       "sourceType": "official_site",
       "officialUrl": "https://icmens.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icmens.org/static/picture/59fdd63fd70a64d65fe6bd885e4631c6.jpg",
+      "imageUrl": "https://icmens.org/static/picture/his/ICMENS2025-Cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Materials Engineering and Nano Sciences",
@@ -33532,8 +33556,8 @@
       "sourceHost": "icmem.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmem.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmem.org/images/logo.png",
+      "imageUrl": "https://www.icmem.org/img-rev-slider/bg-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Mechanical Engineering and Materials",
@@ -33663,7 +33687,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://www.wearofmaterialsconference.com/",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://www.wearofmaterialsconference.com/resources/updateable/img/awards/Ken-Ludema-Award.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "26th International Conference on Wear of Materials and 6th Biotribology Conference",
@@ -33782,8 +33806,8 @@
       "sourceHost": "asugsvsummit.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.asugsvsummit.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://cdn.prod.website-files.com/5de98c06bb83ab5540fc1c92/6a3ed82646e43cf26a6d8a5a_asu-gsv-logo.png",
+      "imageUrl": "https://cdn.prod.website-files.com/5de98c06bb83ab5540fc1c92/68912ac02749c7cc160f9001_Quote%20Background.avif",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "ASU+GSV Summit 2027",
@@ -34187,8 +34211,8 @@
       "sourceHost": "icoce.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icoce.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icoce.org/img/logo.png",
+      "imageUrl": "https://www.icoce.org/img/slides/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Civil Engineering",
@@ -34324,8 +34348,8 @@
       "sourceHost": "areee.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.areee.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.areee.org/img/logo.png",
+      "imageUrl": "https://www.areee.org/img/slides/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 8th Asia Conference on Renewable Energy and Environmental Engineering",
@@ -34458,8 +34482,8 @@
       "sourceHost": "iceeep.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.iceeep.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iceeep.com/style/images/logo.png",
+      "imageUrl": "https://www.iceeep.com/style/images/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Energy Economics and Energy Policy",
@@ -34595,8 +34619,8 @@
       "sourceHost": "icacer.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.icacer.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icacer.com/style/images/logo.png",
+      "imageUrl": "https://www.icacer.com/style/images/logo-springer-big.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 12th International Conference on Advances on Clean Energy Research",
@@ -34728,8 +34752,8 @@
       "sourceHost": "cste.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.cste.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.cste.net/images/logo/CCNU.jpeg",
+      "imageUrl": "https://www.cste.net/images/icons/submit.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 9th International Conference on Computer Science and Technologies in Education",
@@ -34859,7 +34883,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://accscientificsession.acc.org/Registration-and-Hotels",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://accscientificsession.acc.org/-/media/Non-Clinical/Images/About-ACC/Social-Media/WeChat-QR-code.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "ACC.27 Together With WCC",
@@ -34992,7 +35016,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://teacherforum.org/tokyo-educon-13-14-apr-2027",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://teacherforum.org/public/uploads/Banners/2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "EduCon Tokyo – International Conference on Education",
@@ -35122,8 +35146,8 @@
       "sourceHost": "iceds.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iceds.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iceds.org/img/Banner/logo.jpg",
+      "imageUrl": "https://www.iceds.org/img/Banner/banner+logo(2)/%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 8th International Conference on Education Development and Studies",
@@ -35254,8 +35278,8 @@
       "sourceHost": "ceepe.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.ceepe.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.ceepe.net/style/images/CEEPE%20logo.png",
+      "imageUrl": "https://www.ceepe.net/style/images/CEEPE2027-banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 10th International Conference on Energy, Electrical and Power Engineering",
@@ -35387,7 +35411,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://www.iceee.org/",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://www.iceee.org/images/icon/ieee-turkey.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 14th International Conference on Electrical and Electronics Engineering",
@@ -35522,8 +35546,8 @@
       "sourceHost": "bdee.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.bdee.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.bdee.org/logo/Zhengzhou_University_of_Aeronautics.png",
+      "imageUrl": "https://www.bdee.org/style/images/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 7th International Conference on Big Data Engineering and Education",
@@ -35657,8 +35681,8 @@
       "sourceHost": "icpies.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icpies.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icpies.org/style/images/logo/ICPIES%202026.png",
+      "imageUrl": "https://www.icpies.org/style/images/notice.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 IEEE 3rd International Conference on Power and Integrated Energy Systems",
@@ -35884,7 +35908,9 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null
-      }
+      },
+      "logoUrl": "https://gcags.org/Images/GCAGS.header.logo.7.gif",
+      "imageUrl": "https://gcags.org/Images/2025_GCAGS_Journal_v14_00_Covers_and_Spine_Page_1.gif"
     },
     {
       "id": "global-food-security-conference-2027-wageningen",
@@ -36184,8 +36210,8 @@
       "sourceHost": "iccar.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccar.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccar.org/img/logo-1.png",
+      "imageUrl": "https://www.iccar.org/img/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Control, Automation and Robotics",
@@ -36318,8 +36344,8 @@
       "sourceHost": "fcee.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.fcee.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.fcee.net/images/logo-wide@2x.png",
+      "imageUrl": "https://www.fcee.net/images/bg/slide1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 5th International Forum on Clean Energy Engineering",
@@ -36695,7 +36721,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/neurometabolism-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/neurometabolism-2027/_common/updateable/img/scientific-image.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Neurometabolism in Health and Disease",
@@ -36821,7 +36847,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://teacherforum.org/london-educon-26-27-apr-2027",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://teacherforum.org/public/uploads/Banners/2.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "EduCon London – International Conference on Education",
@@ -36952,8 +36978,8 @@
       "sourceHost": "icret.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icret.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icret.org/images/logos/OIT.png",
+      "imageUrl": "https://www.icret.org/images/logos/ontariotechu-og-image.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Renewable Energy Technologies",
@@ -37085,8 +37111,8 @@
       "sourceHost": "cees.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.cees.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.cees.net/style/images/CEES-logo.png",
+      "imageUrl": "https://www.cees.net/style/images/cees-banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 9th International Conference on Clean Energy and Electrical Systems",
@@ -37217,7 +37243,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/organoids-nams-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/organoids-nams-2027/_common/updateable/pdf/2607061200_CP2603820_CPSymposia_Organoids_2027_Slider_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Advanced Models of Human Biology and Disease",
@@ -37344,8 +37370,8 @@
       "sourceHost": "ceege.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.ceege.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.ceege.org/style/images/logo.png",
+      "imageUrl": "https://www.ceege.org/static/picture/faeture-icon2.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 10th International Conference on Electrical Engineering and Green Energy",
@@ -37468,8 +37494,8 @@
       "sourceHost": "iccre.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccre.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccre.org/static/picture/ICCRElogo-new.png",
+      "imageUrl": "https://www.iccre.org/static/image/ICCRE-banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 12th International Conference on Control and Robotics Engineering",
@@ -37668,8 +37694,8 @@
       "sourceHost": "icccr.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icccr.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icccr.org/images/logo.png",
+      "imageUrl": "https://www.icccr.org/images/history/2025/cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 7th International Conference on Computer, Control and Robotics",
@@ -37799,8 +37825,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/anniversary-world-congress-on-biosensors",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "37th Anniversary World Congress on Biosensors",
@@ -37923,8 +37949,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/anniversary-world-congress-on-biosensors",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/34017c43de3b415783848d805d51ec24?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Biosensors 2027: 37th Anniversary World Congress on Biosensors",
@@ -38090,7 +38116,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/next-gen-cell-biology-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/next-gen-cell-biology-2027/_common/updateable/img/2607091509_CP2604079_CPSymposia_CellBiology_Slider_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Next-generation Cell Biology",
@@ -38212,8 +38238,8 @@
       "sourceHost": "icett.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icett.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icett.org/img/logo.png",
+      "imageUrl": "https://www.icett.org/img/slide/slide-1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Education and Training Technologies",
@@ -38344,8 +38370,8 @@
       "sourceHost": "amee.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.amee.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.amee.net/static/image/logo/logo.png",
+      "imageUrl": "https://www.amee.net/static/image/Banner/Banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 9th International Conference on Advanced Mechanical and Electrical Engineering",
@@ -38485,8 +38511,8 @@
       "sourceHost": "icsree.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.icsree.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icsree.com/images/logo.png",
+      "imageUrl": "https://www.icsree.com/images/e3sconf_cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 12th International Conference on Sustainable and Renewable Energy Engineering",
@@ -38609,8 +38635,8 @@
       "sourceHost": "itet.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.itet.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.itet.net/style/images/logo_head_v1.png",
+      "imageUrl": "https://www.itet.net/style/images/main.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 8th International Conference on Information Technology and Education Technology",
@@ -38745,8 +38771,8 @@
       "sourceHost": "icaibd.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icaibd.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icaibd.org/Assets/images/ICAIBD-logo.png",
+      "imageUrl": "https://www.icaibd.org/Assets/upload/banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 The 10th International Conference on Artificial Intelligence and Big Data",
@@ -38868,8 +38894,8 @@
       "sourceHost": "iccta.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccta.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccta.net/img/logo2027.png",
+      "imageUrl": "https://www.iccta.net/img/slider/banner.gif",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on Computer Technology Applications",
@@ -38998,8 +39024,8 @@
       "sourceHost": "asco.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.asco.org/annual-meeting/program/program-overview",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://cdn.bfldr.com/KOIHB2Q3/at/gpvgjsmsm8x4h97v8z343mpj/2027-ASCO-Annual-Meeting-Logo.png?auto=webp",
+      "imageUrl": "https://www.asco.org/assets/images/asco-logo-header-desktop-580.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 ASCO Annual Meeting",
@@ -39128,8 +39154,8 @@
       "sourceHost": "icmei.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icmei.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmei.org/img/logo/logo.png",
+      "imageUrl": "https://www.icmei.org/img/banner/ICMEI-banner_01.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 14th International Conference on Management and Education Innovation",
@@ -39259,8 +39285,8 @@
       "sourceHost": "pemm.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.pemm.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.pemm.net/images/logos/submit.png",
+      "imageUrl": "https://www.pemm.net/images/iop_cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 5th International Conference on Precision Engineering and Mechanical Manufacturing",
@@ -39390,8 +39416,8 @@
       "sourceHost": "icmmm.org",
       "sourceType": "official_site",
       "officialUrl": "http://www.icmmm.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icmmm.org/style/images/icmmm-logo-02.png",
+      "imageUrl": "https://www.icmmm.org/style/images/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 14th International Conference on Mechanics, Materials and Manufacturing",
@@ -39508,8 +39534,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-one-health",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/e6e61d2ae3154d048563d4f6cb7a473d?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "International Conference on One Health 2027",
@@ -39636,8 +39662,8 @@
       "sourceHost": "icslt.org",
       "sourceType": "official_site",
       "officialUrl": "https://icslt.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icslt.org/images/logo2.jpg",
+      "imageUrl": "https://icslt.org/images/banner3.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 13th International Conference on e-Society, e-Learning and e-Technologies",
@@ -39765,8 +39791,8 @@
       "sourceHost": "cvit.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.cvit.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.cvit.org/static/picture/logo.png",
+      "imageUrl": "https://www.cvit.org/img/slider/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 8th International Conference on Computer Vision and Information Technology",
@@ -39893,8 +39919,8 @@
       "sourceHost": "icfet.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icfet.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icfet.org/assets/img/images_%E5%89%AF%E6%9C%AC.png",
+      "imageUrl": "https://www.icfet.org/assets/img/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 The 13th International Conference on Frontiers of Educational Technologies",
@@ -40022,8 +40048,8 @@
       "sourceHost": "seai.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.seai.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.seai.org/style/images/logo/huaqiao.gif",
+      "imageUrl": "https://www.seai.org/style/images/itnac_noyear_0_0.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 7th International Conference on Software Engineering and Artificial Intelligence",
@@ -40277,7 +40303,7 @@
       "sourceHost": "cvpr.thecvf.com",
       "sourceType": "official_site",
       "officialUrl": "https://cvpr.thecvf.com/",
-      "logoUrl": null,
+      "logoUrl": "https://cvpr.thecvf.com/static/core/img/cvpr-navbar-logo.svg",
       "imageUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -40412,8 +40438,8 @@
       "sourceHost": "acmme.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.acmme.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.acmme.org/images/acmme2017logo.png",
+      "imageUrl": "https://www.acmme.org/images/proceedings/cover/ACMME2015.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 15th Asia Conference on Mechanical and Materials Engineering",
@@ -40541,8 +40567,8 @@
       "sourceHost": "icvars.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icvars.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icvars.org/images/logo.png",
+      "imageUrl": "https://www.icvars.org/images/Big%C2%A0Data,%C2%A0AI,%C2%A0IoT,%C2%A0Games,%C2%A0and%C2%A0Mixed%C2%A0Reality.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Intelligent Computing and Virtual & Augmented Reality Simulations",
@@ -40791,8 +40817,8 @@
       "sourceHost": "aaip.net",
       "sourceType": "official_site",
       "officialUrl": "https://aaip.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://aaip.net/img/logo.png",
+      "imageUrl": "https://aaip.net/img/sha.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 5th Asia Conference on Advances in Image Processing",
@@ -40912,8 +40938,8 @@
       "sourceHost": "iccci.org",
       "sourceType": "official_site",
       "officialUrl": "https://iccci.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://iccci.org/style/images/footer-logo.png",
+      "imageUrl": "https://iccci.org/style/images/iccci_top.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 9th International Conference on Computer Communication and the Internet",
@@ -41035,8 +41061,8 @@
       "sourceHost": "iccss.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.iccss.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iccss.org/static/logo/ICCSS%20logo.png",
+      "imageUrl": "https://www.iccss.org/static/picture/Banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 The 10th International Conference on Circuits, Systems and Simulation",
@@ -41170,7 +41196,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://www.pangbornsymposium.com/",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://www.pangbornsymposium.com/resources/updateable/img/pangborn17-location.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Pangborn 2027: 17th Pangborn Sensory Science Symposium",
@@ -41293,8 +41319,8 @@
       "sourceHost": "icedl.org",
       "sourceType": "official_site",
       "officialUrl": "https://icedl.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icedl.org/images/logo.png",
+      "imageUrl": "https://icedl.org/images/ijiet_cover.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 11th International Conference on Education and Distance Learning",
@@ -41419,8 +41445,8 @@
       "sourceHost": "icccm.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.icccm.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icccm.org/style/images/ICCCM-logo.png",
+      "imageUrl": "https://www.icccm.org/style/images/ICCCM2024-Banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 15th International Conference on Computer and Communications Management",
@@ -41541,8 +41567,8 @@
       "sourceHost": "ift.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.ift.org/ift-first-event/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.ift.org/cdn-cgi/image/width=1600,height=0/globalassets/global-media/ift-logos/ift-first-logo-color-trimed.svg?v=639077984410000000",
+      "imageUrl": "https://www.ift.org/cdn-cgi/image/width=2200,height=0/siteassets/ift/0-ift-first-event/2026/1-attend/images/ift-first-2026-registration-hero.jpg?v=639080815870000000",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "IFT FIRST 2027",
@@ -41663,8 +41689,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/transport-research-symposium",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/95d431183f9645968efb23ae207104f9?mod=v1/resize=3840/output=webp/quality=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Transportation Research Symposium 2027",
@@ -41794,7 +41820,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/drugging-the-undruggable-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/drugging-the-undruggable-2027/_common/updateable/img/CPSymposia_Undruggable_Slider_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Drugging the Undruggable",
@@ -41920,8 +41946,8 @@
       "sourceHost": "mlmi.net",
       "sourceType": "official_site",
       "officialUrl": "https://mlmi.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://mlmi.net/img/logo.png",
+      "imageUrl": "https://mlmi.net/img/slides/1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 10th International Conference on Machine Learning and Machine Intelligence",
@@ -42327,7 +42353,8 @@
         },
         "safetyNote": null,
         "registrationUrl": null
-      }
+      },
+      "imageUrl": "https://kdd2027.kdd.org/wp-content/uploads/2026/07/sc_mcenery_convention_center.webp"
     },
     {
       "id": "5th-international-conference-on-mechatronics-and-electrical-engineerin",
@@ -42375,8 +42402,8 @@
       "sourceHost": "meee.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.meee.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.meee.org/images/MEEE-logo.png",
+      "imageUrl": "https://www.meee.org/images/more1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 5th International Conference on Mechatronics and Electrical Engineering",
@@ -42789,7 +42816,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://icaigc.org/",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://icaigc.org/images/index/tubiao1.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 IEEE International Conference on Artificial Intelligence and Generated Content",
@@ -42914,8 +42941,8 @@
       "sourceHost": "psce.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.psce.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.psce.net/static/image/logo-24.png",
+      "imageUrl": "https://www.psce.net/static/image/banner-03.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on Power Systems and Control Engineering",
@@ -43045,8 +43072,8 @@
       "sourceHost": "icbet.org",
       "sourceType": "official_site",
       "officialUrl": "https://icbet.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://icbet.org/images/logo/Meiji.png",
+      "imageUrl": "https://icbet.org/images/banner1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 17th International Conference on Biomedical Engineering and Technology",
@@ -43167,8 +43194,8 @@
       "sourceHost": "iaa-mobility.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.iaa-mobility.com/en/visitors/iaa-formats-2027/iaa-conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.iaa-mobility.com/api/image?originalSource=%2Fdam%2Fjcr%3A5ea16f0a-6bad-4246-8d85-3f1f4fea9918%2FIAA_MOBILITY_2025_Logo_OhneJahreszahl_Black_new.svg",
+      "imageUrl": "https://www.iaa-mobility.com/api/image/3c864f592ba7e9ef5ac58c79273c2cabc85bd556?originalSource=%2F.imaging%2Ffocalpoint%2F4x5%2F3200x%2Fdam%2Fjcr%3A5fce5d8e-c087-4884-8ba7-d64ea2c18819%2Fiaa-visionary-club-general-cover-square.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 IAA Conference / IAA MOBILITY",
@@ -43312,7 +43339,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/neuroimmunology-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/neuroimmunology-2027/_common/updateable/img/CPSymposia_NeuroimmuneAxis_Slider_530x207px_V1.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Neuro-immune Axis — Charting the Periphery",
@@ -43437,8 +43464,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/esistc4conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/073c3b76a2f64ead844c004294eb04a4?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "10th International Conference on Fracture of Polymers, Composites and Adhesives",
@@ -43565,8 +43592,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/future-foods-congress",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/8ad94de42e924b35aea77bf7843434a5?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Future Foods Congress 2027",
@@ -44202,8 +44229,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/global-emergency-nursing-conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/1017492b20124ae0ab5b8853c90afe0f?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Global Emergency Nursing Conference 2027",
@@ -44337,7 +44364,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://cell-press-symposia.com/rnas-2027/index.html",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://cell-press-symposia.com/rnas-2027/_common/updateable/img/CPSymposia_FunctionalRNA_Headers_530x207px_V1_SCIENTIFIC.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cell Press Symposia: Functional RNAs",
@@ -44463,8 +44490,8 @@
       "sourceHost": "icsss.net",
       "sourceType": "official_site",
       "officialUrl": "https://www.icsss.net/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.icsss.net/assets/images/logo/logo.png",
+      "imageUrl": "https://www.icsss.net/assets/images/coming-soon/1.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "2027 International Conference on System Safety and Security",
@@ -44582,8 +44609,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/food-chemistry-conference",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/9c671dea625544deb57f952b3a9be538?mod=v1/resize=3840/output=webp/quality=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "5th Food Chemistry Conference",
@@ -44712,8 +44739,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/desalination-science-and-technology",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/e81460939f2c4c6b84c75bbe552eb288?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Desalination Science and Technology 2027",
@@ -44837,8 +44864,8 @@
       "sourceHost": "rsna.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.rsna.org/annual-meeting/future-and-past-meetings",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.rsna.org/-/media/images/rsna/menu/logo.svg?iar=0&amp;rev=221743ad6305477e999961ebbff8e994&amp;hash=7A1B9E759BFB33FFCE204D9681AB6F48",
+      "imageUrl": "https://www.rsna.org/-/media/images/shared/svg-icons/x.svg?rev=fd35e5873e57446780cf80a9dbd95f38&amp;hash=F2371AC5CFCF3B10D9F27EC6529FAC28",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "RSNA Annual Meeting 2027",
@@ -44958,8 +44985,8 @@
       "sourceHost": "aonsa.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.aonsa.org/aonsa-activities/aocns/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.aonsa.org/wp-content/uploads/cropped-cropped-aonsa-1-2-1.jpg",
+      "imageUrl": "https://www.aonsa.org/wp-content/uploads/AOCNS2023_groupphoto_large.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Asia-Oceania Conference on Neutron Scattering 2027",
@@ -45086,7 +45113,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://www.scout.org/event/44th-world-scout-conference",
       "logoUrl": null,
-      "imageUrl": null,
+      "imageUrl": "https://www.scout.org/sites/default/files/styles/hero_4k/public/2022-01/vo20180810_0117.jpeg.webp?itok=ToKQt50L",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Scout Conference 2027",
@@ -45221,8 +45248,8 @@
       "sourceHost": "psoriasisg2c.com",
       "sourceType": "official_site",
       "officialUrl": "https://psoriasisg2c.com/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://psoriasisg2c.com/wp-content/uploads/2023/04/psoriasis-g2c-logo-light-150px.png",
+      "imageUrl": "https://psoriasisg2c.com/wp-content/plugins/fusion-builder/assets/images/iLightbox/metro-white-skin/caption-bg.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "International Congress: Psoriasis – from Gene to Clinic 2027",
@@ -45356,8 +45383,8 @@
       "sourceHost": "elsevier.com",
       "sourceType": "official_site",
       "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-infectious-disease-dynamics",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.elsevier.com/images/elsevier-logo-orange.svg",
+      "imageUrl": "https://media.ffycdn.net/eu/elsevier/d/c412249451f941b1864672ee9aac5536?w=1200&amp;q=75",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "EPIDEMICS 11: 11th International Conference on Infectious Disease Dynamics",
@@ -45488,8 +45515,8 @@
       "sourceHost": "csrs.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.csrs.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://www.csrs.org/images/csrs-logo-light-no-text.png",
+      "imageUrl": "https://www.csrs.org/images/hero/spine-banner.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Cervical Spine Research Society Annual Meeting 2027",
@@ -45618,8 +45645,8 @@
       "sourceHost": "africanstudies.org",
       "sourceType": "official_site",
       "officialUrl": "https://africanstudies.org/",
-      "logoUrl": null,
-      "imageUrl": null,
+      "logoUrl": "https://africanstudies.org/wp-content/uploads/2023/01/ASA-Logo-FINAL.svg",
+      "imageUrl": "https://africanstudies.org/wp-content/uploads/2023/06/African-Studies-Association.jpg",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "African Studies Association Annual Meeting 2027",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T11:38:31.442Z",
+  "generatedAt": "2026-09-12T12:07:12.254Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -22,7 +22,7 @@
   "heldBackWithNothingToShow": 343,
   "websitesResolved": {
     "applied": 87,
-    "alreadyKnown": 1,
+    "alreadyKnown": 79,
     "refused": [],
     "matchedNoConference": [
       "Meta Connect 2026",
@@ -60,8 +60,8 @@
         "now": "2027-10-13"
       }
     ],
-    "logosSupplied": 10,
-    "bannersSupplied": 0,
+    "logosSupplied": 143,
+    "bannersSupplied": 153,
     "logosRefused": []
   },
   "detailsUnmatched": [

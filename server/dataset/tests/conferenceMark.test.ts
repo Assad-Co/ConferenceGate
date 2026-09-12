@@ -52,11 +52,19 @@ test("the words every conference shares cannot distinguish one", () => {
 
 test("a mark is sized so it fits the panel it sits in", () => {
   // "GASTECH" does not fit where "G2" did.
-  assert.match(markSizeClass("G2"), /text-3xl/);
-  assert.match(markSizeClass("GASTECH"), /text-xl/);
-  assert.match(markSizeClass("GOLDSCHMIDT"), /text-sm/);
+  //
+  // The card scale came down a step when the results card swapped its growable panel for a fixed
+  // 112px tile: GASTECH at the old text-2xl measured about 100px in 88px of room and was clipped
+  // at both ends. The hero scale is the detail page's and is unchanged.
+  assert.equal(markSizeClass("G2"), "text-2xl sm:text-3xl");
+  assert.equal(markSizeClass("GASTECH"), "text-sm sm:text-base");
+  assert.equal(markSizeClass("GOLDSCHMIDT"), "text-[10px] sm:text-xs");
   assert.match(markSizeClass("G2", "hero"), /text-5xl/);
   assert.match(markSizeClass("GOLDSCHMIDT", "hero"), /text-xl/);
+
+  // One mark per bucket, so each step down is a real step rather than two names sharing a size.
+  const steps = ["ABC", "ABCDE", "ABCDEFG", "ABCDEFGHI", "ABCDEFGHIJK"].map((mark) => markSizeClass(mark));
+  assert.equal(new Set(steps).size, steps.length);
 });
 
 test("the society that runs a conference is not the conference's mark", () => {

@@ -101,8 +101,12 @@ await Promise.all(Array.from({ length: Math.max(1, CONCURRENCY) }, async () => {
 }));
 
 const header = "conference_name,official_url,resolved_on,method,logo_url,banner_url";
+// Every field is quoted, the URLs included. A CDN that resizes on the path writes a comma into one
+// — https://host/cdn-cgi/image/width=1600,height=0/logo.svg — and an unquoted comma there does not
+// corrupt that cell, it shifts every cell after it, so a logo lands in the banner column as a
+// fragment that is not a URL at all.
 const csv = [header, ...found.map((r) =>
-  [q(r.title), r.officialUrl, today, "page_read", r.logo, r.banner].join(",")
+  [r.title, r.officialUrl, today, "page_read", r.logo, r.banner].map(q).join(",")
 )].join("\n") + "\n";
 await writeFile(OUTPUT, csv);
 
