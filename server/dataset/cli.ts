@@ -264,6 +264,8 @@ function main(): void {
       refused: result.resolvedUrls.refused,
       matchedNoConference: result.resolvedUrls.unmatched,
       redatedByOrganiser: result.resolvedUrls.redated,
+      logosSupplied: result.resolvedUrls.logos,
+      logosRefused: result.resolvedUrls.logosRefused,
     },
     detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),

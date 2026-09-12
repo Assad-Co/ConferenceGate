@@ -24,6 +24,8 @@ export interface ResolvedUrl {
   /** Dates the organiser's own page states, where they contradict the row the record came from. */
   startDate: string | null;
   endDate: string | null;
+  /** The conference's own logo, where somebody found the image the conference itself uses. */
+  logoUrl: string | null;
 }
 
 export function isResolvedUrlHeader(header: string[]): boolean {
@@ -46,8 +48,11 @@ export function rowsFromResolvedCsv(rows: string[][]): ResolvedUrl[] {
       method: cell(cells, "method") || "web_search",
       startDate: statedOrNull(cell(cells, "start_date")),
       endDate: statedOrNull(cell(cells, "end_date")),
+      logoUrl: statedOrNull(cell(cells, "logo_url")),
     }))
-    .filter((row) => row.title && row.officialUrl);
+    // A row needs a title and something to say. It used to need a URL, which silently dropped every
+    // row supplying only a logo — the one column a reader most notices when it is missing.
+    .filter((row) => row.title && (row.officialUrl || row.logoUrl || row.startDate));
 }
 
 /** The same normalisation the detail join uses, so one spelling of a title reaches one record. */
@@ -65,6 +70,30 @@ export interface ResolutionOutcome {
   alreadyKnown: number;
   /** Dates the organiser's own page contradicted, reported so a silent rewrite is impossible. */
   redated: Array<{ title: string; was: string; now: string }>;
+  /** Conferences given a logo of their own. */
+  logos: number;
+  /** Logo rows refused, with why — a supplied column is a claim, screened like any other. */
+  logosRefused: Array<{ title: string; url: string; reason: string }>;
+}
+
+/** Hosts that render somebody else's icon rather than publishing their own. A service's rendering
+ *  of a logo is not the conference's statement of one, which is the rule `suppliedLogoUrl` makes
+ *  for the intake batches and the same one applies here. */
+const ICON_SERVICE_HOST =
+  /(?:^|\.)(?:google\.com|gstatic\.com|duckduckgo\.com|clearbit\.com|logo\.dev|besticon[^/]*)$/i;
+
+/** Why a supplied logo cannot be used, or null when it can. A column asserting a logo is a claim,
+ *  screened exactly like a column asserting a website. */
+function logoRefusal(url: string): string | null {
+  if (!/^https:\/\//i.test(url)) return "not an https image";
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return "unparseable";
+  }
+  if (ICON_SERVICE_HOST.test(host)) return `${host} renders other sites' icons rather than publishing its own`;
+  return null;
 }
 
 /** A date the organiser stated, or nothing — a half-read cell must never reach a record. */
@@ -82,13 +111,25 @@ export function applyResolvedUrls(
     byTitle.set(key, [...(byTitle.get(key) ?? []), record]);
   }
 
-  const outcome: ResolutionOutcome = { applied: 0, unmatched: [], refused: [], alreadyKnown: 0, redated: [] };
+  const outcome: ResolutionOutcome = {
+    applied: 0, unmatched: [], refused: [], alreadyKnown: 0, redated: [], logos: 0, logosRefused: [],
+  };
   for (const row of resolutions) {
     const matches = byTitle.get(titleKey(row.title));
     if (!matches?.length) { outcome.unmatched.push(row.title); continue; }
 
+    // A logo is its own correction and is applied whether or not this row also resolves a site: a
+    // conference whose website was already known is exactly the one most likely to need only this.
+    // It is the sole way a record gets a mark of its own — everything else is a host's favicon.
+    if (row.logoUrl) {
+      const refusal = logoRefusal(row.logoUrl);
+      if (refusal) outcome.logosRefused.push({ title: row.title, url: row.logoUrl, reason: refusal });
+      else for (const record of matches) { record.logoUrl = row.logoUrl; outcome.logos += 1; }
+    }
+
     const url = statedOrNull(row.officialUrl);
-    if (!url || !usableAsOfficialUrl(url)) {
+    if (!url) continue;
+    if (!usableAsOfficialUrl(url)) {
       outcome.refused.push({ title: row.title, url: row.officialUrl, reason: "not a conference's own page" });
       continue;
     }
