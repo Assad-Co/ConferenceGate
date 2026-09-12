@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T07:21:11.209Z",
+  "generatedAt": "2026-09-12T10:13:39.869Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -21,7 +21,7 @@
   "detailsAttached": 51,
   "heldBackWithNothingToShow": 347,
   "websitesResolved": {
-    "applied": 86,
+    "applied": 115,
     "alreadyKnown": 1,
     "refused": [],
     "matchedNoConference": [],
@@ -73,8 +73,8 @@
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 235,
-    "directory_listing": 52
+    "official_site": 263,
+    "directory_listing": 24
   },
   "coverage": {
     "title": "100.0%",
@@ -82,7 +82,7 @@
     "monthOnlyDates": "1.0%",
     "city": "100.0%",
     "country": "99.3%",
-    "officialUrl": "81.9%",
+    "officialUrl": "91.6%",
     "venue": "24.0%",
     "organization": "59.6%",
     "category": "90.2%",
