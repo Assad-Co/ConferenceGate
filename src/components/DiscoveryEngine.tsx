@@ -193,6 +193,14 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
         // that both fill the tile. See the note on the component.
         title={isOwnLogo ? undefined : `Organiser: ${organiserHost(result)}`}
         onError={() => setFailed(true)}
+        // A /favicon.ico is a browser-tab icon, not a logo: 16 or 32 pixels, and often white on
+        // transparent because a tab strip is dark. Filling a 112px tile with one left cards that
+        // looked simply empty — the image had loaded and there was nothing to see. Anything that
+        // small is treated as no logo at all, and the conference's initials take the tile.
+        onLoad={(event) => {
+          const img = event.currentTarget;
+          if (Math.max(img.naturalWidth, img.naturalHeight) <= 32) setFailed(true);
+        }}
         // A conference's logo is served by the conference's own host, and a good number of them
         // refuse a request whose Referer is somebody else's site — which arrives here as a load
         // error and silently demotes a real logo to initials. Sending no referrer at all is what

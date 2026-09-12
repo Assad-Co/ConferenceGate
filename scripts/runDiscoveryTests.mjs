@@ -9,7 +9,7 @@ const testDatabase = path.join(testRoot, "discovery-tests.db");
 // Both suites run under the same isolation: no production credentials, no network, an isolated
 // database path. The launch dataset's tests live beside its code rather than under discovery/,
 // so the runner collects from every directory that holds tests instead of one hard-coded path.
-const testDirectories = ["server/discovery/tests", "server/dataset/tests"];
+const testDirectories = ["server/discovery/tests", "server/dataset/tests", "server/tests"];
 const testFiles = testDirectories.flatMap((directory) => {
   const url = new URL(`../${directory}/`, import.meta.url);
   if (!fs.existsSync(url)) return [];

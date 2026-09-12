@@ -20,6 +20,17 @@ export interface LiveSearchResult {
   discoveryProvider?: "brave" | "serper";
   /** Stored start date, when the record has one. Used to order the browse view. */
   startDate?: string | null;
+  /** Stored end date, so the card can print one range rather than a bare opening day. */
+  endDate?: string | null;
+  /** Where it is held, as data rather than folded into `snippet`, so filters can read it. */
+  location?: { city: string | null; country: string | null } | null;
+  /** Its subject, and how it is held — the card states both as chips. */
+  category?: string | null;
+  format?: "in-person" | "hybrid" | "online" | null;
+  /** What the conference is, where the record holds a description of its own. */
+  description?: string | null;
+  /** Which tabs actually have something behind them, so a card offers only those. */
+  sections?: string[];
   /**
    * Whether `link` is this conference's own page, rather than merely where the record was found.
    *
@@ -211,6 +222,68 @@ function toConferenceQuery(query: string): string {
   return `${query} ${eventTypes} official website registration program speakers -calendar -directory -"list of conferences" -"top conferences" -"best conferences"`;
 }
 
+/** Segments a site puts in its <title> that name a page rather than the conference. */
+const NAVIGATION_SEGMENT = /^(?:home|homepage|welcome|index|main|start|front\s*page)$/i;
+
+/** The words that distinguish one name from another, for deciding whether two halves of a title
+ *  are the same event said twice. Ordinals and years go, because "5th X" and "X 2027" are one. */
+function distinctive(name: string): Set<string> {
+  return new Set(
+    name.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+      .filter((word) => word.length > 2 && !/^\d+(?:st|nd|rd|th)?$/.test(word))
+  );
+}
+const contains = (outer: Set<string>, inner: Set<string>) =>
+  inner.size > 0 && [...inner].every((word) => outer.has(word));
+
+/**
+ * The conference's name, out of what a page put in its title tag.
+ *
+ * An extractor that reads `<title>` gets whatever the site's template assembled, and a template
+ * assembles navigation: "Home | Green Energy 2026 | Green Energy Conference" is a breadcrumb, a
+ * name and a series, and the card printed all three. The same templates also say a thing twice
+ * across a dash — "World Pharma Tech Summit 2027 – 5th World Pharma Tech Summit" is one summit.
+ *
+ * Only furniture is removed, never a word the page did not repeat elsewhere in the title: a
+ * segment is dropped for being a navigation label or the site's own hostname, and a half is
+ * dropped only when every distinctive word in it already appears in the half being kept. Where
+ * two candidates survive, the one carrying a year wins, because that is the edition a reader is
+ * looking at rather than the series it belongs to.
+ */
+export function conferenceNameFrom(rawTitle: string, host: string): string {
+  const siteName = host.replace(/\.[a-z.]+$/i, "").replace(/[^a-z0-9]+/gi, "");
+  const segments = rawTitle.split(/\s*[|»•·]\s*/).map((part) => part.trim()).filter(Boolean);
+  const named = segments.filter((part) =>
+    !NAVIGATION_SEGMENT.test(part) && part.replace(/[^a-z0-9]+/gi, "").toLowerCase() !== siteName.toLowerCase());
+  const pool = named.length ? named : segments;
+  if (!pool.length) return rawTitle.trim();
+
+  const withYear = pool.filter((part) => /\b(?:19|20)\d{2}\b/.test(part));
+  let title = (withYear.length ? withYear : pool)
+    .slice().sort((a, b) => b.length - a.length)[0];
+
+  // One event said twice across a dash keeps the half that names the edition.
+  const halves = title.split(/\s+[–—]\s+|\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+  if (halves.length === 2) {
+    const [left, right] = halves.map(distinctive);
+    if (contains(left, right) || contains(right, left)) {
+      const yearly = halves.filter((half) => /\b(?:19|20)\d{2}\b/.test(half));
+      title = yearly.length === 1 ? yearly[0] : halves.slice().sort((a, b) => b.length - a.length)[0];
+    }
+  }
+  return title.trim() || rawTitle.trim();
+}
+
+/** How a stored record says it is held, in the three words the card knows. */
+function storedFormat(value: unknown): "in-person" | "hybrid" | "online" | null {
+  const said = typeof value === "string" ? value.toLowerCase() : "";
+  if (!said) return null;
+  if (/hybrid|both\b|in[-\s]?person\s*(?:and|\+|&)\s*(?:online|virtual)/.test(said)) return "hybrid";
+  if (/online|virtual|remote|web(?:inar|cast)/.test(said)) return "online";
+  if (/in[-\s]?person|on[-\s]?site|physical|face[-\s]?to[-\s]?face/.test(said)) return "in-person";
+  return null;
+}
+
 /**
  * Searches Conference Gate's completed extraction database before spending external provider
  * quota. These results are especially valuable because their tab data is already prepared, so a
@@ -325,10 +398,16 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       community: sections[7],
     });
     if (score === null) continue;
+    const text = (value: unknown): string | null => {
+      const cell = typeof value === "string" ? value.trim() : "";
+      return cell && !/^(not found|not retrieved|unknown|n\/a|tbd|tba)$/i.test(cell) ? cell : null;
+    };
+    const city = text(overview.city);
+    const nation = text(overview.country);
     ranked.push({
       score,
       result: {
-        title,
+        title: conferenceNameFrom(title, host),
         link: row.source_url,
         snippet:
           typeof overview.description === "string"
@@ -342,7 +421,19 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         // Still the host's mark rather than an edition's, so the card labels it as the organiser's.
         logoSource: siteIconUrl(row.source_url) ? ("organiser" as const) : null,
         prepared: detailsReady,
-        startDate: typeof overview.start_date === "string" ? overview.start_date : null,
+        startDate: text(overview.start_date),
+        // The card reads these as data — a date range, a place, what it is and how it is held. They
+        // were sitting in the same overview the score already reads and simply were not passed on,
+        // so a published conference arrived with a date and nothing else while a launch-dataset one
+        // beside it carried all four.
+        endDate: text(overview.end_date),
+        location: city || nation ? { city, country: nation } : null,
+        category: text(overview.category) ?? text((overview.categories ?? [])[0]),
+        format: storedFormat(overview.format),
+        description: text(overview.description) ?? text(overview.overview),
+        // Which tabs have something behind them, on the same test the readiness flag above uses.
+        sections: (["cfp", "agenda", "speakers", "committee", "sponsors", "venue", "fees", "community"] as const)
+          .filter((_, index) => hasContent(sections[index])),
       },
     });
   }
