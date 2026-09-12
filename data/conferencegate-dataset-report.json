@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:46:54.569Z",
+  "generatedAt": "2026-09-12T04:50:41.036Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -18,7 +18,7 @@
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
-  "detailsAttached": 38,
+  "detailsAttached": 51,
   "heldBackWithNothingToShow": 343,
   "websitesResolved": {
     "applied": 86,

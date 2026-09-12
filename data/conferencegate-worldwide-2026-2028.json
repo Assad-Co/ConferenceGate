@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:46:54.569Z",
+  "generatedAt": "2026-09-12T04:50:41.036Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -4222,15 +4222,38 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Douglas Green",
+              "role": "Keynote Speaker",
+              "org": "St. Jude Children's Research Hospital",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Douglas Green (St. Jude Children's Research Hospital)",
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Francis Chan",
+              "role": "Organizers",
+              "org": "Liangzhu Laboratory Zhejiang University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Eicke Latz",
+              "role": "Organizers",
+              "org": "German Rheumatology Research Center DRFZ",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Organizers: Francis Chan (Liangzhu Laboratory Zhejiang University), Eicke Latz (German Rheumatology Research Center DRFZ)",
           "unstructuredReason": null
         },
         "fees": {
@@ -8581,13 +8604,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Helmholtz Munich",
+        "venueAddress": "Ingolstadter Landstrasse 1, 85764 Neuherberg, Germany",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held in partnership with Helmholtz Munich. The symposium explores AI and machine learning for interpreting cellular states and context, and single-cell genomics for diagnostics and therapeutic discovery, alongside high-throughput multi-omics and perturbation technologies, lineage tracing and imaging. The early registration discount deadline is 25 September 2026."
         },
         "callForPapers": null,
         "schedule": {
@@ -8601,16 +8624,38 @@
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Carsten Marr",
+              "role": "Organizers",
+              "org": "Helmholtz Munich",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fabian Theis",
+              "role": "Organizers",
+              "org": "Helmholtz Munich",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Barbara Treutlein",
+              "role": "Organizers",
+              "org": "ETH Zurich",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Organizers: Carsten Marr (Helmholtz Munich), Fabian Theis (Helmholtz Munich), Barbara Treutlein (ETH Zurich)",
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Cancellations: full refund less a 10% administration charge if written notice is received by 21 October 2026, and a 50% refund if received by 4 November 2026",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
           "availability": "stated",
@@ -10948,13 +10993,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "The 13th International Conference on Advances in Environment Research. Accepted papers can be published in the International Journal of Environmental Science and Development, indexed by Scopus and Chemical Abstracts Services. The call for papers closes on 15 September 2026, with acceptance notifications on 5 October 2026."
         },
         "callForPapers": {
           "status": "Open",
@@ -17797,7 +17842,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -17824,9 +17869,24 @@
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Junhua Zhao",
+              "role": "Conference Committee",
+              "org": "The Chinese University of Hong Kong Shenzhen",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ping He",
+              "role": "Conference Committee",
+              "org": "Zhengzhou University of Light Industry",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Conference Committee: Junhua Zhao (The Chinese University of Hong Kong Shenzhen), Ping He (Zhengzhou University of Light Industry)",
           "unstructuredReason": null
         },
         "fees": {
@@ -18316,7 +18376,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -18324,7 +18384,13 @@
           "availability": "stated",
           "text": "Technical and applied clean-energy sessions."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-12-05",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for papers: the submission deadline is 5 December 2026, with notification on 25 December 2026 and camera-ready papers by 10 January 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -18336,9 +18402,31 @@
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Tae-Jun Ha",
+              "role": "Conference Chair",
+              "org": "Kwangwoon University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yonghoon Kim",
+              "role": "Technical Program Chairs",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Xiao-Dong Zhou",
+              "role": "Technical Program Chairs",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Conference Chair: Tae-Jun Ha (Kwangwoon University). Technical Program Chairs: Yonghoon Kim, Hossam A. Gabbar, Xiao-Dong Zhou",
           "unstructuredReason": null
         },
         "fees": {
@@ -19922,13 +20010,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Sponsored by Hainan University and hosted by the Mechanical and Electrical Engineering College. 21 May: onsite registration. 22 May: keynote speeches and parallel sessions for oral presentations. 23 May: invited speeches and parallel sessions for oral presentations."
         },
         "callForPapers": {
           "status": "Open",
@@ -19955,15 +20043,20 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Refunds: 70% if cancelled more than 60 days before the conference, 50% between 30 and 60 days before, and none within 30 days",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Hainan University",
+              "tier": "Sponsor"
+            }
+          ],
+          "text": "Sponsor: Hainan University",
           "unstructuredReason": null
         },
         "safetyNote": null,
@@ -20695,13 +20788,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Organised by Regent's University London. A high-level interdisciplinary platform for researchers, educators, practitioners and industry leaders to exchange knowledge and explore emerging trends across management and education, welcoming theoretical research, empirical studies, technological developments and practical applications. Submitted papers are peer reviewed by the programme and technical committees, and accepted papers are published in the conference proceedings."
         },
         "callForPapers": {
           "status": "Open",
@@ -20825,13 +20918,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "10 June: conference materials pick-up. 11 June: opening ceremony, keynote and invited speeches. Accepted and registered papers are published in the ICMIM Conference Proceedings as a special chapter, indexed by Scopus and Ei Compendex."
         },
         "callForPapers": {
           "status": "Open",
@@ -20955,7 +21048,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -20987,10 +21080,10 @@
           "unstructuredReason": null
         },
         "sponsors": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Co-sponsor: Western Sydney University. Technical support: RMIT University",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null,
         "registrationUrl": null
@@ -21582,7 +21675,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -21614,10 +21707,10 @@
           "unstructuredReason": null
         },
         "sponsors": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Co-sponsor: Huaqiao University",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null,
         "registrationUrl": null
@@ -22461,7 +22554,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -22469,7 +22562,13 @@
           "availability": "stated",
           "text": "Technical paper sessions."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2027-01-15",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Call for papers: the submission deadline is 15 January 2027, notification 15 February 2027 and registration 5 March 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -22493,9 +22592,14 @@
           "unstructuredReason": null
         },
         "sponsors": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Duy-Tan University",
+              "tier": "Sponsor"
+            }
+          ],
+          "text": "Sponsor: Duy-Tan University",
           "unstructuredReason": null
         },
         "safetyNote": null,
@@ -23781,7 +23885,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -23813,10 +23917,10 @@
           "unstructuredReason": null
         },
         "sponsors": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Co-sponsors: University of Electronic Science and Technology of China, Shanghai University",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null,
         "registrationUrl": null
@@ -24317,7 +24421,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -24349,9 +24453,14 @@
           "unstructuredReason": null
         },
         "sponsors": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "The Hong Kong Polytechnic University",
+              "tier": "Sponsor"
+            }
+          ],
+          "text": "Sponsor: The Hong Kong Polytechnic University",
           "unstructuredReason": null
         },
         "safetyNote": null,
@@ -25712,9 +25821,9 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Georgia Southern University",
+        "venueAddress": "Savannah, Georgia, United States",
         "accommodation": null,
         "program": {
           "availability": "stated",
