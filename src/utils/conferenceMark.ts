@@ -20,12 +20,78 @@ const COUNTING = /^\d+(?:st|nd|rd|th)?$/i;
 
 export function distinctiveWords(title: string): string[] {
   return title
-    .split(/\s+/)
+    // A slash separates two names — "AAPG/EAGE" is two societies. Stripping it rather than
+    // splitting on it produced the word AAPGEAGE, which is neither of them.
+    .split(/[\s/]+/)
     .map((word) => word.replace(/[^A-Za-z0-9&-]/g, ""))
     .filter((word) => word && !COUNTING.test(word) && !GENERIC.test(word));
 }
 
-export function conferenceInitials(title: string): string {
+/**
+ * The half of a titled name that says which event this is.
+ *
+ * Ten Cell Press symposia all begin "Cell Press Symposia:" and five Black Hats all begin "Black
+ * Hat", so a mark read from the front of the name comes out the same for every one of them — ten
+ * cards headed CELL, which is exactly the indistinguishable grid the mark exists to prevent. What
+ * separates them is the subject after the colon, or the region after the series name.
+ *
+ * It only fires where the prefix is a series label and nothing else: the words that name a kind of
+ * event, with no number of its own. "EPIDEMICS 11: 11th International Conference on Infectious
+ * Disease Dynamics" keeps EPIDEMICS, because a prefix carrying its own edition number is the name
+ * rather than a label.
+ */
+const SERIES_LABEL = /^[A-Za-z' ]*\b(?:symposia|symposium|conference|congress|series|meetings?|press)\b[A-Za-z' ]*$/i;
+
+export function distinguishingPart(title: string): string {
+  const colon = title.indexOf(":");
+  if (colon > 0) {
+    const before = title.slice(0, colon).trim();
+    const after = title.slice(colon + 1).trim();
+    if (after && SERIES_LABEL.test(before)) return after;
+  }
+  return title;
+}
+
+export function conferenceInitials(title: string, organisation?: string | null): string {
+  return markFor(distinguishingPart(title), organisation) || markFor(title, organisation);
+}
+
+/** Whether an acronym in the title is just the society that runs the event.
+ *
+ *  Five AAPG events open with AAPG, and it is the longest acronym in every one of them, so all five
+ *  cards read AAPG — the society, not the conference, and the reader cannot tell the Eastern Section
+ *  meeting from the Rocky Mountain one. Where the record names its organiser, an acronym that only
+ *  repeats it is dropped and the title's own words take over: EASTERN, ROCKY, SEALS. */
+function namesTheOrganiser(acronym: string, organisation: string | null | undefined): boolean {
+  if (!organisation) return false;
+  const words = organisation.toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  if (words.includes(acronym)) return true;
+  // "American Association of Petroleum Geologists" is AAPG spelled out. Only the connectives are
+  // dropped here, not GENERIC — that list exists to find what distinguishes one conference from
+  // another, and applied to a society's name it throws away the very words its initials are made
+  // of ("American" is the first A in AAPG).
+  const initials = words.filter((word) => !/^(?:OF|THE|AND|FOR|IN|ON|AT)$/.test(word)).map((word) => word[0]).join("");
+  return initials.length >= 3 && initials === acronym;
+}
+
+/** Acronyms that name a kind of event rather than an event. AAPG runs many Geosciences Technology
+ *  Workshops, so GTW distinguishes one of them from another no better than the word "Workshop" it
+ *  stands for. */
+const FORMAT_ACRONYM = /^GTW$/;
+
+/** A society sharing the billing: "AAPG/EAGE Hydrocarbon Seals" is run by both, so neither names
+ *  the workshop. Only a name joined to the known organiser by a slash counts — an acronym merely
+ *  present elsewhere in the title is the event's own until something says otherwise. */
+function coBilledWithOrganiser(acronym: string, title: string, organisation: string | null | undefined): boolean {
+  if (!organisation) return false;
+  const pairs = title.match(/\b[A-Z][A-Z0-9&-]{1,8}\s*\/\s*[A-Z][A-Z0-9&-]{1,8}\b/g) ?? [];
+  return pairs.some((pair) => {
+    const sides = pair.split("/").map((side) => side.trim().replace(/[^A-Z0-9]/g, ""));
+    return sides.includes(acronym) && sides.some((side) => namesTheOrganiser(side, organisation));
+  });
+}
+
+function markFor(title: string, organisation?: string | null): string {
   // An acronym the title already states is the conference's own mark: "ADIPEC", "ICCFI 2026".
   //
   // The longest wins rather than the first. "UN Climate Change Conference COP31" opens with a two
@@ -34,14 +100,22 @@ export function conferenceInitials(title: string): string {
   const candidates = (title.match(/\b[A-Z][A-Z0-9&-]{1,8}\b/g) ?? [])
     .filter((value) => !/^\d+$/.test(value))
     .map((value) => value.replace(/[^A-Z0-9]/g, ""))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((value) => !namesTheOrganiser(value, organisation))
+    .filter((value) => !coBilledWithOrganiser(value, title, organisation))
+    .filter((value) => !FORMAT_ACRONYM.test(value));
   const longest = candidates.slice().sort((left, right) => right.length - left.length)[0];
   if (longest && longest.length >= 3) return longest.slice(0, 9);
 
   // A two-letter acronym is not worth a word. "Gartner IT Symposium" headed IT says nothing; the
   // name the reader knows it by is Gartner, so the title's own word comes first and a short
   // acronym only stands in when the title has no word to offer.
-  const distinctive = distinctiveWords(title);
+  // The organiser's name is dropped from the words too, not only from the acronyms: AAPG survives
+  // `distinctiveWords` as an ordinary word, and picking it there put the society back on all five
+  // cards by the other route.
+  const distinctive = distinctiveWords(title)
+    .filter((value) => !namesTheOrganiser(value.toUpperCase(), organisation))
+    .filter((value) => !coBilledWithOrganiser(value.toUpperCase(), title, organisation));
   const word = distinctive.find((value) => value.length >= 3 && value.length <= 9);
   if (word) return word.toUpperCase();
   if (longest) return longest;

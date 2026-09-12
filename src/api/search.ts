@@ -5,6 +5,14 @@ export interface LiveSearchResult {
   displayLink: string;
   thumbnail: string | null;
   favicon: string | null;
+  /** Whose mark `favicon` is: the conference's own where a source stated one, otherwise the mark
+   *  of the host that runs it. The card must not present the second as the first. */
+  logoSource?: 'stated' | 'organiser' | null;
+  /** The short name the source gave it. Beats anything derived from the title. */
+  acronym?: string | null;
+  /** Who runs it. The mark drops the organiser's own name, which otherwise heads every event a
+   *  society runs with the society rather than with the event. */
+  organization?: string | null;
   /** True when Conference Gate already has completed structured tab data for this conference. */
   prepared?: boolean;
   /** Where it is held, when the catalogue knows. Needed as data, not prose, so filters can use it. */

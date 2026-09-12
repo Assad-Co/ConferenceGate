@@ -13,6 +13,7 @@ export interface LiveSearchResult {
   displayLink: string;
   thumbnail: string | null;
   favicon: string | null;
+  logoSource?: "stated" | "organiser" | null;
   /** True when Conference Gate already has a completed structured extraction in its database. */
   prepared?: boolean;
   /** External provider that produced this result. */
@@ -338,6 +339,8 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         // A published record's source is the conference's own site — publication refuses a listing
         // — so the icon that site serves is the conference's own mark rather than a directory's.
         favicon: siteIconUrl(row.source_url),
+        // Still the host's mark rather than an edition's, so the card labels it as the organiser's.
+        logoSource: siteIconUrl(row.source_url) ? ("organiser" as const) : null,
         prepared: detailsReady,
         startDate: typeof overview.start_date === "string" ? overview.start_date : null,
       },

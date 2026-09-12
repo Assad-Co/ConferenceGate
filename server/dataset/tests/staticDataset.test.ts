@@ -13,6 +13,7 @@ import {
   hasSomethingToShow,
   isBareListing,
   siteIconUrl,
+  conferenceLogoSource,
   findLaunchRecordByUrl,
   launchRecordToTabbedExtraction,
   loadLaunchDataset,
@@ -380,4 +381,42 @@ test("an aggregator's generated entry is a listing, and a real conference in the
   // conference read off its own site is never one of these, however little else is known.
   assert.equal(isBareListing({ ...listing, sourceType: "official_site" }), false);
   assert.equal(isBareListing({ ...listing, sourceType: "third_party" }), false);
+});
+
+test("a mark derived from a host is labelled as the organiser's, never as the conference's", () => {
+  // Not one of the 190 marks in the launch catalogue is a logo a source stated; every one is
+  // /favicon.ico on the host of an official URL. So the page must say whose it is, or it makes the
+  // same false claim 190 times — and lands fourteen Elsevier congresses on one indistinguishable
+  // card. This is the distinction `distanceSource` makes between a published figure and a derived
+  // one, applied to the mark.
+  withFixtureDataset(() => {
+    const own = findLaunchRecordByUrl("https://www.atce.org/")!;
+
+    const derived: typeof own = {
+      ...own, logoUrl: null, sourceType: "official_site",
+      officialUrl: "https://www.elsevier.com/events/conferences/all/food-chemistry-conference",
+    };
+    assert.equal(conferenceLogoUrl(derived), "https://www.elsevier.com/favicon.ico");
+    assert.equal(conferenceLogoSource(derived), "organiser");
+
+    // A logo a source actually named is the conference's own, and outranks the derivation.
+    const stated: typeof own = { ...derived, logoUrl: "https://example.org/food-chem-2027.png" };
+    assert.equal(conferenceLogoUrl(stated), "https://example.org/food-chem-2027.png");
+    assert.equal(conferenceLogoSource(stated), "stated");
+
+    // No mark at all is its own answer, and must not be reported as either kind.
+    const none: typeof own = { ...own, logoUrl: null, officialUrl: null, sourceType: "directory_listing" };
+    assert.equal(conferenceLogoUrl(none), null);
+    assert.equal(conferenceLogoSource(none), null);
+  });
+});
+
+test("the search payload carries whose mark it is, so a card can lead with the conference", () => {
+  withFixtureDataset(() => {
+    const hits = searchLaunchDataset("ATCE", 5);
+    const hit = hits.find((row) => row.link.includes("atce.org"));
+    assert.ok(hit, "the fixture conference did not come back from search");
+    assert.equal(hit.favicon, "https://www.atce.org/favicon.ico");
+    assert.equal(hit.logoSource, "organiser");
+  });
 });

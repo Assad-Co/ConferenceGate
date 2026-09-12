@@ -58,3 +58,50 @@ test("a mark is sized so it fits the panel it sits in", () => {
   assert.match(markSizeClass("G2", "hero"), /text-5xl/);
   assert.match(markSizeClass("GOLDSCHMIDT", "hero"), /text-xl/);
 });
+
+test("the society that runs a conference is not the conference's mark", () => {
+  // Five AAPG events open with AAPG, and it is the longest acronym in every one, so every card read
+  // AAPG — the society, not the event. A reader could not tell the Eastern Section meeting from the
+  // Rocky Mountain one. It is the same failure the UN/COP31 rule already covers, arriving by a
+  // different route: there the organiser's acronym was shorter, here it is longer.
+  assert.equal(conferenceInitials("AAPG Eastern Section Annual Meeting 2026", "AAPG"), "EASTERN");
+  assert.equal(conferenceInitials("AAPG Rocky Mountain Section Annual Meeting 2026", "AAPG"), "ROCKY");
+
+  // Spelled out in the record and abbreviated in the title is still the same society.
+  assert.equal(
+    conferenceInitials("AAPG Eastern Section Annual Meeting 2026", "American Association of Petroleum Geologists"),
+    "EASTERN"
+  );
+
+  // A society sharing the billing is no more the event's name than the first one is, and GTW names
+  // a kind of workshop rather than one — so what is left is what the workshop is actually about.
+  assert.equal(conferenceInitials("5th Edition AAPG/EAGE Hydrocarbon Seals of the Middle East GTW", "AAPG"), "SEALS");
+  assert.equal(conferenceInitials("3rd Edition AAPG/EAGE Maximizing Asset Value GTW", "AAPG"), "ASSET");
+
+  // An acronym that is the event's own survives, even alongside its organiser's.
+  assert.equal(conferenceInitials("AAPG International Conference & Exhibition (ICE) 2026", "AAPG"), "ICE");
+  assert.equal(conferenceInitials("UN Climate Change Conference COP31", "UNFCCC"), "COP31");
+  // And with no organiser named, nothing changes.
+  assert.equal(conferenceInitials("Gastech 2026"), "GASTECH");
+});
+
+test("a series prefix does not become the mark of every event in the series", () => {
+  // Ten Cell Press symposia share one prefix; read from the front, all ten cards said CELL. What
+  // separates them is the subject the prefix introduces.
+  assert.equal(conferenceInitials("Cell Press Symposia: Functional RNAs"), "RNAS");
+  assert.equal(conferenceInitials("Cell Press Symposia: Drugging the Undruggable"), "DRUGGING");
+  assert.equal(conferenceInitials("Cell Press Symposia: Hallmarks of Aging"), "HALLMARKS");
+
+  // A prefix carrying its own edition number is the name, not a label, and is kept.
+  assert.equal(
+    conferenceInitials("EPIDEMICS 11: 11th International Conference on Infectious Disease Dynamics"),
+    "EPIDEMICS"
+  );
+  // A colon that is not introducing a series is left alone.
+  assert.equal(conferenceInitials("15th NIZO Dairy Conference: Innovations in Milk Proteins"), "NIZO");
+});
+
+test("two societies joined by a slash are two words, not one", () => {
+  // Stripping the slash produced AAPGEAGE, which is neither of them and named nothing.
+  assert.deepEqual(distinctiveWords("AAPG/EAGE Hydrocarbon Seals"), ["AAPG", "EAGE", "Hydrocarbon", "Seals"]);
+});

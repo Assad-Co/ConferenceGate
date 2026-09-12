@@ -442,10 +442,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // artwork.
   const heroImage = (heroImageFailed ? null : data?.overview?.image_url || result.thumbnail) || null;
 
-  // Its mark. A page that was actually read supplies one; otherwise it is derived from the
-  // organiser's own site, so the file may simply not be there and the load has to be allowed to
-  // fail back to the globe rather than leave a broken image in a white box.
+  // Its mark, and whose mark it is. A page that was actually read supplies the conference's own;
+  // otherwise this is /favicon.ico on the host of its official URL, which is the *host's* mark —
+  // Elsevier's on an Elsevier congress, AAPG's on an AAPG workshop. That is true about the
+  // organiser and says nothing about this edition, so it is never enlarged into the hero as though
+  // it were the conference's logo. The file may also simply not be there, so the load has to be
+  // allowed to fail back to the name.
   const logoUrl = data?.overview?.logo_url || result.favicon || null;
+  const logoIsOwn = (data?.overview?.logo_source ?? result.logoSource) === 'stated';
+  const heroLogo = logoIsOwn ? logoUrl : null;
 
   /** The programme as the source described it — the paragraph a schedule was read out of. */
   const programOverview = data?.program_agenda?.overview?.trim() || null;
@@ -494,6 +499,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const snippetDate = parseDateFromSnippet(result.snippet);
   const displayDate = extractedDate || (snippetDate && !isOlderThanUpcomingCutoff(snippetDate) ? snippetDate : null);
   const displayTitle = data?.conferenceTitle || result.title;
+  // The same mark the card showed, so a reader who clicked a card headed EASTERN does not land on
+  // a page headed AAPG. The organiser is dropped for the reason the card drops it.
+  const heroMark = conferenceInitials(displayTitle, data?.overview?.organizer ?? result.organization ?? null);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
   // Anchor "near the venue" to the venue itself when the site named one, falling back to the
   // city line only when it didn't — searching hotels near a named convention centre is a much
@@ -555,20 +563,19 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               onError={() => setHeroImageFailed(true)}
               className="w-full h-full object-cover opacity-25 blur-[1px]"
             />
-          ) : !logoUrl || logoFailed ? (
-            // The conference's own initials, not a globe. Two thirds of the catalogue has no logo
-            // to derive — its organiser's page is on somebody else's site, or there is no page —
-            // and a generic world icon on every one of those made them look like records with
-            // nothing behind them rather than conferences whose mark we simply do not have.
-            <span className={`${markSizeClass(conferenceInitials(displayTitle), 'hero')} font-black tracking-wide text-slate-700 px-6 text-center leading-none`}>
-              {conferenceInitials(displayTitle)}
+          ) : !heroLogo || logoFailed ? (
+            // The conference's own initials, not a globe and not its publisher's logo. Nothing in
+            // the launch catalogue has a logo of its own to show, so this is what a reader sees,
+            // and it is the one mark on the page that belongs to this conference and no other.
+            <span className={`${markSizeClass(heroMark, 'hero')} font-black tracking-wide text-slate-700 px-6 text-center leading-none`}>
+              {heroMark}
             </span>
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-900/20"></div>
-          {logoUrl && !logoFailed && (
+          {heroLogo && !logoFailed && (
             <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
               <img
-                src={logoUrl}
+                src={heroLogo}
                 alt={`${displayTitle} logo`}
                 onError={() => setLogoFailed(true)}
                 className="w-full h-full object-contain"
@@ -579,7 +586,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
           <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
             {logoUrl && !logoFailed && <img src={logoUrl} alt="" className="w-5 h-5 rounded shrink-0" />}
             <div>
-              <div className="text-[10px] uppercase font-bold text-slate-300">Source</div>
+              {/* Where the mark came from, named. An organiser's icon beside the word "Organiser"
+                  is a fact; the same icon blown up in the hero would have been a claim. */}
+              <div className="text-[10px] uppercase font-bold text-slate-300">
+                {logoUrl && !logoIsOwn ? 'Organiser' : 'Source'}
+              </div>
               <div className="text-xs font-bold text-white">{result.displayLink}</div>
             </div>
           </div>

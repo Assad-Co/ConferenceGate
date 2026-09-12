@@ -162,6 +162,24 @@ export function siteIconUrl(officialUrl: string | null): string | null {
   }
 }
 
+/**
+ * Whose mark this is.
+ *
+ * `stated` is the conference's own logo, because a source named it. `organiser` is a favicon this
+ * server derived from the host of the conference's official URL — true about the organiser, and
+ * saying nothing about the edition. The two must not look alike on the page: not one of the 190
+ * marks in the launch catalogue is `stated`, so a card calling all of them "the conference's logo"
+ * is wrong about every one of them, and reads as broken where six AAPG workshops or fourteen
+ * Elsevier congresses land on the same icon. The distinction is the same one `distanceSource`
+ * makes between an organiser's published figure and a calculated one.
+ */
+export type ConferenceLogoSource = "stated" | "organiser";
+
+export function conferenceLogoSource(record: LaunchConferenceRecord): ConferenceLogoSource | null {
+  if (record.logoUrl) return "stated";
+  return conferenceLogoUrl(record) ? "organiser" : null;
+}
+
 export function conferenceLogoUrl(record: LaunchConferenceRecord): string | null {
   // An image the source actually named beats one derived from a domain, and is the only case where
   // this is a fact rather than a derivation.
@@ -239,6 +257,12 @@ export interface LaunchSearchResult {
   thumbnail: null;
   /** The conference's own icon, where it has its own site to take one from. See conferenceLogoUrl. */
   favicon: string | null;
+  /** Whether `favicon` is the conference's own mark or the mark of the host that runs it. */
+  logoSource: ConferenceLogoSource | null;
+  /** The short name the source gave it, where it gave one. */
+  acronym: string | null;
+  /** Who runs it, where the source named them. */
+  organization: string | null;
   prepared: boolean;
   startDate: string | null;
   /**
@@ -336,6 +360,13 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     displayLink: record.sourceHost,
     thumbnail: null,
     favicon: conferenceLogoUrl(record),
+    logoSource: conferenceLogoSource(record),
+    // What the source calls it. The card's mark is derived from the title where there is nothing
+    // better, and "Black Hat India" is better — it is the name, and it is what tells five Black
+    // Hats apart where a mark read from the front of each title cannot.
+    acronym: record.acronym,
+    // Needed by the mark, which must not head five AAPG events with the society's own name.
+    organization: record.organization,
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
@@ -520,10 +551,12 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       important_dates: importantDates,
       official_url: record.officialUrl,
       source_url: record.sourceUrl,
-      // The conference's own mark, and the picture from its own page. The logo is derived from the
-      // site (see conferenceLogoUrl); the picture can only come from a page somebody read, so it
-      // is null here until the worker reads one and stores it.
+      // The mark, whose it is, and the picture from the conference's own page. `logo_source` is
+      // what stops the page calling a host's favicon the conference's logo (see
+      // conferenceLogoSource); the picture can only come from a page somebody read, so it is null
+      // here until the worker reads one and stores it.
       logo_url: conferenceLogoUrl(record),
+      logo_source: conferenceLogoSource(record),
       image_url: null,
     },
     call_for_papers: cfp
@@ -557,6 +590,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       sponsorship_level: sponsor.tier,
       logoUrl: null,
       logo_url: null,
+      logo_source: null,
     })),
     venue_accommodation: {
       venue_name: details?.venueName || record.venue || null,

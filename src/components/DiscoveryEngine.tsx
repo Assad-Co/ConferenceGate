@@ -152,37 +152,86 @@ function rankLiveSearchResults(results: LiveSearchResult[], query: string): Live
 }
 
 /**
- * A conference's logo, or its initials.
+ * A conference's mark: its own logo where a source stated one, its name where the icon is not its.
  *
- * The icon is derived from the organiser's own site rather than read from it, so the file may not
- * be there — a site that declares its icon in markup alone answers /favicon.ico with a 404. Hiding
- * the broken image was not enough: it left the card's logo panel empty and white, which reads as a
- * conference with no identity rather than one whose icon did not load. Falling back to the initials
- * puts the same mark there that a conference with no site of its own gets.
+ * Every icon here is derived — /favicon.ico on the host of the conference's official URL — and that
+ * file is the *host's* mark. For a conference on its own domain the two are the same thing. For the
+ * fourteen Elsevier congresses, the ten Cell Press symposia and the six AAPG workshops in the
+ * catalogue they are not: showing Elsevier's icon as each congress's logo says something false, and
+ * lands fourteen cards that a reader cannot tell apart.
+ *
+ * So an `organiser` mark no longer stands in for the conference. The card leads with the
+ * conference's own abbreviation, which is distinct per conference and is what a reader scans for,
+ * and the host's icon sits in the corner saying who runs it. A `stated` logo is the conference's
+ * own and is shown whole.
+ *
+ * The icon may also simply not exist — a site declaring it in markup alone answers this path with a
+ * 404 — so a failed load drops the badge and leaves the name, which is the same mark a conference
+ * with no site of its own gets.
  */
 const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
   const [failed, setFailed] = React.useState(false);
   const abbreviation = fallbackConferenceAbbreviation(result);
-  if (!result.favicon || failed) {
-    // "GASTECH" does not fit where "G2" did, so the mark is sized to its length rather than
-    // overflowing the panel it sits in.
+  const icon = failed ? null : result.favicon;
+  const isOwnLogo = result.logoSource === 'stated';
+
+  if (icon && isOwnLogo) {
     return (
+      <img
+        src={icon}
+        alt={`${abbreviation} logo`}
+        onError={() => setFailed(true)}
+        className={className ?? 'w-16 h-16 object-contain'}
+      />
+    );
+  }
+
+  // "GASTECH" does not fit where "G2" did, so the mark is sized to its length rather than
+  // overflowing the panel it sits in.
+  return (
+    <span className="relative flex items-center justify-center">
       <span className={`${markSizeClass(abbreviation)} font-black tracking-wide text-black text-center leading-none`}>
         {abbreviation}
       </span>
-    );
-  }
-  return (
-    <img
-      src={result.favicon}
-      alt={`${abbreviation} logo`}
-      onError={() => setFailed(true)}
-      className={className ?? 'w-16 h-16 object-contain'}
-    />
+      {icon && (
+        <img
+          src={icon}
+          alt=""
+          title={`Organiser: ${organiserHost(result)}`}
+          onError={() => setFailed(true)}
+          className="absolute -bottom-3 -right-3 w-5 h-5 rounded-sm object-contain bg-white shadow-sm"
+        />
+      )}
+    </span>
   );
 };
 
+/** The host the organiser's mark came from, for the badge's tooltip. */
+function organiserHost(result: LiveSearchResult): string {
+  try {
+    return new URL(result.favicon ?? result.link).hostname.replace(/^www\./, '');
+  } catch {
+    return result.displayLink || 'the organiser';
+  }
+}
+
+/** A stated short name, once the edition year it carries is taken off: "Black Hat India 2026" is
+ *  Black Hat India, and the card already shows the year as data. */
+function statedShortName(acronym: string | null | undefined): string | null {
+  const name = (acronym ?? '').replace(/\b(?:19|20)\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
+  if (name.length < 2 || name.length > 20) return null;
+  // "Cell Press Symposium" is the series, not this symposium, and three records share it. A name
+  // that only repeats what the title's own prefix says cannot tell one card from another.
+  if (/^(?:cell press symposium|conference|symposium|symposia|congress|summit|meeting)$/i.test(name)) return null;
+  return name.toUpperCase();
+}
+
 function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
+  // What the source calls it beats anything read off the title: five Black Hats are Black Hat
+  // India, MEA, Europe, Asia and USA, and no rule applied to their titles recovers that.
+  const stated = statedShortName(result.acronym);
+  if (stated) return stated;
+
   let host = result.displayLink || '';
   try {
     host = new URL(result.link).hostname.replace(/^www\./, '');
@@ -193,7 +242,7 @@ function fallbackConferenceAbbreviation(result: LiveSearchResult): string {
   // The requested ASEE annual-conference card uses this public-facing abbreviation.
   if (/(^|\.)asee\.org$/i.test(host)) return 'AAESE';
 
-  const fromTitle = conferenceInitials(result.title);
+  const fromTitle = conferenceInitials(result.title, result.organization);
   // A host brand beats bare initials, but never a word the title itself supplied.
   if (fromTitle.length >= 3) return fromTitle;
   const hostBrand = host.split('.')[0]?.replace(/[^a-z0-9]/gi, '') || '';
