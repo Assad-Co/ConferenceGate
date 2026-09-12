@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-12T05:31:39.346Z",
+  "generatedAt": "2026-09-12T07:21:11.209Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
-  "accepted": 196,
-  "duplicatesMerged": 18,
+  "accepted": 287,
+  "duplicatesMerged": 24,
   "rejected": 22,
   "rejectionReasons": {
     "not_a_conference": 14,
@@ -12,14 +12,14 @@
     "no_location": 2,
     "source_url_is_a_listing": 1
   },
-  "indexRecordsAccepted": 184,
+  "indexRecordsAccepted": 285,
   "indexRecordsRefused": {
     "no_start_date": 11,
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
   "detailsAttached": 51,
-  "heldBackWithNothingToShow": 343,
+  "heldBackWithNothingToShow": 347,
   "websitesResolved": {
     "applied": 86,
     "alreadyKnown": 1,
@@ -49,44 +49,45 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 196,
+  "total": 287,
   "byYear": {
-    "2026": 68,
-    "2027": 128
+    "2026": 123,
+    "2027": 164
   },
-  "countries": 34,
-  "cities": 112,
-  "categories": 40,
+  "countries": 46,
+  "cities": 148,
+  "categories": 41,
   "worldRegions": {
-    "Asia": 101,
-    "Europe": 42,
-    "North America": 37,
-    "Middle East": 8,
-    "Oceania": 4,
-    "South America": 3,
-    "Africa": 1
+    "Asia": 114,
+    "Europe": 71,
+    "North America": 69,
+    "Middle East": 11,
+    "Oceania": 9,
+    "South America": 8,
+    "Africa": 3,
+    "(none)": 2
   },
   "formats": {
-    "in-person": 188,
+    "in-person": 279,
     "hybrid": 5,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 190,
-    "directory_listing": 6
+    "official_site": 235,
+    "directory_listing": 52
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "98.5%",
-    "monthOnlyDates": "1.5%",
+    "exactDates": "99.0%",
+    "monthOnlyDates": "1.0%",
     "city": "100.0%",
-    "country": "100.0%",
-    "officialUrl": "96.9%",
-    "venue": "21.9%",
-    "organization": "69.4%",
-    "category": "100.0%",
+    "country": "99.3%",
+    "officialUrl": "81.9%",
+    "venue": "24.0%",
+    "organization": "59.6%",
+    "category": "90.2%",
     "description": "100.0%",
-    "corroborated": "2.0%"
+    "corroborated": "2.8%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

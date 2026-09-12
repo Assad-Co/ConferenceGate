@@ -80,18 +80,23 @@ const COLUMNS = [
  * Whether a header is this shape, so a file in the wrong directory fails loudly rather than
  * becoming two hundred conferences with no country.
  *
- * Three revisions of this batch have arrived and each renamed something. The first named the
+ * Four revisions of this batch have arrived and each renamed something. The first named the
  * conference's page `website_or_source` and its state `record_status`; the third dropped both,
  * resolving the site into `official_url` and the state into `verification_status`, and renamed the
- * sponsors column. What every revision has is a name, a date, somewhere the conference lives, and
- * an assertion about how well that was established.
+ * sponsors column. The fourth dropped the quality column altogether.
+ *
+ * So the quality assertion cannot be what identifies the shape. What every revision has is a name,
+ * a date, somewhere the conference lives and a link to it — and `city` is the signal that survived,
+ * because describing where a conference is held is what makes a row a record of one. That is also
+ * what keeps this apart from the corrections file, which names a conference to fix a field on it
+ * and never says where it is.
  */
 export function isIndexHeader(header: string[]): boolean {
   const seen = new Set(header.map((cell) => cell.replace(/^﻿/, "").trim().toLowerCase()));
   const has = (...columns: string[]) => columns.some((column) => seen.has(column));
   return seen.has("conference_name") && seen.has("start_date")
     && has("website_or_source", "official_url")
-    && has("record_status", "verification_status");
+    && has("record_status", "verification_status", "city");
 }
 
 export function rowsFromIndexCsv(rows: string[][]): IndexRow[] {

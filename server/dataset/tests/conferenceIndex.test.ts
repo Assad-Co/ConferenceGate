@@ -328,3 +328,21 @@ test("where to stay is its own fact, not the venue's address", () => {
   const none = mapIndexRow(row({ accommodation: "Not yet announced as of 10 Sep 2026" }), OPTIONS);
   if (none.ok) assert.equal(none.record.details!.accommodation, null);
 });
+
+test("a batch is known by describing where a conference is, not by a quality column", () => {
+  // The fourth revision of this batch dropped the quality column the header test keyed on, which
+  // left it matching the corrections file instead — 174 conferences would have been read as 174
+  // attempts to fix a field on a conference already published, and every one reported unmatched.
+  assert.equal(
+    isIndexHeader(["conference_name", "start_date", "end_date", "city", "country", "official_url", "logo_url"]),
+    true
+  );
+  // The older revisions still route here.
+  assert.equal(isIndexHeader(["conference_name", "start_date", "website_or_source", "record_status"]), true);
+  assert.equal(isIndexHeader(["conference_name", "start_date", "official_url", "verification_status"]), true);
+
+  // And the corrections file still does not: it names a conference to change a field on it, and
+  // never says where the conference is held.
+  assert.equal(isIndexHeader(["conference_name", "official_url", "start_date", "end_date", "logo_url"]), false);
+  assert.equal(isIndexHeader(["conference_name", "official_url"]), false);
+});

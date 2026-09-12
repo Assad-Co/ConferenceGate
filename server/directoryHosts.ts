@@ -14,6 +14,12 @@ const DIRECTORY_DOMAINS = new Set([
   // published a listing site — and 46 of those a filtered search page — as the conference's own
   // website, which is the one promotion this list exists to prevent.
   "iconf.com",
+  // The AI batch's two listing hosts. Its rows cite one of them wherever the conference's own site
+  // was not resolved, so without this 53 conferences would have published a directory as their
+  // website — and shown that directory's favicon as their logo, 32 cards alike on one and 21 on
+  // the other, which is the failure that made all of this visible in the first place.
+  "aiwhatson.com",
+  "conventions.io",
   "impactconvene.com",
   "conferencesked.com",
   "worldconferencecalendar.com",
