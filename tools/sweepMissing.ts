@@ -1,21 +1,35 @@
 #!/usr/bin/env npx tsx
 /**
- * One pass over everything the catalogue still does not know, so the sites are asked once.
+ * One pass over everything the catalogue still cannot say for itself, so the sites are asked again.
  *
- * Three gaps were left after the earlier sweeps, and all three want the same page fetched:
- *   - 127 records whose Fees & Pricing tab has never been read at all;
- *   - the sections a site refused or had not published when `readDeepSections` last called;
- *   - 51 records showing their initials because no logo was ever found for them.
+ * The first sweep asked only for sections nobody had ever read. That left two other shapes on
+ * screen, and a reader cannot tell them apart from a gap:
  *
- * Fetching each conference's home page once and answering all three off it is the difference
- * between three runs and one — and one run is one cron job to delete afterwards.
+ *   - "Speakers could not be retrieved" — the tab admitting nothing was read;
+ *   - "individual 2026 speaker names are published through the official conference programme" —
+ *     a sentence the site really did write, stored in place of the names, which sends the reader
+ *     off to go and look it up themselves. That is the site's answer, not this catalogue's, and
+ *     the programme it points at is a page that can be read.
  *
- *   npx tsx tools/sweepMissing.ts [dataset.json] [--concurrency=5] [--limit=N] [--emit]
+ * So a section is asked again when it was never read, when the organiser had not announced it
+ * last time, and when what is stored is prose with no names in it. Prose is kept if the second
+ * ask finds nothing better — it is still what the page said — and replaced the moment real
+ * entries come back.
+ *
+ * The programme is mined for speakers, because that is where the sites that "publish names
+ * through the programme" publish them: a session billed to a named person names a speaker.
+ *
+ *   npx tsx tools/sweepMissing.ts [dataset.json] [--concurrency=5] [--limit=N]
+ *                                 [--max-firecrawl=400] [--emit]
  *
  * Nothing here decides what a fact is. Sections come through the discovery engine's own
  * `extractDeepSections`, fees through `feePages`, and the logo through the picker lifted verbatim
  * out of `enrich-conference-images.mjs` — the same rules, asked again, of pages that had not
  * answered yet.
+ *
+ * Reading order is the one the rest of the app uses and for the same reason: the direct fetch is
+ * free and answers most sites, and Firecrawl bills per page, so it is reached only for a URL the
+ * direct fetch could not read. It is never asked first and never asked twice for the same page.
  *
  * Two files come back, because they land in two places the builder already reads: the details CSV
  * that `data/sources/details/` takes, and the corrections CSV that `resolved-official-urls.csv` is.
@@ -25,6 +39,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { extractDeepSections, findSectionPages, type DeepSectionExtraction } from "../server/discovery/deepSections";
 import { feesCell, feesFromPage, findFeePages, type FeeLine } from "../server/discovery/feePages";
+import { firecrawlScrape, isFirecrawlConfigured } from "../server/firecrawl";
 
 const ARGS = process.argv.slice(2);
 const FLAGS = ARGS.filter((a) => a.startsWith("--"));
@@ -32,6 +47,9 @@ const DATASET = ARGS.filter((a) => !a.startsWith("--"))[0] ?? "data/conferencega
 const CONCURRENCY = Number(FLAGS.find((f) => f.startsWith("--concurrency="))?.split("=")[1] ?? 5);
 const LIMIT = Number(FLAGS.find((f) => f.startsWith("--limit="))?.split("=")[1] ?? 0);
 const EMIT = FLAGS.includes("--emit");
+// Firecrawl bills per page, so a run says up front how much of it it may spend. Nothing here
+// raises the cap on its own; a run that hits it says so in the report rather than carrying on.
+const MAX_FIRECRAWL = Number(FLAGS.find((f) => f.startsWith("--max-firecrawl="))?.split("=")[1] ?? 400);
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36";
 
 // ---- the shipped image picker, verbatim (see enrich-catalogue-logos.mjs for why it is sliced) ----
@@ -44,12 +62,40 @@ const picker: any = await import(
     `${source.slice(from, to)}\nexport { isRealImage, getText, kitLinks, pickImages };\n`, "utf8").toString("base64")}`
 );
 
-async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUrl: string }> {
+const FIRECRAWL = isFirecrawlConfigured();
+const rendered = new Set<string>();
+const readStats = { direct: 0, firecrawl: 0, refused: 0, overCap: 0 };
+
+/** The free route. Most conference sites answer it. */
+async function directHtml(url: string, ms = 20000): Promise<{ html: string; finalUrl: string }> {
   const res = await fetch(url, { headers: { "user-agent": UA, accept: "text/html,*/*" }, signal: AbortSignal.timeout(ms), redirect: "follow" });
   if (!res.ok) throw new Error(String(res.status));
   const type = res.headers.get("content-type") ?? "";
   if (!/text\/html|application\/xhtml/i.test(type)) throw new Error(`not html: ${type}`);
   return { html: await res.text(), finalUrl: res.url };
+}
+
+/**
+ * A page, by whichever route can read it.
+ *
+ * Firecrawl is reached only once the free fetch has failed on this exact URL, which is the cost
+ * decision the app already made and not one to relitigate per tool. A page it has already rendered
+ * is not rendered twice, because the second ask bills the same as the first.
+ */
+async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUrl: string }> {
+  try {
+    const direct = await directHtml(url, ms);
+    readStats.direct += 1;
+    return direct;
+  } catch (error) {
+    if (!FIRECRAWL || rendered.has(url)) { readStats.refused += 1; throw error; }
+    if (readStats.firecrawl >= MAX_FIRECRAWL) { readStats.overCap += 1; throw error; }
+    rendered.add(url);
+    const scraped = await firecrawlScrape(url);
+    if (!scraped?.html) { readStats.refused += 1; throw new Error(`unread after firecrawl: ${(error as Error).message}`); }
+    readStats.firecrawl += 1;
+    return { html: scraped.html, finalUrl: url };
+  }
 }
 
 function peopleCell(people: Array<{ name: string; org: string | null; role: string | null }>): string {
@@ -88,16 +134,34 @@ interface Rec { title: string; officialUrl: string | null; logoUrl: string | nul
 
 const dataset = JSON.parse(await readFile(path.resolve(DATASET), "utf8"));
 const all: Rec[] = Array.isArray(dataset.records) ? dataset.records : Object.values(dataset.records ?? dataset);
-const unread = (r: Rec, key: string) => r.details?.[key]?.availability === "unread";
-const wants = (r: Rec) =>
-  ["program", "keynotes", "committee", "sponsors", "fees"].some((k) => unread(r, k)) || !r.logoUrl || !r.imageUrl;
+const SECTIONS = ["program", "keynotes", "committee", "sponsors", "fees"] as const;
+
+/**
+ * Why a section is worth asking the site about again.
+ *
+ * "unread" is the obvious one. "not_announced" is worth a second ask because it was true when it
+ * was recorded and a programme published since then is exactly what a reader wants. And "stated"
+ * with nothing in its list is the Gastech shape: a sentence about the speakers standing where the
+ * speakers should be. All three get the same treatment — ask, and keep whatever is better.
+ */
+function wantsSection(r: Rec, key: string): boolean {
+  const section = r.details?.[key];
+  if (!section) return true;
+  if (section.availability !== "stated") return true;
+  // The programme is a text section; it has said enough once it says anything.
+  if (key === "program") return !String(section.text ?? "").trim();
+  return !(section.items?.length > 0);
+}
+const unread = (r: Rec, key: string) => wantsSection(r, key);
+const wants = (r: Rec) => SECTIONS.some((k) => wantsSection(r, k)) || !r.logoUrl || !r.imageUrl;
 const needing = all.filter((r) => r.officialUrl && /^https?:\/\//i.test(r.officialUrl) && wants(r));
 const queue = LIMIT > 0 ? needing.slice(0, LIMIT) : needing;
 
 const detailRows: string[] = [];
 const urlRows: string[] = [];
 const today = new Date().toISOString().slice(0, 10);
-const stats = { considered: queue.length, unreachable: 0, fees: 0, speakers: 0, committee: 0, sponsors: 0, program: 0, logo: 0, banner: 0 };
+const stats = { considered: queue.length, unreachable: 0, fees: 0, speakers: 0, committee: 0,
+  sponsors: 0, program: 0, logo: 0, banner: 0, fromProgramme: 0 };
 
 async function handle(record: Rec, index: number) {
   const site = record.officialUrl!;
@@ -110,7 +174,12 @@ async function handle(record: Rec, index: number) {
 
     const wantSections = ["program", "keynotes", "committee", "sponsors"].some((k) => unread(record, k));
     if (wantSections) {
-      for (const candidate of findSectionPages(home.html, home.finalUrl, { perSection: 1, sections: ["program", "speakers", "committee", "sponsors"] }).slice(0, 4)) {
+      // Two candidates a section rather than one. A site that keeps its speakers at both /speakers
+      // and /programme/speakers was previously asked for whichever it linked first, and the names
+      // are as often on the second.
+      const candidates = findSectionPages(home.html, home.finalUrl,
+        { perSection: 2, sections: ["program", "speakers", "committee", "sponsors"] }).slice(0, 8);
+      for (const candidate of candidates) {
         try {
           const page = await getHtml(candidate.url);
           const more = extractDeepSections(page.html, page.finalUrl);
@@ -119,6 +188,20 @@ async function handle(record: Rec, index: number) {
           if (more.program && (more.program.sessions.length || more.program.tracks.length)) found.program = more.program;
         } catch { /* a section page that will not load is a missing section */ }
       }
+    }
+
+    // A programme that bills a session to a named person has named a speaker, and that is where
+    // the sites which "publish names through the official programme" publish them. The role comes
+    // from the session, not invented: this is the programme saying who is speaking in it.
+    if (!found.speakers.length && found.program?.sessions.length) {
+      const seenName = new Set<string>();
+      for (const session of found.program.sessions) {
+        const name = (session.speakerName || "").trim();
+        if (!name || seenName.has(name.toLowerCase())) continue;
+        seenName.add(name.toLowerCase());
+        found.speakers.push({ name, org: null, role: null, imageUrl: null, sourceUrl: found.program.source_url } as any);
+      }
+      if (seenName.size) stats.fromProgramme += 1;
     }
 
     let fees: FeeLine[] = [];
@@ -182,6 +265,10 @@ await writeFile("/tmp/sweep-urls.csv", urlCsv);
 
 console.log(`\n================ REPORT ================`);
 console.log(`records asked            ${stats.considered}`);
+console.log(`pages read direct        ${readStats.direct}`);
+console.log(`pages read via firecrawl ${readStats.firecrawl}${FIRECRAWL ? "" : "  (no key: route disabled)"}`);
+console.log(`pages nothing could read ${readStats.refused}`);
+console.log(`pages left at the cap     ${readStats.overCap}${readStats.overCap ? `  (raise --max-firecrawl above ${MAX_FIRECRAWL} to read them)` : ""}`);
 console.log(`sites unreachable        ${stats.unreachable}`);
 console.log(`detail rows written      ${detailRows.length}`);
 console.log(`  gained fees            ${stats.fees}`);
@@ -189,6 +276,7 @@ console.log(`  gained speakers        ${stats.speakers}`);
 console.log(`  gained a committee     ${stats.committee}`);
 console.log(`  gained sponsors        ${stats.sponsors}`);
 console.log(`  gained a programme     ${stats.program}`);
+console.log(`  speakers off the programme ${stats.fromProgramme}`);
 console.log(`image rows written       ${urlRows.length}`);
 console.log(`  gained a logo          ${stats.logo}`);
 console.log(`  gained a banner        ${stats.banner}`);

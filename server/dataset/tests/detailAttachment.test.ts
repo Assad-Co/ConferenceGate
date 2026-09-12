@@ -375,3 +375,50 @@ test("a second list fills the sections the first one never read, and only those"
     "a second list that could add nothing went unreported"
   );
 });
+
+// Gastech's speakers tab read: "Gastech states that its speaker programme brings together
+// ministers, CEOs and other senior energy-industry leaders; individual 2026 speaker names are
+// published through the official conference programme." Every word of that is what the site says,
+// and storing it was right — but it is the site sending the reader away to look the names up, and
+// the programme it points at is a page this catalogue can read. Once the names are in hand the
+// sentence is the worse of the two, so it is the one shape a stated section gives way to.
+test("a sentence about the speakers gives way to the speakers, and never the other way round", () => {
+  const detailsHeader = DETAIL_HEADER;
+  const prose =
+    '"AAPG International Conference & Exhibition (ICE) 2026","7-9 December 2026","NICE, Tangerang",'
+    + '"3-day program.","Speaker names are published through the official conference programme.",'
+    + '"Not yet announced","Not yet published","Not yet announced","https://iceevent.org/2026/",""';
+  const named =
+    '"AAPG International Conference & Exhibition (ICE) 2026","7-9 December 2026","NICE, Tangerang",'
+    + '"3-day program.","Metee Saengsrichun (PTTEP); Claudio Nini (ENI)",'
+    + '"","","","https://iceevent.org/2026/",""';
+
+  const read = (...rows: string[]) =>
+    buildLaunchDataset([], OPTIONS,
+      rowsFromCsv(CONFERENCES).map((row) => ({
+        outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
+        sourceUrl: row.website, statedText: row.name,
+      })),
+      rows.map((body, index) => ({
+        source: `sweep-${index}`, rows: rowsFromDetailCsv(parseCsv([detailsHeader, body].join("\n"))),
+      }))
+    ).dataset.records.find((record) => record.title.startsWith("AAPG International"))!;
+
+  // The sentence is what is stored until something better is read.
+  assert.equal(read(prose).details!.keynotes.items.length, 0);
+  assert.match(read(prose).details!.keynotes.text!, /published through the official/);
+
+  // A later read that has the names replaces it.
+  const upgraded = read(prose, named);
+  assert.deepEqual(upgraded.details!.keynotes.items.map((person: any) => person.name),
+    ["Metee Saengsrichun", "Claudio Nini"]);
+  assert.equal(upgraded.details!.keynotes.availability, "stated");
+
+  // And never the reverse: a roster already read is not talked over by a later sentence.
+  const kept = read(named, prose);
+  assert.deepEqual(kept.details!.keynotes.items.map((person: any) => person.name),
+    ["Metee Saengsrichun", "Claudio Nini"]);
+
+  // A section the sweep left empty says nothing and changes nothing.
+  assert.equal(read(named).details!.committee.availability, "unread");
+});

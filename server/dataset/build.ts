@@ -459,6 +459,32 @@ function attachDetails(
  * `source` then names both lists, because half of what the reader sees came from each and a page
  * claiming one of them would be claiming something false.
  */
+/**
+ * Whether a later read turned a sentence about a section into the section itself.
+ *
+ * A stated section is normally final — a list somebody read is not improved by reading it again.
+ * But "stated" also covers the shape where a site wrote about its speakers instead of naming them:
+ * "individual 2026 speaker names are published through the official conference programme." That is
+ * the site's answer, and storing it verbatim is right until the programme it points at has been
+ * read. Once the names are in hand, the sentence is the worse of the two — it sends the reader off
+ * to go and look up what this page could have told them.
+ *
+ * So the swap is allowed in exactly one direction: prose with no entries, replaced by entries. A
+ * roster is never replaced, prose never displaces a roster, and the programme is excluded because
+ * prose is the only shape it has.
+ */
+function namesWhatItDescribed(
+  was: LaunchConferenceDetails[keyof LaunchConferenceDetails],
+  now: LaunchConferenceDetails[keyof LaunchConferenceDetails]
+): boolean {
+  const entries = (section: unknown): number =>
+    section && typeof section === "object" && Array.isArray((section as { items?: unknown[] }).items)
+      ? (section as { items: unknown[] }).items.length
+      : -1;
+  // -1 is a section with no list at all (the programme). Nothing to upgrade to.
+  return entries(was) === 0 && entries(now) > 0;
+}
+
 function fillUnreadSections(
   existing: LaunchConferenceDetails,
   incoming: LaunchConferenceDetails,
@@ -467,11 +493,11 @@ function fillUnreadSections(
   const filled: string[] = [];
   const sections = ["program", "keynotes", "committee", "fees", "sponsors"] as const;
   for (const section of sections) {
-    const was = existing[section].availability;
-    const now = incoming[section].availability;
-    if (now === "unread") continue;
-    if (was === "stated") continue;
-    if (was === "not_announced" && now !== "stated") continue;
+    const was = existing[section];
+    const now = incoming[section];
+    if (now.availability === "unread") continue;
+    if (was.availability === "stated" && !namesWhatItDescribed(was, now)) continue;
+    if (was.availability === "not_announced" && now.availability !== "stated") continue;
     (existing[section] as LaunchConferenceDetails[typeof section]) = incoming[section] as never;
     filled.push(section);
   }
