@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:10:06.724Z",
+  "generatedAt": "2026-09-12T04:16:26.782Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -8051,10 +8051,10 @@
         "asia"
       ],
       "description": "19th ACM SIGGRAPH Conference and Exhibition on Computer Graphics and Interactive Techniques in Asia.",
-      "sourceUrl": "https://www.siggraph.org/siggraph-events/conferences/",
-      "sourceHost": "siggraph.org",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://asia.siggraph.org/2026/",
+      "sourceHost": "asia.siggraph.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://asia.siggraph.org/2026/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -10174,10 +10174,10 @@
         "cop31"
       ],
       "description": "UN climate change conference (COP31), listed for November 2026.",
-      "sourceUrl": "https://impactconvene.com/conferences/",
-      "sourceHost": "impactconvene.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://cop31.tr/",
+      "sourceHost": "cop31.tr",
+      "sourceType": "official_site",
+      "officialUrl": "https://cop31.tr/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -17902,10 +17902,10 @@
         "security"
       ],
       "description": "Global conference on food security, systems and resilience.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://www.globalfoodsecurityconference.com/",
+      "sourceHost": "globalfoodsecurityconference.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.globalfoodsecurityconference.com/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -22550,10 +22550,10 @@
         "science"
       ],
       "description": "Major sensory science symposium covering food, consumer and sensory research.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://www.pangbornsymposium.com/",
+      "sourceHost": "pangbornsymposium.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.pangbornsymposium.com/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -24013,10 +24013,10 @@
         "siggraph"
       ],
       "description": "SIGGRAPH 2027 International Conference on Computer Graphics and Interactive Techniques, Anaheim Convention Center, Anaheim, California, USA, August 8-12, 2027",
-      "sourceUrl": "https://dl.acm.org/sig/siggraph/upcoming",
-      "sourceHost": "dl.acm.org",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://www.siggraph.org/",
+      "sourceHost": "siggraph.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.siggraph.org/",
       "evidence": {
         "query": "ACM SIGGRAPH KDD MICCAI RecSys 2027 dates location",
         "resultTitle": "SIGGRAPH - Upcoming Events",
@@ -26272,10 +26272,10 @@
         "scout"
       ],
       "description": "World Organization of the Scout Movement global conference.",
-      "sourceUrl": "https://uia.org/icco/search/%24freesearch%3DTorun?freesearch=&page=53",
-      "sourceHost": "uia.org",
-      "sourceType": "reference",
-      "officialUrl": null,
+      "sourceUrl": "https://www.scout.org/event/44th-world-scout-conference",
+      "sourceHost": "scout.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.scout.org/event/44th-world-scout-conference",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -26666,10 +26666,10 @@
         "society"
       ],
       "description": "Annual scientific meeting focused on cervical-spine research and clinical practice.",
-      "sourceUrl": "https://uia.org/icco/search/%24freesearch%3DTorun?freesearch=&page=53",
-      "sourceHost": "uia.org",
-      "sourceType": "reference",
-      "officialUrl": null,
+      "sourceUrl": "https://www.csrs.org/",
+      "sourceHost": "csrs.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.csrs.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -26795,10 +26795,10 @@
         "association"
       ],
       "description": "Annual meeting for African studies scholars and professionals.",
-      "sourceUrl": "https://uia.org/icco/search/%24freesearch%3DTorun?freesearch=&page=53",
-      "sourceHost": "uia.org",
-      "sourceType": "reference",
-      "officialUrl": null,
+      "sourceUrl": "https://africanstudies.org/",
+      "sourceHost": "africanstudies.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://africanstudies.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -27054,10 +27054,10 @@
         "award"
       ],
       "description": "High-level global health policy conference listed for January 2027.",
-      "sourceUrl": "https://impactconvene.com/conferences/",
-      "sourceHost": "impactconvene.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://pmac2027.com/",
+      "sourceHost": "pmac2027.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://pmac2027.com/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
