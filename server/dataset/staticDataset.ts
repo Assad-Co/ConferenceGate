@@ -219,7 +219,33 @@ export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {
   const somethingToRead =
     Boolean(record.description || record.officialUrl || record.venue || record.organization)
     || filledSections(record).length > 0;
-  return whenKnown && whereKnown && somethingToRead && !isBareListing(record);
+  return whenKnown && whereKnown && somethingToRead
+    && !isBareListing(record) && !leadsNowhere(record);
+}
+
+/**
+ * A record whose only link goes nowhere in particular.
+ *
+ * "Somewhere to go" is one of the two things this gate accepts in place of something to read, and
+ * it has to actually be somewhere. Two records cited `https://www.iconf.com/` — the directory's own
+ * front door, which describes no conference, states no date and will show a different list
+ * tomorrow. A reader who clicks it learns nothing about the event whose card they clicked from,
+ * which is the same failure `isBareListing` catches from the other end.
+ *
+ * Only records with no official site of their own are judged here. A conference that owns its
+ * domain legitimately sits at the root of it — that is what `OWN_SITE_PATH` is for — so a bare path
+ * is only damning when the host belongs to somebody else.
+ */
+function leadsNowhere(record: LaunchConferenceRecord): boolean {
+  if (record.officialUrl) return false;
+  try {
+    const link = new URL(record.sourceUrl);
+    const bareRoot = link.pathname === "/" || link.pathname === "";
+    const searchPage = /[?&](?:q|query|search|tag|filter|category)=/i.test(link.search);
+    return bareRoot || searchPage;
+  } catch {
+    return true;
+  }
 }
 
 /**

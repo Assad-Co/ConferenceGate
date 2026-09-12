@@ -285,7 +285,9 @@ test("a conference is worth showing on what it can say, not on which tabs are fi
     datesText: null, startDate: "2027-04-01", endDate: "2027-04-03", datePrecision: "day",
     city: "Lisbon", region: null, country: "Portugal", worldRegion: "Europe", venue: null,
     format: null, organization: null, topics: [], categories: [], keywords: [],
-    officialUrl: null, sourceUrl: "https://example.org/", details: null,
+    // A page about this conference. The link's own shape is tested separately below; here it is
+    // held realistic so these assertions stay about what the record can say.
+    officialUrl: null, sourceUrl: "https://example.org/events/some-conference-2027", details: null,
   };
   // A date, a place and an overview is a page worth opening even with every tab empty.
   assert.equal(hasSomethingToShow({ ...base, description: "An overview." }), true);
@@ -303,6 +305,33 @@ test("a conference is worth showing on what it can say, not on which tabs are fi
     hasSomethingToShow({ ...base, description: "An overview.", startDate: null, datePrecision: "month" }),
     true
   );
+});
+
+// Two records cited https://www.iconf.com/ and nothing else: the directory's own front door, which
+// names no conference, states no date, and lists something different tomorrow. "Somewhere to go" is
+// one of the two things this gate accepts in place of something to read, so it has to actually go
+// somewhere — a reader who clicks that link learns nothing about the event they clicked from.
+test("a record whose only link is a directory's front page has nowhere to send a reader", () => {
+  const base: any = {
+    title: "2027 International Conference on Modern Learning and Educational Technology",
+    acronym: null, edition: null,
+    description: "International conference on modern learning and educational technology.",
+    datesText: null, startDate: "2027-08-08", endDate: "2027-08-10", datePrecision: "day",
+    city: "Osaka", region: null, country: "Japan", worldRegion: "Asia", venue: null,
+    format: null, organization: "Conference organizers", topics: [], categories: [], keywords: [],
+    officialUrl: null, sourceUrl: "https://www.iconf.com/", details: null,
+  };
+  assert.equal(hasSomethingToShow(base), false);
+  // A search that returns whatever matches a tag today is the same dead end by another spelling.
+  assert.equal(hasSomethingToShow({ ...base, sourceUrl: "https://www.iconf.com/?search=education" }), false);
+
+  // The directory's page *about this conference* is a real destination, and keeps the record.
+  assert.equal(
+    hasSomethingToShow({ ...base, sourceUrl: "https://www.iconf.com/conference/ICMLET_9722" }),
+    true
+  );
+  // So does the conference's own site, whatever the listing said.
+  assert.equal(hasSomethingToShow({ ...base, officialUrl: "https://icmlet.org/" }), true);
 });
 
 
