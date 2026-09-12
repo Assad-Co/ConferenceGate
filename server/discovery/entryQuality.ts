@@ -89,7 +89,7 @@ const BENEFIT_LINE = /\b(?:complimentary|exclusive|included|logo|signage|slides?
 const EVENT_VOCABULARY = new Set(`
 about access address advanced advances advisory agenda agentic all analysis annual application
 applications approach artificial attendee attendees award awards based best beta board booking commerce
-booth brief broadcast business calendar call cards career case center centre chair chairs chart
+booth brief broadcast business calendar call cards career case center central centre chair chairs chart
 chief cloud cofounder committee community company computer computing conference congress content
 core corporate creative critical current data day days deadline demo description design detail
 details development digital director discovery display early edition education emerging energy
