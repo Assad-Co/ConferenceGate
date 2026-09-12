@@ -40,6 +40,9 @@ import path from "node:path";
 import { extractDeepSections, findSectionPages, type DeepSectionExtraction } from "../server/discovery/deepSections";
 import { feesCell, feesFromPage, findFeePages, type FeeLine } from "../server/discovery/feePages";
 import { firecrawlScrape, isFirecrawlConfigured } from "../server/firecrawl";
+import { candidateUrlBelongsToEvent, eventIdentityFrom, pageBelongsToEvent,
+  type EventIdentity } from "../server/discovery/eventIdentity";
+import { isCredibleAffiliation, isCredibleName } from "../server/discovery/entryQuality";
 
 const ARGS = process.argv.slice(2);
 const FLAGS = ARGS.filter((a) => a.startsWith("--"));
@@ -98,27 +101,46 @@ async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUr
   }
 }
 
+/**
+ * A roster, with everything that is not a person taken out of it.
+ *
+ * The extractors decide where on a page a roster sits; this decides whether what they found is a
+ * person. Both are needed — a committee page's list markup is perfect and one of its entries was
+ * "Mozilla Firefox" — and a section whose entries all fail is left empty rather than part-filled,
+ * because half a roster read as a whole one is the wrong answer stated confidently.
+ */
 function peopleCell(people: Array<{ name: string; org: string | null; role: string | null }>): string {
   if (!people.length) return "";
   const byRole = new Map<string, string[]>();
   for (const person of people) {
+    if (!isCredibleName(person.name)) { stats.junked += 1; continue; }
     const role = (person.role || "").trim() || "—";
-    const named = person.org ? `${person.name} (${person.org})` : person.name;
+    const org = person.org && isCredibleAffiliation(person.org) ? person.org : null;
+    const named = org ? `${person.name} (${org})` : person.name;
     if (!byRole.has(role)) byRole.set(role, []);
     if (!byRole.get(role)!.includes(named)) byRole.get(role)!.push(named);
   }
+  if (!byRole.size) return "";
   return [...byRole.entries()].map(([role, names]) => (role === "—" ? names.join("; ") : `${role}: ${names.join("; ")}`)).join(". ");
 }
-function sponsorsCell(sponsors: Array<{ name: string; tier: string | null }>): string {
-  if (!sponsors.length) return "";
-  const byTier = new Map<string, string[]>();
-  for (const sponsor of sponsors) {
-    const tier = (sponsor.tier || "").trim() || "—";
-    if (!byTier.has(tier)) byTier.set(tier, []);
-    if (!byTier.get(tier)!.includes(sponsor.name)) byTier.get(tier)!.push(sponsor.name);
-  }
-  return [...byTier.entries()].map(([tier, names]) => (tier === "—" ? names.join("; ") : `${tier}: ${names.join("; ")}`)).join(". ");
+/**
+ * A sponsor list, which is the one this sweep does not ship.
+ *
+ * 118 sponsor cells came back from the first run and most of them were the page rather than its
+ * sponsors: image filenames off Gastech, a stylesheet sprite off Entrepreneur, "opens in new
+ * tab/window" off the Vaccine Congress, and the sponsor pack's own benefits off URTeC. A sponsor
+ * is an organisation, which is exactly the shape every one of those strings also has, so the
+ * people test cannot sort them and no test here has earned the right to.
+ *
+ * What a real sponsor needs is evidence it is an organisation — a logo, a link to its own site, an
+ * organisation marker — which `deepSections` weighs from the markup around it and this tool cannot
+ * see by the time it holds a list of names. So the column is left empty and the sentence a site
+ * already wrote about its sponsors is kept, being at least something the site said.
+ */
+function sponsorsCell(_sponsors: Array<{ name: string; tier: string | null }>): string {
+  return "";
 }
+
 function programCell(program: DeepSectionExtraction["program"]): string {
   if (!program) return "";
   const sessions = program.sessions.slice(0, 40).map((s) => {
@@ -161,10 +183,14 @@ const detailRows: string[] = [];
 const urlRows: string[] = [];
 const today = new Date().toISOString().slice(0, 10);
 const stats = { considered: queue.length, unreachable: 0, fees: 0, speakers: 0, committee: 0,
-  sponsors: 0, program: 0, logo: 0, banner: 0, fromProgramme: 0 };
+  sponsors: 0, program: 0, logo: 0, banner: 0, fromProgramme: 0, notThisEvent: 0, junked: 0 };
 
 async function handle(record: Rec, index: number) {
   const site = record.officialUrl!;
+  const identity: EventIdentity | null = eventIdentityFrom({
+    title: record.title, acronym: (record as any).acronym ?? null,
+    start_year: (record as any).year ?? null, official_url: site,
+  });
   try {
     const home = await getHtml(site);
     const found: DeepSectionExtraction = { program: null, speakers: [], committee: [], sponsors: [], community: null };
@@ -180,8 +206,13 @@ async function handle(record: Rec, index: number) {
       const candidates = findSectionPages(home.html, home.finalUrl,
         { perSection: 2, sections: ["program", "speakers", "committee", "sponsors"] }).slice(0, 8);
       for (const candidate of candidates) {
+        // A deep page has to belong to *this* event. Skipping this is what let one neurips.cc
+        // roster be filed under eight different NeurIPS workshops: the links are all on the same
+        // host, so without the identity test every workshop inherits every other workshop's page.
+        if (identity && !candidateUrlBelongsToEvent(identity, candidate.url).ok) { stats.notThisEvent += 1; continue; }
         try {
           const page = await getHtml(candidate.url);
+          if (identity && !pageBelongsToEvent(identity, page.finalUrl, page.html).ok) { stats.notThisEvent += 1; continue; }
           const more = extractDeepSections(page.html, page.finalUrl);
           found.speakers.push(...more.speakers); found.committee.push(...more.committee);
           found.sponsors.push(...more.sponsors);
@@ -270,6 +301,8 @@ console.log(`pages read via firecrawl ${readStats.firecrawl}${FIRECRAWL ? "" : "
 console.log(`pages nothing could read ${readStats.refused}`);
 console.log(`pages left at the cap     ${readStats.overCap}${readStats.overCap ? `  (raise --max-firecrawl above ${MAX_FIRECRAWL} to read them)` : ""}`);
 console.log(`sites unreachable        ${stats.unreachable}`);
+console.log(`pages not this event     ${stats.notThisEvent}`);
+console.log(`entries refused as junk  ${stats.junked}`);
 console.log(`detail rows written      ${detailRows.length}`);
 console.log(`  gained fees            ${stats.fees}`);
 console.log(`  gained speakers        ${stats.speakers}`);
