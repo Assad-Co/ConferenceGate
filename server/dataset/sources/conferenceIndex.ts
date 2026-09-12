@@ -61,6 +61,9 @@ export interface IndexRow {
   domainType: string;
   logoUrl: string;
   logoSourceType: string;
+  /** The wide artwork the conference runs across the top of its own site, where the batch found
+   *  one. A fifth revision added it; earlier ones have no such column and read as empty. */
+  bannerUrl: string;
   cfpUrl: string;
   registrationUrl: string;
   programUrl: string;
@@ -72,8 +75,9 @@ const COLUMNS = [
   "country", "format", "overview", "call_for_papers", "cfp_deadline", "fees_and_pricing",
   "program_agenda", "keynote_speakers", "technical_committee", "sponsors", "venue",
   "accommodation", "organizer", "website_or_source", "record_status", "data_quality_notes",
-  "source_url", "official_url", "domain_type", "logo_url", "logo_source_type", "cfp_url",
-  "registration_url", "program_url", "committee_url", "sponsors_partners", "verification_status",
+  "source_url", "official_url", "domain_type", "logo_url", "logo_source_type", "banner_url",
+  "cfp_url", "registration_url", "program_url", "committee_url", "sponsors_partners",
+  "verification_status",
 ] as const;
 
 /**
@@ -122,7 +126,8 @@ export function rowsFromIndexCsv(rows: string[][]): IndexRow[] {
       qualityNotes: value("data_quality_notes"),
       sourceUrl: value("source_url"), officialUrl: value("official_url"),
       domainType: value("domain_type"), logoUrl: value("logo_url"),
-      logoSourceType: value("logo_source_type"), cfpUrl: value("cfp_url"),
+      logoSourceType: value("logo_source_type"), bannerUrl: value("banner_url"),
+      cfpUrl: value("cfp_url"),
       registrationUrl: value("registration_url"), programUrl: value("program_url"),
       committeeUrl: value("committee_url"),
     };
@@ -317,6 +322,10 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     sourceType: sourceTypeFor(host, officialUrl),
     officialUrl,
     logoUrl: suppliedLogoUrl(row.logoUrl, row.logoSourceType),
+    // Screened exactly like the logo, and for the same reason: a column asserting a banner is a
+    // claim, and an icon service's rendering of a domain is not the conference's own artwork.
+    // There is no banner_source_type column, so nothing can mark one a fallback.
+    imageUrl: suppliedLogoUrl(row.bannerUrl, ""),
     evidence: {
       query: options.sourceName,
       resultTitle: title,

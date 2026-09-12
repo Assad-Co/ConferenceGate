@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-12T10:20:36.917Z",
+  "generatedAt": "2026-09-12T11:38:31.442Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
-  "accepted": 287,
-  "duplicatesMerged": 24,
+  "accepted": 294,
+  "duplicatesMerged": 18,
   "rejected": 22,
   "rejectionReasons": {
     "not_a_conference": 14,
@@ -12,19 +12,47 @@
     "no_location": 2,
     "source_url_is_a_listing": 1
   },
-  "indexRecordsAccepted": 285,
+  "indexRecordsAccepted": 282,
   "indexRecordsRefused": {
     "no_start_date": 11,
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
   "detailsAttached": 51,
-  "heldBackWithNothingToShow": 347,
+  "heldBackWithNothingToShow": 343,
   "websitesResolved": {
-    "applied": 115,
+    "applied": 87,
     "alreadyKnown": 1,
     "refused": [],
-    "matchedNoConference": [],
+    "matchedNoConference": [
+      "Meta Connect 2026",
+      "IROS 2026 — IEEE/RSJ International Conference on Intelligent Robots and Systems",
+      "ICIP 2026",
+      "AI+X Summit 2026",
+      "CoRL 2026 — Conference on Robot Learning",
+      "ACM Multimedia 2026",
+      "AAMAS 2027 — International Conference on Autonomous Agents and Multiagent Systems",
+      "IEEE ICRA 2027",
+      "World Summit AI 2026 — Amsterdam",
+      "All Things Open 2026",
+      "ACML 2026 — Asian Conference on Machine Learning",
+      "Automate 2027",
+      "Zurich AI Festival 2026",
+      "WI-IAT 2026 — Web Intelligence and Intelligent Agent Technology",
+      "TechEx Global 2027",
+      "Data & AI Conference Europe 2026",
+      "SciPy India 2026",
+      "AI DevWorld 2027",
+      "AI Con USA 2027",
+      "Data Summit 2027",
+      "AI Expo Europe 2026",
+      "ASOCIO Digital AI Summit 2026",
+      "Tech.AD USA 2026",
+      "Futureproof Festival of AI 2026",
+      "The Boston AI Summit 2026",
+      "The 4th Annual AI Regulation Summit",
+      "AiX Conference 2027"
+    ],
     "redatedByOrganiser": [
       {
         "title": "Cell Press Symposia: Neuro-immune Axis — Charting the Periphery",
@@ -50,45 +78,45 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 287,
+  "total": 294,
   "byYear": {
-    "2026": 123,
-    "2027": 164
+    "2026": 158,
+    "2027": 136
   },
-  "countries": 46,
-  "cities": 148,
+  "countries": 36,
+  "cities": 123,
   "categories": 41,
   "worldRegions": {
-    "Asia": 114,
-    "Europe": 71,
-    "North America": 69,
-    "Middle East": 11,
-    "Oceania": 9,
-    "South America": 8,
-    "Africa": 3,
-    "(none)": 2
+    "Asia": 105,
+    "(none)": 74,
+    "Europe": 48,
+    "North America": 47,
+    "Middle East": 10,
+    "Oceania": 4,
+    "South America": 4,
+    "Africa": 2
   },
   "formats": {
-    "in-person": 279,
+    "in-person": 286,
     "hybrid": 5,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 263,
-    "directory_listing": 24
+    "official_site": 288,
+    "directory_listing": 6
   },
   "coverage": {
     "title": "100.0%",
     "exactDates": "99.0%",
     "monthOnlyDates": "1.0%",
     "city": "100.0%",
-    "country": "99.3%",
-    "officialUrl": "91.6%",
-    "venue": "24.0%",
-    "organization": "59.6%",
-    "category": "90.2%",
+    "country": "74.8%",
+    "officialUrl": "98.0%",
+    "venue": "20.7%",
+    "organization": "79.6%",
+    "category": "99.3%",
     "description": "100.0%",
-    "corroborated": "2.8%"
+    "corroborated": "1.7%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",

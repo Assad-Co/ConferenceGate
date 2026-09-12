@@ -54,6 +54,38 @@ test("two editions of one series in different cities stay two records", () => {
   assert.equal(result.duplicatesMerged, 0);
 });
 
+// NeurIPS 2026 runs seventy-odd workshops on one date across one set of cities, listed as
+// seventy-four rows on one page. Every title ends "— NeurIPS 2026", so they share a place bucket
+// and each short name is a subset of some longer sibling's: "ML for Systems" was absorbed into
+// "AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI", and the two
+// titled "NeurIPS 2026 Workshop on ..." both reduced to the acronym NeurIPS and merged on identity.
+// Four real workshops disappeared into conferences that never named them.
+test("workshops one listing named separately are not collapsed into each other", () => {
+  const result = buildLaunchDataset(
+    [
+      row("https://neurips.cc/Downloads/2026", "ML for Systems — NeurIPS 2026, Sydney, Australia, December 11-13, 2026"),
+      row("https://neurips.cc/Downloads/2026", "AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI — NeurIPS 2026, Sydney, Australia, December 11-13, 2026"),
+      row("https://neurips.cc/Downloads/2026", "NeurIPS 2026 Workshop on SaTQuML: Secure and Trustworthy Quantum Machine Learning — NeurIPS 2026, Sydney, Australia, December 11-13, 2026"),
+      row("https://neurips.cc/Downloads/2026", "NeurIPS 2026 Workshop on Tackling Climate Change with Machine Learning — NeurIPS 2026, Sydney, Australia, December 11-13, 2026"),
+    ],
+    OPTIONS
+  );
+  assert.equal(result.dataset.records.length, 4);
+  assert.equal(result.duplicatesMerged, 0);
+});
+
+// The guard above is about differing titles. A listing that repeats one verbatim is still one
+// conference written twice, and must still merge.
+test("one listing repeating a conference verbatim is still one conference", () => {
+  const stated = "ML for Systems — NeurIPS 2026, Sydney, Australia, December 11-13, 2026";
+  const result = buildLaunchDataset(
+    [row("https://neurips.cc/Downloads/2026", stated), row("https://neurips.cc/Downloads/2026", stated)],
+    OPTIONS
+  );
+  assert.equal(result.dataset.records.length, 1);
+  assert.equal(result.duplicatesMerged, 1);
+});
+
 test("records are ordered soonest first and rejections are reported with a reason", () => {
   const result = buildLaunchDataset(
     [

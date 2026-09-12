@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { scoreStoredConferenceRecord } from "../storedConferenceSearch";
 import type {
-  LaunchConferenceRecord, LaunchDataset, LaunchDetailPerson, LaunchSearchIndex,
+  LaunchConferenceRecord, LaunchDataset, LaunchDetailPerson, LaunchFormat, LaunchSearchIndex,
   LaunchSectionAvailability,
 } from "./types";
 
@@ -267,6 +267,11 @@ export interface LaunchSearchResult {
   category: string | null;
   prepared: boolean;
   startDate: string | null;
+  /** ISO end date, where the source gave one. Sent as data rather than folded into a sentence so
+   *  the card can render "24–27 May 2026" and a filter can still read the day. */
+  endDate: string | null;
+  /** Whether it is held in person, online or both — one of the three facts the card states. */
+  format: LaunchFormat;
   /**
    * Where the conference is held, as data.
    *
@@ -377,6 +382,8 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     prepared: filledSections(record).length > 0,
     sections: filledSections(record),
     startDate: record.startDate,
+    endDate: record.endDate,
+    format: record.format,
     location: record.city || record.country
       ? { city: record.city ?? null, country: record.country ?? null }
       : null,

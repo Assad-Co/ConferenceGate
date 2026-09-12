@@ -93,6 +93,36 @@ function isSubsetOrEqual(left: Set<string>, right: Set<string>): boolean {
   return true;
 }
 
+/**
+ * Two rows one compiler listed separately, on one page, in one file.
+ *
+ * The name heuristic above exists for the opposite situation: two *sources* describing one
+ * conference, where neither wrote the name the same way. Inside a single listing it asserts
+ * something the source denies, and the co-located workshop is where that goes wrong. NeurIPS 2026
+ * runs seventy-odd workshops on one date across one set of cities, and every one of their titles
+ * ends "— NeurIPS 2026" — so they land in one place bucket and each short name is a subset of some
+ * longer sibling's. "ML for Systems" was absorbed into "AgenticOS: Co-designing Systems and ML
+ * Foundations of an OS Layer for Agentic AI", and "Continual World Models" into "Continual
+ * Learning in the Era of Foundation Models and Embodied Agents" — four distinct workshops gone,
+ * each merged into a different conference that never mentioned it.
+ *
+ * A compiler that wrote seventy-four rows under one URL is stating that there are seventy-four
+ * events. Collapsing them is the catalogue contradicting its own source, which is the one thing
+ * this file is not allowed to do — "a shared name is never on its own a reason to drop a
+ * conference". Exact identity matches are unaffected: two rows that really are one conference
+ * still carry the same acronym, series or title and merge on the key above.
+ */
+function fromOneListing(left: LaunchConferenceRecord, right: LaunchConferenceRecord): boolean {
+  const listing = left.evidence?.query;
+  return Boolean(listing) && listing === right.evidence?.query && left.sourceUrl === right.sourceUrl;
+}
+
+/** Two rows one compiler wrote as two conferences. A repeated title in one listing is still a
+ *  duplicate row and still merges; it is differing titles that the source is asserting apart. */
+function separatelyListed(left: LaunchConferenceRecord, right: LaunchConferenceRecord): boolean {
+  return fromOneListing(left, right) && left.title.trim() !== right.title.trim();
+}
+
 function mergeRecords(strong: LaunchConferenceRecord, weak: LaunchConferenceRecord): LaunchConferenceRecord {
   const merged: LaunchConferenceRecord = { ...strong };
   // Fill only what the stronger source left unsaid. A weaker source never overwrites a stated value.
@@ -266,7 +296,13 @@ export function buildLaunchDataset(
 
   for (const record of parsed) {
     const key = identityKey(record);
-    let existingKey: string | null = byIdentity.has(key) ? key : null;
+    const clash = byIdentity.get(key);
+    // An identity match is only an identity match between *sources*. Within one listing it can be
+    // an artifact of how the name parsed: "NeurIPS 2026 Workshop on SaTQuML" and "NeurIPS 2026
+    // Workshop on Tackling Climate Change" both reduce to the acronym NeurIPS, which said they
+    // were one conference and lost two real workshops. Same title is still a duplicate row.
+    let existingKey: string | null =
+      clash && !separatelyListed(record, clash) ? key : null;
 
     // Not an exact identity match: look for strong agreement instead. Same city, same year, same
     // start date, and one name's distinctive words contained in the other's. Anything weaker is
@@ -275,7 +311,8 @@ export function buildLaunchDataset(
       const tokens = nameTokens(record);
       for (const candidateKey of byPlace.get(placeKey(record)) || []) {
         const candidate = byIdentity.get(candidateKey);
-        if (candidate && isSubsetOrEqual(tokens, nameTokens(candidate))) {
+        if (candidate && !separatelyListed(record, candidate)
+          && isSubsetOrEqual(tokens, nameTokens(candidate))) {
           existingKey = candidateKey;
           break;
         }
@@ -287,9 +324,12 @@ export function buildLaunchDataset(
       duplicatesMerged += 1;
       continue;
     }
-    byIdentity.set(key, record);
+    // A sibling kept apart from a key-mate needs a key of its own, or storing it would evict the
+    // conference already there — the same loss by another route.
+    const storeKey = clash ? `${key}|${record.title.toLowerCase().replace(/[^a-z0-9]+/g, "")}` : key;
+    byIdentity.set(storeKey, record);
     const place = placeKey(record);
-    byPlace.set(place, [...(byPlace.get(place) || []), key]);
+    byPlace.set(place, [...(byPlace.get(place) || []), storeKey]);
   }
 
   const records = [...byIdentity.values()].sort((left, right) => {

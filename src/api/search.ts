@@ -21,6 +21,11 @@ export interface LiveSearchResult {
   location?: { city: string | null; country: string | null } | null;
   /** ISO start date, when the catalogue knows one. */
   startDate?: string | null;
+  /** ISO end date, when the catalogue knows one. The card joins it with `startDate` into a single
+   *  range — "24–27 May 2026" — rather than showing two dates or a raw ISO string. */
+  endDate?: string | null;
+  /** Held in person, online, or both. Absent on results that are not catalogue records. */
+  format?: 'in-person' | 'hybrid' | 'online' | null;
   /** Which tabs have something behind them. A card offers only these, because a chip for an
    *  empty tab is a promise the detail page cannot keep. */
   sections?: string[];

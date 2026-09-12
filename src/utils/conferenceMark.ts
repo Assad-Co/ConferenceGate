@@ -139,9 +139,13 @@ export function markSizeClass(mark: string, scale: "card" | "hero" = "card"): st
       : mark.length <= 9 ? "text-2xl sm:text-3xl"
       : "text-xl sm:text-2xl";
   }
-  return mark.length <= 3 ? "text-3xl sm:text-4xl"
-    : mark.length <= 5 ? "text-2xl sm:text-3xl"
-    : mark.length <= 7 ? "text-xl sm:text-2xl"
-    : mark.length <= 9 ? "text-base sm:text-lg"
-    : "text-sm sm:text-base";
+  // Sized for the results card's fixed logo tile — 112px square, less 12px of padding a side, so
+  // roughly 88px of room. The tile replaced a panel that could widen to fit its mark, and these
+  // sizes are what stops a long one spilling out of a box that no longer grows: GASTECH at the old
+  // text-2xl measured about 100px and was clipped at both ends.
+  return mark.length <= 3 ? "text-2xl sm:text-3xl"
+    : mark.length <= 5 ? "text-lg sm:text-xl"
+    : mark.length <= 7 ? "text-sm sm:text-base"
+    : mark.length <= 9 ? "text-xs sm:text-sm"
+    : "text-[10px] sm:text-xs";
 }

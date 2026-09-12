@@ -19,6 +19,8 @@ import {
   DollarSign,
   X,
   RefreshCw,
+  Leaf,
+  ArrowRight,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
@@ -176,12 +178,14 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
   const isOwnLogo = result.logoSource === 'stated';
 
   if (icon && isOwnLogo) {
+    // `object-contain` is what makes it the whole logo: a wordmark is far wider than it is tall, and
+    // cropping it to a square would cut the conference's name off its own mark.
     return (
       <img
         src={icon}
         alt={`${abbreviation} logo`}
         onError={() => setFailed(true)}
-        className={className ?? 'w-16 h-16 object-contain'}
+        className={className ?? 'max-w-full max-h-full object-contain'}
       />
     );
   }
@@ -190,7 +194,7 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
   // overflowing the panel it sits in.
   return (
     <span className="relative flex items-center justify-center">
-      <span className={`${markSizeClass(abbreviation)} font-black tracking-wide text-black text-center leading-none`}>
+      <span className={`${markSizeClass(abbreviation)} max-w-full break-words font-black tracking-wide text-black text-center leading-tight`}>
         {abbreviation}
       </span>
       {icon && (
@@ -205,6 +209,41 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
     </span>
   );
 };
+
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * The card's one date line: "24–27 May 2026".
+ *
+ * Day-first, because the card leads with the thing that differs between two editions of the same
+ * conference. Deliberately not `utils/date`'s `formatDateRange`, which is the house style
+ * everywhere else ("Jun 25 – 28, 2026") and is used on pages this card does not own; changing it
+ * to suit one card would restyle every date in the app.
+ *
+ * Returns null rather than a guess when there is no usable start date — a card with no date says
+ * nothing about when, which is the same rule the rest of the catalogue follows.
+ */
+function discoverDateLine(startIso?: string | null, endIso?: string | null): string | null {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (!startIso || !iso.test(startIso)) return startIso || null;
+  const [sy, sm, sd] = startIso.split('-').map(Number);
+  const day = (n: number) => String(n);
+  if (!endIso || !iso.test(endIso) || endIso === startIso) {
+    return `${day(sd)} ${MONTH_SHORT[sm - 1]} ${sy}`;
+  }
+  const [ey, em, ed] = endIso.split('-').map(Number);
+  if (sy === ey && sm === em) return `${day(sd)}–${day(ed)} ${MONTH_SHORT[sm - 1]} ${sy}`;
+  if (sy === ey) return `${day(sd)} ${MONTH_SHORT[sm - 1]} – ${day(ed)} ${MONTH_SHORT[em - 1]} ${sy}`;
+  return `${day(sd)} ${MONTH_SHORT[sm - 1]} ${sy} – ${day(ed)} ${MONTH_SHORT[em - 1]} ${ey}`;
+}
+
+/** How the conference is held, in the words the chip shows. Null where the source did not say. */
+function formatChipLabel(format?: string | null): string | null {
+  if (format === 'in-person') return 'In-Person';
+  if (format === 'hybrid') return 'Hybrid';
+  if (format === 'online') return 'Online';
+  return null;
+}
 
 /** The host the organiser's mark came from, for the badge's tooltip. */
 function organiserHost(result: LiveSearchResult): string {
@@ -1182,70 +1221,81 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               <div
                 key={idx}
                 onClick={() => onOpenExternalResult(result)}
-                className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-6 cursor-pointer flex flex-col lg:flex-row gap-6 group"
+                className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 cursor-pointer flex flex-col sm:flex-row sm:items-center gap-5 group"
               >
-                {/* Conference logo first; a search thumbnail is only a quiet background because
-                    conference searches often return a speaker/video still instead of the event brand. */}
-                <div className="w-full lg:w-72 h-48 lg:h-auto rounded-xl overflow-hidden relative shrink-0 bg-white border border-slate-200 flex items-center justify-center">
-                  {result.thumbnail && (
-                    <img
-                      src={result.thumbnail}
-                      alt=""
-                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                      className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-300"
-                    />
-                  )}
-                  <div className="relative z-10 min-w-24 min-h-24 px-5 py-4 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center">
-                    <ConferenceLogo result={result} />
-                  </div>
+                {/* The conference's own logo, shown whole in a tile of its own.
+                    This used to be a 288px panel with the search thumbnail washed in behind it,
+                    which gave a speaker still or a video frame the space the conference's mark
+                    should have had. The tile is square and fixed so a hundred cards line up, and
+                    the logo inside it is contained rather than cropped — a wordmark keeps its
+                    words. */}
+                <div className="w-28 h-28 shrink-0 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-3 overflow-hidden">
+                  <ConferenceLogo result={result} />
                 </div>
 
                 {/* Info Block */}
-                <div className="flex-1 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">
-                          {result.title}
-                        </h2>
-                      </div>
-                    </div>
+                <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">
+                    {result.title}
+                  </h2>
 
-                    {/* When and where, as data rather than prose.
-                        The card's one line was `snippet`, which for a catalogue record is exactly
-                        this date and place — so it repeated what the card already knew and left no
-                        room for anything about the conference itself. Both facts are structured
-                        fields, so the card reads them directly and keeps the prose for the
-                        description underneath. */}
-                    {(result.startDate || result.location?.city || result.location?.country) && (
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-700">
-                        {result.startDate && (
-                          <span className="inline-flex items-center gap-1.5">
-                            <CalendarDays className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                            {result.startDate}
+                  {/* When and where, as data rather than prose.
+                      The card's one line was `snippet`, which for a catalogue record is exactly
+                      this date and place — so it repeated what the card already knew and left no
+                      room for anything about the conference itself. Both facts are structured
+                      fields, so the card reads them directly. */}
+                  {(() => {
+                    const dateLine = discoverDateLine(result.startDate, result.endDate);
+                    const place = [result.location?.city, result.location?.country]
+                      .filter(Boolean).join(', ');
+                    if (!dateLine && !place) return null;
+                    return (
+                      <div className="flex flex-col gap-1.5 text-sm font-medium text-slate-600">
+                        {dateLine && (
+                          <span className="inline-flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
+                            {dateLine}
                           </span>
                         )}
-                        {(result.location?.city || result.location?.country) && (
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                            {[result.location?.city, result.location?.country].filter(Boolean).join(', ')}
+                        {place && (
+                          <span className="inline-flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                            {place}
                           </span>
                         )}
                       </div>
-                    )}
+                    );
+                  })()}
 
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                      {result.description || result.snippet}
-                    </p>
-
-                    {/* Quick-Tab Shortcuts — jump straight into a specific section of the
-                        detail page instead of always landing on the overview. */}
-                    {/* Only the tabs that have something behind them.
-                        Every card used to claim "Stored details available" and offer all five
-                        chips, whether or not a single one of those tabs had anything in it — so a
-                        reader clicked Speakers on a conference whose speakers nobody has published
-                        and found an empty page. A chip is a promise the detail page has to keep. */}
+                  {/* What it is: subject, kind, and how it is held. Only the ones the record
+                      actually states — a chip is a claim like any other field. */}
+                  {(result.category || formatChipLabel(result.format)) && (
                     <div className="flex flex-wrap items-center gap-2">
+                      {result.category && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700">
+                          <Leaf className="w-3.5 h-3.5 shrink-0" />
+                          {result.category}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+                        Conference
+                      </span>
+                      {formatChipLabel(result.format) && (
+                        <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+                          {formatChipLabel(result.format)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick-Tab Shortcuts — jump straight into a specific section of the
+                      detail page instead of always landing on the overview.
+                      Only the tabs that have something behind them. Every card used to claim
+                      "Stored details available" and offer all five chips, whether or not a single
+                      one of those tabs had anything in it — so a reader clicked Speakers on a
+                      conference whose speakers nobody has published and found an empty page. A
+                      chip is a promise the detail page has to keep. */}
+                  <div className="flex flex-wrap items-center gap-2">
                       {(result.sections?.length ?? 0) > 0 && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700">
                           Stored conference details
@@ -1273,15 +1323,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                           {label}
                         </button>
                       ))}
-                    </div>
                   </div>
+                </div>
 
-                  {/* Card Action Row */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
-                    <span className="px-4 py-1.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors">
-                      View Details
-                    </span>
-                  </div>
+                {/* The action sits beside the conference and vertically centred, rather than under
+                    a rule at the bottom of a tall card. */}
+                <div className="shrink-0 flex sm:justify-end">
+                  <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-xl transition-colors">
+                    View Details
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </span>
                 </div>
               </div>
             ))}

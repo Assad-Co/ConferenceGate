@@ -33,6 +33,8 @@ const row = (over: Partial<Record<string, string>> = {}) => ({
   // The second revision's columns. Blank here, which is the first revision's shape and must keep
   // reading exactly as it did.
   sourceUrl: "", officialUrl: "", domainType: "", logoUrl: "", logoSourceType: "",
+  // The fifth revision's column, blank here for the same reason as the second's above.
+  bannerUrl: "",
   cfpUrl: "", registrationUrl: "", programUrl: "", committeeUrl: "",
   ...over,
 });
