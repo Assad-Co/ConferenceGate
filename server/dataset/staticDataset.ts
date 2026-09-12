@@ -120,8 +120,8 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
  * real event a reader was looking for.
  *
  * So the question is what the page can say. A reader needs to know what it is, when it runs and
- * where, and then to have something to read or somewhere to go. A record that cannot answer those
- * is a name and nothing else, and that is the only thing held back.
+ * where, and then to have something to read or somewhere to go, and a detail page nobody could
+ * read is held back by `pagesWereRead` rather than by counting its filled tabs.
  */
 /** A path that is the site's root, or the root plus a bare edition segment: "/", "/2027/",
  *  "/us-26/". Anything else is a page on a site that carries other things too. */
@@ -213,13 +213,59 @@ function originIconUrl(url: string): string | null {
   }
 }
 
+/**
+ * Whether anybody ever managed to read this conference's own pages.
+ *
+ * The three section states are not interchangeable, and the difference between two of them is the
+ * whole point. "stated" has something to show. "not_announced" is the organiser saying they have
+ * not published it yet — an answer, from a page somebody read, and a useful one: the Mid-Continent
+ * Field Conference states its venue and says in five places that the rest is not out yet, which is
+ * a conference somebody is looking for. "unread" is the absence of an answer, and it is the one the
+ * detail page renders as "could not be retrieved".
+ *
+ * So this counts answers, not filled tabs. Counting filled tabs is what the first version of this
+ * gate did, and besides hiding those 386 it would today hide the Mid-Continent record while keeping
+ * twelve whose every panel but one admits nothing could be read.
+ *
+ * One answer out of seven is not a page, unless what is behind it is a thing rather than a
+ * sentence. A call for papers with a date on it is what a reader came for and is worth a tab on its
+ * own; so is a schedule, a roster or a price list. A four-word blurb standing in for a programme is
+ * not, and twelve records in this catalogue are exactly that — every one of their sites answers
+ * this server with a 403, so what is stored is not what the conference has, it is what nobody could
+ * find out.
+ */
+function pagesWereRead(record: LaunchConferenceRecord): boolean {
+  const details = record.details;
+  if (!details) return false;
+  const answered = [
+    details.callForPapers ? "stated" : "unread",
+    details.schedule.sessions.length ? "stated" : details.program.availability,
+    details.keynotes.availability,
+    details.committee.availability,
+    details.sponsors.availability,
+    details.venueName || details.venueAddress || details.accommodation || record.venue
+      ? "stated"
+      : "unread",
+    details.fees.availability,
+  ].filter((state) => state !== "unread");
+  if (answered.length >= 2) return true;
+  return (
+    Boolean(details.callForPapers)
+    || details.schedule.sessions.length > 0
+    || details.keynotes.items.length > 0
+    || details.committee.items.length > 0
+    || details.sponsors.items.length > 0
+    || details.fees.items.length > 0
+  );
+}
+
 export function hasSomethingToShow(record: LaunchConferenceRecord, today?: string): boolean {
   const whenKnown = Boolean(record.startDate || record.datePrecision === "month");
   const whereKnown = Boolean(record.city || record.country);
   const somethingToRead =
     Boolean(record.description || record.officialUrl || record.venue || record.organization)
     || filledSections(record).length > 0;
-  return whenKnown && whereKnown && somethingToRead
+  return whenKnown && whereKnown && somethingToRead && pagesWereRead(record)
     && !isBareListing(record) && !leadsNowhere(record) && !onlyAClosedCall(record, today);
 }
 

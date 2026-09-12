@@ -376,6 +376,22 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     const populatedSections = sections.filter(hasContent).length;
     const pagesCrawled = Number(metadata.pages_crawled) || 0;
     const detailsReady = populatedSections >= 3 && (pagesCrawled >= 3 || populatedSections >= 5);
+    // A detail page has to be able to answer more than one of its tabs, the same bar the catalogue
+    // applies in `pagesWereRead`. A stored record that answers one and admits "could not be
+    // retrieved" to the other seven is a promise of a page rather than a page, and the reader only
+    // finds that out after clicking through.
+    //
+    // The availability map is preferred where the row carries one, because it separates the two
+    // reasons a section is empty: an organiser who has not announced their speakers yet answered
+    // the question, and hiding that record loses a real conference. Rows written before the map
+    // existed have only the sections themselves to go on, and there a populated section is the
+    // only evidence anybody read anything.
+    const availability = metadata.section_availability;
+    const answeredSections =
+      availability && typeof availability === "object"
+        ? Object.values(availability).filter((state) => state !== "unread").length
+        : populatedSections;
+    if (answeredSections < 2) continue;
 
     const score = scoreStoredConferenceRecord(query, {
       title,

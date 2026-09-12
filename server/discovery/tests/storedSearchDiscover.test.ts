@@ -4,6 +4,10 @@
 // a database that holds published records matching all of them. Every record here is shaped like a
 // real published one, and each carries the specific property that a filter written for Brave's
 // output rejects it for.
+//
+// "Shaped like a real published one" includes its sections: publication requires a record whose
+// pages somebody read, so every seed carries the venue and programme a published record has. A row
+// that can answer no tab at all is held back before search ever sees it, which is its own test.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -20,6 +24,12 @@ interface SeedRecord {
   overview: Record<string, unknown>;
   sections?: Record<string, unknown>;
 }
+
+/** The two sections every published record carries, so search is tested on publishable rows. */
+const READ_SECTIONS: Record<string, unknown> = {
+  venue_accommodation: { venue_name: "Congress Centre", venue_address: "City centre" },
+  program_agenda: { overview: "Plenary and parallel technical sessions across the programme." },
+};
 
 const SEEDS: SeedRecord[] = [
   {
@@ -114,11 +124,15 @@ async function seed(): Promise<void> {
        publish_readiness,confidence_score) VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [record.id, record.title, record.title.toLowerCase(), "html", record.url,
         new URL(record.url).hostname, record.url, "published", "publish_ready", 0.9]);
+    const sections = { ...READ_SECTIONS, ...(record.sections ?? {}) };
     await dbRun(`INSERT OR REPLACE INTO extracted_conferences
-      (source_url, overview, call_for_papers, extraction_metadata, updated_at)
-      VALUES (?,?,?,?,datetime('now'))`,
+      (source_url, overview, call_for_papers, program_agenda, venue_accommodation,
+       extraction_metadata, updated_at)
+      VALUES (?,?,?,?,?,?,datetime('now'))`,
       [record.url, JSON.stringify(record.overview),
-        JSON.stringify(record.sections?.call_for_papers ?? {}),
+        JSON.stringify(sections.call_for_papers ?? {}),
+        JSON.stringify(sections.program_agenda ?? {}),
+        JSON.stringify(sections.venue_accommodation ?? {}),
         JSON.stringify({ origin: "discovery_engine", status: "success", discovery_event_id: record.id })]);
   }
 }

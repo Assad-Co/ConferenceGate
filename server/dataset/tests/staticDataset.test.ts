@@ -279,15 +279,34 @@ test("the catalogue hands the page the logo alongside the rest of the record", (
   });
 });
 
+/**
+ * A conference whose pages were read and which had nothing to announce yet.
+ *
+ * Nothing is filled, so a record carrying this is the case the gate has to get right in both
+ * directions: it is not held back for having no roster, and it is not kept on the strength of a
+ * detail page nobody could open.
+ */
+const READ_AND_UNANNOUNCED = {
+  program: { availability: "not_announced", text: "Agenda not yet published." },
+  schedule: { sessions: [], themes: [] },
+  keynotes: { availability: "not_announced", items: [] },
+  committee: { availability: "not_announced", items: [] },
+  fees: { availability: "not_announced", items: [] },
+  sponsors: { availability: "not_announced", items: [] },
+  callForPapers: null,
+};
+
 test("a conference is worth showing on what it can say, not on which tabs are filled", () => {
   const base: any = {
     title: "Some Conference 2027", acronym: null, edition: null, description: null,
     datesText: null, startDate: "2027-04-01", endDate: "2027-04-03", datePrecision: "day",
     city: "Lisbon", region: null, country: "Portugal", worldRegion: "Europe", venue: null,
     format: null, organization: null, topics: [], categories: [], keywords: [],
-    // A page about this conference. The link's own shape is tested separately below; here it is
-    // held realistic so these assertions stay about what the record can say.
-    officialUrl: null, sourceUrl: "https://example.org/events/some-conference-2027", details: null,
+    // A page about this conference, read, with nothing announced on it yet. Both are held realistic
+    // so these assertions stay about what the record can say rather than about the link's shape or
+    // about whether anybody opened the conference's pages, which are tested separately below.
+    officialUrl: null, sourceUrl: "https://example.org/events/some-conference-2027",
+    details: READ_AND_UNANNOUNCED,
   };
   // A date, a place and an overview is a page worth opening even with every tab empty.
   assert.equal(hasSomethingToShow({ ...base, description: "An overview." }), true);
@@ -305,6 +324,81 @@ test("a conference is worth showing on what it can say, not on which tabs are fi
     hasSomethingToShow({ ...base, description: "An overview.", startDate: null, datePrecision: "month" }),
     true
   );
+  // None of which survives a record nobody read: the overview is the card, and behind it would be
+  // eight panels of "could not be retrieved".
+  assert.equal(hasSomethingToShow({ ...base, description: "An overview.", details: null }), false);
+});
+
+// Twelve records reached the catalogue as a detail page nobody could open: a one-line blurb
+// standing in for a programme, and every other panel saying "could not be retrieved". Every one of
+// their sites answers this server with a 403. What separates them from a conference that has simply
+// not announced anything yet is the difference between "unread" and "not_announced", and this test
+// exists because the obvious rule — count the filled tabs — gets that backwards in both directions.
+test("a conference nobody could read is not listed, but one with nothing to announce is", () => {
+  const base: any = {
+    title: "2027 5th Asia Conference on Advances in Image Processing", acronym: null, edition: null,
+    description: "Asia conference focused on advances in image processing.",
+    datesText: null, startDate: "2027-04-16", endDate: "2027-04-18", datePrecision: "day",
+    city: "Osaka", region: null, country: "Japan", worldRegion: "Asia",
+    venue: null, format: null, organization: "Conference organizers",
+    topics: [], categories: [], keywords: [],
+    officialUrl: "https://aaip.net/", sourceUrl: "https://aaip.net/",
+    details: {
+      program: { availability: "stated", text: "Technical paper sessions." },
+      schedule: { sessions: [], themes: [] },
+      keynotes: { availability: "unread", items: [] },
+      committee: { availability: "unread", items: [] },
+      fees: { availability: "unread", items: [] },
+      sponsors: { availability: "unread", items: [] },
+      callForPapers: null,
+    },
+  };
+  // Four words of programme and six panels admitting defeat is not a page.
+  assert.equal(hasSomethingToShow(base, "2026-09-12"), false);
+  // Nor is a record with no tabs at all.
+  assert.equal(hasSomethingToShow({ ...base, details: null }, "2026-09-12"), false);
+
+  // The Mid-Continent Field Conference: its pages were read, and they say in five places that the
+  // rest is not out yet. Nothing is filled and it is still a conference somebody is looking for.
+  const unannounced = {
+    ...base,
+    title: "7th Biennial AAPG Mid-Continent Section Field Conference",
+    venue: "Oklahoma State University",
+    details: {
+      ...base.details,
+      program: { availability: "not_announced", text: "Detailed technical agenda not yet published." },
+      keynotes: { availability: "not_announced", items: [] },
+      committee: { availability: "not_announced", items: [] },
+      fees: { availability: "not_announced", items: [] },
+      sponsors: { availability: "not_announced", items: [] },
+    },
+  };
+  assert.equal(hasSomethingToShow(unannounced, "2026-09-12"), true);
+
+  // A second answer is enough on its own, whichever two they are.
+  assert.equal(hasSomethingToShow({ ...base, venue: "Osaka International House" }, "2026-09-12"), true);
+
+  // And one answer carries the record when what is behind it is a thing rather than a sentence: a
+  // dated call for papers is what a reader came for. A closed one is handled by its own rule below.
+  const call = {
+    ...base,
+    details: {
+      ...base.details,
+      program: { availability: "unread", text: null },
+      callForPapers: { status: "Open", abstractDeadline: "2026-12-31", submissionEmail: null, lengthLimit: null, text: null },
+    },
+  };
+  assert.equal(hasSomethingToShow(call, "2026-09-12"), true);
+  // A roster is the same: one tab, but one holding people.
+  const roster = {
+    ...base,
+    details: {
+      ...base.details,
+      program: { availability: "unread", text: null },
+      keynotes: { availability: "stated", items: [{ name: "A Speaker" }] },
+    },
+  };
+  assert.equal(hasSomethingToShow(roster, "2026-09-12"), true);
 });
 
 // Two records cited https://www.iconf.com/ and nothing else: the directory's own front door, which
@@ -319,7 +413,7 @@ test("a record whose only link is a directory's front page has nowhere to send a
     datesText: null, startDate: "2027-08-08", endDate: "2027-08-10", datePrecision: "day",
     city: "Osaka", region: null, country: "Japan", worldRegion: "Asia", venue: null,
     format: null, organization: "Conference organizers", topics: [], categories: [], keywords: [],
-    officialUrl: null, sourceUrl: "https://www.iconf.com/", details: null,
+    officialUrl: null, sourceUrl: "https://www.iconf.com/", details: READ_AND_UNANNOUNCED,
   };
   assert.equal(hasSomethingToShow(base), false);
   // A search that returns whatever matches a tag today is the same dead end by another spelling.

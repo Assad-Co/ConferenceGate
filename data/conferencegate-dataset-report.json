@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-12T17:28:09.483Z",
+  "generatedAt": "2026-09-12T18:34:25.157Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
-  "accepted": 265,
+  "accepted": 253,
   "duplicatesMerged": 18,
   "rejected": 22,
   "rejectionReasons": {
@@ -19,7 +19,7 @@
     "no_location": 1
   },
   "detailsAttached": 155,
-  "heldBackWithNothingToShow": 372,
+  "heldBackWithNothingToShow": 384,
   "websitesResolved": {
     "applied": 87,
     "alreadyKnown": 79,
@@ -78,44 +78,44 @@
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 265,
+  "total": 253,
   "byYear": {
     "2026": 137,
-    "2027": 128
+    "2027": 116
   },
-  "countries": 38,
-  "cities": 116,
+  "countries": 37,
+  "cities": 111,
   "categories": 38,
   "worldRegions": {
-    "Asia": 79,
     "Oceania": 77,
-    "North America": 47,
-    "Europe": 46,
+    "Asia": 73,
+    "North America": 44,
+    "Europe": 43,
     "Middle East": 10,
     "South America": 4,
     "Africa": 2
   },
   "formats": {
-    "in-person": 257,
+    "in-person": 245,
     "hybrid": 5,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 261,
+    "official_site": 249,
     "directory_listing": 4
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "98.9%",
-    "monthOnlyDates": "1.1%",
+    "exactDates": "98.8%",
+    "monthOnlyDates": "1.2%",
     "city": "100.0%",
     "country": "100.0%",
-    "officialUrl": "98.5%",
-    "venue": "23.0%",
-    "organization": "87.5%",
+    "officialUrl": "98.4%",
+    "venue": "24.1%",
+    "organization": "87.0%",
     "category": "100.0%",
     "description": "100.0%",
-    "corroborated": "1.9%"
+    "corroborated": "2.0%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",
