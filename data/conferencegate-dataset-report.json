@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T18:34:25.157Z",
+  "generatedAt": "2026-09-12T21:37:30.646Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -18,7 +18,7 @@
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
-  "detailsAttached": 155,
+  "detailsAttached": 185,
   "heldBackWithNothingToShow": 384,
   "websitesResolved": {
     "applied": 87,
@@ -76,6 +76,18 @@
     {
       "title": "Latin America Geothermal Systems Workshop 2026",
       "reason": "no_conference_with_this_title"
+    },
+    {
+      "title": "World Health Summit 2026",
+      "reason": "already_filled_by_another_list"
+    },
+    {
+      "title": "2027 9th International Conference on Computer Science and Technologies in Education",
+      "reason": "already_filled_by_another_list"
+    },
+    {
+      "title": "2027 The 13th International Conference on Frontiers of Educational Technologies",
+      "reason": "already_filled_by_another_list"
     }
   ],
   "total": 253,

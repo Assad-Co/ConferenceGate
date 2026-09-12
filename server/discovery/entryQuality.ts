@@ -114,13 +114,40 @@ tickets tools topic topics tour track tracks trade training travel trend trends 
 venue view virtual vision visitor web welcome workshop workshops world year
 `.trim().split(/\s+/));
 
+/**
+ * A country or a well-known city, which a page names beside people without naming a person.
+ *
+ * Gastech's co-hosts list opened with "South Korea" — the delegation, not a delegate. A place is
+ * the same shape as a name and carries no word that gives it away, so it takes a list.
+ */
+const PLACE_WORD = new Set(`korea japan china india thailand vietnam malaysia singapore indonesia
+philippines taiwan australia zealand america canada mexico brazil argentina chile colombia peru
+britain england scotland wales ireland france germany spain portugal italy greece turkey poland
+sweden norway denmark finland netherlands belgium austria switzerland czechia hungary romania
+ukraine russia egypt nigeria kenya ghana africa morocco algeria tunisia emirates arabia qatar
+kuwait bahrain oman jordan lebanon israel iran iraq pakistan bangladesh york london paris berlin
+madrid rome tokyo beijing shanghai dubai sydney toronto chicago boston houston seattle denver
+atlanta miami vegas francisco angeles diego orleans jersey delhi mumbai bangkok jakarta manila
+seoul osaka kyoto states kingdom republic`.trim().split(/\s+/));
+/** Qualifiers a place name carries that a person's name also might. */
+const PLACE_QUALIFIER = new Set(["south", "north", "west", "east", "new", "san", "los", "las",
+  "united", "saudi", "great", "the", "of", "and"]);
+
+/** Whether every word of a candidate belongs to a place rather than to a person. */
+function namesAPlace(words: string[]): boolean {
+  const solid = words.map((word) => word.toLowerCase().replace(/[^a-z]/g, "")).filter(Boolean);
+  if (!solid.length || solid.length > 3) return false;
+  return solid.every((word) => PLACE_WORD.has(word) || PLACE_QUALIFIER.has(word))
+    && solid.some((word) => PLACE_WORD.has(word));
+}
+
 /** Whether a string can be somebody's name. */
 export function isCredibleName(raw: string): boolean {
   const text = raw.replace(/\s+/g, " ").trim();
   if (text.length < 4 || text.length > 70) return false;
   if (TITLE_ONLY.test(text) || FURNITURE.test(text) || DATE_LINE.test(text)) return false;
   if (FILENAME.test(text) || looksMachineGenerated(text) || looksLikeMarkup(text)) return false;
-  if (IS_SENTENCE.test(text) || NOT_A_PERSON.test(text)) return false;
+  if (IS_SENTENCE.test(text) || NOT_A_PERSON.test(text) ) return false;
   if (ORGANISATION_WORD.test(text) || HEADLINE.test(text) || BENEFIT_LINE.test(text)) return false;
   // Nobody is called "Future Leaders Gastech 2025". An edition year inside a name means the string
   // names an event, a strand or a session — the one place a roster and a programme get confused.
@@ -132,6 +159,7 @@ export function isCredibleName(raw: string): boolean {
   // A name is written in capitals; a phrase about a name is not. URTeC's sponsor tiers arrived as
   // "Logo on on-site signage" and "Complimentary Event registrations", which open with a capital
   // exactly as any sentence does — so it is the balance that decides, not the presence of one.
+  if (namesAPlace(words)) return false;
   const carries = words.filter((word) => !JOINING.has(word.toLowerCase().replace(/[^a-z]/g, "")));
   const capitalised = carries.filter((word) => /^[A-Z\u00C0-\u024F]/.test(word)).length;
   if (capitalised < 2 || capitalised < carries.length - capitalised) return false;

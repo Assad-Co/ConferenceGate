@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T18:34:25.157Z",
+  "generatedAt": "2026-09-12T21:37:30.646Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -540,7 +540,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "webharvest-verified-2026",
+        "source": "webharvest-verified-2026, sweep-2026-09-12",
         "venueName": "BITEC — Bangkok International Trade & Exhibition Centre",
         "venueAddress": "Bangkok, Thailand",
         "accommodation": "Official housing partner CDM Thailand provides preferential hotel rates. Published examples include Hyatt Place Bangkok Sukhumvit 24 from THB 2,900 and Wyndham Garden Bangkok Sukhumvit 42 from THB 3,200 single occupancy; additional official hotels are listed in the housing portal.",
@@ -593,9 +593,689 @@
         },
         "committee": {
           "availability": "stated",
-          "items": [],
-          "text": "Gastech publishes an Executive Committee through its official event site and the conference programme is managed by dmg events with industry leadership participation.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Sarah Bairstow",
+              "role": "CO-HOSTS",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Prasert Sinsukprasert",
+              "role": "CO-HOSTS",
+              "org": "Ministry of Energy of Thailand",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "H.E. Tarek El Molla",
+              "role": "CO-HOSTS",
+              "org": "Luminant Energy Consultancy",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Secretary Dan Brouillette",
+              "role": "CO-HOSTS",
+              "org": "The Torridon Group",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Joseph McMonigle",
+              "role": "CO-HOSTS",
+              "org": "Global Center for Energy Analysis",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Nobuo Tanaka",
+              "role": "CO-HOSTS",
+              "org": "International Energy Agency (IEA",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Narin Phoawanich",
+              "role": "CO-HOSTS",
+              "org": "Electricity Generating Authority of Thailand (EGAT",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Poonpat Leesombatpiboon",
+              "role": "CO-HOSTS",
+              "org": "Energy Regulatory Commission (ERC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Damian Beauchamp",
+              "role": "CO-HOSTS",
+              "org": "8 Rivers",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Luis F. Gonzalez",
+              "role": "CO-HOSTS",
+              "org": "Aboitiz Power",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Paul Everingham",
+              "role": "CO-HOSTS",
+              "org": "Asia Natural Gas & Energy Association (ANGEA",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Andrew Kirk",
+              "role": "CO-HOSTS",
+              "org": "B. Grimm LNG",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Asheesh Sastry",
+              "role": "CO-HOSTS",
+              "org": "BCG",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Witaya Wannasuphoprasit",
+              "role": "CO-HOSTS",
+              "org": "Chulalongkorn University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Tawatchai Sumranwanich",
+              "role": "CO-HOSTS",
+              "org": "EGCO Group",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pavan Chilukuri",
+              "role": "CO-HOSTS",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Cristian Signoretto",
+              "role": "CO-HOSTS",
+              "org": "Eni",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Christopher Buckingham",
+              "role": "CO-HOSTS",
+              "org": "Evercore",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Marco Duso",
+              "role": "CO-HOSTS",
+              "org": "EY Parthenon",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Stephane Germain",
+              "role": "CO-HOSTS",
+              "org": "GHGSat",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Disathat Panyarachun",
+              "role": "CO-HOSTS",
+              "org": "Gulf Development",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Kohei Toyoda",
+              "role": "CO-HOSTS",
+              "org": "Japan Bank for International Cooperation (JBIC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yosuke Sato",
+              "role": "CO-HOSTS",
+              "org": "JOGMEC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jonathan Westby",
+              "role": "CO-HOSTS",
+              "org": "JERA Global Markets",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Nick Milne",
+              "role": "CO-HOSTS",
+              "org": "Macquarie Bank",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Uwa Airhiavbere",
+              "role": "CO-HOSTS",
+              "org": "Microsoft",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Tracy Lothian",
+              "role": "CO-HOSTS",
+              "org": "MidOcean Energy",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Julien Perez",
+              "role": "CO-HOSTS",
+              "org": "OGCI",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Charlotte Wolff-Bye",
+              "role": "CO-HOSTS",
+              "org": "PETRONAS",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Paspong Sangprueksa",
+              "role": "CO-HOSTS",
+              "org": "PTT Public Company Limited",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Leonardo Brunori",
+              "role": "CO-HOSTS",
+              "org": "RINA; Assorisorse",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Eric Eyberg",
+              "role": "CO-HOSTS",
+              "org": "S&P Global",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Tom Summers",
+              "role": "CO-HOSTS",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Alan Heng",
+              "role": "CO-HOSTS",
+              "org": "Singapore GasCo",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yumiko Yao",
+              "role": "CO-HOSTS",
+              "org": "Tokyo Gas Asia",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pablo Galante Escobar",
+              "role": "CO-HOSTS",
+              "org": "Vitol",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Zubin Bamji",
+              "role": "CO-HOSTS",
+              "org": "World Bank",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Gerry Traynor",
+              "role": "CO-HOSTS",
+              "org": "Wood",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Simon Flowers",
+              "role": "CO-HOSTS",
+              "org": "Wood Mackenzie",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Genevieve",
+              "role": "CO-HOSTS",
+              "org": "Jenny",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Paul Sullivan",
+              "role": "CO-HOSTS",
+              "org": "Worley",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Alessandra Pasini",
+              "role": "CO-HOSTS",
+              "org": "Zhero",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "ENGIE GEMS",
+              "role": "CO-HOSTS",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "BW LNG",
+              "role": "CO-HOSTS",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Anne-Sophie Corbeau",
+              "role": "CO-HOSTS",
+              "org": "Columbia University's School of International and Public Affairs",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Stergios Stamopoulos",
+              "role": "CO-HOSTS",
+              "org": "ABS",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Joseph Gebara",
+              "role": "CO-HOSTS",
+              "org": "Ahmadiah Contracting & Trading Co.",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jason Bennett",
+              "role": "CO-HOSTS",
+              "org": "Baker Botts L.L.P.",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Stefano Tarchi",
+              "role": "CO-HOSTS",
+              "org": "Baker Hughes",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Timothy Truong",
+              "role": "CO-HOSTS",
+              "org": "Bechtel Energy",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Justin M. Ellrich",
+              "role": "CO-HOSTS",
+              "org": "Black & Veatch",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Philippe Herve",
+              "role": "CO-HOSTS",
+              "org": "Bluebeam",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Petrina Raitt",
+              "role": "CO-HOSTS",
+              "org": "bp",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Geoffroy Hureau",
+              "role": "CO-HOSTS",
+              "org": "CEDIGAZ",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sam White",
+              "role": "CO-HOSTS",
+              "org": "Cheniere Energy",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Atsushi Tamagawa",
+              "role": "CO-HOSTS",
+              "org": "Chiyoda Corp",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pisut Painmanakul",
+              "role": "CO-HOSTS",
+              "org": "Chulalongkorn University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Akio Usami",
+              "role": "CO-HOSTS",
+              "org": "ClassNK",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Shan Tongwen",
+              "role": "CO-HOSTS",
+              "org": "CNOOC Group",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Karl Masani",
+              "role": "CO-HOSTS",
+              "org": "ConocoPhillips",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Martin Cartwright",
+              "role": "CO-HOSTS",
+              "org": "DNV",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Prasit Laohawirapap",
+              "role": "CO-HOSTS",
+              "org": "EGCO Group",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Veera Tangvichacharn",
+              "role": "CO-HOSTS",
+              "org": "Electricity Generating Authority of Thailand (EGAT",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mona Bhagat",
+              "role": "CO-HOSTS",
+              "org": "Elemental Energies",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Delphi Sun",
+              "role": "CO-HOSTS",
+              "org": "Ltd",
+              "title": "ENN Natural Gas Co.",
+              "topic": null
+            },
+            {
+              "name": "Xiaoli Yao Wright",
+              "role": "CO-HOSTS",
+              "org": "ExxonMobil",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Steven Borsos",
+              "role": "CO-HOSTS",
+              "org": "Fluor",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Laurent David",
+              "role": "CO-HOSTS",
+              "org": "GIIGNL",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "David Colson",
+              "role": "CO-HOSTS",
+              "org": "GTT (Gaztransport & Technigaz",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Wuttipat Kaewko",
+              "role": "CO-HOSTS",
+              "org": "Gulf Development Public Company",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "John Palamara",
+              "role": "CO-HOSTS",
+              "org": "Honeywell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bhargav Sharma",
+              "role": "CO-HOSTS",
+              "org": "Honeywell UOP",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Tomohide Muraoka",
+              "role": "CO-HOSTS",
+              "org": "JGC Holdings Corporation",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Javid Talib",
+              "role": "CO-HOSTS",
+              "org": "jht Consulting",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Andrew Webster",
+              "role": "CO-HOSTS",
+              "org": "KBR",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Michael Deighton",
+              "role": "CO-HOSTS",
+              "org": "Kent",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jason Manning",
+              "role": "CO-HOSTS",
+              "org": "Kiewit",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Chris Clucas",
+              "role": "CO-HOSTS",
+              "org": "Liquefied Gas Consultancy Ltd",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "John Hatley",
+              "role": "CO-HOSTS",
+              "org": "MARITEX Business Advisors",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Martin Mayer",
+              "role": "CO-HOSTS",
+              "org": "McDermott",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Hasan Ozkoc",
+              "role": "CO-HOSTS",
+              "org": "Mediterranean Energy Regulators (MEDREG",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Makoto Inomoto",
+              "role": "CO-HOSTS",
+              "org": "Mitsui O.S.K. Lines",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Alessandro Romagnoli",
+              "role": "CO-HOSTS",
+              "org": "Nanyang Technological University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Hironobu Watanabe",
+              "role": "CO-HOSTS",
+              "org": "NYK Line Japan",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Rakhi Oli",
+              "role": "CO-HOSTS",
+              "org": "One Step Advisors",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fabio Feital de Carvalho",
+              "role": "CO-HOSTS",
+              "org": "Petrobras America Inc.",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Kurujit Nakornthap",
+              "role": "CO-HOSTS",
+              "org": "Petroleum and Energy Institute of Thailand",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ngo Anh Hien",
+              "role": "CO-HOSTS",
+              "org": "Petrovietnam Corporation (Head Office",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Thanat Obyam",
+              "role": "CO-HOSTS",
+              "org": "PTT Public Company Limited",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Barbara Jinks",
+              "role": "CO-HOSTS",
+              "org": "Ready4H2",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jefferson Edwards",
+              "role": "CO-HOSTS",
+              "org": "Shell",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "David Wilson",
+              "role": "CO-HOSTS",
+              "org": "Siemens Energy",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Katan Hirachand",
+              "role": "CO-HOSTS",
+              "org": "India",
+              "title": "Societe Generale Bank",
+              "topic": null
+            },
+            {
+              "name": "Hans Weverbergh",
+              "role": "CO-HOSTS",
+              "org": "Society of International Gas Tanker and Terminal Operators (SIGTTO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Susan Sakmar",
+              "role": "CO-HOSTS",
+              "org": "University of Houston Law Center",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jean-Christian Heintz",
+              "role": "CO-HOSTS",
+              "org": "Wideangle LNG",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "James Holbeach",
+              "role": "CO-HOSTS",
+              "org": "Wood",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "CO-HOSTS: Sarah Bairstow; Prasert Sinsukprasert (Ministry of Energy of Thailand); H.E. Tarek El Molla (Luminant Energy Consultancy); Secretary Dan Brouillette (The Torridon Group); Joseph McMonigle (Global Center for Energy Analysis); Nobuo Tanaka (International Energy Agency (IEA)); Narin Phoawanich (Electricity Generating Authority of Thailand (EGAT)); Poonpat Leesombatpiboon (Energy Regulatory Commission (ERC) of Thailand); Damian Beauchamp (8 Rivers); Luis F. Gonzalez (Aboitiz Power); Paul Everingham (Asia Natural Gas & Energy Association (ANGEA)); Andrew Kirk (B. Grimm LNG); Asheesh Sastry (BCG); Yngvil Åsheim (BW LNG); Witaya Wannasuphoprasit (Chulalongkorn University); Tawatchai Sumranwanich (EGCO Group); Pavan Chilukuri; Jérôme Malka (Engie GEMS); Cristian Signoretto (Eni); Christopher Buckingham (Evercore); Marco Duso (EY Parthenon); Michèle Azalbert (Gentari); Stephane Germain (GHGSat); Disathat Panyarachun (Gulf Development); Kohei Toyoda (Japan Bank for International Cooperation (JBIC)); Yosuke Sato (JOGMEC); Jonathan Westby (JERA Global Markets); Nick Milne (Macquarie Bank); Uwa Airhiavbere (Microsoft); Tracy Lothian (MidOcean Energy); Julien Perez (OGCI); Charlotte Wolff-Bye (PETRONAS); Paspong Sangprueksa (PTT Public Company Limited); Leonardo Brunori (RINA; Assorisorse); Eric Eyberg (S&P Global); Tom Summers (Shell); Alan Heng (Singapore GasCo); Yumiko Yao (Tokyo Gas Asia); Vicky A. Bailey (United States Energy Association); Pablo Galante Escobar (Vitol); Zubin Bamji (World Bank); Gerry Traynor (Wood); Simon Flowers (Wood Mackenzie); Genevieve (Jenny) Solomon (Woodside Energy); Paul Sullivan (Worley); Alessandra Pasini (Zhero); ENGIE GEMS; BW LNG; Anne-Sophie Corbeau (Columbia University's School of International and Public Affairs); Stergios Stamopoulos (ABS); Joseph Gebara (Ahmadiah Contracting & Trading Co.); Sébastien Lichtle (Air Liquide Engineering & Construction); Jason Bennett (Baker Botts L.L.P.); Stefano Tarchi (Baker Hughes); Timothy Truong (Bechtel Energy); Justin M. Ellrich (Black & Veatch); Philippe Herve (Bluebeam); Petrina Raitt (bp); Geoffroy Hureau (CEDIGAZ); Sam White (Cheniere Energy); Atsushi Tamagawa (Chiyoda Corp); Pisut Painmanakul (Chulalongkorn University); Akio Usami (ClassNK); Shan Tongwen (CNOOC Group); Karl Masani (ConocoPhillips); Martin Cartwright (DNV); Prasit Laohawirapap (EGCO Group); Veera Tangvichacharn (Electricity Generating Authority of Thailand (EGAT)); Mona Bhagat (Elemental Energies); Delphi Sun (ENN Natural Gas Co., Ltd); Xiaoli Yao Wright (ExxonMobil); Steven Borsos (Fluor); Laurent David (GIIGNL); David Colson (GTT (Gaztransport & Technigaz) SA); Wuttipat Kaewko (Gulf Development Public Company); John Palamara (Honeywell); Bhargav Sharma (Honeywell UOP); Tomohide Muraoka (JGC Holdings Corporation); Javid Talib (jht Consulting); Andrew Webster (KBR); Michael Deighton (Kent); Jason Manning (Kiewit); Chris Clucas (Liquefied Gas Consultancy Ltd); John Hatley (MARITEX Business Advisors); Martin Mayer (McDermott); Hasan Ozkoc (Mediterranean Energy Regulators (MEDREG)); Makoto Inomoto (Mitsui O.S.K. Lines); Alessandro Romagnoli (Nanyang Technological University); Hironobu Watanabe (NYK Line Japan); Rakhi Oli (One Step Advisors); Fabio Feital de Carvalho (Petrobras America Inc.); Kurujit Nakornthap (Petroleum and Energy Institute of Thailand); Ngo Anh Hien (Petrovietnam Corporation (Head Office)); Thanat Obyam (PTT Public Company Limited); Barbara Jinks (Ready4H2); Jefferson Edwards (Shell); David Wilson (Siemens Energy); Katan Hirachand (Societe Generale Bank, India); Hans Weverbergh (Society of International Gas Tanker and Terminal Operators (SIGTTO)); Ricardo Sánchez Galindo (Técnicas Reunidas); Susan Sakmar (University of Houston Law Center); Kent Åstrand (Wärtsilä Marine); Jean-Christian Heintz (Wideangle LNG); James Holbeach (Wood)",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "stated",
@@ -846,7 +1526,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "webharvest-verified-2026",
+        "source": "webharvest-verified-2026, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Barcelona, Spain — official conference venue information is provided through the EuroFinance event site.",
         "accommodation": "Attendee travel and accommodation information is provided by EuroFinance for the Barcelona event.",
@@ -868,9 +1548,101 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "The official EuroFinance 2026 agenda publishes named corporate treasury, economics, policy and industry speakers across the Main Stage and specialist streams.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Can Balcioglu",
+              "role": "Speaker",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Treasury Exchange Roundtables",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Agentic AI",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Remco de Vries",
+              "role": "Keynote",
+              "org": "group treasurer",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Kim Tran",
+              "role": "Keynote",
+              "org": "NN Group N.V.",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Royston Da Costa",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Marianna Polykrati",
+              "role": "Keynote",
+              "org": "group treasurer",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Kennedy Okai",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fritz Waldegger",
+              "role": "Keynote",
+              "org": "Palfinger AG",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Standard Chartered",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Deutsche Bank",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "BNP Paribas",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "J.P. Morgan",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Speaker: Can Balcioglu. Keynote: Treasury Exchange Roundtables; Agentic AI; Remco de Vries (group treasurer); Kim Tran (NN Group N.V.); Royston Da Costa; Marianna Polykrati (group treasurer); Kennedy Okai; Fritz Waldegger (Palfinger AG); Standard Chartered; Deutsche Bank; BNP Paribas; J.P. Morgan",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -981,7 +1753,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -995,9 +1767,24 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Nurmala Sari",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bolormaa Purevdorj",
+              "role": "Invited",
+              "org": "Population Health Research Center Mongolia",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Invited: Nurmala Sari; Bolormaa Purevdorj (Population Health Research Center Mongolia)",
           "unstructuredReason": null
         },
         "committee": {
@@ -1531,7 +2318,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": "Pier 48",
         "venueAddress": "Mission Rock, San Francisco, California",
         "accommodation": "San Francisco accommodation is arranged independently; official event/travel information is provided through the event site.",
@@ -1553,9 +2340,122 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "Keynote Speakers: Peter Norvig is a confirmed 2026 speaker; the event features 120+ speakers from frontier labs, startups, enterprises and academia.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Peter Norvig",
+              "role": "Keynote Speaker",
+              "org": "Stanford HAI",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Emmanuel Ameisen",
+              "role": "Keynote Speaker",
+              "org": "Anthropic",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sarah Chieng",
+              "role": "Keynote Speaker",
+              "org": "Cerebras",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ioannis Antonoglou",
+              "role": "Keynote Speaker",
+              "org": "Reflection AI",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jaclyn Konzelmann",
+              "role": "Keynote Speaker",
+              "org": "Google Labs",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Marco Paglia",
+              "role": "Keynote Speaker",
+              "org": "Musixmatch",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jon Pappas",
+              "role": "Keynote Speaker",
+              "org": "Upwork",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yogiraj Awati",
+              "role": "Keynote Speaker",
+              "org": "Instacart",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ryan Lopopolo",
+              "role": "Keynote Speaker",
+              "org": "OpenAI",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pallavi Kinnera",
+              "role": "Keynote Speaker",
+              "org": "Meta Reality Labs",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Shuen Mei",
+              "role": "Keynote Speaker",
+              "org": "Harbor Capital Advisors",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Pratyusha Singaraju",
+              "role": "Keynote Speaker",
+              "org": "Netflix",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Julia Diament",
+              "role": "Keynote Speaker",
+              "org": "Microsoft",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Divya Mahajan",
+              "role": "Keynote Speaker",
+              "org": "Amazon Alexa",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ruiyang Wang",
+              "role": "Keynote Speaker",
+              "org": "Anthropic",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Vidya Meenakshi",
+              "role": "Keynote Speaker",
+              "org": "Intuit",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Peter Norvig (Stanford HAI); Emmanuel Ameisen (Anthropic); Sarah Chieng (Cerebras); Ioannis Antonoglou (Reflection AI); Jaclyn Konzelmann (Google Labs); Marco Paglia (Musixmatch); Jon Pappas (Upwork); Yogiraj Awati (Instacart); Ryan Lopopolo (OpenAI); Pallavi Kinnera (Meta Reality Labs); Shuen Mei (Harbor Capital Advisors); Pratyusha Singaraju (Netflix); Julia Diament (Microsoft); Divya Mahajan (Amazon Alexa); Ruiyang Wang (Anthropic); Vidya Meenakshi (Intuit)",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -1667,7 +2567,7 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, sweep-2026-09-12",
         "venueName": "Oklahoma State University",
         "venueAddress": "Stillwater, Oklahoma",
         "program": {
@@ -1692,10 +2592,26 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet published",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Faculty/Academic",
+              "amount": 225,
+              "currency": "USD"
+            },
+            {
+              "category": "Industry/Government",
+              "amount": 325,
+              "currency": "USD"
+            },
+            {
+              "category": "Guest/Spouse",
+              "amount": 175,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Faculty/Academic $225; Industry/Government $325; Guest/Spouse $175",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "not_announced",
@@ -3686,7 +4602,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Cleveland, Ohio, United States",
         "accommodation": "Official hotel/travel guidance is provided to registered attendees through MAICON's event information.",
@@ -3719,10 +4635,21 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "8/22/26 - 10/11/26 Regular Rates",
+              "amount": 1999,
+              "currency": "USD"
+            },
+            {
+              "category": "10/12/26 - 10/15/26 On-Site Rates",
+              "amount": 2099,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD 8/22/26 - 10/11/26 Regular Rates $1999; 10/12/26 - 10/15/26 On-Site Rates $2099",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -5204,7 +6131,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": "Santa Clara Convention Center",
         "venueAddress": "Santa Clara, California",
         "accommodation": "Official venue/travel guidance and nearby lodging options are provided by RoboBusiness for attendees.",
@@ -5226,9 +6153,31 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "Keynote Speakers: Current speaker roster includes robotics executives, founders, engineers and investors; speaker names are published on the official RoboBusiness program.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Craig Salvalaggio",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Rene Ymzon",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Maxime Godin",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Keynote: Craig Salvalaggio; Rene Ymzon; Maxime Godin",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -5237,10 +6186,21 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "PRICING - Full Conference EARLY BIRD (ENDS 8/31/26)",
+              "amount": 520,
+              "currency": "USD"
+            },
+            {
+              "category": "PRICING - Expo Only EARLY BIRD (ENDS 8/31/26)",
+              "amount": 80,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD PRICING - Full Conference EARLY BIRD (ENDS 8/31/26) $520; PRICING - Expo Only EARLY BIRD (ENDS 8/31/26) $80",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -5360,7 +6320,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "webharvest-verified-2026",
+        "source": "webharvest-verified-2026, sweep-2026-09-12",
         "venueName": "George R. Brown Convention Center",
         "venueAddress": "Houston, Texas, United States",
         "accommodation": "Official ATCE travel and hotel booking is provided through the event's Book Your Travel programme.",
@@ -5388,15 +6348,136 @@
         },
         "committee": {
           "availability": "stated",
-          "items": [],
-          "text": "Technical programme managed by Society of Petroleum Engineers committees and discipline specialists.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Jitendra Kikani Chevron",
+              "role": "Jitendra Kikani Chevron",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Taoufik Manai SLB",
+              "role": "Jack Norbeck FERVO Energy",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jessica Ramirez Drilling Baker Hughes",
+              "role": "Executive and Program Committees",
+              "org": "Peter Janiczek Completions OMV E&P GmbH",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Murtaza Ziauddin Completions Schlumberger",
+              "role": "Executive and Program Committees",
+              "org": "Isabel Poletzky Drilling Premium Oilfield Technologies",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mariela Fresky Reservoir Shell",
+              "role": "Executive and Program Committees",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Specialty Coordinators",
+              "role": "Executive and Program Committees",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Subcommittee Chairpersons",
+              "role": "Executive and Program Committees",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Mehdi Izadi 2026 ATCE Program Committee Vice Chairperson ExxonMobil: Josh Etkind ThinkOnward (Tom Blasingame Texas A&M University). Jitendra Kikani Chevron: Jitendra Kikani Chevron. Jack Norbeck FERVO Energy: Taoufik Manai SLB. Executive and Program Committees: Jessica Ramirez Drilling Baker Hughes (Peter Janiczek Completions OMV E&P GmbH); Murtaza Ziauddin Completions Schlumberger (Isabel Poletzky Drilling Premium Oilfield Technologies); Mariela Fresky Reservoir Shell; Specialty Coordinators; Subcommittee Chairpersons",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "stated",
-          "items": [],
-          "text": "Paid conference registration is available through SPE, with member and attendee-category pricing through the official registration portal.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "category": "Attendee - SPE Member",
+              "amount": 850,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee - Student",
+              "amount": 125,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee - Spouse",
+              "amount": 200,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee - Presenting Author",
+              "amount": 525,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee 1-Day - SPE Member",
+              "amount": 475,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee 1-Day - Presenting Author",
+              "amount": 175,
+              "currency": "USD"
+            },
+            {
+              "category": "10 - 3-day attendee",
+              "amount": 7000,
+              "currency": "USD"
+            },
+            {
+              "category": "20 - 3-day attendee",
+              "amount": 15000,
+              "currency": "USD"
+            },
+            {
+              "category": "Unlimited 3-day attendee",
+              "amount": 35000,
+              "currency": "USD"
+            },
+            {
+              "category": "Proceedings Member",
+              "amount": 200,
+              "currency": "USD"
+            },
+            {
+              "category": "Proceedings Non-Member",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Awards Reception and Banquet - THURSDAY",
+              "amount": 135,
+              "currency": "USD"
+            },
+            {
+              "category": "Badge Reprint Fee - check the confirmation",
+              "amount": 100,
+              "currency": "USD"
+            },
+            {
+              "category": "Attendee - Non-member »JOIN SPE TO SAVE",
+              "amount": 300,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Attendee - SPE Member $850; Attendee - Student $125; Attendee - Spouse $200; Attendee - Presenting Author $525; Attendee 1-Day - SPE Member $475; Attendee 1-Day - Presenting Author $175; 10 - 3-day attendee $7000; 20 - 3-day attendee $15000; Unlimited 3-day attendee $35000; Proceedings Member $200; Proceedings Non-Member $350; Awards Reception and Banquet - THURSDAY $135; Badge Reprint Fee - check the confirmation $100; Attendee - Non-member »JOIN SPE TO SAVE $300",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -5651,7 +6732,7 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, sweep-2026-09-12",
         "venueName": "Montana Technological University (MontanaTech)",
         "venueAddress": "Butte, Montana",
         "program": {
@@ -5682,10 +6763,31 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet published; registration also listed via Eventbrite.",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Professional Early Bird (Expires September 24, 2026)",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Professional Regular (After September 24, 2026)",
+              "amount": 400,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Early Bird (Expires September 24, 2026)",
+              "amount": 50,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Regular (After September 24, 2026)",
+              "amount": 90,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Professional Early Bird (Expires September 24, 2026) $300; Professional Regular (After September 24, 2026) $400; Student Early Bird (Expires September 24, 2026) $50; Student Regular (After September 24, 2026) $90",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "not_announced",
@@ -5962,12 +7064,12 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Canonsburg, Pennsylvania",
         "program": {
-          "availability": "not_announced",
-          "text": "Annual meeting of AAPG's Eastern Section; program not yet published on AAPG's calendar listing."
+          "availability": "stated",
+          "text": "October 2: Saturday - Day #1. October 3: Sunday - Day #2. 8:00am: 4:00pm Exhibitor Set Up - Grand Ballroom 2. 10:00am: 6:00pm Registration Open - King's Landing. 12:00pm: 2:00pm Student Poster Session - Grand Ballroom 3 & 4. 2:00pm: 2:30pm Student Awards - Grand Ballroom 1. 3:00pm: 4:20pm Student Panel Discussion - Grand Ballroom 1. 4:30pm: 5:50pm Opening Session and Awards - Grand Ballroom 1. 6:00pm: 10:00pm Ice Breaker and Core Viewing - Grand Ballroom 2. October 4: Monday - Day #3. 8:00am: 12:00pm Professional Poster Session. 8:00am: 8:25am Techical Program - “Super Basin Thinking”: Methods to Explore and Revitalize the World’s Greatest Petroleum Basins “Super Basin Thinking”: Methods to Explore and Revitalize the World’s Greatest Petroleum Basins (Sternbach) Technical . 8:25am: 8:50am The Appalachian Unconventional “Super Basin”: A Discussion of Past, Present, and Future Exploration Trends Marcellus SuperBasin (Zagorski) Technical Session. 8:50am: 9:15am The Appalachian “Super Basin”: Utica-Pt Pleasant Update Utica SuperBasin (Jarvis) Technical Session. 9:15am: 9:40am Technical Program - The Marcellus Shale: Geologic Controls on Reservoir Quality and Geochemical Aspects of Future Potential Resources The Marcellus Shale: Geologic Controls on Reservoir Quality and Geochemical Aspects of Future Poten. 9:40am: 10:00am Technical Program - Q&A. 10:00am: 10:10am Break. 10:10am: 10:35am Technical Program - A Proposed Model for Quantifying Critical Mineral Occurrence from Unconventional Sources: An Example from the Marcellus Shale, Appalachian Basin, USA A Proposed Model for Quantifying Critical Mineral Occurrence f. 10:35am: 11:00am Technical Program - Statistical Methods for Collection, Measurement, and Analysis of Critical Minerals in Fine Grained Clastic Rocks: Case Study of the Dunkirk Shale, NY Statistical Methods for Collection, Measurement, and Analysis . 11:00am: 11:25am Technical Program - Energy in Transition, the Hunt for Lithium in North America Energy in Transition, the Hunt for Lithium in North America (Bridges) Technical Session. 11:25am: 11:50am Technical Program - Feasibility and Potential of Compressed Air Energy Storage (CAES) using Salt Caverns in Michigan Feasibility and Potential of Compressed Air Energy Storage (CAES) using Salt Caverns in Michigan (Cox) Technical Se. 11:50am: 12:00pm Technical Program - Q&A. 12:00pm: 1:30pm DPA Luncheon - Your Career in Petroleum Geology: Opportunities & Responsibilities By Donald Burdick CEO Olifant Energy LLC & Incoming DPA President In this DPA-sponsored luncheon, Don will cover a variety of professional and societal. 1:30pm: 1:55pm Technical Program - Echoes of a Giant: the Utica/TBR conventional play Echoes of a Giant: the Utica/TBR conventional play (Hunt) Technical Session. 1:55pm: 2:20pm Technical Program - Moundsville Monster: The history and geology of West Virginia’s most productive shale gas well Moundsville Monster: The history and geology of West Virginia’s most productive shale gas well (Vance) Technical Sessi. 2:20pm: 2:45pm Technical Program - Identifying Repeated Reservoir Intervals Geospatially Using Open-Hole Geophysical Logs Identifying Repeated Reservoir Intervals Geospatially Using Open-Hole Geophysical Logs (Boyer) Technical Session. 2:45pm: 3:05pm Technical Program - Q&A. 3:05pm: 3:15pm Break. 3:15pm: 3:40pm Technical Program - Application of Similarity Analysis to Predict Performance of New Wells in Old Fields using Geologic Variables Application of Similarity Analysis to Predict Performance of New Wells in Old Fields using Geologic Var. 3:40pm: 4:05pm Technical Program - Mapping depletion using drilling data to gain insights into fracture growth and reservoir drainage Mapping depletion using drilling data to gain insights into fracture growth and reservoir drainage (Wutherich) Tec. 4:05pm: 4:30pm Technical Program - How the Humanities can teach us to improve our interpretation skills; Geosteering Techniques from examples in several Basins How the Humanities can teach us to improve our interpretation skills; Geosteering Techni. 4:30pm: 4:50pm Technical Program - Q&A. October 5: Tuesday - Day #4. 8:00am: 8:25am Technical Program - Carbon in the Cambrian Rome Trough: Insights from the Rogersville Shale Carbon in the Cambrian Rome Trough: Insights from the Rogersville Shale (Weislogel) Technical Session. 8:25am: 8:50am Technical Program - Preliminary Evaluation of Rogersville Shale Well Completions and Performance Preliminary Evaluation of Rogersville Shale Well Completions and Performance (Bowersox) Technical Session. 8:50am: 9:15am Technical Program - Resolving biogeochemical feedback mechanisms using a quantitative, statistical approach in the Late Ordovician Utica-Point Pleasant Formation: Implications for source rock deposition and absolute proxy values Reso. 9:15am: 9:40am Technical Program - Comparing and Contrasting Deposits of the Late Ordovician “Point Pleasant” and Dolgeville Formations Comparing and Contrasting Deposits of the Late Ordovician “Point Pleasant” and Dolgeville Formations (Blood) Tec. 9:40am: 10:00m Technical Program - Q&A. 10:10am: 10:35am Technical Program - Produced Gas and Condensate Geochemistry of the Marcellus Formation: Insights into Petroleum Maturity, Migration, and Alteration in an Unconventional Shale Reservoir Produced Gas and Condensate Geochemistry of th. 10:35am: 11:00am Technical Program - Variations in Produced Water Chemistry and Relation to Regional Geology and Production in the Marcellus Shale, Northcentral West Virginia Variations in Produced Water Chemistry and Relation to Regional Geology an"
         },
         "callForPapers": null,
         "schedule": {
@@ -6393,7 +7495,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "webharvest-verified-2026",
+        "source": "webharvest-verified-2026, sweep-2026-09-12",
         "venueName": "ADNEC Centre Abu Dhabi",
         "venueAddress": "Abu Dhabi, United Arab Emirates",
         "accommodation": null,
@@ -6436,9 +7538,17 @@
         },
         "committee": {
           "availability": "stated",
-          "items": [],
-          "text": "ADIPEC conference programmes are curated with global energy-industry leadership and technical experts under dmg events.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Abdulmunim Saif Al Kindy",
+              "role": "ADIPEC 2026 Executive Committee",
+              "org": "UAE Ministry of Energy and Infrastructure",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "ADIPEC 2026 Executive Committee: Abdulmunim Saif Al Kindy (UAE Ministry of Energy and Infrastructure)",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "stated",
@@ -8651,7 +9761,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": "McCormick Place",
         "venueAddress": "Chicago, Illinois, USA",
         "accommodation": "RSNA official hotel program offers up to 30% off participating Chicago hotels. Official partners include Maritz for registration and onPeak for housing-related services.",
@@ -8673,9 +9783,52 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "Jeffrey S. Klein, MD — President’s Address; Jonathan S. Lewin, MD — Opening Plenary; Gwendolyn M. Bryant-Smith, MD — Monday plenary; Mark P. Bernstein, MD — plenary on mass-casualty incidents; Janice M. Newsome, MD — plenary on humanism, equity and AI in interventional radiology.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Jeffrey S. Klein",
+              "role": "President’s Address",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jonathan S. Lewin",
+              "role": "Opening Session",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Gwendolyn M. Bryant-Smith",
+              "role": "Monday Morning Plenary Session",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mark P. Bernstein",
+              "role": "Tuesday Morning Plenary Session",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Janice M. Newsome",
+              "role": "Tuesday Afternoon Plenary Session",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "International Invitation Letter",
+              "role": "Speaker",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "President’s Address: Jeffrey S. Klein. Opening Session: Jonathan S. Lewin. Monday Morning Plenary Session: Gwendolyn M. Bryant-Smith. Tuesday Morning Plenary Session: Mark P. Bernstein. Tuesday Afternoon Plenary Session: Janice M. Newsome. Speaker: International Invitation Letter",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -9287,13 +10440,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": "Kuala Lumpur Convention Centre",
         "venueAddress": "Kuala Lumpur, Malaysia",
         "accommodation": null,
         "program": {
-          "availability": "not_announced",
-          "text": "Conference and exhibition on computer graphics and interactive techniques; detailed program not captured in the official listing used here."
+          "availability": "stated",
+          "text": "July 23, 2026: Important Dates Submission Opens: Submission Deadline: Aug 23, 2026 Winners Announced: Sep 13, 2026. Sep 23, 2026: Camera -Ready Deadline. Dec 01: Workshop & Awards: – 04, 2026"
         },
         "callForPapers": {
           "status": null,
@@ -10134,7 +11287,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Santa Clara, California, United States",
         "accommodation": "Official conference travel/accommodation information is provided through the Humanoids 2026 website.",
@@ -10175,10 +11328,41 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Member (RAS)",
+              "amount": 600,
+              "currency": "USD"
+            },
+            {
+              "category": "Member (IEEE)",
+              "amount": 660,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member",
+              "amount": 900,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Member (RAS)",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Member (IEEE)",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Non-Member",
+              "amount": 450,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Member (RAS) $600; Member (IEEE) $660; Non-Member $900; Student Member (RAS) $300; Student Member (IEEE) $350; Student Non-Member $450",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -11462,7 +12646,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": "Javits Center",
         "venueAddress": "655 W. 34th Street, New York, NY 10001",
         "accommodation": "Official accommodation partner: HotelMap, offering discounted hotel rates to summit attendees. Airline discounts are also offered through Southwest, Delta and United.",
@@ -11518,9 +12702,30 @@
         },
         "fees": {
           "availability": "stated",
-          "items": [],
-          "text": "VIP All Access: US$2,799 early-bird / US$3,499 standard. Delegate Pass: US$2,099 early-bird / US$2,899 standard. Special rates are available for qualifying academics, government employees, startups, students, charities and press.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "category": "Rate",
+              "amount": 699,
+              "currency": "USD"
+            },
+            {
+              "category": "Rate",
+              "amount": 1599,
+              "currency": "USD"
+            },
+            {
+              "category": "Rate",
+              "amount": 799,
+              "currency": "USD"
+            },
+            {
+              "category": "Add to any other existing pass =",
+              "amount": 2199,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Rate $699; Rate $1599; Rate $799; Add to any other existing pass = $2199",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -26528,7 +27733,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Honolulu, Hawaii",
         "accommodation": null,
@@ -26556,9 +27761,38 @@
         },
         "committee": {
           "availability": "stated",
-          "items": [],
-          "text": "IAFOR conference/program committee.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Mohamed Askar",
+              "role": "Committees",
+              "org": "Southern Utah University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Anne Boddington",
+              "role": "Committees",
+              "org": "IAFOR & The University of Osaka",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Umberto Ansaldo",
+              "role": "Committees",
+              "org": "University of Porto",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "International Academic Board",
+              "role": "Conference Review Committee",
+              "org": "IAB",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Committees: Kālewa Correa (The International Academic College (IAC)); Mohamed Askar (Southern Utah University); Anne Boddington (IAFOR & The University of Osaka); Umberto Ansaldo (University of Porto). Conference Review Committee: International Academic Board (IAB)",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "unread",
@@ -26660,7 +27894,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "Honolulu, Hawaii",
         "accommodation": null,
@@ -26688,9 +27922,45 @@
         },
         "committee": {
           "availability": "stated",
-          "items": [],
-          "text": "IAFOR conference/program committee.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Grant Black",
+              "role": "Committees",
+              "org": "The International Academic College (IAC",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ying Chen",
+              "role": "Committees",
+              "org": "University of Wisconsin",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Anne Boddington",
+              "role": "Committees",
+              "org": "IAFOR & The University of Osaka",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Umberto Ansaldo",
+              "role": "Committees",
+              "org": "University of Porto",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "International Academic Board",
+              "role": "IICAH2027 Review Committee",
+              "org": "IAB",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Committees: Grant Black (The International Academic College (IAC)); Ying Chen (University of Wisconsin); Anne Boddington (IAFOR & The University of Osaka); Umberto Ansaldo (University of Porto). IICAH2027 Review Committee: International Academic Board (IAB)",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "unread",
@@ -28569,7 +29839,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -28590,9 +29860,17 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Mohammad Tariqul Islam",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Invited: Mohammad Tariqul Islam",
           "unstructuredReason": null
         },
         "committee": {
@@ -29070,7 +30348,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -29091,9 +30369,31 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Pavel Loskot",
+              "role": "Invited",
+              "org": "ZJU-UIUC Institute",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Mohd Ashraf Ahmad",
+              "role": "Invited",
+              "org": "University Malaysia Pahang",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Lecturer Qian Shi",
+              "role": "Invited",
+              "org": "Shanghai University",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Invited: Pavel Loskot (ZJU-UIUC Institute); Mohd Ashraf Ahmad (University Malaysia Pahang); Lecturer Qian Shi (Shanghai University)",
           "unstructuredReason": null
         },
         "committee": {
@@ -30849,13 +32149,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "December 20, 2026: Please send your proposal to ceac@cbees.net . Special session is open for proposal before ."
         },
         "callForPapers": {
           "status": "Open",
@@ -32544,7 +33844,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -32565,9 +33865,59 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Suhansa Rodchua",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Francesco Colace",
+              "role": "Invited",
+              "org": "Italy",
+              "title": "University of Salerno",
+              "topic": null
+            },
+            {
+              "name": "Siti Hajar Binti Halili",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Eugene Aw Cheng Xi",
+              "role": "Invited",
+              "org": "Malaysia",
+              "title": "UCSI Graduate Business School, UCSI University",
+              "topic": null
+            },
+            {
+              "name": "Dimiter Velev",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ceren Cubukcu Cerasi",
+              "role": "Invited",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yi Ying",
+              "role": "Invited",
+              "org": "Indonesia",
+              "title": "BINUS University",
+              "topic": null
+            }
+          ],
+          "text": "Invited: Suhansa Rodchua; Francesco Colace (University of Salerno, Italy); Siti Hajar Binti Halili; Eugene Aw Cheng Xi (UCSI Graduate Business School, UCSI University, Malaysia); Dimiter Velev; Ceren Cubukcu Cerasi; Yi Ying (BINUS University, Indonesia)",
           "unstructuredReason": null
         },
         "committee": {
@@ -33250,7 +34600,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": "San Diego, California",
         "accommodation": "Hotel/travel details pending.",
@@ -33272,9 +34622,17 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "Lisa Schumacher; Chris Ernst; Jayney Howson; Byron Auguste; Shad Ahmed; Heather Stefanski; Greg Hart; Allison Peek Bebo; Maria Flynn; Matt Sigelman; Amanda Willard; Taylor Stockton; Ryan Craig; Lina Bankert; Raymond Sass; Julia Stiglitz.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Barack Obama",
+              "role": "Speaker",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Speaker: Barack Obama",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -35604,13 +36962,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "April 10, 2027: Please prepare your proposal as a single PDF file with the requested information no later than . Submit the proposal by email to the secretary at bdee@bmail.org. February 1, 2027: Special Session Proposal Due. February 15, 2027: Special Session Proposal Notification. March 1, 2027: Special Session Paper Due. March 25, 2027: Authors Notification. April 10, 2027: Camera-ready Submission. may : The accepted papers in a cancelled special session be moved to special session, or to a main Congress session if they fit the quality requirement. The registration requirement and procedure for papers will be determined by the organizing co"
         },
         "callForPapers": {
           "status": "Open",
@@ -36648,7 +38006,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
+        "source": "ai-worldwide-2026-2028, sweep-2026-09-12",
         "venueName": "Courtyard by Marriott across Universal Orlando",
         "venueAddress": "5916 Caravan Ct, Orlando, FL 32819",
         "accommodation": "Official conference accommodation: US$190/night single occupancy or US$215/night double occupancy, including taxes and breakfast.",
@@ -36761,9 +38119,15 @@
         },
         "fees": {
           "availability": "stated",
-          "items": [],
-          "text": "Early bird: Academic US$699, Industry US$799, Delegate US$649, Student US$499, Virtual US$399. Mid-term: US$799/899/749/599/399. Late: US$899/999/849/699/499.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "category": "Registration Price ( ) ( )",
+              "amount": 699,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Registration Price ( ) ( ) $699",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "not_announced",
@@ -37780,7 +39144,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -38536,9 +39900,40 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Full Paper (Non-Student) 全文注册（非学生）",
+              "amount": 560,
+              "currency": "USD"
+            },
+            {
+              "category": "Full Paper (IEEE Member) 全文注册（IEEE会员）",
+              "amount": 540,
+              "currency": "USD"
+            },
+            {
+              "category": "Full Paper (Student) 全文注册（学生）",
+              "amount": 520,
+              "currency": "USD"
+            },
+            {
+              "category": "Invited Speaker 邀请报告嘉宾注册",
+              "amount": 450,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate without presentation & Publication 听众注册（无会议报告&出版）",
+              "amount": 280,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic Visit 考察",
+              "amount": 100,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Full Paper (Non-Student) 全文注册（非学生） $560; Full Paper (IEEE Member) 全文注册（IEEE会员） $540; Full Paper (Student) 全文注册（学生） $520; Invited Speaker 邀请报告嘉宾注册 $450; Delegate without presentation & Publication 听众注册（无会议报告&出版） $280; Academic Visit 考察 $100",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -39173,7 +40568,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -39195,9 +40590,24 @@
         },
         "keynotes": {
           "availability": "stated",
-          "items": [],
-          "text": "Amy Shen — Okinawa Institute of Science and Technology Graduate University; Kazunori Ikebukuro — Tokyo University of Agriculture and Technology.",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "name": "Amy Shen",
+              "role": "Plenary",
+              "org": "Okinawa Institute of Science and Technology Graduate University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Koji Sode",
+              "role": "Speaker",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Plenary: Amy Shen (Okinawa Institute of Science and Technology Graduate University). Speaker: Koji Sode",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
@@ -40228,7 +41638,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -40312,9 +41722,30 @@
         },
         "fees": {
           "availability": "stated",
-          "items": [],
-          "text": "Refunds: 70% if cancelled more than 60 days before the conference, 50% between 30 and 60 days before, and none within 30 days",
-          "unstructuredReason": "no_recognisable_entries"
+          "items": [
+            {
+              "category": "Author (Standard)",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "Author (IEEE Member)",
+              "amount": 520,
+              "currency": "USD"
+            },
+            {
+              "category": "Author (Student)",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate",
+              "amount": 300,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Author (Standard) $550; Author (IEEE Member) $520; Author (Student) $500; Delegate $300",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -44010,7 +45441,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12, web-search-2026-09-details",
         "venueName": "McCormick Place",
         "venueAddress": "Chicago, Illinois, USA",
         "accommodation": null,
@@ -44024,9 +45455,108 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Deepali Palta",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yadu Dar",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Emily Benson",
+              "role": "Keynote",
+              "org": "The Business Impact of Finding Your Community in Food Science",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Colin Dennis",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bryson Bolton",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Faith Critzer",
+              "role": "Keynote",
+              "org": "University of Georgia",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Jonathan Kershaw",
+              "role": "Keynote",
+              "org": "Brigham Young University",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Darryl Riley",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Laurette Rondenet",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sean Leighton",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Michelle Cordeiro",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Yifat Rogers",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Tawanda Ngorima",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "John Coupland",
+              "role": "Keynote",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Keynote: Deepali Palta; Yadu Dar; Emily Benson (The Business Impact of Finding Your Community in Food Science); Colin Dennis; Bryson Bolton; Faith Critzer (University of Georgia); Jonathan Kershaw (Brigham Young University); Darryl Riley; Laurette Rondenet; Sean Leighton; Michelle Cordeiro; Yifat Rogers; Tawanda Ngorima; John Coupland",
           "unstructuredReason": null
         },
         "committee": {
@@ -47627,7 +49157,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -47660,10 +49190,16 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Pricing pending.",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Delegate - Clinician / Scientist *",
+              "amount": 495,
+              "currency": "GBP"
+            }
+          ],
+          "text": "GBP Delegate - Clinician / Scientist * $495",
+          "unstructuredReason": null
         },
         "sponsors": {
           "availability": "stated",
@@ -48326,7 +49862,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, sweep-2026-09-12",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -48347,10 +49883,18 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "To be announced.",
-          "unstructuredReason": "no_recognisable_entries"
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Afifah Ismat Rahman-Shepherd",
+              "role": "Speaker",
+              "org": "Research Fellow",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Speaker: Afifah Ismat Rahman-Shepherd (Research Fellow)",
+          "unstructuredReason": null
         },
         "committee": {
           "availability": "stated",
