@@ -265,6 +265,7 @@ function main(): void {
       matchedNoConference: result.resolvedUrls.unmatched,
       redatedByOrganiser: result.resolvedUrls.redated,
       logosSupplied: result.resolvedUrls.logos,
+      bannersSupplied: result.resolvedUrls.banners,
       logosRefused: result.resolvedUrls.logosRefused,
     },
     detailsUnmatched: result.detailsUnmatched,

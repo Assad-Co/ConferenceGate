@@ -216,6 +216,15 @@ export interface LaunchConferenceRecord {
    */
   logoUrl?: string | null;
 
+  /**
+   * The wide artwork a conference runs across the top of its own site.
+   *
+   * Same rule as the logo: kept only where a source named the image. Where there is none the
+   * detail page draws a banner from the conference's subject rather than showing a blank panel,
+   * and a drawn one is never stored here — storing it would make a decoration look like a fact.
+   */
+  imageUrl?: string | null;
+
   evidence: LaunchEvidence;
   provenance: Record<string, LaunchFieldProvenance>;
   /** Other pages that stated the same conference. Deduplication keeps the strongest source as the

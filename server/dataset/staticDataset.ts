@@ -263,6 +263,8 @@ export interface LaunchSearchResult {
   acronym: string | null;
   /** Who runs it, where the source named them. */
   organization: string | null;
+  /** Its subject, used to choose the banner's palette. */
+  category: string | null;
   prepared: boolean;
   startDate: string | null;
   /**
@@ -367,6 +369,8 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     acronym: record.acronym,
     // Needed by the mark, which must not head five AAPG events with the society's own name.
     organization: record.organization,
+    // What it is about, which is what the drawn banner keys its palette on.
+    category: record.category,
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
@@ -557,7 +561,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       // here until the worker reads one and stores it.
       logo_url: conferenceLogoUrl(record),
       logo_source: conferenceLogoSource(record),
-      image_url: null,
+      image_url: record.imageUrl ?? null,
     },
     call_for_papers: cfp
       ? {

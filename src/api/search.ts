@@ -13,6 +13,8 @@ export interface LiveSearchResult {
   /** Who runs it. The mark drops the organiser's own name, which otherwise heads every event a
    *  society runs with the society rather than with the event. */
   organization?: string | null;
+  /** Its subject. Chooses the drawn banner's palette. */
+  category?: string | null;
   /** True when Conference Gate already has completed structured tab data for this conference. */
   prepared?: boolean;
   /** Where it is held, when the catalogue knows. Needed as data, not prose, so filters can use it. */

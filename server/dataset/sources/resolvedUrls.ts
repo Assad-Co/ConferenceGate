@@ -26,6 +26,8 @@ export interface ResolvedUrl {
   endDate: string | null;
   /** The conference's own logo, where somebody found the image the conference itself uses. */
   logoUrl: string | null;
+  /** The conference's own banner — the wide artwork across the top of its own site. */
+  bannerUrl: string | null;
 }
 
 export function isResolvedUrlHeader(header: string[]): boolean {
@@ -49,10 +51,11 @@ export function rowsFromResolvedCsv(rows: string[][]): ResolvedUrl[] {
       startDate: statedOrNull(cell(cells, "start_date")),
       endDate: statedOrNull(cell(cells, "end_date")),
       logoUrl: statedOrNull(cell(cells, "logo_url")),
+      bannerUrl: statedOrNull(cell(cells, "banner_url") || cell(cells, "image_url")),
     }))
     // A row needs a title and something to say. It used to need a URL, which silently dropped every
     // row supplying only a logo — the one column a reader most notices when it is missing.
-    .filter((row) => row.title && (row.officialUrl || row.logoUrl || row.startDate));
+    .filter((row) => row.title && (row.officialUrl || row.logoUrl || row.bannerUrl || row.startDate));
 }
 
 /** The same normalisation the detail join uses, so one spelling of a title reaches one record. */
@@ -72,6 +75,8 @@ export interface ResolutionOutcome {
   redated: Array<{ title: string; was: string; now: string }>;
   /** Conferences given a logo of their own. */
   logos: number;
+  /** Conferences given a banner of their own, replacing the drawn one. */
+  banners: number;
   /** Logo rows refused, with why — a supplied column is a claim, screened like any other. */
   logosRefused: Array<{ title: string; url: string; reason: string }>;
 }
@@ -112,7 +117,8 @@ export function applyResolvedUrls(
   }
 
   const outcome: ResolutionOutcome = {
-    applied: 0, unmatched: [], refused: [], alreadyKnown: 0, redated: [], logos: 0, logosRefused: [],
+    applied: 0, unmatched: [], refused: [], alreadyKnown: 0, redated: [],
+    logos: 0, banners: 0, logosRefused: [],
   };
   for (const row of resolutions) {
     const matches = byTitle.get(titleKey(row.title));
@@ -125,6 +131,14 @@ export function applyResolvedUrls(
       const refusal = logoRefusal(row.logoUrl);
       if (refusal) outcome.logosRefused.push({ title: row.title, url: row.logoUrl, reason: refusal });
       else for (const record of matches) { record.logoUrl = row.logoUrl; outcome.logos += 1; }
+    }
+
+    // A banner is the artwork the conference puts across the top of its own site. It is screened
+    // like the logo, and where there is none the page draws one rather than showing a blank panel.
+    if (row.bannerUrl) {
+      const refusal = logoRefusal(row.bannerUrl);
+      if (refusal) outcome.logosRefused.push({ title: row.title, url: row.bannerUrl, reason: refusal });
+      else for (const record of matches) { record.imageUrl = row.bannerUrl; outcome.banners += 1; }
     }
 
     const url = statedOrNull(row.officialUrl);

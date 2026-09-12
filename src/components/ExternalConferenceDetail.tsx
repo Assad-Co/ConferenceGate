@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { conferenceInitials, markSizeClass } from '../utils/conferenceMark';
+import { conferenceBanner } from '../utils/conferenceBanner';
 import {
   Calendar,
   MapPin,
@@ -502,6 +503,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // The same mark the card showed, so a reader who clicked a card headed EASTERN does not land on
   // a page headed AAPG. The organiser is dropped for the reason the card drops it.
   const heroMark = conferenceInitials(displayTitle, data?.overview?.organizer ?? result.organization ?? null);
+  // Drawn, not fetched, and only where nothing was published — see conferenceBanner. Every hero
+  // now has a ground, so none of them reads as a page whose image failed to load.
+  const banner = conferenceBanner(displayTitle, data?.overview?.category ?? result.category ?? null);
   const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
   // Anchor "near the venue" to the venue itself when the site named one, falling back to the
   // city line only when it didn't — searching hotels near a named convention centre is a much
@@ -555,7 +559,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
 
       {/* Hero Banner Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center">
+        <div
+          className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center"
+          style={heroImage ? undefined : { backgroundImage: banner.backgroundImage }}
+        >
           {heroImage ? (
             <img
               src={heroImage}
@@ -564,14 +571,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               className="w-full h-full object-cover opacity-25 blur-[1px]"
             />
           ) : !heroLogo || logoFailed ? (
-            // The conference's own initials, not a globe and not its publisher's logo. Nothing in
-            // the launch catalogue has a logo of its own to show, so this is what a reader sees,
-            // and it is the one mark on the page that belongs to this conference and no other.
-            <span className={`${markSizeClass(heroMark, 'hero')} font-black tracking-wide text-slate-700 px-6 text-center leading-none`}>
+            // The conference's own name, not a globe and not its publisher's logo — the one mark on
+            // the page that belongs to this conference and no other. It sits on the drawn banner
+            // now rather than on bare slate, so it reads as a title over artwork.
+            <span className={`${markSizeClass(heroMark, 'hero')} relative z-[1] font-black tracking-wide text-white/90 px-6 text-center leading-none drop-shadow-lg`}>
               {heroMark}
             </span>
           ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-slate-900/20"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent"></div>
           {heroLogo && !logoFailed && (
             <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
               <img
