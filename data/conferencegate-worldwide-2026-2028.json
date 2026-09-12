@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:39:22.757Z",
+  "generatedAt": "2026-09-12T04:46:54.569Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -320,13 +320,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Melia Sevilla",
+        "venueAddress": "Seville, Spain",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Invited plenary lectures, contributed talks and poster sessions on the latest research in vaccine science. The programme is curated by a committee of academic leaders in their respective fields. Posters can be submitted by 30 August 2026."
         },
         "callForPapers": null,
         "schedule": {
@@ -334,9 +334,31 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Ivan Hung",
+              "role": "Keynote Speaker",
+              "org": "China",
+              "title": "The University of Hong Kong",
+              "topic": null
+            },
+            {
+              "name": "Florian Krammer",
+              "role": "Keynote Speaker",
+              "org": "USA",
+              "title": "Icahn School of Medicine at Mount Sinai",
+              "topic": null
+            },
+            {
+              "name": "Angela Rasmussen",
+              "role": "Keynote Speaker",
+              "org": "Canada",
+              "title": "University of Saskatchewan",
+              "topic": null
+            }
+          ],
+          "text": "Ivan Hung (The University of Hong Kong, China), Florian Krammer (Icahn School of Medicine at Mount Sinai, USA), Angela Rasmussen (University of Saskatchewan, Canada)",
           "unstructuredReason": null
         },
         "committee": {
@@ -2251,36 +2273,65 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Melia Sevilla",
+        "venueAddress": "Seville, Spain",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Explores the most recent advances in the molecular and cellular hallmarks of aging and how they influence aging and disease at the organ, tissue and organismal level, from metabolism and disease to gerotechnology and gerotherapeutics. Abstract submissions are due by 5 June 2026."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-06-05",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstract submissions are due by 5 June 2026"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Luigi Ferrucci",
+              "role": "Keynote Speaker",
+              "org": "National Institute on Aging",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Keynote Speaker: Luigi Ferrucci (National Institute on Aging)",
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Rafael de Cabo",
+              "role": "Organizers",
+              "org": "National Institute on Aging",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ana Maria Cuervo",
+              "role": "Organizers",
+              "org": "Albert Einstein College of Medicine",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Organizers: Rafael de Cabo (National Institute on Aging), Ana Maria Cuervo (Albert Einstein College of Medicine)",
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
+          "availability": "stated",
           "items": [],
-          "text": null,
-          "unstructuredReason": null
+          "text": "Registration EUR 490 to 965, depending on registration time and student status",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
           "availability": "unread",
@@ -3193,13 +3244,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Brings together the latest scientific and technological advances in protein functionality, with a focus on plant-based and fermentation-derived proteins. The programme covers protein functionality across diverse biological sources, linking protein chemistry, processing, physics, formulation, sensory science, nutrition and sustainability."
         },
         "callForPapers": null,
         "schedule": {
@@ -3213,9 +3264,38 @@
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Steven Cornet",
+              "role": "Organising Committee",
+              "org": "NIZO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Joanna Folan",
+              "role": "Organising Committee",
+              "org": "Elsevier",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Celine Brattinga",
+              "role": "Organising Committee",
+              "org": "NIZO",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fred van de Velde",
+              "role": "Organising Committee",
+              "org": "NIZO",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Organising Committee: Steven Cornet (NIZO), Joanna Folan (Elsevier), Celine Brattinga (NIZO), Fred van de Velde (NIZO)",
           "unstructuredReason": null
         },
         "fees": {
@@ -3707,15 +3787,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "Palazzo Regionale dei Congressi",
         "venueAddress": "Grado, Italy",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Food materials science as the foundation of next-generation food design, uniting scientists and industry leaders to explore how structure, processing and formulation can be tuned to create desirable functionality and eating quality. Abstract submission deadline 8 May 2026; author notification 26 June 2026; author registration deadline 24 July 2026."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-05-08",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstract submission deadline 8 May 2026"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -4122,13 +4208,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held in partnership with Zhejiang University and Liangzhu Laboratory. Covers inflammatory and non-inflammatory cell death processes including pyroptosis, ferroptosis, necroptosis and apoptosis, and how they control the balance of health and disease as well as fundamental processes such as growth and development."
         },
         "callForPapers": null,
         "schedule": {
@@ -4504,13 +4590,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "Meliá Sitges",
         "venueAddress": "Spain",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Plenary sessions, interactive workshops and editorial panel discussions. Authors attending are invited to submit their papers for consideration in the Journal of Cleaner Production."
         },
         "callForPapers": null,
         "schedule": {
@@ -5286,13 +5372,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Southern University of Science and Technology",
+        "venueAddress": "1088 Xueyuan Avenue, Nanshan District, Shenzhen, China",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held in partnership with the Southern University of Science and Technology. Supporting Cell Press publications are Structure, Cell and Molecular Cell."
         },
         "callForPapers": null,
         "schedule": {
@@ -5674,12 +5760,12 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "program": {
-          "availability": "not_announced",
-          "text": "Leadership-development summit for geoscience students and young professionals across AAPG's Latin America & Caribbean Region; agenda not yet published in detail."
+          "availability": "stated",
+          "text": "A two-and-a-half day, invitation-only event providing professional and personal development for young leaders representing student and Young Professional chapters throughout the region, celebrating its 12th anniversary. Since 2013 the Summit has brought students from across Latin America and the Caribbean together for intensive professional and personal development sessions and training in leadership, communications, ethics and service. Since 2022 it has included Young Professionals representing AAPG's International Regions and United States Sections."
         },
         "callForPapers": null,
         "schedule": {
@@ -7285,14 +7371,20 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "program": {
-          "availability": "unread",
-          "text": "Workshop continuing prior editions' focus on stratigraphic trap exploration - case studies, emerging technologies, industry-academia collaboration. Detailed session-by-session agenda and downloadable brochure not fully accessible via search at time of research; check AAPG event page directly."
+          "availability": "stated",
+          "text": "Call for abstracts: the submission deadline is 14 August 2026. Poster abstracts should be sent directly to cnavarro@aapg.org."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-08-14",
+          "submissionEmail": "cnavarro@aapg.org",
+          "lengthLimit": null,
+          "text": "Call for abstracts: the submission deadline is 14 August 2026. Poster abstracts should be sent directly to cnavarro@aapg.org"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -13197,15 +13289,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Lyon Convention Centre",
+        "venueAddress": "50 Quai Charles de Gaulle, 69006 Lyon, France",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Four days of plenary lectures, symposia, poster sessions and industry workshops. For the 2027 meeting symposia are either one or two hours long and consist of three or six 15-minute presentations with a collective Q&A at the end. The poster abstract submission deadline is 28 August 2026, and submissions should be text of no more than 300 words. The deadline to submit a symposium is also 28 August 2026."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-08-28",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "The poster abstract submission deadline is 28 August 2026, and submissions should be text of no more than 300 words"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -13217,9 +13315,24 @@
           "unstructuredReason": null
         },
         "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Charlotte Stagg",
+              "role": "Conference Co-chairs",
+              "org": "University of Oxford",
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Marom Bikson",
+              "role": "Conference Co-chairs",
+              "org": "City College of New York",
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Conference Co-chairs: Charlotte Stagg (University of Oxford), Marom Bikson (City College of New York)",
           "unstructuredReason": null
         },
         "fees": {
@@ -14212,13 +14325,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Kuala Lumpur Convention Centre",
+        "venueAddress": "Kuala Lumpur, Malaysia",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "A forum to highlight scientific breakthroughs, share practical case studies and identify opportunities for collaboration that can accelerate translation from research to real-world impact, bringing together researchers in academia and industry as well as policymakers to discuss the latest trends in biotechnology, bioenergy and biobased products."
         },
         "callForPapers": null,
         "schedule": {
@@ -17817,14 +17930,20 @@
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
+        "source": "aapg-2026-2027-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": "Houston, Texas",
         "program": {
-          "availability": "not_announced",
-          "text": "Regional AAPG Gulf Coast Section conference (successor to GCAGS); program not yet published."
+          "availability": "stated",
+          "text": "The 76th GCAGS/GCSSEPM Convention and Exposition, hosted by the Houston Geological Society. The convention features oral and poster presentations, field trips and networking events. Open-call abstract submission deadline 1 December 2026."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-12-01",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Open-call abstract submission deadline 1 December 2026"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -22833,13 +22952,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "McCormick Place",
         "venueAddress": "Chicago, Illinois, USA",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Educational sessions, workshops, live demonstrations and panel discussions on food science and technology. For the first time all scientific programming takes place directly in the expo hall."
         },
         "callForPapers": null,
         "schedule": {
@@ -23083,13 +23202,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Addresses how certain molecules and biological pathways have long been considered undruggable, and the challenges that presents in therapeutic development."
         },
         "callForPapers": null,
         "schedule": {
@@ -24712,15 +24831,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "Glacier Hotel",
         "venueAddress": "Les Diablerets, Switzerland",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Organised by the European Structural Integrity Society Technical Committee 4. The conference includes a special session to honour the contribution of the late Professor J. Gordon Williams to the understanding of fracture mechanics as applied to polymers and composites. The call for abstracts is open, with a deadline of 22 January 2027."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": "Open",
+          "abstractDeadline": "2027-01-22",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "The call for abstracts is open, with a deadline of 22 January 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -24833,13 +24958,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Kyoto International Conference Center",
+        "venueAddress": "Kyoto, Japan",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held under the theme Shaping Future Food Systems through Sustainability and Digital Innovation. The programme includes invited plenary keynote lectures, parallel oral presentation sessions and poster presentations, covering alternative proteins, plant-based foods, cultivated meat and cellular agriculture, precision fermentation and novel ingredients."
         },
         "callForPapers": null,
         "schedule": {
@@ -24961,13 +25086,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "Papendal Hotel and Congress Centre",
         "venueAddress": "Netherlands",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Covers technologies and developments around milk protein functionality, bringing together experts from dairy science and technology, processing, microbiology, chemistry, physics, sensory science, health and nutritional sciences. Oral and poster abstracts are invited through the online abstract submission system."
         },
         "callForPapers": null,
         "schedule": {
@@ -25207,13 +25332,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": "Orlando, Florida, USA; exact convention facility not yet announced in the official 3-year calendar.",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Connects professionals and technology providers in higher education technology from around the world to network, share ideas, grow professionally and discover solutions to current challenges. Held in Orlando and online."
         },
         "callForPapers": null,
         "schedule": {
@@ -25328,15 +25453,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "venueName": "Postillion Convention Centre WTC Rotterdam",
+        "venueAddress": "Rotterdam, Netherlands",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Presented by the Emergency Nurses Association and Elsevier. The programme includes keynote and plenary sessions, podium and poster presentations on emergency care challenges and the practices in use to support patients around the globe. Abstracts are invited for oral and poster presentations with a deadline of 7 May 2027; author notification 30 June 2027; author registration and early bird deadline 16 July 2027."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2027-05-07",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstracts are invited for oral and poster presentations with a deadline of 7 May 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -25455,15 +25586,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held in partnership with the University of Geneva and the Swiss Initiative for RNA and Disease. The meeting covers the full spectrum of RNA biology, spanning fundamental mechanisms, structural biology, RNA therapeutics, discovery tools and computational strategies. Abstract submission deadline 18 June 2027; early registration deadline 9 July 2027."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2027-06-18",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstract submission deadline 18 June 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -25693,15 +25830,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Held under the theme Fostering Cross-disciplinary Research to Advance Global Food Systems, bringing together journal editors, board members, authors, reviewers, academics, government agencies, R&D specialists, equipment and service suppliers and policymakers. The programme runs three oral topics in parallel sessions: Innovative Processing and Sustainable Valorisation; Nutrients, Bioactive Components and Other Emerging Components; and Methods and Technologies for Sustainability. The call for abstracts is closed."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": "Closed",
+          "abstractDeadline": null,
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "The call for abstracts is closed"
+        },
         "schedule": {
           "sessions": [],
           "themes": []
@@ -25816,13 +25959,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "The 8th International Conference on Desalination Science and Technology, a forum bridging laboratory-scale discoveries with industry-scale desalination applications. The programme features plenary lectures, keynote speeches, oral presentations and interactive poster sessions, with emphasis on novel desalination materials, innovative hybrid systems and advanced module design, alongside pre-treatment and post-treatment processes and membrane fouling and control. Awards are presented for the best oral and poster contributions from students and early-career researchers."
         },
         "callForPapers": null,
         "schedule": {
@@ -25940,13 +26083,13 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "McCormick Place",
         "venueAddress": "Chicago, Illinois, USA",
         "accommodation": "RSNA housing details for 2027 not yet announced.",
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "The 113th Scientific Assembly and Annual Meeting of the Radiological Society of North America, running Sunday to Thursday. Technical Exhibits run Sunday to Wednesday and close on 17 November."
         },
         "callForPapers": null,
         "schedule": {
@@ -26455,15 +26598,21 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
         "venueName": "Singapore Expo",
         "venueAddress": "Singapore",
         "accommodation": null,
         "program": {
-          "availability": "unread",
-          "text": null
+          "availability": "stated",
+          "text": "Regularly attracts over 500 scientists, with representatives from many of the major research groups in this area worldwide, for dialogue on the latest ideas, data, insight, models and methods in infectious disease dynamics. Abstracts for talks and posters are invited by 18 June 2027; Scientific Committee decisions are expected by 28 July 2027; author registration and early booking deadline 17 September 2027."
         },
-        "callForPapers": null,
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2027-06-18",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstracts for talks and posters are invited by 18 June 2027"
+        },
         "schedule": {
           "sessions": [],
           "themes": []

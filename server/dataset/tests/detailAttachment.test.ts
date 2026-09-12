@@ -329,3 +329,49 @@ test("a conference somebody described stays described when it merges with a sear
   assert.ok(ice.details, "the merge kept the record with no details and discarded the one with them");
   assert.equal(ice.details!.keynotes.availability, "stated");
 });
+
+test("a second list fills the sections the first one never read, and only those", () => {
+  // GeoGulf's first list said its programme was not yet published and named nobody. The second
+  // read the organiser's own page, which by then carried a programme and an abstract deadline. A
+  // catalogue that kept reporting "not yet published" after the organiser published would be the
+  // one getting it wrong, so an announcement supersedes a record of its absence — while ICE, whose
+  // first list named its speakers and its sponsor, keeps every one of them.
+  const second = [
+    DETAIL_HEADER,
+    '"GeoGulf 2027","18-20 April 2027","George R. Brown Convention Center, Houston","The 76th GCAGS/GCSSEPM Convention: oral and poster presentations, field trips and networking events. Open-call abstract submission deadline 1 December 2026.","","","","","https://www.geogulf.org/",""',
+    '"AAPG International Conference & Exhibition (ICE) 2026","7-9 December 2026","Somewhere Else Entirely","A different programme.","Someone Else (Nowhere University)","","","Another Sponsor Ltd","https://iceevent.org/2026/",""',
+  ].join("\n");
+
+  const structured: StructuredOutcome[] = rowsFromCsv(CONFERENCES).map((row) => ({
+    outcome: mapCuratedRow(row, { ...OPTIONS, sourceName: "aapg-test", sourceUrl: row.website }),
+    sourceUrl: row.website,
+    statedText: row.name,
+  }));
+  const result = buildLaunchDataset([], OPTIONS, structured, [
+    { source: "a-first-list", rows: rowsFromDetailCsv(parseCsv(DETAILS)) },
+    { source: "b-second-list", rows: rowsFromDetailCsv(parseCsv(second)) },
+  ]);
+
+  const geogulf = find(result.dataset.records, "GeoGulf");
+  assert.equal(geogulf.details?.program.availability, "stated");
+  assert.match(geogulf.details?.program.text ?? "", /76th GCAGS/);
+  assert.equal(geogulf.details?.callForPapers?.abstractDeadline, "2026-12-01");
+  assert.equal(geogulf.details?.venueName, "George R. Brown Convention Center");
+  // Both lists are named, because half of what the page shows came from each.
+  assert.equal(geogulf.details?.source, "a-first-list, b-second-list");
+
+  // Nothing the first list stated was touched, however loudly the second contradicted it.
+  const ice = find(result.dataset.records, "AAPG International");
+  assert.match(ice.details?.program.text ?? "", /3-day program/);
+  assert.equal(ice.details?.venueName, "Nusantara International Convention Exhibition (NICE)");
+  assert.equal(ice.details?.keynotes.items[0]?.name, "Metee Saengsrichun");
+  assert.equal(ice.details?.sponsors.items[0]?.name, "Pertamina (PHE)");
+  assert.equal(ice.details?.source, "a-first-list", "a list that changed nothing claimed the record");
+  assert.ok(
+    result.detailsUnmatched.some(
+      (row) => row.title === "AAPG International Conference & Exhibition (ICE) 2026"
+        && row.reason === "already_filled_by_another_list"
+    ),
+    "a second list that could add nothing went unreported"
+  );
+});

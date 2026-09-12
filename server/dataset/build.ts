@@ -6,6 +6,7 @@
 // because a series legitimately runs regional editions in the same year.
 
 import type {
+  LaunchConferenceDetails,
   LaunchConferenceRecord,
   LaunchDataset,
   LaunchRejection,
@@ -364,14 +365,8 @@ function attachDetails(
         unmatched.push({ title: row.name, reason: "dates_disagree_with_the_record" });
         continue;
       }
-      // A conference already filled by an earlier list keeps what it has: two lists disagreeing is
-      // a fact to look at, not something to resolve by whichever file sorted last.
-      if (record.details) {
-        unmatched.push({ title: row.name, reason: "already_filled_by_another_list" });
-        continue;
-      }
       const detail = mapCuratedDetailRow(row, record.city, record.year, record.country);
-      record.details = {
+      const incoming: LaunchConferenceDetails = {
         source: supply.source,
         venueName: detail.venueName,
         venueAddress: detail.venueAddress,
@@ -384,10 +379,73 @@ function attachDetails(
         sponsors: detail.sponsors,
         safetyNote: detail.safetyNote,
       };
+      if (!record.details) {
+        record.details = incoming;
+        attached += 1;
+        continue;
+      }
+      const filled = fillUnreadSections(record.details, incoming, supply.source);
+      if (filled.length === 0) {
+        unmatched.push({ title: row.name, reason: "already_filled_by_another_list" });
+        continue;
+      }
       attached += 1;
     }
   }
   return { attached, unmatched };
+}
+
+/**
+ * What a second list may add to a conference an earlier one already described.
+ *
+ * The rule used to be that it may add nothing: two lists disagreeing is a fact to look at, not
+ * something to settle by whichever file sorted last. That is still right about disagreement, and
+ * it is what this keeps. But most of what an index batch supplies is `unread` — nobody looked —
+ * and a list that fills a section no earlier list filled contradicts nothing. Refusing it left
+ * twenty-four conferences showing an empty Programme tab while a file naming their venue, their
+ * co-chairs and their abstract deadline sat unread in the same directory.
+ *
+ * So this is monotone: a section only ever gains content. `unread` is filled by anything, and
+ * `not_announced` is replaced only by a section that states something — an organiser announcing a
+ * programme is what is supposed to happen between one list being compiled and the next, and a
+ * catalogue that reported the older list's "not yet announced" forever would be the one lying.
+ * Nothing ever overwrites a section that already states something, which is the case the original
+ * rule was written for and the one where two lists genuinely disagree.
+ *
+ * `source` then names both lists, because half of what the reader sees came from each and a page
+ * claiming one of them would be claiming something false.
+ */
+function fillUnreadSections(
+  existing: LaunchConferenceDetails,
+  incoming: LaunchConferenceDetails,
+  incomingSource: string
+): string[] {
+  const filled: string[] = [];
+  const sections = ["program", "keynotes", "committee", "fees", "sponsors"] as const;
+  for (const section of sections) {
+    const was = existing[section].availability;
+    const now = incoming[section].availability;
+    if (now === "unread") continue;
+    if (was === "stated") continue;
+    if (was === "not_announced" && now !== "stated") continue;
+    (existing[section] as LaunchConferenceDetails[typeof section]) = incoming[section] as never;
+    filled.push(section);
+  }
+  if (!existing.callForPapers && incoming.callForPapers) {
+    existing.callForPapers = incoming.callForPapers;
+    filled.push("callForPapers");
+  }
+  if (!existing.schedule.sessions.length && incoming.schedule.sessions.length) {
+    existing.schedule = incoming.schedule;
+    filled.push("schedule");
+  }
+  if (!existing.venueName && incoming.venueName) {
+    existing.venueName = incoming.venueName;
+    existing.venueAddress = existing.venueAddress ?? incoming.venueAddress;
+    filled.push("venue");
+  }
+  if (filled.length) existing.source = `${existing.source}, ${incomingSource}`;
+  return filled;
 }
 
 const CSV_COLUMNS = [
