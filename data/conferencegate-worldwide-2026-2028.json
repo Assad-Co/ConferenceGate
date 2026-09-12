@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T15:25:27.129Z",
+  "generatedAt": "2026-09-12T15:50:12.255Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -409,18 +409,21 @@
       "category": "Petroleum & Energy",
       "categories": [
         "Petroleum & Energy",
+        "Artificial Intelligence & Machine Learning",
         "Energy & Geosciences"
       ],
       "topics": [
         "natural gas",
         "gastech",
         "lng",
+        "ai",
         "hydrogen"
       ],
       "keywords": [
         "natural gas",
         "gastech",
         "lng",
+        "ai",
         "hydrogen",
         "Bangkok",
         "Thailand",
@@ -566,15 +569,18 @@
       "venue": "Santa Clara Convention Center",
       "format": "in-person",
       "organization": "Kisaco Research / AI Infra Summit",
-      "category": "Telecommunications & Networking",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Telecommunications & Networking"
       ],
       "topics": [
+        "ai",
         "networking",
         "infra"
       ],
       "keywords": [
+        "ai",
         "networking",
         "infra"
       ],
@@ -1391,10 +1397,12 @@
         "Artificial Intelligence & Machine Learning"
       ],
       "topics": [
-        "agentic"
+        "agentic",
+        "ai"
       ],
       "keywords": [
-        "agentic"
+        "agentic",
+        "ai"
       ],
       "description": "Independent AI conference for builders, researchers, founders and technical leaders covering frontier models, agentic AI, infrastructure, safety, evaluation and real-world applications.",
       "sourceUrl": "https://aiconference.com/",
@@ -2525,17 +2533,20 @@
       "venue": "Taets Art & Event Park",
       "format": "in-person",
       "organization": "InspiredMinds / World Summit AI",
-      "category": "Business & Finance",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Business & Finance",
         "Law & Policy"
       ],
       "topics": [
+        "ai",
         "investment",
         "governance",
         "amsterdam"
       ],
       "keywords": [
+        "ai",
         "investment",
         "governance",
         "amsterdam"
@@ -2746,16 +2757,19 @@
       "venue": "*SCAPE",
       "format": "in-person",
       "organization": "AICON / CreativesAtWork / partner organisations",
-      "category": "Education & EdTech",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Education & EdTech"
       ],
       "topics": [
+        "ai",
         "learning",
         "aicon",
         "everyone"
       ],
       "keywords": [
+        "ai",
         "learning",
         "aicon",
         "everyone"
@@ -3481,32 +3495,33 @@
       "venue": null,
       "format": "in-person",
       "organization": "Marketing AI Institute",
-      "category": "Business & Finance",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Business & Finance",
         "Artificial Intelligence & Machine Learning",
+        "Business & Finance",
         "Data Science & Analytics",
         "Robotics & Automation"
       ],
       "topics": [
+        "artificial intelligence",
+        "generative ai",
+        "ai",
         "business",
         "marketing",
         "strategy",
-        "artificial intelligence",
-        "generative ai",
         "analytics",
         "automation",
         "maicon"
       ],
       "keywords": [
+        "artificial intelligence",
+        "generative ai",
+        "ai",
         "business",
         "marketing",
         "strategy",
-        "artificial intelligence",
-        "generative ai",
         "analytics",
-        "automation",
-        "maicon"
+        "automation"
       ],
       "description": "Marketing Artificial Intelligence Conference focused on practical AI adoption, generative AI, automation, AI strategy, content, analytics and business transformation.",
       "sourceUrl": "https://www.maicon.ai/",
@@ -3871,12 +3886,16 @@
       "venue": null,
       "format": "in-person",
       "organization": "MIT Club of Northern California",
-      "category": null,
-      "categories": [],
+      "category": "Artificial Intelligence & Machine Learning",
+      "categories": [
+        "Artificial Intelligence & Machine Learning"
+      ],
       "topics": [
+        "ai",
         "agency"
       ],
       "keywords": [
+        "ai",
         "agency"
       ],
       "description": "10th annual MIT AI Conference focused on the age of AI agency, bringing together researchers, engineers, executives, founders and investors.",
@@ -4257,26 +4276,28 @@
       "venue": "RAI Amsterdam",
       "format": "in-person",
       "organization": "TechEx / AI & Big Data Expo",
-      "category": "Data Science & Analytics",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Data Science & Analytics",
         "Artificial Intelligence & Machine Learning",
+        "Data Science & Analytics",
         "Law & Policy"
       ],
       "topics": [
-        "big data",
-        "analytics",
         "generative ai",
         "agentic",
+        "ai",
+        "big data",
+        "analytics",
         "governance",
         "data",
         "europe"
       ],
       "keywords": [
-        "big data",
-        "analytics",
         "generative ai",
         "agentic",
+        "ai",
+        "big data",
+        "analytics",
         "governance",
         "data",
         "europe"
@@ -4441,6 +4462,7 @@
       ],
       "topics": [
         "agentic",
+        "ai",
         "computing",
         "robotics",
         "nvidia",
@@ -4448,6 +4470,7 @@
       ],
       "keywords": [
         "agentic",
+        "ai",
         "computing",
         "robotics",
         "nvidia",
@@ -4562,14 +4585,18 @@
       "venue": "San Jose McEnery Convention Center",
       "format": "in-person",
       "organization": "PyTorch Foundation / Linux Foundation",
-      "category": null,
-      "categories": [],
+      "category": "Artificial Intelligence & Machine Learning",
+      "categories": [
+        "Artificial Intelligence & Machine Learning"
+      ],
       "topics": [
+        "ai",
         "pytorch",
         "north",
         "america"
       ],
       "keywords": [
+        "ai",
         "pytorch",
         "north",
         "america"
@@ -4795,16 +4822,19 @@
       "organization": "WTWH Media / RoboBusiness",
       "category": "Robotics & Automation",
       "categories": [
-        "Robotics & Automation"
+        "Robotics & Automation",
+        "Artificial Intelligence & Machine Learning"
       ],
       "topics": [
         "robotics",
         "automation",
+        "ai",
         "robobusiness"
       ],
       "keywords": [
         "robotics",
         "automation",
+        "ai",
         "robobusiness"
       ],
       "description": "Commercial robotics and automation event focused on building, deploying and scaling intelligent robots, including service robotics, AI, perception, motion, autonomy and robotics business models.",
@@ -5746,6 +5776,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "education",
         "learning",
         "iot",
@@ -5758,12 +5789,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "education",
         "learning",
         "iot",
         "data science",
-        "25th",
-        "mexican"
+        "25th"
       ],
       "description": "Mexico's leading annual AI conference and an established international forum for artificial intelligence, machine learning, data science, robotics, IoT, healthcare and education.",
       "sourceUrl": "https://micai.org/",
@@ -6064,14 +6095,16 @@
       "venue": null,
       "format": "in-person",
       "organization": "Cell Press / Elsevier",
-      "category": "Science & Technology",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Science & Technology",
         "Structural Biology & AI"
       ],
       "topics": [
         "Science & Technology",
         "Structural Biology & AI",
+        "ai",
         "cell",
         "press",
         "symposia",
@@ -6083,12 +6116,12 @@
       "keywords": [
         "Science & Technology",
         "Structural Biology & AI",
+        "ai",
         "cell",
         "press",
         "symposia",
         "biological",
-        "function",
-        "structure"
+        "function"
       ],
       "description": "International conference focused on structural biology & ai.",
       "sourceUrl": "https://cell-press-symposia.com/3Dbiologicalfunction-2026/index.html",
@@ -6203,6 +6236,7 @@
         "Technology & Engineering",
         "Robotics / AI",
         "artificial intelligence",
+        "ai",
         "robotics",
         "joint",
         "artificial",
@@ -6212,6 +6246,7 @@
         "Technology & Engineering",
         "Robotics / AI",
         "artificial intelligence",
+        "ai",
         "robotics",
         "joint",
         "artificial",
@@ -6749,19 +6784,22 @@
       "venue": null,
       "format": "in-person",
       "organization": "Gartner",
-      "category": "Cybersecurity & Privacy",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Cybersecurity & Privacy",
         "Data Science & Analytics",
         "Business & Finance"
       ],
       "topics": [
+        "ai",
         "cybersecurity",
         "analytics",
         "strategy",
         "gartner"
       ],
       "keywords": [
+        "ai",
         "cybersecurity",
         "analytics",
         "strategy",
@@ -7426,6 +7464,7 @@
       "topics": [
         "artificial intelligence",
         "agentic",
+        "ai",
         "learning",
         "distributed",
         "artificial",
@@ -7434,6 +7473,7 @@
       "keywords": [
         "artificial intelligence",
         "agentic",
+        "ai",
         "learning",
         "distributed",
         "artificial",
@@ -7770,6 +7810,7 @@
       ],
       "topics": [
         "artificial intelligence",
+        "ai",
         "governance",
         "southern",
         "african",
@@ -7779,6 +7820,7 @@
       ],
       "keywords": [
         "artificial intelligence",
+        "ai",
         "governance",
         "southern",
         "african",
@@ -7962,6 +8004,7 @@
       "category": "Technology & Consumer Electronics",
       "categories": [
         "Technology & Consumer Electronics",
+        "Artificial Intelligence & Machine Learning",
         "Architecture & Construction",
         "Education & EdTech",
         "Technology",
@@ -7972,6 +8015,7 @@
         "Cloud Computing & AI",
         "computing",
         "cloud computing",
+        "ai",
         "architecture",
         "learning",
         "invent"
@@ -7981,6 +8025,7 @@
         "Cloud Computing & AI",
         "computing",
         "cloud computing",
+        "ai",
         "architecture",
         "learning",
         "invent"
@@ -8496,6 +8541,7 @@
       "category": "Life Sciences",
       "categories": [
         "Life Sciences",
+        "Artificial Intelligence & Machine Learning",
         "Science & Technology",
         "Single Cell Biology & AI"
       ],
@@ -8504,6 +8550,7 @@
         "Single Cell Biology & AI",
         "biology",
         "cell biology",
+        "ai",
         "cell",
         "symposia",
         "decoding",
@@ -8516,10 +8563,10 @@
         "Single Cell Biology & AI",
         "biology",
         "cell biology",
+        "ai",
         "cell",
         "symposia",
-        "decoding",
-        "cellular"
+        "decoding"
       ],
       "description": "International conference focused on single cell biology & ai.",
       "sourceUrl": "https://cell-press-symposia.com/single-cell-biology-2026/index.html",
@@ -8655,6 +8702,7 @@
         "Technology",
         "AI Applications",
         "artificial intelligence",
+        "ai",
         "artificial",
         "intelligence",
         "application",
@@ -8664,6 +8712,7 @@
         "Technology",
         "AI Applications",
         "artificial intelligence",
+        "ai",
         "artificial",
         "intelligence",
         "application",
@@ -8781,12 +8830,14 @@
       "category": "Robotics & Automation",
       "categories": [
         "Robotics & Automation",
+        "Artificial Intelligence & Machine Learning",
         "Education & EdTech"
       ],
       "topics": [
         "robotics",
         "automation",
         "humanoid",
+        "ai",
         "learning",
         "25th",
         "ieee-ras",
@@ -8796,6 +8847,7 @@
         "robotics",
         "automation",
         "humanoid",
+        "ai",
         "learning",
         "25th",
         "ieee-ras",
@@ -8912,9 +8964,9 @@
       "datesText": null,
       "city": "Sydney / Atlanta / Paris",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / United States / France",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": "Sydney main site: International Convention Centre (ICC Sydney)",
       "format": "in-person",
       "organization": "Neural Information Processing Systems Foundation",
@@ -8930,6 +8982,7 @@
         "generative ai",
         "computer vision",
         "reinforcement learning",
+        "ai",
         "robotics",
         "health",
         "learning",
@@ -8940,10 +8993,10 @@
         "generative ai",
         "computer vision",
         "reinforcement learning",
+        "ai",
         "robotics",
         "health",
-        "learning",
-        "neurips"
+        "learning"
       ],
       "description": "The 40th Conference on Neural Information Processing Systems, an interdisciplinary machine-learning and AI research conference spanning deep learning, generative AI, computer vision, language models, robotics, reinforcement learning, optimization, AI for science, health and society.",
       "sourceUrl": "https://neurips.cc/",
@@ -8979,7 +9032,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Conferences/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -10111,16 +10164,19 @@
       "venue": "Javits Center",
       "format": "in-person",
       "organization": "The AI Summit / Informa Tech",
-      "category": "Business & Finance",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Business & Finance"
       ],
       "topics": [
+        "ai",
         "business",
         "strategy",
         "york"
       ],
       "keywords": [
+        "ai",
         "business",
         "strategy",
         "york"
@@ -10259,9 +10315,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -10322,7 +10378,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -10454,9 +10510,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -10520,7 +10576,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -10652,9 +10708,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -10717,7 +10773,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -10864,6 +10920,7 @@
       "topics": [
         "artificial intelligence",
         "data mining",
+        "ai",
         "robotics",
         "mining",
         "artificial",
@@ -10874,12 +10931,12 @@
       "keywords": [
         "artificial intelligence",
         "data mining",
+        "ai",
         "robotics",
         "mining",
         "artificial",
         "intelligence",
-        "application",
-        "technologies"
+        "application"
       ],
       "description": "International academic conference covering AI theory and applications, robotics, decision making, intelligent systems, control, data mining and computer applications.",
       "sourceUrl": "https://www.aiat.org/",
@@ -11104,21 +11161,22 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Education & EdTech",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Education & EdTech",
-        "Artificial Intelligence & Machine Learning"
+        "Artificial Intelligence & Machine Learning",
+        "Education & EdTech"
       ],
       "topics": [
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "learning",
         "robot",
         "physical",
         "going",
@@ -11126,14 +11184,14 @@
         "neurips"
       ],
       "keywords": [
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "learning",
         "robot",
         "physical",
         "going",
-        "zero-shot",
-        "neurips"
+        "zero-shot"
       ],
       "description": "Official NeurIPS 2026 workshop focused on 8th Robot Learning Workshop: Is Physical AI Going Zero-Shot?. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -11169,7 +11227,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -11301,9 +11359,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -11316,6 +11374,7 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "biological",
         "discovery",
@@ -11329,11 +11388,11 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "biological",
         "discovery",
-        "toward",
-        "closed-loop"
+        "toward"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Agentic AI for Biological Discovery: Toward Closed-Loop Life-Science Intelligence. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -11369,7 +11428,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -11501,9 +11560,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -11566,7 +11625,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -11698,9 +11757,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -11713,6 +11772,7 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "agenticos",
         "co-designing",
@@ -11725,11 +11785,11 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "agenticos",
         "co-designing",
-        "systems",
-        "foundations"
+        "systems"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AgenticOS: Co-designing Systems and ML Foundations of an OS Layer for Agentic AI. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -11765,7 +11825,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -11897,9 +11957,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -11911,6 +11971,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "agents",
         "biomedical",
@@ -11923,12 +11984,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "agents",
         "biomedical",
         "imaging",
-        "multimodal",
-        "clinical"
+        "multimodal"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI Agents for Biomedical Imaging and Multimodal Clinical Data. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -11964,7 +12025,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -12096,9 +12157,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -12110,6 +12171,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "science",
         "evolution",
@@ -12119,6 +12181,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "science",
         "evolution",
@@ -12159,7 +12222,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -12291,9 +12354,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -12305,6 +12368,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "self",
         "human",
@@ -12316,12 +12380,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "self",
         "human",
         "identity",
-        "authenticity",
-        "agency"
+        "authenticity"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI and the Self: Human Identity, Authenticity, and Agency in the Age of AI. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -12357,7 +12421,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -12489,22 +12553,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Medicine & Oncology",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Medicine & Oncology",
         "Artificial Intelligence & Machine Learning",
+        "Medicine & Oncology",
         "Education & EdTech"
       ],
       "topics": [
-        "cancer",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "cancer",
         "learning",
         "scale",
         "clinical",
@@ -12516,14 +12581,14 @@
         "neurips"
       ],
       "keywords": [
-        "cancer",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "cancer",
         "learning",
         "scale",
         "clinical",
-        "impact",
-        "asci"
+        "impact"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI at Scale for Clinical Impact (ASCI): Cancer Pathology Foundation Models. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -12559,7 +12624,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -12691,9 +12756,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -12705,6 +12770,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "chip",
         "design",
@@ -12713,6 +12779,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "chip",
         "design",
@@ -12752,7 +12819,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -12884,22 +12951,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Pharmaceutical & Biotechnology",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Pharmaceutical & Biotechnology",
         "Artificial Intelligence & Machine Learning",
+        "Pharmaceutical & Biotechnology",
         "Education & EdTech"
       ],
       "topics": [
-        "drug discovery",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "drug discovery",
         "learning",
         "drug",
         "discovery",
@@ -12908,14 +12976,14 @@
         "neurips"
       ],
       "keywords": [
-        "drug discovery",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "drug discovery",
         "learning",
         "drug",
         "discovery",
-        "bridging",
-        "translation"
+        "bridging"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI for Drug Discovery: Bridging the Translation Gap. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -12951,7 +13019,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -13083,9 +13151,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -13097,6 +13165,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "meta-science",
         "scaling",
@@ -13108,12 +13177,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "meta-science",
         "scaling",
         "organizing",
-        "science",
-        "scientists"
+        "science"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI for Meta-Science: Scaling and Organizing Science in the Age of AI Scientists. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -13149,7 +13218,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -13281,9 +13350,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -13295,6 +13364,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "peace",
         "neurips"
@@ -13302,6 +13372,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "peace",
         "neurips"
@@ -13340,7 +13411,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -13472,9 +13543,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -13486,6 +13557,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "science",
         "verification",
@@ -13495,6 +13567,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "science",
         "verification",
@@ -13535,7 +13608,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -13667,9 +13740,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -13681,6 +13754,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "stochastic",
         "dynamics",
@@ -13694,12 +13768,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "stochastic",
         "dynamics",
         "from",
-        "theoretical",
-        "foundations"
+        "theoretical"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI for Stochastic Dynamics: From Theoretical Foundations to Scientific Applications. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -13735,7 +13809,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -13867,9 +13941,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -13881,6 +13955,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "verifiable",
         "coding",
@@ -13895,12 +13970,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "verifiable",
         "coding",
         "human-aligned",
-        "collaborative",
-        "agents"
+        "collaborative"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI for Verifiable Coding: Human-Aligned Collaborative Agents for Autoformalization, Proofs, and Heuristics. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -13936,7 +14011,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -14068,22 +14143,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Energy & Geosciences",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Energy & Geosciences",
         "Artificial Intelligence & Machine Learning",
+        "Energy & Geosciences",
         "Education & EdTech"
       ],
       "topics": [
-        "power grids",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "power grids",
         "learning",
         "foundations",
         "power",
@@ -14095,14 +14171,14 @@
         "neurips"
       ],
       "keywords": [
-        "power grids",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "power grids",
         "learning",
         "foundations",
         "power",
-        "grids",
-        "from"
+        "grids"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI Foundations for Power Grids: From Models to Deployment at Scale. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -14138,7 +14214,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -14270,9 +14346,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -14284,6 +14360,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "ai4mat-neurips-2026",
         "accelerated",
@@ -14294,12 +14371,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "ai4mat-neurips-2026",
         "accelerated",
         "materials",
-        "design",
-        "neurips"
+        "design"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AI4Mat-NeurIPS-2026: Workshop on AI for Accelerated Materials Design. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -14335,7 +14412,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -14467,9 +14544,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -14481,6 +14558,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "aidar",
         "data",
@@ -14492,12 +14570,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "aidar",
         "data",
         "readiness",
-        "scientific",
-        "discovery"
+        "scientific"
       ],
       "description": "Official NeurIPS 2026 workshop focused on AIDaR: AI Data Readiness for Scientific Discovery. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -14533,7 +14611,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -14665,9 +14743,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -14730,7 +14808,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -14862,9 +14940,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -14928,7 +15006,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -15060,9 +15138,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -15130,7 +15208,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -15262,22 +15340,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Cybersecurity & Privacy",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Cybersecurity & Privacy",
         "Artificial Intelligence & Machine Learning",
+        "Cybersecurity & Privacy",
         "Education & EdTech"
       ],
       "topics": [
-        "privacy",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "privacy",
         "learning",
         "beyond",
         "private",
@@ -15286,14 +15365,14 @@
         "neurips"
       ],
       "keywords": [
-        "privacy",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "privacy",
         "learning",
         "beyond",
         "private",
-        "training",
-        "landscape"
+        "training"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Beyond Private Training: The New Landscape of AI Privacy. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -15329,7 +15408,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -15461,9 +15540,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -15530,7 +15609,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -15662,22 +15741,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Education & EdTech",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Education & EdTech",
-        "Artificial Intelligence & Machine Learning"
+        "Artificial Intelligence & Machine Learning",
+        "Education & EdTech"
       ],
       "topics": [
-        "assessment",
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "assessment",
+        "learning",
         "trust",
         "evaluation",
         "robustness",
@@ -15687,14 +15767,14 @@
         "neurips"
       ],
       "keywords": [
-        "assessment",
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "assessment",
+        "learning",
         "trust",
         "evaluation",
-        "robustness",
-        "causality"
+        "robustness"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Can We Trust AI Evaluation? Robustness, Causality, and Risk in Modern AI Assessment. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -15730,7 +15810,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -15862,9 +15942,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -15930,7 +16010,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -16062,9 +16142,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -16123,7 +16203,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -16255,9 +16335,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -16269,6 +16349,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "child",
         "safety",
@@ -16277,6 +16358,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "child",
         "safety",
@@ -16316,7 +16398,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -16448,30 +16530,32 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Education & EdTech",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Education & EdTech",
-        "Artificial Intelligence & Machine Learning"
+        "Artificial Intelligence & Machine Learning",
+        "Education & EdTech"
       ],
       "topics": [
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "learning",
         "continual",
         "enterprise",
         "agents",
         "neurips"
       ],
       "keywords": [
-        "learning",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "learning",
         "continual",
         "enterprise",
         "agents",
@@ -16511,7 +16595,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -16643,9 +16727,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -16709,7 +16793,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -16841,9 +16925,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -16902,7 +16986,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -17034,9 +17118,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -17048,6 +17132,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "devai",
         "developmental",
@@ -17057,6 +17142,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "devai",
         "developmental",
@@ -17097,7 +17183,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -17229,9 +17315,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -17296,7 +17382,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -17428,9 +17514,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -17497,7 +17583,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -17629,9 +17715,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -17695,7 +17781,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -17827,9 +17913,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -17891,7 +17977,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -18023,9 +18109,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -18087,7 +18173,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -18219,9 +18305,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -18235,6 +18321,7 @@
         "artificial intelligence",
         "machine learning",
         "generative ai",
+        "ai",
         "economics",
         "learning",
         "generative",
@@ -18244,6 +18331,7 @@
         "artificial intelligence",
         "machine learning",
         "generative ai",
+        "ai",
         "economics",
         "learning",
         "generative",
@@ -18283,7 +18371,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -18415,9 +18503,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -18482,7 +18570,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -18614,9 +18702,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -18629,6 +18717,7 @@
         "artificial intelligence",
         "machine learning",
         "reinforcement learning",
+        "ai",
         "learning",
         "empirical",
         "design",
@@ -18640,11 +18729,11 @@
         "artificial intelligence",
         "machine learning",
         "reinforcement learning",
+        "ai",
         "learning",
         "empirical",
         "design",
-        "reinforcement",
-        "physical"
+        "reinforcement"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Empirical Design in Reinforcement Learning for Physical AI. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -18680,7 +18769,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -18812,9 +18901,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -18826,6 +18915,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "formal",
         "guarantees",
@@ -18836,12 +18926,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "formal",
         "guarantees",
         "frontier",
-        "systems",
-        "neurips"
+        "systems"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Formal Guarantees for Frontier AI Systems. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -18877,7 +18967,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -19009,9 +19099,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -19077,7 +19167,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -19209,9 +19299,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -19274,7 +19364,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -19406,9 +19496,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -19472,7 +19562,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -19604,9 +19694,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -19673,7 +19763,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -19805,9 +19895,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -19820,6 +19910,7 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "from",
         "heuristics",
@@ -19834,11 +19925,11 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "from",
         "heuristics",
-        "guarantees",
-        "bandit"
+        "guarantees"
       ],
       "description": "Official NeurIPS 2026 workshop focused on From Heuristics to Guarantees: Bandit and RL Blueprint for Reliable Agentic-AI. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -19874,7 +19965,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -20006,9 +20097,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -20074,7 +20165,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -20206,9 +20297,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -20280,7 +20371,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -20412,9 +20503,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -20427,6 +20518,7 @@
         "artificial intelligence",
         "machine learning",
         "generative ai",
+        "ai",
         "learning",
         "generative",
         "stochastic",
@@ -20440,11 +20532,11 @@
         "artificial intelligence",
         "machine learning",
         "generative ai",
+        "ai",
         "learning",
         "generative",
         "stochastic",
-        "thermodynamics",
-        "tale"
+        "thermodynamics"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Generative AI and Stochastic Thermodynamics: A Tale of Free Energies. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -20480,7 +20572,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -20612,9 +20704,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -20679,7 +20771,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -20811,9 +20903,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -20881,7 +20973,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -21013,9 +21105,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -21028,6 +21120,7 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "human-ai",
         "coevolution",
@@ -21040,11 +21133,11 @@
         "artificial intelligence",
         "machine learning",
         "agentic",
+        "ai",
         "learning",
         "human-ai",
         "coevolution",
-        "measuring",
-        "human-agent"
+        "measuring"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Human-AI Coevolution: Measuring Human-Agent Teams in the Agentic Era. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -21080,7 +21173,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -21212,9 +21305,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -21226,6 +21319,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "believe",
         "better",
@@ -21238,12 +21332,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "believe",
         "better",
         "icbinb",
-        "failure",
-        "modes"
+        "failure"
       ],
       "description": "Official NeurIPS 2026 workshop focused on I Can’t Believe It’s Not Better (ICBINB): Failure Modes of AI in Biology. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -21279,7 +21373,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -21411,9 +21505,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -21478,7 +21572,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -21610,9 +21704,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -21678,7 +21772,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -21810,9 +21904,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -21824,6 +21918,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "interpretability",
         "discovery",
@@ -21837,12 +21932,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "interpretability",
         "discovery",
         "understanding",
-        "discovering",
-        "novel"
+        "discovering"
       ],
       "description": "Official NeurIPS 2026 workshop focused on Interpretability for Discovery: Understanding and Discovering Novel Knowledge in AI Models. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -21878,7 +21973,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22010,9 +22105,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -22080,7 +22175,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22212,9 +22307,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -22278,7 +22373,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22410,9 +22505,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -22476,7 +22571,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22608,9 +22703,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -22674,7 +22769,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -22806,9 +22901,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -22877,7 +22972,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23009,9 +23104,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -23023,6 +23118,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "math-ai",
         "mathematical",
@@ -23032,6 +23128,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "math-ai",
         "mathematical",
@@ -23072,7 +23169,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23204,9 +23301,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -23270,7 +23367,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23402,9 +23499,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -23461,7 +23558,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23593,9 +23690,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -23663,7 +23760,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23795,9 +23892,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -23860,7 +23957,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -23992,9 +24089,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -24059,7 +24156,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -24191,9 +24288,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -24205,6 +24302,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "neurips",
         "dynamic",
@@ -24216,12 +24314,12 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "neurips",
         "dynamic",
         "alignment",
-        "human-ai",
-        "coupled"
+        "human-ai"
       ],
       "description": "Official NeurIPS 2026 workshop focused on NeurIPS 2026 Workshop on Dynamic Alignment in Human-AI Coupled Systems. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -24257,7 +24355,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -24389,9 +24487,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -24456,7 +24554,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -24588,9 +24686,9 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
@@ -24655,7 +24753,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -24787,22 +24885,23 @@
       "datesText": null,
       "city": "Sydney / Paris / Atlanta",
       "region": null,
-      "country": null,
-      "countryCode": null,
-      "worldRegion": null,
+      "country": "Australia / France / United States",
+      "countryCode": "AU",
+      "worldRegion": "Oceania",
       "venue": null,
       "format": "in-person",
       "organization": "NeurIPS Foundation / NeurIPS 2026 Workshop Program",
-      "category": "Law & Policy",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Law & Policy",
         "Artificial Intelligence & Machine Learning",
+        "Law & Policy",
         "Education & EdTech"
       ],
       "topics": [
-        "governance",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "governance",
         "learning",
         "neurips",
         "ai-native",
@@ -24813,14 +24912,14 @@
         "under"
       ],
       "keywords": [
-        "governance",
         "artificial intelligence",
         "machine learning",
+        "ai",
+        "governance",
         "learning",
         "neurips",
         "ai-native",
-        "academia",
-        "authorship"
+        "academia"
       ],
       "description": "Official NeurIPS 2026 workshop focused on NeurIPS’26 Workshop on AI-Native Academia: Authorship, Peer Review, and Conference Governance under AI. It is part of the accepted NeurIPS workshop programme spanning current and emerging topics in machine learning and artificial intelligence.",
       "sourceUrl": "https://neurips.cc/",
@@ -24856,7 +24955,7 @@
         "country": {
           "sourceUrl": "https://neurips.cc/Downloads/2026",
           "sourcePageTitle": null,
-          "confidence": "Low"
+          "confidence": "Medium"
         }
       },
       "corroboratingSourceUrls": [],
@@ -26169,17 +26268,20 @@
       "venue": "Kitzbühel Country Club",
       "format": "in-person",
       "organization": "Stellenberg AI Summit GmbH",
-      "category": "Business & Finance",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Business & Finance"
       ],
       "topics": [
+        "ai",
         "strategy",
         "executive",
         "winter",
         "kitzb"
       ],
       "keywords": [
+        "ai",
         "strategy",
         "executive",
         "winter",
@@ -26418,25 +26520,27 @@
       "venue": "Olympia London",
       "format": "in-person",
       "organization": "TechEx / AI & Big Data Expo",
-      "category": "Data Science & Analytics",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
-        "Data Science & Analytics",
         "Artificial Intelligence & Machine Learning",
+        "Data Science & Analytics",
         "Robotics & Automation",
         "Law & Policy"
       ],
       "topics": [
+        "generative ai",
+        "ai",
         "big data",
         "analytics",
-        "generative ai",
         "autonomous systems",
         "governance",
         "data"
       ],
       "keywords": [
+        "generative ai",
+        "ai",
         "big data",
         "analytics",
-        "generative ai",
         "autonomous systems",
         "governance",
         "data"
@@ -26615,6 +26719,7 @@
       ],
       "topics": [
         "artificial intelligence",
+        "ai",
         "41st",
         "aaai",
         "artificial",
@@ -26625,6 +26730,7 @@
       ],
       "keywords": [
         "artificial intelligence",
+        "ai",
         "41st",
         "aaai",
         "artificial",
@@ -29127,6 +29233,7 @@
         "machine learning",
         "computer vision",
         "nlp",
+        "ai",
         "computing",
         "iot",
         "cybersecurity",
@@ -29141,10 +29248,10 @@
         "machine learning",
         "computer vision",
         "nlp",
+        "ai",
         "computing",
         "iot",
-        "cybersecurity",
-        "data science"
+        "cybersecurity"
       ],
       "description": "IEEE technical conference for research and applications in AI, machine learning, cognitive computing, NLP, computer vision, robotics, data science, IoT, cybersecurity and trustworthy systems.",
       "sourceUrl": "https://www.ai-conf.com/",
@@ -32529,17 +32636,20 @@
       "venue": "Gulf Convention Centre",
       "format": "in-person",
       "organization": "AI-HSSE Conference & Exhibition",
-      "category": "Cybersecurity & Privacy",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Cybersecurity & Privacy",
         "Petroleum & Energy"
       ],
       "topics": [
+        "ai",
         "cybersecurity",
         "oil and gas",
         "ai-hsse"
       ],
       "keywords": [
+        "ai",
         "cybersecurity",
         "oil and gas",
         "ai-hsse"
@@ -32952,6 +33062,7 @@
         "deep learning",
         "generative ai",
         "computer vision",
+        "ai",
         "learning",
         "cybersecurity",
         "data science",
@@ -32965,9 +33076,9 @@
         "deep learning",
         "generative ai",
         "computer vision",
+        "ai",
         "learning",
-        "cybersecurity",
-        "data science"
+        "cybersecurity"
       ],
       "description": "Global AI and machine-learning conference bringing researchers, industry experts and innovators together across LLMs, generative AI, computer vision, deep learning, robotics, data science, cybersecurity and AI governance.",
       "sourceUrl": "https://artificialintelligence.unitedscientificgroup.org/",
@@ -34557,6 +34668,7 @@
       "category": "Life Sciences",
       "categories": [
         "Life Sciences",
+        "Artificial Intelligence & Machine Learning",
         "Science",
         "Cell Biology / Imaging / AI"
       ],
@@ -34565,6 +34677,7 @@
         "Cell Biology / Imaging / AI",
         "biology",
         "cell biology",
+        "ai",
         "cell",
         "press",
         "symposia",
@@ -34575,10 +34688,10 @@
         "Cell Biology / Imaging / AI",
         "biology",
         "cell biology",
+        "ai",
         "cell",
         "press",
-        "symposia",
-        "next-generation"
+        "symposia"
       ],
       "description": "Symposium on advanced imaging, AI and cellular engineering in next-generation cell biology.",
       "sourceUrl": "https://cell-press-symposia.com/next-gen-cell-biology-2027/index.html",
@@ -35220,6 +35333,7 @@
         "Technology",
         "AI / Big Data",
         "artificial intelligence",
+        "ai",
         "big data",
         "10th",
         "artificial",
@@ -35230,11 +35344,11 @@
         "Technology",
         "AI / Big Data",
         "artificial intelligence",
+        "ai",
         "big data",
         "10th",
         "artificial",
-        "intelligence",
-        "data"
+        "intelligence"
       ],
       "description": "International academic conference on artificial intelligence and big data.",
       "sourceUrl": "https://www.icaibd.org/",
@@ -36497,6 +36611,7 @@
         "Technology",
         "Software Engineering / AI",
         "artificial intelligence",
+        "ai",
         "software engineering",
         "software",
         "engineering",
@@ -36507,11 +36622,11 @@
         "Technology",
         "Software Engineering / AI",
         "artificial intelligence",
+        "ai",
         "software engineering",
         "software",
         "engineering",
-        "artificial",
-        "intelligence"
+        "artificial"
       ],
       "description": "Academic conference combining software engineering and artificial intelligence.",
       "sourceUrl": "https://www.seai.org/",
@@ -36759,6 +36874,7 @@
         "Computer Vision & AI",
         "computer vision",
         "pattern recognition",
+        "ai",
         "cvpr"
       ],
       "keywords": [
@@ -36766,6 +36882,7 @@
         "Computer Vision & AI",
         "computer vision",
         "pattern recognition",
+        "ai",
         "cvpr"
       ],
       "description": "IEEE/CVF Computer Vision and Pattern Recognition Conference; premier annual computer-vision event with main conference, co-located workshops and short courses.",
@@ -37134,11 +37251,13 @@
       "venue": "Ágora Tech Park",
       "format": "in-person",
       "organization": "Q-Assist / Summit de IA Brasil",
-      "category": "Environment & Sustainability",
+      "category": "Artificial Intelligence & Machine Learning",
       "categories": [
+        "Artificial Intelligence & Machine Learning",
         "Environment & Sustainability"
       ],
       "topics": [
+        "ai",
         "sustainability",
         "intelig",
         "ncia",
@@ -37146,6 +37265,7 @@
         "brasil"
       ],
       "keywords": [
+        "ai",
         "sustainability",
         "intelig",
         "ncia",
@@ -38661,6 +38781,7 @@
         "data",
         "Technology",
         "Data Science & Knowledge Discovery",
+        "ai",
         "data science"
       ],
       "keywords": [
@@ -38684,6 +38805,7 @@
         "Artificial Intelligence & Machine Learning",
         "Technology",
         "Data Science & Knowledge Discovery",
+        "ai",
         "data science"
       ],
       "description": "KDD 2027 ACM SIGKDD Conference on Knowledge Discovery and Data Mining, San Jose McEnery Convention Center, San Jose, California, USA, August 1-5, 2027",
@@ -39136,6 +39258,7 @@
         "Artificial Intelligence / Generative AI",
         "artificial intelligence",
         "generative ai",
+        "ai",
         "ieee",
         "artificial",
         "intelligence",
@@ -39147,10 +39270,10 @@
         "Artificial Intelligence / Generative AI",
         "artificial intelligence",
         "generative ai",
+        "ai",
         "ieee",
         "artificial",
-        "intelligence",
-        "generated"
+        "intelligence"
       ],
       "description": "IEEE-branded conference on artificial intelligence and generated content.",
       "sourceUrl": "https://icaigc.org/",
@@ -40039,6 +40162,7 @@
       "topics": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "artificial",
         "intelligence",
@@ -40047,6 +40171,7 @@
       "keywords": [
         "artificial intelligence",
         "machine learning",
+        "ai",
         "learning",
         "artificial",
         "intelligence",

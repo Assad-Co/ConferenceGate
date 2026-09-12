@@ -17,7 +17,9 @@ import type {
 import type { ParseOptions, ParseOutcome } from "../parseEvidence";
 import { refuseByDateWindow, seriesName, slugify, splitTitleParts, topicsFromTitle } from "../parseEvidence";
 import { classifyCategories, primaryCategory } from "../../discovery/categories";
-import { normalizeCountry, regionForCountry } from "../../discovery/countries";
+import {
+  findCountryInText, normalizeCountry, regionForCountry, type CountryRecord,
+} from "../../discovery/countries";
 import { isDirectoryHost, isReferenceHost } from "../../directoryHosts";
 import { parseCsv, statedOrNull, usableAsOfficialUrl } from "./curated";
 import {
@@ -159,6 +161,38 @@ export function suppliedLogoUrl(logoUrl: string, logoSourceType: string): string
   return value;
 }
 
+/**
+ * Every country a cell names, canonically and in the order it named them.
+ *
+ * One cell can name several, because one conference can be held in several places: NeurIPS 2026
+ * runs in Sydney, Paris and Atlanta, so this batch writes its city as "Sydney / Paris / Atlanta"
+ * and its country as "Australia / France / United States". An exact lookup finds no country by
+ * that name and returned nothing at all — which dropped the country from 74 records, a quarter of
+ * the catalogue, so their cards named no country, the country filter excluded every one of them,
+ * and their world region was unknown.
+ *
+ * Kept in full rather than reduced to the first, because the country filter is a substring test:
+ * a reader filtering for France finds a conference that really is held in France. The single-valued
+ * fields — the ISO code, the world region — take the first, which is the country the first city
+ * sits in.
+ *
+ * Commas are not separators here. "Doha, Qatar" is one place written the ordinary way, and
+ * `findCountryInText` already reads it.
+ */
+function countriesNamedIn(stated: string | null): CountryRecord[] {
+  if (!stated) return [];
+  const whole = normalizeCountry(stated);
+  if (whole) return [whole];
+  const found: CountryRecord[] = [];
+  for (const part of stated.split(/[/|;·•]|\s+and\s+/i).map((piece) => piece.trim()).filter(Boolean)) {
+    const match = normalizeCountry(part) ?? findCountryInText(part);
+    if (match && !found.some((already) => already.iso2 === match.iso2)) found.push(match);
+  }
+  if (found.length) return found;
+  const inside = findCountryInText(stated);
+  return inside ? [inside] : [];
+}
+
 /** ISO, or a year/month the source stopped short at. Nothing else is guessed into a date. */
 function readIsoDate(raw: string): { date: string | null; year: number | null; month: number | null } {
   const value = statedOrNull(raw) ?? "";
@@ -244,7 +278,10 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
   const statedOn = statedOrNull(row.sourceUrl) || website;
 
   const city = statedOrNull(row.city);
-  const countryRecord = normalizeCountry(statedOrNull(row.country));
+  const statedCountries = countriesNamedIn(statedOrNull(row.country));
+  // The first named country, which is the one the first named city sits in: "Sydney / Paris /
+  // Atlanta" against "Australia / France / United States" pairs in order.
+  const countryRecord = statedCountries[0] ?? null;
   if (!city && !countryRecord) return { ok: false, reason: "no_location" };
 
   const { title: cleanTitle, acronym, edition } = splitTitleParts(title);
@@ -306,7 +343,12 @@ export function mapIndexRow(row: IndexRow, options: IndexMapOptions): IndexOutco
     datesText: null,
     city,
     region: null,
-    country: countryRecord?.name ?? null,
+    // The names the source gave, where it gave several. The country filter is a substring test, so
+    // keeping "Australia / France / United States" is what lets a reader filtering for any one of
+    // the three find a conference that really is held in all three — and it is what the source
+    // said. The code and the world region below resolve to the first of them, because those are
+    // single-valued by definition and the first country is the one the first city sits in.
+    country: statedCountries.length ? statedCountries.map((found) => found.name).join(" / ") : null,
     countryCode: countryRecord?.iso2 ?? null,
     worldRegion: regionForCountry(countryRecord?.name ?? null),
     venue: parsed.venueName,

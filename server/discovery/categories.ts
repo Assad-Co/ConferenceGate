@@ -30,6 +30,12 @@ export const CATEGORY_RULES: CategoryRule[] = [
       "artificial intelligence", "machine learning", "deep learning", "neural network", "generative ai",
       "large language model", "llm", "computer vision", "natural language processing", "nlp",
       "reinforcement learning", "agentic", "foundation model", "data mining", "pattern recognition",
+      // The field's own acronym and the two frameworks that stand for it. Every term here is
+      // matched whole-word, so "ai" is the token AI and never the tail of Dubai, Mumbai or chair —
+      // which is what makes the shortest and commonest name for this subject safe to read. Without
+      // it "MIT AI Conference 2026 — AI: The Age of Agency" carried no category at all, and so
+      // reached its card with no subject chip and no place in a subject filter.
+      "ai", "pytorch", "tensorflow",
     ],
   },
   {

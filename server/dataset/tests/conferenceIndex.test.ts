@@ -348,3 +348,43 @@ test("a batch is known by describing where a conference is, not by a quality col
   assert.equal(isIndexHeader(["conference_name", "official_url", "start_date", "end_date", "logo_url"]), false);
   assert.equal(isIndexHeader(["conference_name", "official_url"]), false);
 });
+
+// NeurIPS 2026 runs in three cities on three continents, and this batch states that the ordinary
+// way: "Sydney / Paris / Atlanta" against "Australia / France / United States". An exact lookup
+// finds no country by that name, so 74 records — a quarter of the catalogue — reached their cards
+// naming no country at all, were excluded by the country filter, and had no world region.
+test("a conference held in several countries keeps all of them", () => {
+  const outcome = mapIndexRow(
+    row({ city: "Sydney / Paris / Atlanta", country: "Australia / France / United States" }),
+    OPTIONS
+  );
+  assert.equal(outcome.ok, true);
+  if (!outcome.ok) return;
+
+  // Every one, in the order stated — the country filter is a substring test, so this is what lets a
+  // reader looking for France find a conference that really is held in France.
+  assert.equal(outcome.record.country, "Australia / France / United States");
+  // The single-valued fields take the first, which is the country the first city sits in.
+  assert.equal(outcome.record.countryCode, "AU");
+  assert.equal(outcome.record.worldRegion, "Oceania");
+});
+
+test("one country written the ordinary way is still one country", () => {
+  const plain = mapIndexRow(row({ city: "Doha", country: "Qatar" }), OPTIONS);
+  assert.equal(plain.ok, true);
+  if (!plain.ok) return;
+  assert.equal(plain.record.country, "Qatar");
+  assert.equal(plain.record.countryCode, "QA");
+
+  // A comma is not a separator here: "Doha, Qatar" names one place, not two.
+  const withCity = mapIndexRow(row({ city: "Doha", country: "Doha, Qatar" }), OPTIONS);
+  assert.equal(withCity.ok, true);
+  if (!withCity.ok) return;
+  assert.equal(withCity.record.country, "Qatar");
+
+  // An alias still resolves to the canonical name rather than being repeated as written.
+  const alias = mapIndexRow(row({ city: "Austin", country: "USA" }), OPTIONS);
+  assert.equal(alias.ok, true);
+  if (!alias.ok) return;
+  assert.equal(alias.record.country, "United States");
+});

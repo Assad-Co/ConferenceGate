@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T15:25:27.129Z",
+  "generatedAt": "2026-09-12T15:50:12.255Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -83,17 +83,16 @@
     "2026": 137,
     "2027": 128
   },
-  "countries": 36,
+  "countries": 38,
   "cities": 116,
-  "categories": 40,
+  "categories": 38,
   "worldRegions": {
     "Asia": 79,
-    "(none)": 74,
+    "Oceania": 77,
     "North America": 47,
     "Europe": 46,
     "Middle East": 10,
     "South America": 4,
-    "Oceania": 3,
     "Africa": 2
   },
   "formats": {
@@ -110,11 +109,11 @@
     "exactDates": "98.9%",
     "monthOnlyDates": "1.1%",
     "city": "100.0%",
-    "country": "72.1%",
+    "country": "100.0%",
     "officialUrl": "98.5%",
     "venue": "23.0%",
     "organization": "87.5%",
-    "category": "99.2%",
+    "category": "100.0%",
     "description": "100.0%",
     "corroborated": "1.9%"
   },
