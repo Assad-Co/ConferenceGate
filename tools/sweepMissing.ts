@@ -112,8 +112,15 @@ async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUr
 function peopleCell(people: Array<{ name: string; org: string | null; role: string | null }>): string {
   if (!people.length) return "";
   const byRole = new Map<string, string[]>();
-  for (const person of people) {
-    if (!isCredibleName(person.name)) { stats.junked += 1; continue; }
+  // Half a roster read correctly is not half an answer. MIT's speakers page gave up fourteen
+  // venture funds and job titles and two names; NVIDIA's gave up its own product announcements.
+  // A cell where most of what was found is not a person means the wrong block was read, and what
+  // survived the filter is not evidence the rest was right.
+  const credible = people.filter((person) => isCredibleName(person.name));
+  stats.junked += people.length - credible.length;
+  if (credible.length * 2 < people.length) return "";
+
+  for (const person of credible) {
     const role = (person.role || "").trim() || "—";
     const org = person.org && isCredibleAffiliation(person.org) ? person.org : null;
     const named = org ? `${person.name} (${org})` : person.name;

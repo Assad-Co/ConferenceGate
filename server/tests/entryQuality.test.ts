@@ -80,3 +80,23 @@ test("a biography is not an affiliation, and the person survives it", () => {
   assert.equal(isCredibleAffiliation("An invitation-only network where global energy leaders align"), false);
   assert.equal(isCredibleAffiliation("peer-reviewed research journal dedicated to publishing high-quality"), false);
 });
+
+test("a phrase made only of the conference's own words is not a person", () => {
+  // These are the last shape to survive every structural rule: two capitalised words, no digits,
+  // no organisation marker — identical in form to "Peter Norvig". Only the vocabulary separates
+  // them, which is why the catalogue filters names by words rather than by shape.
+  for (const phrase of [
+    "Education Exhibits", "Scientific Posters", "Presenter Portal",   // RSNA Annual Meeting 2026
+    "Future Outlook", "First Recipient",                              // World Government Summit 2027
+    "Visitor Planner",                                                // Gastech 2026
+    "Central Topics", "Past Summits",                                 // World Health Summit 2026
+    "Short Description", "Sovereign Intelligence",                    // NVIDIA GTC Berlin 2026
+    "Social Sharing", "Presentation Best Practices",                  // RSNA Annual Meeting 2026
+  ]) assert.equal(isCredibleName(phrase), false, phrase);
+
+  // And the names it must not cost. Every one is a real speaker the same sweep found.
+  for (const name of [
+    "Peter Norvig", "Prasert Sinsukprasert", "Nobuo Tanaka", "Winnie Byanyima",
+    "Julio Frenk", "Helen Clark", "Koji Sode", "Mohd Ashraf Ahmad", "Barack Obama",
+  ]) assert.equal(isCredibleName(name), true, name);
+});

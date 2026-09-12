@@ -73,6 +73,47 @@ const HEADLINE = /^(?:introducing|announcing|presenting|discover|explore|meet|jo
 /** A benefit priced in a sponsor pack: "Complimentary Event registrations", "Pens 1 (exclusive)". */
 const BENEFIT_LINE = /\b(?:complimentary|exclusive|included|logo|signage|slides?|banner|booth|stand|pass(?:es)?|registrations?|tickets?|listing|mentions?|placements?)\b/i;
 
+/**
+ * Words that belong to the conference, not to a person.
+ *
+ * This is the vocabulary test, and it is the only thing that separates the last of the junk from a
+ * real name: "Education Exhibits", "Future Outlook", "Sovereign Intelligence" and "Chart
+ * Industries" are structurally perfect names — two capitalised words, no digits, no organisation
+ * marker — and no rule about shape will ever tell them from "Peter Norvig". Only the words do.
+ *
+ * A person's name almost always carries at least one word that is not ordinary English. So a
+ * candidate every one of whose words appears below is a phrase about the event, and is refused.
+ * The list is deliberately domain-heavy: these are the words conference pages put in headings,
+ * cards and nav, which is where a roster reader goes wrong.
+ */
+const EVENT_VOCABULARY = new Set(`
+about access address advanced advances advisory agenda agentic all analysis annual application
+applications approach artificial attendee attendees award awards based best beta board booking commerce
+booth brief broadcast business calendar call cards career case center centre chair chairs chart
+chief cloud cofounder committee community company computer computing conference congress content
+core corporate creative critical current data day days deadline demo description design detail
+details development digital director discovery display early edition education emerging energy
+engineering enterprise event events exchange exhibit exhibitor exhibitors exhibits experience
+expert exploration expo executive field finance first floor focus form forum foundation free
+full fund future gallery
+general global grand group growth guest guide health highlights home hub human impact important
+industries industry information innovation insight insights institute intelligence international
+introduction join key keynote keynotes lab labs landing latest launch lead leader leaders leadership logic
+learning lecture live logic main management market marketing media meeting meetings member members
+mentors message mobile modern network networking new news next officer official online open portable
+opening operations opportunities other outlook overview panel panels partner partners past pass
+passes past people plan planner plans platform plenary policy portal poster posters practices
+presentation presenter press previous price pricing primary prime print private product products
+professional profile program programme project public question questions quick rate rates recipient
+registration regular report research resource resources results review roundtable schedule science
+scientific search second security selected seminar senior service services session sessions share
+sharing shop short show showcase site social solution solutions sovereign shuttle space speaker speakers
+sponsor sponsors staff standard startup strategy stream student students studio submission summary
+summit summits support sustainability system systems tech technical technologies technology ticket
+tickets tools topic topics tour track tracks trade training travel trend trends update updates user
+venue view virtual vision visitor web welcome workshop workshops world year
+`.trim().split(/\s+/));
+
 /** Whether a string can be somebody's name. */
 export function isCredibleName(raw: string): boolean {
   const text = raw.replace(/\s+/g, " ").trim();
@@ -93,7 +134,9 @@ export function isCredibleName(raw: string): boolean {
   // exactly as any sentence does — so it is the balance that decides, not the presence of one.
   const carries = words.filter((word) => !JOINING.has(word.toLowerCase().replace(/[^a-z]/g, "")));
   const capitalised = carries.filter((word) => /^[A-Z\u00C0-\u024F]/.test(word)).length;
-  return capitalised >= 2 && capitalised >= carries.length - capitalised;
+  if (capitalised < 2 || capitalised < carries.length - capitalised) return false;
+  // The vocabulary test. A name carries at least one word that is not the conference's own.
+  return carries.some((word) => !EVENT_VOCABULARY.has(word.toLowerCase().replace(/[^a-z]/g, "")));
 }
 
 /**
