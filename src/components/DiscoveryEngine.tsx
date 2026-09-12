@@ -162,14 +162,19 @@ function rankLiveSearchResults(results: LiveSearchResult[], query: string): Live
  * catalogue they are not: showing Elsevier's icon as each congress's logo says something false, and
  * lands fourteen cards that a reader cannot tell apart.
  *
- * So an `organiser` mark no longer stands in for the conference. The card leads with the
- * conference's own abbreviation, which is distinct per conference and is what a reader scans for,
- * and the host's icon sits in the corner saying who runs it. A `stated` logo is the conference's
- * own and is shown whole.
+ * That distinction used to be drawn in shape: a `stated` logo filled the panel, an `organiser` one
+ * shrank to a badge in the corner beside the conference's initials. It read as a blemish on the
+ * mark rather than as a statement about it — "FINANCE" clipped in the tile with a small black F
+ * stuck to its edge — so the distinction now lives in the tooltip and the alt text, which is where
+ * a claim about whose mark this is belongs, and both fill the tile.
+ *
+ * What keeps that honest is that the mark is usually the conference's own now: 241 of 292 records
+ * carry a logo their own site published, against 108 when the badge was introduced. The 51 that do
+ * not show their organiser's, named as the organiser's on hover.
  *
  * The icon may also simply not exist — a site declaring it in markup alone answers this path with a
- * 404 — so a failed load drops the badge and leaves the name, which is the same mark a conference
- * with no site of its own gets.
+ * 404 — so a failed load falls back to the conference's initials, which is the same mark a
+ * conference with no site of its own gets.
  */
 const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
   const [failed, setFailed] = React.useState(false);
@@ -177,13 +182,16 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
   const icon = failed ? null : result.favicon;
   const isOwnLogo = result.logoSource === 'stated';
 
-  if (icon && isOwnLogo) {
+  if (icon) {
     // `object-contain` is what makes it the whole logo: a wordmark is far wider than it is tall, and
     // cropping it to a square would cut the conference's name off its own mark.
     return (
       <img
         src={icon}
-        alt={`${abbreviation} logo`}
+        alt={isOwnLogo ? `${abbreviation} logo` : `${organiserHost(result)} logo`}
+        // An organiser's mark is still not the edition's, and the tooltip is where that is said now
+        // that both fill the tile. See the note on the component.
+        title={isOwnLogo ? undefined : `Organiser: ${organiserHost(result)}`}
         onError={() => setFailed(true)}
         // A conference's logo is served by the conference's own host, and a good number of them
         // refuse a request whose Referer is somebody else's site — which arrives here as a load
@@ -197,22 +205,11 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
     );
   }
 
-  // "GASTECH" does not fit where "G2" did, so the mark is sized to its length rather than
-  // overflowing the panel it sits in.
+  // No image at all, or one that would not load. "GASTECH" does not fit where "G2" did, so the mark
+  // is sized to its length rather than overflowing the tile it sits in.
   return (
-    <span className="relative flex items-center justify-center">
-      <span className={`${markSizeClass(abbreviation)} max-w-full break-words font-black tracking-wide text-black text-center leading-tight`}>
-        {abbreviation}
-      </span>
-      {icon && (
-        <img
-          src={icon}
-          alt=""
-          title={`Organiser: ${organiserHost(result)}`}
-          onError={() => setFailed(true)}
-          className="absolute -bottom-3 -right-3 w-5 h-5 rounded-sm object-contain bg-white shadow-sm"
-        />
-      )}
+    <span className={`${markSizeClass(abbreviation)} max-w-full break-words font-black tracking-wide text-black text-center leading-tight`}>
+      {abbreviation}
     </span>
   );
 };

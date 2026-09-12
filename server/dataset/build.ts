@@ -347,7 +347,11 @@ export function buildLaunchDataset(
   // Publishing is a choice about what to ship, not about what the evidence says, so it is an
   // option rather than the builder's own rule: a fixture catalogue must still come back as the
   // thing it was built from.
-  const usable = options.publishOnlyUsable ? records.filter(hasSomethingToShow) : records;
+  // The horizon, not the wall clock: a record held back for a deadline that has passed should be
+  // held back on a rebuild of this dataset too, rather than depending on the day it is rebuilt.
+  const usable = options.publishOnlyUsable
+    ? records.filter((record) => hasSomethingToShow(record, options.horizonStart))
+    : records;
   const published = options.publishOnlyCuratedLists
     ? usable.filter((record) => record.supply === "curated_list")
     : usable;

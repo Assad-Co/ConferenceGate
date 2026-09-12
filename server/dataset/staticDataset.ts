@@ -213,14 +213,43 @@ function originIconUrl(url: string): string | null {
   }
 }
 
-export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {
+export function hasSomethingToShow(record: LaunchConferenceRecord, today?: string): boolean {
   const whenKnown = Boolean(record.startDate || record.datePrecision === "month");
   const whereKnown = Boolean(record.city || record.country);
   const somethingToRead =
     Boolean(record.description || record.officialUrl || record.venue || record.organization)
     || filledSections(record).length > 0;
   return whenKnown && whereKnown && somethingToRead
-    && !isBareListing(record) && !leadsNowhere(record);
+    && !isBareListing(record) && !leadsNowhere(record) && !onlyAClosedCall(record, today);
+}
+
+/**
+ * A record whose entire content is a call for papers that has already closed.
+ *
+ * Forty-eight records in this catalogue were the same shape: a date, a city, their own site, and
+ * one filled tab holding a submission deadline. No venue, no organiser, no programme, no speakers,
+ * and a "description" that restated the title — "International conference focused on circuits &
+ * systems." The deadline was the whole record.
+ *
+ * That is worth showing right up until the deadline passes. After it, the one thing the page could
+ * tell a reader is a date they can no longer act on, and the record has nothing else to fall back
+ * on. Twenty-eight of the forty-eight were already in that state.
+ *
+ * Deliberately narrow. A conference that also names a venue, an organiser, or writes a description
+ * of its own keeps its page whatever its deadline says, because the deadline was never all it had;
+ * so does one with a second filled tab. And the organiser's own "Closed" is not used — a status
+ * string is their word about their process, while this asks the simpler question of whether the day
+ * has passed. `today` is the build's horizon rather than the wall clock, so a rebuild of an old
+ * dataset reproduces what it published rather than quietly shrinking.
+ */
+function onlyAClosedCall(record: LaunchConferenceRecord, today?: string): boolean {
+  if (!today) return false;
+  const sections = filledSections(record);
+  if (sections.length !== 1 || sections[0] !== "cfp") return false;
+  if (record.venue || record.organization) return false;
+  if (descriptionWorthShowing(record)) return false;
+  const deadline = record.details?.callForPapers?.abstractDeadline;
+  return Boolean(deadline && deadline < today);
 }
 
 /**
@@ -355,6 +384,13 @@ export function datesLineFor(record: LaunchConferenceRecord): string | null {
 
 const MONTH_WORD = /^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*$/i;
 
+/** Words that hold a sentence together without adding anything to it, so they cannot be the
+ *  difference between a description and a restatement of the title. */
+const JOINING_WORD = new Set([
+  "the", "and", "or", "on", "of", "for", "in", "at", "to", "from", "with", "a", "an", "as", "by",
+  "its", "their", "this", "that", "these", "is", "are", "be", "will", "into", "about",
+]);
+
 /**
  * The description, when it describes something.
  *
@@ -376,9 +412,15 @@ export function descriptionWorthShowing(record: LaunchConferenceRecord): string 
     ...words([record.city, record.region, record.country, record.venue, record.organization].filter(Boolean).join(" ")),
   ]);
   const novel = words(text).filter(
-    (word) => !known.has(word) && !/^\d+(?:st|nd|rd|th)?$/.test(word) && !MONTH_WORD.test(word)
+    (word) => !known.has(word) && !/^\d+(?:st|nd|rd|th)?$/.test(word)
+      && !MONTH_WORD.test(word) && !JOINING_WORD.has(word)
   );
   // Three words the title and the place did not already supply. Below that it is a restatement.
+  //
+  // Joining words are not supplied words. Fourteen records read "International conference focused
+  // on <their own title>", and reached three only by counting "on" — so the sentence that says
+  // nothing new was printed under a card that had just said all of it. A restatement does not
+  // become a description by being phrased as one.
   return novel.length >= 3 ? text : null;
 }
 

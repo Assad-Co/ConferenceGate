@@ -357,6 +357,59 @@ test("a description that restates the title is not a description", () => {
     descriptionWorthShowing({ ...base, description: "Sourced from predicthq.com - A gathering of treasury professionals worldwide." }),
     "A gathering of treasury professionals worldwide."
   );
+
+  // Fourteen records read "International conference focused on <their own title>" and cleared the
+  // three-word bar only by counting "on" — a restatement phrased as a description is still one.
+  assert.equal(
+    descriptionWorthShowing({
+      ...base, title: "2027 6th Asia-Pacific Computer Technology Conference",
+      city: "Osaka", country: "Japan",
+      description: "International conference focused on computer technology.",
+    }),
+    null
+  );
+});
+
+// Forty-eight records were one shape: a date, a city, their own site, and a single filled tab
+// holding a submission deadline — no venue, no organiser, and a description that restated the
+// title. The deadline was the whole record, which is worth showing right up until it passes.
+test("a record whose only content is a call for papers is held back once that call has closed", () => {
+  const base: any = {
+    title: "2026 8th International Conference on Circuits and Systems", acronym: null, edition: null,
+    description: "International conference focused on circuits & systems.",
+    datesText: null, startDate: "2026-09-18", endDate: "2026-09-21", datePrecision: "day",
+    city: "Hangzhou", region: null, country: "China", worldRegion: "Asia", venue: null,
+    format: null, organization: null, topics: [], categories: [], keywords: [],
+    officialUrl: "https://iccs.org/", sourceUrl: "https://iccs.org/",
+    details: {
+      program: { availability: "unread", items: [] }, schedule: { sessions: [], themes: [] },
+      keynotes: { availability: "unread", items: [] }, committee: { availability: "unread", items: [] },
+      fees: { availability: "unread", items: [] }, sponsors: { availability: "unread", items: [] },
+      callForPapers: { status: "Open", abstractDeadline: "2026-05-20", submissionEmail: null, lengthLimit: null, text: null },
+    },
+  };
+  const today = "2026-09-12";
+  assert.equal(hasSomethingToShow(base, today), false);
+
+  // A deadline still ahead is exactly what a reader came for.
+  const open = { ...base, details: { ...base.details, callForPapers: { ...base.details.callForPapers, abstractDeadline: "2026-11-30" } } };
+  assert.equal(hasSomethingToShow(open, today), true);
+
+  // The rule is about records where the deadline was all there was. Anything else the page can say
+  // keeps it, however old the call.
+  assert.equal(hasSomethingToShow({ ...base, venue: "Zhejiang University" }, today), true);
+  assert.equal(hasSomethingToShow({ ...base, organization: "IEEE Circuits and Systems Society" }, today), true);
+  assert.equal(
+    hasSomethingToShow({ ...base, description: "Three days of tutorials on analogue design for doctoral students." }, today),
+    true
+  );
+
+  // The organiser's own "Closed" is their word about their process, not a date, and is not used.
+  const saysClosed = { ...base, details: { ...base.details, callForPapers: { ...base.details.callForPapers, status: "Closed", abstractDeadline: "2026-11-30" } } };
+  assert.equal(hasSomethingToShow(saysClosed, today), true);
+
+  // With no date to judge against, nothing is held back on this rule.
+  assert.equal(hasSomethingToShow(base), true);
 });
 
 
