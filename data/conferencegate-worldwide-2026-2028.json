@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T16:37:48.796Z",
+  "generatedAt": "2026-09-12T17:28:09.483Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -323,7 +323,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Melia Sevilla",
         "venueAddress": "Seville, Spain",
         "accommodation": null,
@@ -414,9 +414,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Standard author / Academic registration 1",
+              "amount": 850,
+              "currency": "EUR"
+            },
+            {
+              "category": "Student registration 2",
+              "amount": 415,
+              "currency": "EUR"
+            },
+            {
+              "category": "Standard industry registration",
+              "amount": 1070,
+              "currency": "EUR"
+            },
+            {
+              "category": "Additional paper fee",
+              "amount": 50,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Standard author / Academic registration 1 $850; Student registration 2 $415; Standard industry registration $1070; Additional paper fee $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -482,7 +503,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://www.gastechevent.com/",
       "logoUrl": "https://www.gastechevent.com/media/aqpcl4x4/gastech-2026-logo-black.png",
-      "imageUrl": null,
+      "imageUrl": "https://www.gastechevent.com/media/stthwoqc/v3-gt26-app-website-banner-1500-x-200-px.gif",
       "evidence": {
         "query": "webharvest-verified-2026",
         "resultTitle": "Gastech 2026",
@@ -3485,7 +3506,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -3540,9 +3561,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Academic/Author standard registration rate 1",
+              "amount": 635,
+              "currency": "EUR"
+            },
+            {
+              "category": "Student registration rate 2",
+              "amount": 400,
+              "currency": "EUR"
+            },
+            {
+              "category": "Industry standard registration rate",
+              "amount": 785,
+              "currency": "EUR"
+            },
+            {
+              "category": "Conference dinner ticket",
+              "amount": 70,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Academic/Author standard registration rate 1 $635; Student registration rate 2 $400; Industry standard registration rate $785; Conference dinner ticket $70",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -4289,7 +4331,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Palazzo Regionale dei Congressi",
         "venueAddress": "Grado, Italy",
         "accommodation": null,
@@ -4504,9 +4546,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Academic/Author standard registration rate 1",
+              "amount": 835,
+              "currency": "EUR"
+            },
+            {
+              "category": "Student registration rate 2",
+              "amount": 385,
+              "currency": "EUR"
+            },
+            {
+              "category": "Industry standard registration rate",
+              "amount": 1050,
+              "currency": "EUR"
+            },
+            {
+              "category": "Conference dinner ticket",
+              "amount": 70,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Academic/Author standard registration rate 1 $835; Student registration rate 2 $385; Industry standard registration rate $1050; Conference dinner ticket $70",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -5344,7 +5407,8 @@
         "safetyNote": null,
         "registrationUrl": "https://www.atce.org/"
       },
-      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/26ATCE/media/logos/NEW-SPE-ATCE-LOGO-GRADIENT.png"
+      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/26ATCE/media/logos/NEW-SPE-ATCE-LOGO-GRADIENT.png",
+      "imageUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/26ATCE/media/2026/26ATCE-HERO-1-12-26.png"
     },
     {
       "id": "cell-symposia-taking-programmed-cell-death-from-mechanisms-to-interven",
@@ -5715,7 +5779,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Meliá Sitges",
         "venueAddress": "Spain",
         "accommodation": null,
@@ -5771,9 +5835,35 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Standard Academic Registration 1",
+              "amount": 799,
+              "currency": "EUR"
+            },
+            {
+              "category": "Student Registration 2",
+              "amount": 495,
+              "currency": "EUR"
+            },
+            {
+              "category": "Standard Industry Registration",
+              "amount": 899,
+              "currency": "EUR"
+            },
+            {
+              "category": "Conference Dinner Ticket",
+              "amount": 75,
+              "currency": "EUR"
+            },
+            {
+              "category": "Additional Paper Fee",
+              "amount": 50,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Standard Academic Registration 1 $799; Student Registration 2 $495; Standard Industry Registration $899; Conference Dinner Ticket $75; Additional Paper Fee $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -9162,7 +9252,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://asia.siggraph.org/2026/",
       "logoUrl": "https://asia.siggraph.org/2026/wp-content/uploads/2026/06/1_Logo_Standard_Horizontal.png",
-      "imageUrl": null,
+      "imageUrl": "https://asia.siggraph.org/2026/wp-content/uploads/2026/07/ACE-Fair-Web-Banner-300x300px-002.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "SIGGRAPH Asia 2026",
@@ -9197,7 +9287,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details",
         "venueName": "Kuala Lumpur Convention Centre",
         "venueAddress": "Kuala Lumpur, Malaysia",
         "accommodation": null,
@@ -9230,9 +9320,60 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "ACM Member (ACM/ACM SIGGRAPH)",
+              "amount": 975,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member",
+              "amount": 1175,
+              "currency": "USD"
+            },
+            {
+              "category": "ACM Member (ACM/ACM SIGGRAPH)",
+              "amount": 875,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member",
+              "amount": 975,
+              "currency": "USD"
+            },
+            {
+              "category": "ACM Student Member",
+              "amount": 475,
+              "currency": "USD"
+            },
+            {
+              "category": "ACM/ACM SIGGRAPH Member",
+              "amount": 950,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member",
+              "amount": 1150,
+              "currency": "USD"
+            },
+            {
+              "category": "ACM/ACM SIGGRAPH Member",
+              "amount": 850,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member",
+              "amount": 950,
+              "currency": "USD"
+            },
+            {
+              "category": "ACM Student Member",
+              "amount": 350,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD ACM Member (ACM/ACM SIGGRAPH) $975; Non-Member $1175; ACM Member (ACM/ACM SIGGRAPH) $875; Non-Member $975; ACM Student Member $475; ACM/ACM SIGGRAPH Member $950; Non-Member $1150; ACM/ACM SIGGRAPH Member $850; Non-Member $950; ACM Student Member $350",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -27217,7 +27358,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -27250,9 +27391,40 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Student Students",
+              "amount": 650,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Student Regular",
+              "amount": 700,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Students",
+              "amount": 400,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Student Regular",
+              "amount": 450,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Students",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Student Regular",
+              "amount": 350,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Student Students $650; Non-Student Regular $700; Student Students $400; Non-Student Regular $450; Student Students $300; Non-Student Regular $350",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -29494,7 +29666,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Lyon Convention Centre",
         "venueAddress": "50 Quai Charles de Gaulle, 69006 Lyon, France",
         "accommodation": null,
@@ -29556,9 +29728,35 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Early delegates",
+              "amount": 625,
+              "currency": "EUR"
+            },
+            {
+              "category": "Standard delegates",
+              "amount": 725,
+              "currency": "EUR"
+            },
+            {
+              "category": "Early Industry",
+              "amount": 735,
+              "currency": "EUR"
+            },
+            {
+              "category": "Industry",
+              "amount": 835,
+              "currency": "EUR"
+            },
+            {
+              "category": "Additional paper fee",
+              "amount": 50,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Early delegates $625; Standard delegates $725; Early Industry $735; Industry $835; Additional paper fee $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -30912,7 +31110,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Kuala Lumpur Convention Centre",
         "venueAddress": "Kuala Lumpur, Malaysia",
         "accommodation": null,
@@ -30989,9 +31187,50 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Early academic registration rate 1",
+              "amount": 825,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic registration rate 1",
+              "amount": 875,
+              "currency": "USD"
+            },
+            {
+              "category": "Early student registration rate 2",
+              "amount": 475,
+              "currency": "USD"
+            },
+            {
+              "category": "Late student registration rate 2",
+              "amount": 525,
+              "currency": "USD"
+            },
+            {
+              "category": "Early industry registration rate",
+              "amount": 880,
+              "currency": "USD"
+            },
+            {
+              "category": "Late industry registration rate",
+              "amount": 930,
+              "currency": "USD"
+            },
+            {
+              "category": "Additional paper fee",
+              "amount": 50,
+              "currency": "USD"
+            },
+            {
+              "category": "Conference dinner ticket",
+              "amount": 75,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Early academic registration rate 1 $825; Academic registration rate 1 $875; Early student registration rate 2 $475; Late student registration rate 2 $525; Early industry registration rate $880; Late industry registration rate $930; Additional paper fee $50; Conference dinner ticket $75",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -31360,7 +31599,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -31401,9 +31640,60 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Speaker",
+              "amount": 699,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 399,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate/ Listener",
+              "amount": 499,
+              "currency": "USD"
+            },
+            {
+              "category": "Single Occupancy",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Speaker",
+              "amount": 799,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 499,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate/ Listener",
+              "amount": 599,
+              "currency": "USD"
+            },
+            {
+              "category": "Speaker",
+              "amount": 899,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 599,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate/ Listener",
+              "amount": 699,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Speaker $699; Student $399; Delegate/ Listener $499; Single Occupancy $350; Speaker $799; Student $499; Delegate/ Listener $599; Speaker $899; Student $599; Delegate/ Listener $699",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -31803,7 +32093,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -31950,9 +32240,40 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Author (ICBEA Reviewer)",
+              "amount": 530,
+              "currency": "USD"
+            },
+            {
+              "category": "Author (Student)",
+              "amount": 570,
+              "currency": "USD"
+            },
+            {
+              "category": "Author (Normal)",
+              "amount": 630,
+              "currency": "USD"
+            },
+            {
+              "category": "Listener (Student)",
+              "amount": 320,
+              "currency": "USD"
+            },
+            {
+              "category": "Listener (Normal)",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic Visit",
+              "amount": 50,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Author (ICBEA Reviewer) $530; Author (Student) $570; Author (Normal) $630; Listener (Student) $320; Listener (Normal) $350; Academic Visit $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -33582,7 +33903,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -33665,9 +33986,45 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Standard",
+              "amount": 600,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "Day Trip",
+              "amount": 100,
+              "currency": "USD"
+            },
+            {
+              "category": "Standard",
+              "amount": 450,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 410,
+              "currency": "USD"
+            },
+            {
+              "category": "Standard",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 320,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Standard $600; Student $550; Day Trip $100; Standard $450; Student $410; Standard $350; Student $320",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -33769,7 +34126,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -33852,9 +34209,45 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Standard",
+              "amount": 600,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "One Day Trip",
+              "amount": 100,
+              "currency": "USD"
+            },
+            {
+              "category": "Standard",
+              "amount": 450,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 410,
+              "currency": "USD"
+            },
+            {
+              "category": "Standard",
+              "amount": 350,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 320,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Standard $600; Student $550; One Day Trip $100; Standard $450; Student $410; Standard $350; Student $320",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -35594,7 +35987,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -35642,9 +36035,70 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Non-Student",
+              "amount": 510,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE Member",
+              "amount": 480,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 450,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Student",
+              "amount": 360,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE Member",
+              "amount": 330,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Student",
+              "amount": 310,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE Member",
+              "amount": 280,
+              "currency": "USD"
+            },
+            {
+              "category": "Student",
+              "amount": 250,
+              "currency": "USD"
+            },
+            {
+              "category": "Extra Full Paper (Same presenter with 2-3 papers)",
+              "amount": 400,
+              "currency": "USD"
+            },
+            {
+              "category": "Extra Abstract (Same presenter with 2-3 papers)",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Extra Page (Full paper exceeds 6 pages)",
+              "amount": 70,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Non-Student $510; IEEE Member $480; Student $450; Non-Student $360; IEEE Member $330; Student $300; Non-Student $310; IEEE Member $280; Student $250; Extra Full Paper (Same presenter with 2-3 papers) $400; Extra Abstract (Same presenter with 2-3 papers) $300; Extra Page (Full paper exceeds 6 pages) $70",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -36126,7 +36580,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -36159,9 +36613,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "IEEE Members (Presentation and Publication)",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE Members (Presentation Only)",
+              "amount": 390,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE Members (Listeners)",
+              "amount": 320,
+              "currency": "USD"
+            },
+            {
+              "category": "One Day Visit",
+              "amount": 100,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD IEEE Members (Presentation and Publication) $550; IEEE Members (Presentation Only) $390; IEEE Members (Listeners) $320; One Day Visit $100",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -39175,7 +39650,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -39224,9 +39699,20 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Delegates from Industry",
+              "amount": 785,
+              "currency": "USD"
+            },
+            {
+              "category": "Multiple paper fee 3",
+              "amount": 50,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Delegates from Industry $785; Multiple paper fee 3 $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -40907,7 +41393,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -40962,9 +41448,25 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Listeners (Onsite Registration) 听众现场注册",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "Students / IEEE Members 学生或者IEEE会员注册",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "Listeners (Onsite Registration) 听众现场注册",
+              "amount": 260,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Listeners (Onsite Registration) 听众现场注册 $300; Students / IEEE Members 学生或者IEEE会员注册 $550; Listeners (Onsite Registration) 听众现场注册 $260",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -42516,7 +43018,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -42542,9 +43044,45 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Regular Registration",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "Authors (IEEE member)",
+              "amount": 520,
+              "currency": "USD"
+            },
+            {
+              "category": "Authors (Regular)",
+              "amount": 550,
+              "currency": "USD"
+            },
+            {
+              "category": "Presenter without paper publication",
+              "amount": 380,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate without paper publication",
+              "amount": 250,
+              "currency": "USD"
+            },
+            {
+              "category": "Delegate （Student）",
+              "amount": 200,
+              "currency": "USD"
+            },
+            {
+              "category": "One Day Tour (optional)",
+              "amount": 80,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Regular Registration $500; Authors (IEEE member) $520; Authors (Regular) $550; Presenter without paper publication $380; Delegate without paper publication $250; Delegate （Student） $200; One Day Tour (optional) $80",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -44730,7 +45268,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details",
         "venueName": null,
         "venueAddress": "Singapore Expo",
         "accommodation": null,
@@ -44792,9 +45330,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Academic standard registration rate 1",
+              "amount": 745,
+              "currency": "USD"
+            },
+            {
+              "category": "Student registration rate 2",
+              "amount": 475,
+              "currency": "USD"
+            },
+            {
+              "category": "Industry standard registration rate",
+              "amount": 845,
+              "currency": "USD"
+            },
+            {
+              "category": "Conference Dinner ticket",
+              "amount": 80,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Academic standard registration rate 1 $745; Student registration rate 2 $475; Industry standard registration rate $845; Conference Dinner ticket $80",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -45951,7 +46510,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": null,
         "venueAddress": null,
         "accommodation": null,
@@ -45977,9 +46536,30 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "IEEE/Committee Member",
+              "amount": 520,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE/Committee Member",
+              "amount": 370,
+              "currency": "USD"
+            },
+            {
+              "category": "IEEE/Committee Member",
+              "amount": 300,
+              "currency": "USD"
+            },
+            {
+              "category": "One Day Visit",
+              "amount": 70,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD IEEE/Committee Member $520; IEEE/Committee Member $370; IEEE/Committee Member $300; One Day Visit $70",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -46504,7 +47084,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Glacier Hotel",
         "venueAddress": "Les Diablerets, Switzerland",
         "accommodation": null,
@@ -46551,9 +47131,25 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Full delegates",
+              "amount": 1925,
+              "currency": "EUR"
+            },
+            {
+              "category": "Accompanying person",
+              "amount": 660,
+              "currency": "EUR"
+            },
+            {
+              "category": "Additional price per paper",
+              "amount": 50,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Full delegates $1925; Accompanying person $660; Additional price per paper $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -46647,7 +47243,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Kyoto International Conference Center",
         "venueAddress": "Kyoto, Japan",
         "accommodation": null,
@@ -46695,9 +47291,35 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Early academic 1",
+              "amount": 715,
+              "currency": "USD"
+            },
+            {
+              "category": "Academic",
+              "amount": 815,
+              "currency": "USD"
+            },
+            {
+              "category": "Early industry",
+              "amount": 815,
+              "currency": "USD"
+            },
+            {
+              "category": "Industry",
+              "amount": 915,
+              "currency": "USD"
+            },
+            {
+              "category": "Additional paper fee",
+              "amount": 50,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Early academic 1 $715; Academic $815; Early industry $815; Industry $915; Additional paper fee $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -47182,7 +47804,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Postillion Convention Centre WTC Rotterdam",
         "venueAddress": "Rotterdam, Netherlands",
         "accommodation": null,
@@ -47214,9 +47836,45 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Early-booking academic delegate",
+              "amount": 645,
+              "currency": "EUR"
+            },
+            {
+              "category": "Early-booking delegate",
+              "amount": 460,
+              "currency": "EUR"
+            },
+            {
+              "category": "Standard delegate",
+              "amount": 510,
+              "currency": "EUR"
+            },
+            {
+              "category": "Early-booking ENA member",
+              "amount": 360,
+              "currency": "EUR"
+            },
+            {
+              "category": "ENA member",
+              "amount": 410,
+              "currency": "EUR"
+            },
+            {
+              "category": "Additional paper fee 2",
+              "amount": 50,
+              "currency": "EUR"
+            },
+            {
+              "category": "Conference dinner ticket",
+              "amount": 80,
+              "currency": "EUR"
+            }
+          ],
+          "text": "EUR Early-booking academic delegate $645; Early-booking delegate $460; Standard delegate $510; Early-booking ENA member $360; ENA member $410; Additional paper fee 2 $50; Conference dinner ticket $80",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -48022,7 +48680,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "McCormick Place",
         "venueAddress": "Chicago, Illinois, USA",
         "accommodation": "RSNA housing details for 2027 not yet announced.",
@@ -48106,9 +48764,40 @@
           "unstructuredReason": null
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Associate (Non-Physician) Member",
+              "amount": 500,
+              "currency": "USD"
+            },
+            {
+              "category": "First Year in Practice Member",
+              "amount": 250,
+              "currency": "USD"
+            },
+            {
+              "category": "Executive Management Industry personnel Investor",
+              "amount": 1785,
+              "currency": "USD"
+            },
+            {
+              "category": "Medical Imaging Professional* (Non-Physician)",
+              "amount": 1015,
+              "currency": "USD"
+            },
+            {
+              "category": "Non-Member Resident Non-Member Trainee Non-Member Student",
+              "amount": 900,
+              "currency": "USD"
+            },
+            {
+              "category": "Other** Non-Physician/Non-Industry",
+              "amount": 1785,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Associate (Non-Physician) Member $500; First Year in Practice Member $250; Executive Management Industry personnel Investor $1785; Medical Imaging Professional* (Non-Physician) $1015; Non-Member Resident Non-Member Trainee Non-Member Student $900; Other** Non-Physician/Non-Industry $1785",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -48599,7 +49288,7 @@
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, web-search-2026-09-details",
+        "source": "conferencegate-200-2026-2027-v3, fees-from-site-2026-09-details, read-from-site-2026-09-details, web-search-2026-09-details",
         "venueName": "Singapore Expo",
         "venueAddress": "Singapore",
         "accommodation": null,
@@ -48631,9 +49320,50 @@
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
+          "availability": "stated",
+          "items": [
+            {
+              "category": "Early Booking Delegate",
+              "amount": 615,
+              "currency": "USD"
+            },
+            {
+              "category": "Late Booking Delegate",
+              "amount": 715,
+              "currency": "USD"
+            },
+            {
+              "category": "Student Delegates 1",
+              "amount": 315,
+              "currency": "USD"
+            },
+            {
+              "category": "Developing Country Rate 2",
+              "amount": 420,
+              "currency": "USD"
+            },
+            {
+              "category": "Early Booking Loyalty Rate (5% discount) Delegate*",
+              "amount": 584,
+              "currency": "USD"
+            },
+            {
+              "category": "Late Booking Loyalty Rate (5% discount) Delegate*",
+              "amount": 679,
+              "currency": "USD"
+            },
+            {
+              "category": "Loyalty Rate (5% discount) Student Delegate*",
+              "amount": 299,
+              "currency": "USD"
+            },
+            {
+              "category": "Additional paper fee",
+              "amount": 50,
+              "currency": "USD"
+            }
+          ],
+          "text": "USD Early Booking Delegate $615; Late Booking Delegate $715; Student Delegates 1 $315; Developing Country Rate 2 $420; Early Booking Loyalty Rate (5% discount) Delegate* $584; Late Booking Loyalty Rate (5% discount) Delegate* $679; Loyalty Rate (5% discount) Student Delegate* $299; Additional paper fee $50",
           "unstructuredReason": null
         },
         "sponsors": {
@@ -49087,7 +49817,7 @@
       "sourceType": "official_site",
       "officialUrl": "https://pmac2027.com/",
       "logoUrl": "https://pmac2027.com/assets/pmac2027/img/banner.png",
-      "imageUrl": null,
+      "imageUrl": "https://pmac2027.com/assets/pmac2027/img/banner.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "Prince Mahidol Award Conference 2027",

@@ -65,6 +65,12 @@ function amountIn(text: string): { amount: string; currency: string | null } | n
   if (!/^\d{1,6}$/.test(whole)) return null;
   // A price of nothing is a statement about eligibility, not a fee this can price.
   if (Number(whole) === 0) return null;
+  // An edition year is not a price. "1 Delegate Pass for Entrepreneur 2026" was read as a €2026
+  // fee, which is both wrong and expensive-looking. A real four-figure fee is written with the
+  // separator or the cents — "€2,026", "€2026.00" — where a year is always written bare, so a bare
+  // number that happens to be a year in this catalogue's range is refused.
+  const bare = !hit[4] && !hit[3].includes(",");
+  if (bare && Number(whole) >= 2000 && Number(whole) <= 2100) return null;
   return { amount: whole, currency };
 }
 
@@ -149,7 +155,15 @@ export function feesCell(fees: FeeLine[]): string {
   const currency = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const kept = currency ? fees.filter((fee) => !fee.currency || fee.currency === currency) : fees;
   if (!kept.length) return "";
-  const body = kept.map((fee) => `${fee.label} $${fee.amount}`).join("; ");
+  // A home page and a registration page usually state the same table, and reading both listed every
+  // price twice. Deduplication belongs here rather than in the page reader, because it is only
+  // across pages that the repeat appears.
+  const seen = new Set<string>();
+  const once = kept.filter((fee) => {
+    const key = `${fee.label.toLowerCase()}|${fee.amount}`;
+    return seen.has(key) ? false : seen.add(key);
+  });
+  const body = once.map((fee) => `${fee.label} $${fee.amount}`).join("; ");
   return currency ? `${currency} ${body}` : body;
 }
 
