@@ -263,6 +263,7 @@ function main(): void {
       alreadyKnown: result.resolvedUrls.alreadyKnown,
       refused: result.resolvedUrls.refused,
       matchedNoConference: result.resolvedUrls.unmatched,
+      redatedByOrganiser: result.resolvedUrls.redated,
     },
     detailsUnmatched: result.detailsUnmatched,
     ...coverageReport(result.dataset.records),

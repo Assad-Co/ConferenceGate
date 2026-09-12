@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:16:26.782Z",
+  "generatedAt": "2026-09-12T04:39:22.757Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -2212,10 +2212,10 @@
         "aging"
       ],
       "description": "International conference focused on aging biology.",
-      "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/hallmarksofaging-2026/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/hallmarksofaging-2026/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -4083,10 +4083,10 @@
         "death"
       ],
       "description": "International conference focused on cell death & therapeutics.",
-      "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/cell-death-2026/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/cell-death-2026/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -5247,10 +5247,10 @@
         "structure"
       ],
       "description": "International conference focused on structural biology & ai.",
-      "sourceUrl": "https://www.elsevier.com/en-au/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/3Dbiologicalfunction-2026/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/3Dbiologicalfunction-2026/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -8450,10 +8450,10 @@
         "cellular"
       ],
       "description": "International conference focused on single cell biology & ai.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/single-cell-biology-2026/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/single-cell-biology-2026/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -10696,10 +10696,10 @@
         "applications"
       ],
       "description": "International conference on advanced nanomaterials and emerging applications.",
-      "sourceUrl": "https://conferencesked.com/conferences/conferences-2027",
-      "sourceHost": "conferencesked.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.academicx.org/ANEA/2027/",
+      "sourceHost": "academicx.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.academicx.org/ANEA/2027/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -10817,10 +10817,10 @@
         "research"
       ],
       "description": "International conference focused on architecture & environmental research.",
-      "sourceUrl": "https://www.iconf.com/news/1195",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icaer.org/",
+      "sourceHost": "icaer.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icaer.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -12509,10 +12509,10 @@
         "dubai"
       ],
       "description": "International conference focused on teaching, education & learning.",
-      "sourceUrl": "https://www.iconf.com/conference/DubaiInternationalConferenceonTeaching%2CEducation%26Learning_9561",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://teacherforum.org/dubai-ictel-16-17-feb-2027",
+      "sourceHost": "teacherforum.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://teacherforum.org/dubai-ictel-16-17-feb-2027",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -14038,10 +14038,10 @@
         "engineering"
       ],
       "description": "International conference focused on civil engineering & architecture.",
-      "sourceUrl": "https://www.iconf.com/news/1195",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.ceac.net/",
+      "sourceHost": "ceac.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.ceac.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -14173,10 +14173,10 @@
         "environmental"
       ],
       "description": "International conference focused on bioresource technology.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-bioresource-technology-for-bioenergy-bioproducts-and-environmental-sustainability",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-bioresource-technology-for-bioenergy-bioproducts-and-environmental-sustainability",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -14567,10 +14567,10 @@
         "engineering"
       ],
       "description": "International conference focused on materials science & engineering.",
-      "sourceUrl": "https://www.iconf.com/conference/14thGlobalConference%26ExpoonMaterialsScienceandEngineering_9585",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://inovscitechconferences.com/2027/paris/matscieng/",
+      "sourceHost": "inovscitechconferences.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://inovscitechconferences.com/2027/paris/matscieng/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -16984,10 +16984,10 @@
         "tokyo"
       ],
       "description": "International conference focused on teaching, education & learning.",
-      "sourceUrl": "https://www.iconf.com/conference/EduConTokyo%E2%80%93InternationalConferenceonEducation_9575",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://teacherforum.org/tokyo-educon-13-14-apr-2027",
+      "sourceHost": "teacherforum.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://teacherforum.org/tokyo-educon-13-14-apr-2027",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -17645,10 +17645,10 @@
         "systems"
       ],
       "description": "International conference focused on power & integrated energy systems.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Energy+and+Resources",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icpies.org/",
+      "sourceHost": "icpies.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icpies.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -18158,10 +18158,10 @@
         "engineering"
       ],
       "description": "International forum on clean energy engineering.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.fcee.net/",
+      "sourceHost": "fcee.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.fcee.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -18287,10 +18287,10 @@
         "neurometabolism"
       ],
       "description": "Symposium on neurometabolism and its roles in health and disease.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/neurometabolism-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/neurometabolism-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -18412,10 +18412,10 @@
         "london"
       ],
       "description": "International conference focused on teaching, education & learning.",
-      "sourceUrl": "https://www.iconf.com/conference/EduConLondon%E2%80%93InternationalConferenceonEducation_9568",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://teacherforum.org/london-educon-26-27-apr-2027",
+      "sourceHost": "teacherforum.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://teacherforum.org/london-educon-26-27-apr-2027",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -18805,10 +18805,10 @@
         "models"
       ],
       "description": "Symposium on advanced human biology models, organoids and new approach methodologies.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/organoids-nams-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/organoids-nams-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -19465,131 +19465,6 @@
       }
     },
     {
-      "id": "energy-opportunities-conference-2027-cartagena",
-      "title": "Energy Opportunities Conference 2027",
-      "acronym": null,
-      "series": "Energy Opportunities Conference",
-      "edition": null,
-      "year": 2027,
-      "startDate": "2027-05-18",
-      "endDate": "2027-05-20",
-      "datePrecision": "day",
-      "startMonth": 5,
-      "datesText": "18-20 May 2027",
-      "city": "Cartagena",
-      "region": null,
-      "country": "Colombia",
-      "countryCode": "CO",
-      "worldRegion": "South America",
-      "venue": null,
-      "format": "in-person",
-      "organization": "AAPG",
-      "category": "Petroleum & Energy",
-      "categories": [
-        "Petroleum & Energy"
-      ],
-      "topics": [
-        "aapg",
-        "energy",
-        "opportunities"
-      ],
-      "keywords": [
-        "Cartagena",
-        "Colombia",
-        "CO",
-        "South America",
-        "2027",
-        "Petroleum & Energy"
-      ],
-      "description": "Energy Opportunities Conference 2027, Conference, Cartagena, 18-20 May 2027",
-      "sourceUrl": "https://www.aapg.org/events/calendar/",
-      "sourceHost": "aapg.org",
-      "sourceType": "reference",
-      "officialUrl": null,
-      "corroboratingSourceUrls": [],
-      "evidence": {
-        "query": "curated:aapg-2026-2027",
-        "resultTitle": "Energy Opportunities Conference 2027",
-        "statedText": "Energy Opportunities Conference 2027, 18-20 May 2027, Cartagena, Colombia",
-        "retrievedAt": "2026-09-12",
-        "method": "web_search",
-        "externalId": null
-      },
-      "origin": "launch_dataset",
-      "supply": "curated_list",
-      "provenance": {
-        "title": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "dates": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "city": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "country": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "venue": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "Low"
-        },
-        "organization": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        }
-      },
-      "details": {
-        "source": "aapg-2026-2027-details",
-        "venueName": null,
-        "venueAddress": null,
-        "program": {
-          "availability": "not_announced",
-          "text": "Successor to the 2026 Rio de Janeiro edition (hosted by Petrobras); program not yet published."
-        },
-        "callForPapers": null,
-        "schedule": {
-          "sessions": [],
-          "themes": []
-        },
-        "keynotes": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "committee": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet published",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "sponsors": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "safetyNote": null
-      }
-    },
-    {
       "id": "cell-press-symposia-next-generation-cell-biology-2027-beijing",
       "title": "Cell Press Symposia: Next-generation Cell Biology",
       "acronym": "Cell Press Symposium",
@@ -19636,10 +19511,10 @@
         "next-generation"
       ],
       "description": "Symposium on advanced imaging, AI and cellular engineering in next-generation cell biology.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/next-gen-cell-biology-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/next-gen-cell-biology-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -19889,10 +19764,10 @@
         "engineering"
       ],
       "description": "International conference focused on mechanical & electrical engineering.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Mechanical+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.amee.net/",
+      "sourceHost": "amee.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.amee.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -20662,10 +20537,10 @@
         "innovation"
       ],
       "description": "International conference focused on management & education innovation.",
-      "sourceUrl": "https://www.iconf.com/conference?confDateEnd=&confDateStart=&confName=&contient=&country=&tags=Education",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icmei.org/",
+      "sourceHost": "icmei.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icmei.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -20792,10 +20667,10 @@
         "mechanical"
       ],
       "description": "International conference focused on precision engineering & manufacturing.",
-      "sourceUrl": "https://www.iconf.com/conference?tags=Mechanical+Engineering",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.pemm.net/",
+      "sourceHost": "pemm.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.pemm.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -20922,10 +20797,10 @@
         "materials"
       ],
       "description": "International academic conference on mechanics, materials and manufacturing.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "http://www.icmmm.org/",
+      "sourceHost": "icmmm.org",
+      "sourceType": "official_site",
+      "officialUrl": "http://www.icmmm.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -21039,10 +20914,10 @@
         "health"
       ],
       "description": "International conference integrating human, animal and environmental health.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-one-health",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-one-health",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -21549,10 +21424,10 @@
         "intelligence"
       ],
       "description": "Academic conference combining software engineering and artificial intelligence.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.seai.org/",
+      "sourceHost": "seai.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.seai.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -22428,10 +22303,10 @@
         "simulation"
       ],
       "description": "International academic conference on circuits, systems and simulation.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.iccss.org/",
+      "sourceHost": "iccss.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.iccss.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -23040,10 +22915,10 @@
         "research"
       ],
       "description": "International transportation research symposium.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/transport-research-symposium",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/transport-research-symposium",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -23169,10 +23044,10 @@
         "drugging"
       ],
       "description": "International conference focused on drug discovery.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/drugging-the-undruggable-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/drugging-the-undruggable-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -23748,10 +23623,10 @@
         "engineering"
       ],
       "description": "International academic conference on mechatronics and electrical engineering.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.meee.org/",
+      "sourceHost": "meee.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.meee.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -24159,10 +24034,10 @@
         "generated"
       ],
       "description": "IEEE-branded conference on artificial intelligence and generated content.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://icaigc.org/",
+      "sourceHost": "icaigc.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://icaigc.org/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -24284,10 +24159,10 @@
         "engineering"
       ],
       "description": "International conference on power systems and control engineering.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.psce.net/",
+      "sourceHost": "psce.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.psce.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -24631,10 +24506,10 @@
       "series": "Cell Press Symposia: Neuro-immune Axis — Charting the Periphery",
       "edition": null,
       "year": 2027,
-      "startDate": "2027-09-13",
-      "endDate": "2027-09-15",
+      "startDate": "2027-10-13",
+      "endDate": "2027-10-15",
       "datePrecision": "day",
-      "startMonth": 9,
+      "startMonth": 10,
       "datesText": null,
       "city": "New York",
       "region": null,
@@ -24673,10 +24548,10 @@
         "axis"
       ],
       "description": "International conference focused on neuroimmunology.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/neuroimmunology-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/neuroimmunology-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -24919,10 +24794,10 @@
         "foods"
       ],
       "description": "Conference on shaping future food systems through sustainability and digital innovation.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/future-foods-congress",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/future-foods-congress",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -25414,10 +25289,10 @@
         "emergency"
       ],
       "description": "International conference focused on emergency nursing.",
-      "sourceUrl": "https://www.elsevier.com/en-gb/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/global-emergency-nursing-conference",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/global-emergency-nursing-conference",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -25541,10 +25416,10 @@
         "rnas"
       ],
       "description": "International conference focused on rna biology.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
-      "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceUrl": "https://cell-press-symposia.com/rnas-2027/index.html",
+      "sourceHost": "cell-press-symposia.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://cell-press-symposia.com/rnas-2027/index.html",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -25661,10 +25536,10 @@
         "security"
       ],
       "description": "International academic conference on system safety and security.",
-      "sourceUrl": "https://www.iconf.com/",
-      "sourceHost": "iconf.com",
-      "sourceType": "directory_listing",
-      "officialUrl": null,
+      "sourceUrl": "https://www.icsss.net/",
+      "sourceHost": "icsss.net",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icsss.net/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -25902,10 +25777,10 @@
         "technology"
       ],
       "description": "International conference focused on desalination.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/desalination-science-and-technology",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/desalination-science-and-technology",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -26407,10 +26282,10 @@
         "clinic"
       ],
       "description": "International congress focused on psoriasis science and clinical translation.",
-      "sourceUrl": "https://uia.org/icco/search/%24freesearch%3DTorun?freesearch=&page=53",
-      "sourceHost": "uia.org",
-      "sourceType": "reference",
-      "officialUrl": null,
+      "sourceUrl": "https://psoriasisg2c.com/",
+      "sourceHost": "psoriasisg2c.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://psoriasisg2c.com/",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -26541,10 +26416,10 @@
         "dynamics"
       ],
       "description": "International conference focused on infectious disease dynamics.",
-      "sourceUrl": "https://www.elsevier.com/events/conferences/all",
+      "sourceUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-infectious-disease-dynamics",
       "sourceHost": "elsevier.com",
-      "sourceType": "third_party",
-      "officialUrl": null,
+      "sourceType": "official_site",
+      "officialUrl": "https://www.elsevier.com/events/conferences/all/international-conference-on-infectious-disease-dynamics",
       "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
@@ -27271,130 +27146,6 @@
         },
         "safetyNote": null,
         "registrationUrl": null
-      }
-    },
-    {
-      "id": "venecon-2027-caracas",
-      "title": "Venecon 2027",
-      "acronym": null,
-      "series": "Venecon",
-      "edition": null,
-      "year": 2027,
-      "startDate": null,
-      "endDate": null,
-      "datePrecision": "month",
-      "startMonth": 6,
-      "datesText": "June 2027",
-      "city": "Caracas",
-      "region": null,
-      "country": "Venezuela",
-      "countryCode": "VE",
-      "worldRegion": "South America",
-      "venue": null,
-      "format": "in-person",
-      "organization": "AAPG",
-      "category": "Petroleum & Energy",
-      "categories": [
-        "Petroleum & Energy"
-      ],
-      "topics": [
-        "aapg",
-        "venecon"
-      ],
-      "keywords": [
-        "Caracas",
-        "Venezuela",
-        "VE",
-        "South America",
-        "2027",
-        "Petroleum & Energy"
-      ],
-      "description": "Venecon 2027, Technical Symposium, Caracas, June 2027",
-      "sourceUrl": "https://www.aapg.org/events/calendar/",
-      "sourceHost": "aapg.org",
-      "sourceType": "reference",
-      "officialUrl": null,
-      "corroboratingSourceUrls": [],
-      "evidence": {
-        "query": "curated:aapg-2026-2027",
-        "resultTitle": "Venecon 2027",
-        "statedText": "Venecon 2027, June 2027, Caracas, Venezuela",
-        "retrievedAt": "2026-09-12",
-        "method": "web_search",
-        "externalId": null
-      },
-      "origin": "launch_dataset",
-      "supply": "curated_list",
-      "provenance": {
-        "title": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "dates": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "Medium"
-        },
-        "city": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "country": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "venue": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "Low"
-        },
-        "organization": {
-          "sourceUrl": "https://www.aapg.org/events/calendar/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        }
-      },
-      "details": {
-        "source": "aapg-2026-2027-details",
-        "venueName": null,
-        "venueAddress": null,
-        "program": {
-          "availability": "not_announced",
-          "text": "Technical symposium on Venezuela's geology and E&P opportunities; program not yet published."
-        },
-        "callForPapers": null,
-        "schedule": {
-          "sessions": [],
-          "themes": []
-        },
-        "keynotes": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "committee": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "fees": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet published",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "sponsors": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
-          "unstructuredReason": "no_recognisable_entries"
-        },
-        "safetyNote": null
       }
     }
   ]

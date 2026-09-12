@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isIndexHeader, mapIndexRow, readIndexCsv, rowsFromIndexCsv, suppliedLogoUrl } from "../sources/conferenceIndex";
-import { siteIconUrl } from "../staticDataset";
+import { conferenceLogoUrl, siteIconUrl } from "../staticDataset";
 import { parseCsv, usableAsOfficialUrl } from "../sources/curated";
 
 const OPTIONS = {
@@ -241,8 +241,8 @@ test("a later revision's resolved official site is used, and the listing it was 
 test("a column calling a URL official does not make it so", () => {
   // domain_type is the compiler's finding, and a finding is screened rather than believed. Thirty-
   // six of these rows resolve to an entry in a publisher's event index; it is the best page there
-  // is for that conference and worth linking, but it is not the conference's own site, so nothing
-  // may take a logo from the publisher's domain.
+  // is for that conference and worth linking, but the path does not show it to be a site of the
+  // conference's own, so nothing may claim that from the URL alone.
   const outcome = mapIndexRow(row({
     website: "", sourceUrl: "https://www.elsevier.com/events/conferences/all",
     officialUrl: "https://www.elsevier.com/events/conferences/all/food-chemistry-conference",
@@ -250,7 +250,16 @@ test("a column calling a URL official does not make it so", () => {
   }), OPTIONS);
   assert.equal(outcome.ok, true);
   if (!outcome.ok) return;
-  assert.equal(siteIconUrl(outcome.record.officialUrl), null, "a publisher's icon became a conference's logo");
+  assert.equal(siteIconUrl(outcome.record.officialUrl), null, "a page deep in a site read as the site");
+
+  // The record still shows a mark, because by this point a different question has been answered:
+  // the URL passed every screen that sets `official_site`, so the host is the one running the
+  // conference. Elsevier's icon on an Elsevier congress is the organiser's, not a stranger's.
+  assert.equal(
+    conferenceLogoUrl(outcome.record),
+    "https://www.elsevier.com/favicon.ico",
+    "a conference on its organiser's own domain was left with no mark at all"
+  );
 
   // And a row that resolved nothing keeps the listing as its source, rather than being refused.
   const unresolved = mapIndexRow(row({

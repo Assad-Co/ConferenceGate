@@ -28,7 +28,7 @@ const record = (over: Partial<LaunchConferenceRecord> = {}): LaunchConferenceRec
 test("a conference whose own site was found later links to it, and gains its logo", () => {
   const records = [record()];
   const outcome = applyResolvedUrls(records, [
-    { title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/", resolvedOn: "2026-09-11", method: "web_search" },
+    { title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/", resolvedOn: "2026-09-11", method: "web_search", startDate: null, endDate: null },
   ]);
   assert.equal(outcome.applied, 1);
   assert.equal(records[0].officialUrl, "https://www.gastechevent.com/");
@@ -43,7 +43,7 @@ test("a record that already names its own site is not corrected", () => {
   // read its website off the organiser's own page.
   const records = [record({ officialUrl: "https://www.gastechevent.com/", sourceUrl: "https://www.gastechevent.com/" })];
   const outcome = applyResolvedUrls(records, [
-    { title: "Gastech 2026", officialUrl: "https://wrong.example/", resolvedOn: "2026-09-11", method: "web_search" },
+    { title: "Gastech 2026", officialUrl: "https://wrong.example/", resolvedOn: "2026-09-11", method: "web_search", startDate: null, endDate: null },
   ]);
   assert.equal(outcome.applied, 0);
   assert.equal(outcome.alreadyKnown, 1);
@@ -59,7 +59,7 @@ test("a resolved URL is screened like any other, and a refusal is reported", () 
   ] as const) {
     const records = [record()];
     const outcome = applyResolvedUrls(records, [
-      { title: "Gastech 2026", officialUrl: url, resolvedOn: "2026-09-11", method: "web_search" },
+      { title: "Gastech 2026", officialUrl: url, resolvedOn: "2026-09-11", method: "web_search", startDate: null, endDate: null },
     ]);
     assert.equal(outcome.applied, 0, `${url} was applied though it is ${why}`);
     assert.equal(outcome.refused.length, 1);
@@ -69,7 +69,7 @@ test("a resolved URL is screened like any other, and a refusal is reported", () 
 
 test("a row naming no conference in the catalogue is reported rather than dropped", () => {
   const outcome = applyResolvedUrls([record()], [
-    { title: "A Conference Nobody Has Heard Of", officialUrl: "https://real.example/", resolvedOn: "2026-09-11", method: "web_search" },
+    { title: "A Conference Nobody Has Heard Of", officialUrl: "https://real.example/", resolvedOn: "2026-09-11", method: "web_search", startDate: null, endDate: null },
   ]);
   assert.equal(outcome.applied, 0);
   assert.deepEqual(outcome.unmatched, ["A Conference Nobody Has Heard Of"]);
@@ -81,12 +81,55 @@ test("the header tells this file apart from the two others in the same directory
   assert.equal(isResolvedUrlHeader(["conference_name", "official_url", "resolved_on", "method"]), true);
   assert.equal(isResolvedUrlHeader(["﻿conference_name", "official_url"]), true);
   assert.equal(isResolvedUrlHeader(["conference_name", "start_date", "website_or_source", "record_status"]), false);
+  // A resolution file may state the organiser's dates without becoming an intake batch.
+  assert.equal(isResolvedUrlHeader(["conference_name", "official_url", "start_date", "end_date"]), true);
   assert.equal(isResolvedUrlHeader(["Conference Name", "Event Type", "Dates", "Location"]), false);
 
   const rows = rowsFromResolvedCsv(parseCsv(
     'conference_name,official_url,resolved_on,method\n"Gastech 2026",https://www.gastechevent.com/,2026-09-11,web_search\n'
   ));
   assert.deepEqual(rows, [
-    { title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/", resolvedOn: "2026-09-11", method: "web_search" },
+    { title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/", resolvedOn: "2026-09-11", method: "web_search", startDate: null, endDate: null },
   ]);
+});
+
+test("dates the organiser's own page states correct the row the record came from", () => {
+  const listed = record();
+  listed.officialUrl = null;
+  listed.startDate = "2027-09-13";
+  listed.endDate = "2027-09-15";
+  listed.year = 2027;
+
+  const outcome = applyResolvedUrls([listed], [
+    {
+      title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/",
+      resolvedOn: "2026-09-12", method: "web_search",
+      startDate: "2027-10-13", endDate: "2027-10-15",
+    },
+  ]);
+
+  assert.equal(listed.startDate, "2027-10-13");
+  assert.equal(listed.endDate, "2027-10-15");
+  assert.equal(listed.startMonth, 10);
+  assert.equal(listed.datePrecision, "day");
+  assert.deepEqual(outcome.redated, [{ title: "Gastech 2026", was: "2027-09-13", now: "2027-10-13" }]);
+});
+
+test("a resolution that states no date leaves the record's own dates alone", () => {
+  const listed = record();
+  listed.officialUrl = null;
+  listed.startDate = "2026-09-07";
+
+  const outcome = applyResolvedUrls([listed], [
+    {
+      title: "Gastech 2026", officialUrl: "https://www.gastechevent.com/",
+      resolvedOn: "2026-09-12", method: "web_search",
+      // "Not yet announced" is not a date, and neither is a year on its own.
+      startDate: "2027", endDate: null,
+    },
+  ]);
+
+  assert.equal(listed.startDate, "2026-09-07");
+  assert.deepEqual(outcome.redated, []);
+  assert.equal(outcome.applied, 1);
 });

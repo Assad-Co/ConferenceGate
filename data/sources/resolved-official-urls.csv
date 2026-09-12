@@ -1,4 +1,4 @@
-conference_name,official_url,resolved_on,method
+conference_name,official_url,resolved_on,method,start_date,end_date
 "Gastech 2026",https://www.gastechevent.com/,2026-09-11,web_search
 "National Frozen & Refrigerated Foods Convention",https://nfraconvention.org/,2026-09-11,web_search
 "AAPG Eastern Section Annual Meeting 2026",https://www.esaapg.org/,2026-09-11,web_search
@@ -49,3 +49,40 @@ conference_name,official_url,resolved_on,method
 "6th Global Food Security Conference",https://www.globalfoodsecurityconference.com/,2026-09-12,web_search
 "Cervical Spine Research Society Annual Meeting 2027",https://www.csrs.org/,2026-09-12,web_search
 "African Studies Association Annual Meeting 2027",https://africanstudies.org/,2026-09-12,web_search
+"2027 14th International Conference on Mechanics, Materials and Manufacturing",http://www.icmmm.org/,2026-09-12,web_search
+"2027 5th International Conference on Precision Engineering and Mechanical Manufacturing",https://www.pemm.net/,2026-09-12,web_search
+"2027 7th International Conference on Software Engineering and Artificial Intelligence",https://www.seai.org/,2026-09-12,web_search
+"2027 The 10th International Conference on Circuits, Systems and Simulation",https://www.iccss.org/,2026-09-12,web_search
+"2027 9th International Conference on Advanced Mechanical and Electrical Engineering",https://www.amee.net/,2026-09-12,web_search
+"2027 5th International Conference on Mechatronics and Electrical Engineering",https://www.meee.org/,2026-09-12,web_search
+"2027 International Conference on Power Systems and Control Engineering",https://www.psce.net/,2026-09-12,web_search
+"2027 5th International Forum on Clean Energy Engineering",https://www.fcee.net/,2026-09-12,web_search
+"2027 IEEE 3rd International Conference on Power and Integrated Energy Systems",https://www.icpies.org/,2026-09-12,web_search
+"2027 IEEE International Conference on Artificial Intelligence and Generated Content",https://icaigc.org/,2026-09-12,web_search
+"2027 14th International Conference on Management and Education Innovation",https://www.icmei.org/,2026-09-12,web_search
+"2027 International Conference on System Safety and Security",https://www.icsss.net/,2026-09-12,web_search
+"2027 Civil Engineering and Architecture Conference",https://www.ceac.net/,2026-09-12,web_search
+"2027 International Conference on Architecture and Environmental Research",https://www.icaer.org/,2026-09-12,web_search
+"Dubai International Conference on Teaching, Education & Learning",https://teacherforum.org/dubai-ictel-16-17-feb-2027,2026-09-12,web_search
+"14th Global Conference & Expo on Materials Science and Engineering",https://inovscitechconferences.com/2027/paris/matscieng/,2026-09-12,web_search
+"EduCon Tokyo – International Conference on Education",https://teacherforum.org/tokyo-educon-13-14-apr-2027,2026-09-12,web_search
+"14th International Conference on Advanced Nanomaterials and Emerging Applications",https://www.academicx.org/ANEA/2027/,2026-09-12,web_search
+"EduCon London – International Conference on Education",https://teacherforum.org/london-educon-26-27-apr-2027,2026-09-12,web_search
+"Cell Press Symposia: Hallmarks of Aging",https://cell-press-symposia.com/hallmarksofaging-2026/index.html,2026-09-12,web_search
+"Cell Press Symposia: Drugging the Undruggable",https://cell-press-symposia.com/drugging-the-undruggable-2027/index.html,2026-09-12,web_search
+"Cell Press Symposia: Functional RNAs",https://cell-press-symposia.com/rnas-2027/index.html,2026-09-12,web_search
+"EPIDEMICS 11: 11th International Conference on Infectious Disease Dynamics",https://www.elsevier.com/events/conferences/all/international-conference-on-infectious-disease-dynamics,2026-09-12,web_search
+"Cell Symposia: Taking Programmed Cell Death from Mechanisms to Interventions",https://cell-press-symposia.com/cell-death-2026/index.html,2026-09-12,web_search
+"Cell Press Symposia: Biological Function in 3D — Structure, Dynamics, and AI",https://cell-press-symposia.com/3Dbiologicalfunction-2026/index.html,2026-09-12,web_search
+"Cell Symposia: Decoding Cellular Complexity — Single Cell Biology in the Era of AI",https://cell-press-symposia.com/single-cell-biology-2026/index.html,2026-09-12,web_search
+"Cell Press Symposia: Neuro-immune Axis — Charting the Periphery",https://cell-press-symposia.com/neuroimmunology-2027/index.html,2026-09-12,web_search,2027-10-13,2027-10-15
+"Cell Press Symposia: Neurometabolism in Health and Disease",https://cell-press-symposia.com/neurometabolism-2027/index.html,2026-09-12,web_search,,
+"Cell Press Symposia: Advanced Models of Human Biology and Disease",https://cell-press-symposia.com/organoids-nams-2027/index.html,2026-09-12,web_search,,
+"Cell Press Symposia: Next-generation Cell Biology",https://cell-press-symposia.com/next-gen-cell-biology-2027/index.html,2026-09-12,web_search,,
+"Future Foods Congress 2027",https://www.elsevier.com/events/conferences/all/future-foods-congress,2026-09-12,web_search,,
+"Global Emergency Nursing Conference 2027",https://www.elsevier.com/events/conferences/all/global-emergency-nursing-conference,2026-09-12,web_search,,
+"Desalination Science and Technology 2027",https://www.elsevier.com/events/conferences/all/desalination-science-and-technology,2026-09-12,web_search,,
+"5th International Conference on Bioresource Technology for Bioenergy, Bioproducts & Environmental Sustainability",https://www.elsevier.com/events/conferences/all/international-conference-on-bioresource-technology-for-bioenergy-bioproducts-and-environmental-sustainability,2026-09-12,web_search,,
+"International Conference on One Health 2027",https://www.elsevier.com/events/conferences/all/international-conference-on-one-health,2026-09-12,web_search,,
+"Transportation Research Symposium 2027",https://www.elsevier.com/events/conferences/all/transport-research-symposium,2026-09-12,web_search,,
+"International Congress: Psoriasis – from Gene to Clinic 2027",https://psoriasisg2c.com/,2026-09-12,web_search,,

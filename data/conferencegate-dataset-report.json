@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-12T04:16:26.782Z",
+  "generatedAt": "2026-09-12T04:39:22.757Z",
   "horizonStart": "2026-09-12",
   "evidenceRows": 325,
-  "apiEventRows": 72,
-  "accepted": 198,
+  "apiEventRows": 70,
+  "accepted": 196,
   "duplicatesMerged": 18,
   "rejected": 22,
   "rejectionReasons": {
@@ -18,57 +18,70 @@
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
-  "detailsAttached": 16,
+  "detailsAttached": 14,
   "heldBackWithNothingToShow": 343,
   "websitesResolved": {
-    "applied": 49,
+    "applied": 86,
     "alreadyKnown": 1,
     "refused": [],
-    "matchedNoConference": []
+    "matchedNoConference": [],
+    "redatedByOrganiser": [
+      {
+        "title": "Cell Press Symposia: Neuro-immune Axis — Charting the Periphery",
+        "was": "2027-09-13",
+        "now": "2027-10-13"
+      }
+    ]
   },
   "detailsUnmatched": [
+    {
+      "title": "Energy Opportunities Conference 2027",
+      "reason": "no_conference_with_this_title"
+    },
+    {
+      "title": "Venecon 2027",
+      "reason": "no_conference_with_this_title"
+    },
     {
       "title": "Latin America Geothermal Systems Workshop 2026",
       "reason": "no_conference_with_this_title"
     }
   ],
-  "total": 198,
+  "total": 196,
   "byYear": {
     "2026": 68,
-    "2027": 130
+    "2027": 128
   },
-  "countries": 35,
-  "cities": 114,
+  "countries": 34,
+  "cities": 112,
   "categories": 40,
   "worldRegions": {
     "Asia": 101,
     "Europe": 42,
     "North America": 37,
     "Middle East": 8,
-    "South America": 5,
     "Oceania": 4,
+    "South America": 3,
     "Africa": 1
   },
   "formats": {
-    "in-person": 190,
+    "in-person": 188,
     "hybrid": 5,
     "online": 3
   },
   "sourceTypes": {
-    "official_site": 153,
-    "directory_listing": 25,
-    "third_party": 17,
-    "reference": 3
+    "official_site": 190,
+    "directory_listing": 6
   },
   "coverage": {
     "title": "100.0%",
-    "exactDates": "98.0%",
-    "monthOnlyDates": "2.0%",
+    "exactDates": "98.5%",
+    "monthOnlyDates": "1.5%",
     "city": "100.0%",
     "country": "100.0%",
-    "officialUrl": "77.3%",
-    "venue": "21.7%",
-    "organization": "69.7%",
+    "officialUrl": "96.9%",
+    "venue": "21.9%",
+    "organization": "69.4%",
     "category": "100.0%",
     "description": "100.0%",
     "corroborated": "2.0%"

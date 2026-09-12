@@ -164,8 +164,35 @@ export function siteIconUrl(officialUrl: string | null): string | null {
 
 export function conferenceLogoUrl(record: LaunchConferenceRecord): string | null {
   // An image the source actually named beats one derived from a domain, and is the only case where
-  // this is a fact rather than a derivation. Everything else falls back to the organiser's own icon.
-  return record.logoUrl ?? siteIconUrl(record.officialUrl);
+  // this is a fact rather than a derivation.
+  if (record.logoUrl) return record.logoUrl;
+
+  // The path test above is a proxy for a question — is this host the conference's? — asked where
+  // nothing else has answered it. On a launch record it has been: `sourceType` is `official_site`
+  // only after the URL survived `usableAsOfficialUrl`, the index-path test and the directory and
+  // reference host lists, which is the whole apparatus this file uses to decide what an official
+  // site is. Asking the path again there refuses the organiser's own mark on AAPG's event pages,
+  // the Elsevier and Cell Press symposia and Black Hat's per-edition paths — every one of them a
+  // conference that host runs, not a magazine writing about one.
+  //
+  // What it yields is therefore the organiser's mark rather than a mark belonging to the edition,
+  // which is a weaker claim than a `logoUrl` and is why that is preferred whenever a source stated
+  // one. It is still a true one: a reader seeing Elsevier on an Elsevier congress is not misled.
+  if (record.sourceType === "official_site" && record.officialUrl) {
+    return originIconUrl(record.officialUrl);
+  }
+  return siteIconUrl(record.officialUrl);
+}
+
+/** The icon of whatever site a URL is on, with no claim about whose site that is. */
+function originIconUrl(url: string): string | null {
+  try {
+    const site = new URL(url);
+    if (site.protocol !== "https:" && site.protocol !== "http:") return null;
+    return new URL("/favicon.ico", site.origin).toString();
+  } catch {
+    return null;
+  }
 }
 
 export function hasSomethingToShow(record: LaunchConferenceRecord): boolean {

@@ -12,6 +12,7 @@
 // claim being checked, not evidence for it.
 
 import { parseCsv, statedOrNull, usableAsOfficialUrl } from "./curated";
+import { isIndexHeader } from "./conferenceIndex";
 import { isDirectoryHost, isReferenceHost } from "../../directoryHosts";
 import type { LaunchConferenceRecord } from "../types";
 
@@ -20,11 +21,16 @@ export interface ResolvedUrl {
   officialUrl: string;
   resolvedOn: string;
   method: string;
+  /** Dates the organiser's own page states, where they contradict the row the record came from. */
+  startDate: string | null;
+  endDate: string | null;
 }
 
 export function isResolvedUrlHeader(header: string[]): boolean {
   const seen = new Set(header.map((cell) => cell.replace(/^﻿/, "").trim().toLowerCase()));
-  return ["conference_name", "official_url"].every((column) => seen.has(column)) && !seen.has("start_date");
+  // A resolution file may carry the dates the official page states, so `start_date` no longer tells
+  // the two shapes apart: an intake batch is what an index header describes, and this is the rest.
+  return ["conference_name", "official_url"].every((column) => seen.has(column)) && !isIndexHeader(header);
 }
 
 export function rowsFromResolvedCsv(rows: string[][]): ResolvedUrl[] {
@@ -38,6 +44,8 @@ export function rowsFromResolvedCsv(rows: string[][]): ResolvedUrl[] {
       officialUrl: cell(cells, "official_url"),
       resolvedOn: cell(cells, "resolved_on"),
       method: cell(cells, "method") || "web_search",
+      startDate: statedOrNull(cell(cells, "start_date")),
+      endDate: statedOrNull(cell(cells, "end_date")),
     }))
     .filter((row) => row.title && row.officialUrl);
 }
@@ -55,6 +63,13 @@ export interface ResolutionOutcome {
   refused: Array<{ title: string; url: string; reason: string }>;
   /** Rows skipped because the record already knew its own site. */
   alreadyKnown: number;
+  /** Dates the organiser's own page contradicted, reported so a silent rewrite is impossible. */
+  redated: Array<{ title: string; was: string; now: string }>;
+}
+
+/** A date the organiser stated, or nothing — a half-read cell must never reach a record. */
+function statedDate(value: string | null): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
 export function applyResolvedUrls(
@@ -67,7 +82,7 @@ export function applyResolvedUrls(
     byTitle.set(key, [...(byTitle.get(key) ?? []), record]);
   }
 
-  const outcome: ResolutionOutcome = { applied: 0, unmatched: [], refused: [], alreadyKnown: 0 };
+  const outcome: ResolutionOutcome = { applied: 0, unmatched: [], refused: [], alreadyKnown: 0, redated: [] };
   for (const row of resolutions) {
     const matches = byTitle.get(titleKey(row.title));
     if (!matches?.length) { outcome.unmatched.push(row.title); continue; }
@@ -99,6 +114,21 @@ export function applyResolvedUrls(
       record.sourceHost = host;
       record.sourceType = "official_site";
       outcome.applied += 1;
+
+      // Where the organiser's own page states dates the intake row got wrong, the organiser wins:
+      // a listing repeating a date nobody checked is exactly the claim this file exists to correct.
+      // Only a full ISO date counts, and only a different one — this can sharpen a record, never
+      // blur it.
+      const start = statedDate(row.startDate);
+      if (start && start !== record.startDate) {
+        outcome.redated.push({ title: row.title, was: record.startDate ?? "(none)", now: start });
+        record.startDate = start;
+        record.endDate = statedDate(row.endDate) ?? start;
+        record.year = Number(start.slice(0, 4));
+        record.startMonth = Number(start.slice(5, 7));
+        record.datePrecision = "day";
+        record.datesText = null;
+      }
     }
   }
   return outcome;

@@ -220,10 +220,9 @@ test("a conference's logo comes from the conference's own site, never from a lis
     assert.equal(conferenceLogoUrl(listed), null);
   });
 
-  // A site's icon is the site's mark, so it is the conference's only where the site is. Gastech's
-  // stated page is an article on a trade magazine and the 20th Vaccine Congress's is on its
-  // publisher's site; taking an icon from either puts a brand on the page that has nothing to do
-  // with the conference, which is worse than the initials the card falls back to.
+  // A site's icon is the site's mark, so reading a URL alone tells you whose mark it is only where
+  // the URL is a site root. Gastech's stated page is an article on a trade magazine: a path deep in
+  // a host that carries a thousand other things, and nothing about it says the host is Gastech's.
   assert.equal(siteIconUrl("https://www.rogtecmagazine.com/events-calendar/"), null);
   assert.equal(siteIconUrl("https://www.elsevier.com/en-gb/events/conferences/all"), null);
   assert.equal(siteIconUrl("https://www.aapg.org/event-details/5th-edition-gtw/"), null);
@@ -239,6 +238,30 @@ test("a conference's logo comes from the conference's own site, never from a lis
   assert.equal(siteIconUrl(null), null);
   assert.equal(siteIconUrl("not a url"), null);
   assert.equal(siteIconUrl("javascript:alert(1)"), null);
+});
+
+test("a record that survived the official-site screening takes its organiser's mark", () => {
+  // `siteIconUrl` above reads a URL and nothing else, so it has only the path to go on. A record
+  // has more: `official_site` is set only once the URL passed `usableAsOfficialUrl`, the index-path
+  // test and the directory and reference host lists. A deep path on a host that cleared all of that
+  // is the organiser's own event page — the Cell Press symposium below is a Cell Press conference —
+  // and refusing its mark leaves a real conference blank for no gain.
+  withFixtureDataset(() => {
+    const own = findLaunchRecordByUrl("https://www.atce.org/")!;
+    const symposium: typeof own = {
+      ...own, logoUrl: null, sourceType: "official_site",
+      officialUrl: "https://cell-press-symposia.com/rnas-2027/index.html",
+    };
+    assert.equal(conferenceLogoUrl(symposium), "https://cell-press-symposia.com/favicon.ico");
+
+    // A listing is still a listing: the screening that sets `official_site` is what is being
+    // trusted, so a record that never passed it falls back to the path test and then the initials.
+    const listed: typeof own = {
+      ...own, logoUrl: null, sourceType: "directory_listing",
+      officialUrl: "https://www.emedevents.com/c/medical-conferences-2027/rnas",
+    };
+    assert.equal(conferenceLogoUrl(listed), null);
+  });
 });
 
 test("the catalogue hands the page the logo alongside the rest of the record", () => {
