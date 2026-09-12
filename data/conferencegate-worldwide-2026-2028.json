@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T05:27:29.225Z",
+  "generatedAt": "2026-09-12T05:31:39.346Z",
   "horizonStart": "2026-09-12",
   "years": [
     2026,
@@ -7747,7 +7747,7 @@
       "sourceHost": "rsna.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.rsna.org/annual-meeting",
-      "logoUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/2026/RSNA_2026_Logo_Color_FIN",
+      "logoUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/2026/rsna_2026_logo_color_fin.png?hash=209FF7E1087515064C3CACAF7024365E&rev=53148db37730402f90666a3f7fdf2436",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "RSNA Annual Meeting 2026",
@@ -7907,7 +7907,7 @@
       "sourceHost": "aws.amazon.com",
       "sourceType": "official_site",
       "officialUrl": "https://aws.amazon.com/events/reinvent/",
-      "logoUrl": "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/events/approved/images/26fb240213f80570ec3ab8d25f2f82bc-aws-reinvent-2024-logo-white-2332x508.ef167bec9458463187b57895480739161b7f15f5.png",
+      "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "AWS re:Invent 2026",
@@ -8171,7 +8171,7 @@
       "sourceHost": "asia.siggraph.org",
       "sourceType": "official_site",
       "officialUrl": "https://asia.siggraph.org/2026/",
-      "logoUrl": "https://p15.projs.ifdemo.com/siggraph2026/wp-content/uploads/2026/02/1_Logo_Standard_Horizontal.png",
+      "logoUrl": "https://asia.siggraph.org/2026/wp-content/uploads/2026/06/1_Logo_Standard_Horizontal.png",
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "SIGGRAPH Asia 2026",
@@ -12246,7 +12246,7 @@
       "sourceHost": "worldgovernmentssummit.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.worldgovernmentssummit.org/",
-      "logoUrl": "https://www.worldgovernmentssummit.org/assets/images/logo-white.svg",
+      "logoUrl": null,
       "evidence": {
         "query": "conferencegate-200-2026-2027-v3",
         "resultTitle": "World Government Summit 2027",
