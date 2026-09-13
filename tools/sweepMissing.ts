@@ -37,10 +37,12 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { extractDeepSections, findSectionPages, type DeepSectionExtraction } from "../server/discovery/deepSections";
-import { feesCell, feesFromPage, findFeePages, type FeeLine } from "../server/discovery/feePages";
+import { tmpdir } from "node:os";
+import { crawlSweepPages } from "../server/discovery/sweepPages";
+import { extractDeepSections, type DeepSectionExtraction } from "../server/discovery/deepSections";
+import { feesCell, feesFromPage, type FeeLine } from "../server/discovery/feePages";
 import { firecrawlScrape, isFirecrawlConfigured } from "../server/firecrawl";
-import { candidateUrlBelongsToEvent, eventIdentityFrom, pageBelongsToEvent,
+import { eventIdentityFrom,
   type EventIdentity } from "../server/discovery/eventIdentity";
 import { isCredibleAffiliation, isCredibleName } from "../server/discovery/entryQuality";
 
@@ -94,9 +96,9 @@ async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUr
     if (!FIRECRAWL || rendered.has(url)) { readStats.refused += 1; throw error; }
     if (readStats.firecrawl >= MAX_FIRECRAWL) { readStats.overCap += 1; throw error; }
     rendered.add(url);
+    readStats.firecrawl += 1;
     const scraped = await firecrawlScrape(url);
     if (!scraped?.html) { readStats.refused += 1; throw new Error(`unread after firecrawl: ${(error as Error).message}`); }
-    readStats.firecrawl += 1;
     return { html: scraped.html, finalUrl: url };
   }
 }
@@ -186,6 +188,7 @@ const wants = (r: Rec) => SECTIONS.some((k) => wantsSection(r, k)) || !r.logoUrl
 const needing = all.filter((r) => r.officialUrl && /^https?:\/\//i.test(r.officialUrl) && wants(r));
 const queue = LIMIT > 0 ? needing.slice(0, LIMIT) : needing;
 
+const audit: Array<{ conference: string; url: string; stage: string; reason: string }> = [];
 const detailRows: string[] = [];
 const urlRows: string[] = [];
 const today = new Date().toISOString().slice(0, 10);
@@ -201,31 +204,46 @@ async function handle(record: Rec, index: number) {
   try {
     const home = await getHtml(site);
     const found: DeepSectionExtraction = { program: null, speakers: [], committee: [], sponsors: [], community: null };
-    const here = extractDeepSections(home.html, home.finalUrl);
-    found.speakers.push(...here.speakers); found.committee.push(...here.committee);
-    found.sponsors.push(...here.sponsors); found.program = here.program;
-
-    const wantSections = ["program", "keynotes", "committee", "sponsors"].some((k) => unread(record, k));
-    if (wantSections) {
-      // Two candidates a section rather than one. A site that keeps its speakers at both /speakers
-      // and /programme/speakers was previously asked for whichever it linked first, and the names
-      // are as often on the second.
-      const candidates = findSectionPages(home.html, home.finalUrl,
-        { perSection: 2, sections: ["program", "speakers", "committee", "sponsors"] }).slice(0, 8);
-      for (const candidate of candidates) {
-        // A deep page has to belong to *this* event. Skipping this is what let one neurips.cc
-        // roster be filed under eight different NeurIPS workshops: the links are all on the same
-        // host, so without the identity test every workshop inherits every other workshop's page.
-        if (identity && !candidateUrlBelongsToEvent(identity, candidate.url).ok) { stats.notThisEvent += 1; continue; }
+    if (!identity) throw new Error("invalid event identity");
+    const crawl = await crawlSweepPages({ identity, home,
+      readPage: async (url, guessed) => {
+        if (!guessed) return getHtml(url);
+        const page = await directHtml(url, 10000);
+        readStats.direct += 1;
+        return page;
+      },
+      readXml: async (url) => {
+        const res = await fetch(url, { headers: { "user-agent": UA, accept: "application/xml,text/xml" }, signal: AbortSignal.timeout(10000), redirect: "error" });
+        if (!res.ok) throw new Error(String(res.status));
+        // Stop reading large maps before buffering the whole response.
+        const reader = res.body?.getReader();
+        if (!reader) return "";
+        const chunks: Uint8Array[] = []; let size = 0;
         try {
-          const page = await getHtml(candidate.url);
-          if (identity && !pageBelongsToEvent(identity, page.finalUrl, page.html).ok) { stats.notThisEvent += 1; continue; }
-          const more = extractDeepSections(page.html, page.finalUrl);
-          found.speakers.push(...more.speakers); found.committee.push(...more.committee);
-          found.sponsors.push(...more.sponsors);
-          if (more.program && (more.program.sessions.length || more.program.tracks.length)) found.program = more.program;
-        } catch { /* a section page that will not load is a missing section */ }
-      }
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.length;
+            if (size > 2_000_000) throw new Error("sitemap too large");
+            chunks.push(value);
+          }
+        } finally { await reader.cancel(); }
+        return Buffer.concat(chunks).toString("utf8");
+      },
+    });
+    for (const rejection of crawl.rejected) {
+      if (rejection.stage !== "fetch") stats.notThisEvent += 1;
+      audit.push({ conference: record.title, ...rejection });
+    }
+    if (!crawl.pages.length) throw new Error("homepage failed event identity check");
+    let fees: FeeLine[] = [];
+    for (const page of crawl.pages) {
+      const more = extractDeepSections(page.html, page.finalUrl);
+      found.speakers.push(...more.speakers); found.committee.push(...more.committee);
+      found.sponsors.push(...more.sponsors);
+      if (more.program && (!found.program || more.program.sessions.length > found.program.sessions.length ||
+        (!found.program.sessions.length && more.program.tracks.length > found.program.tracks.length))) found.program = more.program;
+      if (unread(record, "fees")) fees.push(...feesFromPage(page.html, page.finalUrl));
     }
 
     // A programme that bills a session to a named person has named a speaker, and that is where
@@ -240,16 +258,6 @@ async function handle(record: Rec, index: number) {
         found.speakers.push({ name, org: null, role: null, imageUrl: null, sourceUrl: found.program.source_url } as any);
       }
       if (seenName.size) stats.fromProgramme += 1;
-    }
-
-    let fees: FeeLine[] = [];
-    if (unread(record, "fees")) {
-      fees = feesFromPage(home.html, home.finalUrl);
-      for (const feeUrl of findFeePages(home.html, home.finalUrl, 3)) {
-        if (fees.length >= 6) break;
-        try { const page = await getHtml(feeUrl); fees.push(...feesFromPage(page.html, page.finalUrl)); }
-        catch { /* a prices page that will not load is a missing price list */ }
-      }
     }
 
     const speakers = unread(record, "keynotes") ? peopleCell(found.speakers) : "";
@@ -298,13 +306,14 @@ await Promise.all(Array.from({ length: Math.max(1, CONCURRENCY) }, async () => {
 
 const detailCsv = ['"Conference Name","Dates","Venue","Program/Agenda","Keynote Speakers","Technical/Program Committee","Pricing/Registration","Sponsors/Exhibitors","Website","Regional Safety Note"', ...detailRows].join("\n") + "\n";
 const urlCsv = ["conference_name,official_url,resolved_on,method,logo_url,banner_url", ...urlRows].join("\n") + "\n";
-await writeFile("/tmp/sweep-details.csv", detailCsv);
-await writeFile("/tmp/sweep-urls.csv", urlCsv);
+await writeFile(path.join(tmpdir(), "sweep-details.csv"), detailCsv);
+await writeFile(path.join(tmpdir(), "sweep-rejections.json"), JSON.stringify(audit, null, 2));
+await writeFile(path.join(tmpdir(), "sweep-urls.csv"), urlCsv);
 
 console.log(`\n================ REPORT ================`);
 console.log(`records asked            ${stats.considered}`);
 console.log(`pages read direct        ${readStats.direct}`);
-console.log(`pages read via firecrawl ${readStats.firecrawl}${FIRECRAWL ? "" : "  (no key: route disabled)"}`);
+console.log(`firecrawl attempts       ${readStats.firecrawl}${FIRECRAWL ? "" : "  (no key: route disabled)"}`);
 console.log(`pages nothing could read ${readStats.refused}`);
 console.log(`pages left at the cap     ${readStats.overCap}${readStats.overCap ? `  (raise --max-firecrawl above ${MAX_FIRECRAWL} to read them)` : ""}`);
 console.log(`sites unreachable        ${stats.unreachable}`);
@@ -331,4 +340,4 @@ function emit(marker: string, csv: string) {
   }
   console.log(`${marker}END total=${total}`);
 }
-if (EMIT) { emit("DETAIL", detailCsv); emit("IMAGE", urlCsv); }
+if (EMIT) { emit("DETAIL", detailCsv); emit("IMAGE", urlCsv); emit("AUDIT", JSON.stringify(audit)); }
