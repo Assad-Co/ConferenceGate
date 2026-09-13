@@ -14,6 +14,7 @@
 // So: a cell carrying a withdrawal is never structured, only quoted. And every cell is kept
 // verbatim whether or not anything parsed out of it, because the sentence is the evidence.
 
+import { isCredibleName } from "../../discovery/entryQuality";
 import { parseCuratedDates } from "./curated";
 import type {
   LaunchConferenceDetails, LaunchDetailAgendaEntry, LaunchDetailCallForPapers, LaunchDetailFee,
@@ -344,6 +345,35 @@ export function splitVenue(
   return { name: head, address: parts.slice(1).join(", ") || null };
 }
 
+/**
+ * A cell that answers the question by telling the reader to go and ask somewhere else.
+ *
+ * Gastech's speakers cell read: "Gastech states that its speaker programme brings together
+ * ministers, CEOs and other senior energy-industry leaders; individual 2026 speaker names are
+ * published through the official conference programme." Every word is true and none of it is a
+ * speaker. Shown as the content of the Speakers tab, it is this catalogue passing the question
+ * back to the reader, who came here instead of going to look it up.
+ *
+ * A sentence *about* a section is still content — "Exhibit and sponsor program available" is what
+ * that site has to say, and it says it. The difference is a particular: a price, a time, a date, a
+ * name. A cell that names one has told the reader something. A cell whose only substance is where
+ * to look has not, so it is recorded as unread — which is also the truth, because the page holding
+ * the names has not been read, and unread is the one state that asks for another attempt.
+ */
+const POINTS_ELSEWHERE =
+  /\b(?:published|presented|offered|listed|announced|available|released|shown)\s+(?:by|through|via|on|at|in)\b|\bthrough\s+the\s+official\b|\bsee\s+the\s+(?:official|organiser|organizer|conference)\b|\brefer\s+to\s+the\b|\bvisit\s+the\b|\bcheck\s+the\s+(?:official|conference)\b|\bon\s+the\s+(?:official|conference)\s+(?:site|website|page|programme|program|agenda)\b/i;
+
+/** Something the reader can act on: a price, a clock time, a day-and-month, or a person. */
+const A_PARTICULAR =
+  /(?:US\$|USD|EUR|GBP|CHF|CAD|AUD|[$€£])\s?\d|\b\d{1,2}:\d{2}\b|\b\d{1,2}[–\-]?\d{0,2}\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}\b/;
+
+function onlySaysWhereToLook(text: string): boolean {
+  if (!POINTS_ELSEWHERE.test(text)) return false;
+  if (A_PARTICULAR.test(text)) return false;
+  // A name in the sentence is a particular too, and the one this catalogue cares about most.
+  return !text.split(/[;,.]\s+/).some((clause) => isCredibleName(clause.trim()));
+}
+
 /** Classifies a cell once its structured entries (if any) are known. */
 function availabilityOf(cell: string, itemCount: number): SectionAvailability {
   const text = clean(cell);
@@ -351,6 +381,7 @@ function availabilityOf(cell: string, itemCount: number): SectionAvailability {
   if (itemCount > 0) return "stated";
   if (UNREADABLE.test(text)) return "unread";
   if (NOT_ANNOUNCED.test(text)) return "not_announced";
+  if (onlySaysWhereToLook(text)) return "unread";
   return "stated";
 }
 

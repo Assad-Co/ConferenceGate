@@ -232,7 +232,7 @@ test("a section the source described in a sentence keeps that sentence as its co
   // and the page has to be able to tell it apart from an absence to show it as one.
   const csv = [
     DETAIL_HEADER,
-    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","Higher-ed IT strategy, cybersecurity and leadership sessions.","Featured speakers published by the organiser.","Program committees and staff curate content.","Not yet announced","Exhibit and sponsor program available.","https://gcags.org/",""',
+    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","Higher-ed IT strategy, cybersecurity and leadership sessions.","Keynotes are drawn from Gulf Coast operators and university geoscience departments.","Program committees and staff curate content.","Not yet announced","Exhibit and sponsor program available.","https://gcags.org/",""',
   ].join("\n");
   const payload = launchRecordToTabbedExtraction(find(build(csv).dataset.records, "GeoGulf")) as any;
 
@@ -245,6 +245,41 @@ test("a section the source described in a sentence keeps that sentence as its co
   assert.deepEqual(payload.sponsors_exhibitors, []);
   // The one that genuinely says nothing is still an absence.
   assert.equal(payload.sectionAvailability.fees_pricing, "not_announced");
+});
+
+test("a sentence that only says where to look is not what the section has to say", () => {
+  // The line above it is the rule this has to sit beside without breaking: a sentence describing a
+  // section is that section's content. This is the shape that is not. Gastech's speakers cell read
+  // "individual 2026 speaker names are published through the official conference programme" — true,
+  // and not a speaker. Shown as the Speakers tab's content it hands the question back to the reader,
+  // who came here rather than going to look it up. So it counts as unread, which is also the fact:
+  // the page holding the names has not been read, and unread is the state that asks for another go.
+  const pointer = [
+    DETAIL_HEADER,
+    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","See the official programme for sessions.",'
+    + '"Individual speaker names are published through the official conference programme.",'
+    + '"Committee members are listed on the organiser\'s website.",'
+    + '"Registration is offered through the official system.",'
+    + '"Participating companies are presented through the official event site.","https://gcags.org/",""',
+  ].join("\n");
+  const sent = launchRecordToTabbedExtraction(find(build(pointer).dataset.records, "GeoGulf")) as any;
+  for (const section of ["program_agenda", "keynote_speakers", "technical_committee",
+    "sponsors_exhibitors", "fees_pricing"]) {
+    assert.equal(sent.sectionAvailability[section], "unread", `${section} relayed a redirect as content`);
+  }
+
+  // A particular is what makes the difference: a price, a time, a date or a name. A cell that
+  // states one has told the reader something, however it ends.
+  const particulars = [
+    DETAIL_HEADER,
+    '"GeoGulf 2027","18-20 April 2027","Houston, Texas","Sessions run 09:00-17:00; full detail on the official site.",'
+    + '"Keynote by Dr Helen Marsden; the rest are published on the conference page.","",'
+    + '"Member USD 450; see the official site for group rates.","","https://gcags.org/",""',
+  ].join("\n");
+  const kept = launchRecordToTabbedExtraction(find(build(particulars).dataset.records, "GeoGulf")) as any;
+  assert.equal(kept.sectionAvailability.program_agenda, "stated", "a clock time is a particular");
+  assert.equal(kept.sectionAvailability.keynote_speakers, "stated", "a named speaker is a particular");
+  assert.equal(kept.sectionAvailability.fees_pricing, "stated", "a price is a particular");
 });
 
 test("a conference is held back only when there is nothing to show, not when one tab is empty", () => {

@@ -364,6 +364,21 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // the latter must say so rather than sit under "(checking…)" forever once nothing is actually
   // checking anymore. Partial counts already found are shown either way, since they're real.
 
+  /** What a reader would call each section, for the one line that names what is missing. */
+  const SECTION_LABEL: Record<string, string> = {
+    cfp: 'call for papers', fees: 'fees', agenda: 'programme', speakers: 'speakers',
+    committee: 'committee', sponsors: 'sponsors', community: 'community',
+  };
+
+  /** The record's name for what sits behind each tab. Overview is the record itself. */
+  const SECTION_OF: Record<string, string> = {
+    cfp: 'call_for_papers', fees: 'fees_pricing', agenda: 'program_agenda',
+    speakers: 'keynote_speakers', committee: 'technical_committee',
+    sponsors: 'sponsors_exhibitors', venue: 'venue_accommodation', community: 'community',
+  };
+  /** Tabs that are dropped when nobody has read them. Overview always has the record to show. */
+  const UNREAD_ONLY_TABS = new Set(['cfp', 'fees', 'agenda', 'speakers', 'committee', 'sponsors', 'community']);
+
   // Why a section is empty, one section at a time.
   //
   // A record can be part-filled: a curated list gave AAPG's ICE 2026 twelve keynote speakers and a
@@ -378,6 +393,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     if (stated) return stated;
     return data?.fetchFailed || data?.sectionsNotRead ? 'unread' : 'stated';
   };
+
+  // The sections nobody managed to read, named once under the tab strip rather than apologised for
+  // inside a tab apiece. A section the organiser has simply not announced is not in here: that was
+  // answered, and its tab says so.
+  const unreadSectionNames = Object.keys(SECTION_LABEL)
+    .filter((tab) => sectionState(SECTION_OF[tab]) === 'unread')
+    .map((tab) => SECTION_LABEL[tab]);
+
 
   /** What to tell the reader about a section holding nothing, given why it holds nothing. */
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
@@ -668,16 +691,22 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'community', label: 'Community' },
             ] as Array<{ id: ExternalDetailTab; label: string }>
           )
-            // Every tab is always shown.
+            // A tab is offered when it can answer.
             //
-            // Three versions of this were wrong in three different ways. "(0)" asserted the
+            // Four versions of this were wrong in four different ways. "(0)" asserted the
             // conference had none. "(not retrieved)" was honest but told a visitor about our
-            // pipeline. Removing the tab left the page looking like the conference has no
+            // pipeline. Removing every empty tab left the page looking like the conference has no
             // programme and no speakers at all, which is the first lie again in a worse form —
-            // and it took away the one place that could explain itself.
+            // and it took away the one place that could explain itself. Keeping all of them, the
+            // version this replaces, sold the reader eight rooms and left six of them apologising.
             //
-            // So: the tab keeps its plain name, with no count beside it when nothing has been
-            // read, and the panel inside says what is and is not known.
+            // What separates them is why a section is empty, which the record already knows.
+            // "stated" has something. "not_announced" is the organiser saying it is not out yet,
+            // which is an answer worth a tab and worth reading. "unread" is nobody having managed
+            // to read it — nothing to show, nothing known, and a tab that can only say so. Those
+            // are not offered; one line under the strip names them instead, so the page still
+            // never implies the conference has no speakers, and says it once rather than six times.
+            .filter((tab) => !UNREAD_ONLY_TABS.has(tab.id) || sectionState(SECTION_OF[tab.id]) !== 'unread')
             .map((tab) => (
             <button
               key={tab.id}
@@ -692,6 +721,22 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             </button>
           ))}
         </div>
+        {/* Said once, where the missing tabs would have been, instead of six times inside them. */}
+        {unreadSectionNames.length > 0 && (
+          <div className="px-6 pb-4 text-[11px] text-slate-400 leading-relaxed">
+            Not read from this conference&rsquo;s site: {unreadSectionNames.join(', ')}. That is what
+            this catalogue could not retrieve, not a statement that the conference has none.
+            {result.link && (
+              <>
+                {' '}
+                <a href={result.link} target="_blank" rel="noopener noreferrer"
+                   className="text-blue-600 hover:underline font-semibold">
+                  The organiser&rsquo;s site
+                </a>{' '}has them if anywhere does.
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tab Content Area */}

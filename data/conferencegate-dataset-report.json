@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-12T21:37:30.646Z",
-  "horizonStart": "2026-09-12",
+  "generatedAt": "2026-09-13T03:07:58.243Z",
+  "horizonStart": "2026-09-13",
   "evidenceRows": 325,
   "apiEventRows": 70,
   "accepted": 253,
@@ -18,7 +18,7 @@
     "date_precision_too_coarse": 1,
     "no_location": 1
   },
-  "detailsAttached": 185,
+  "detailsAttached": 184,
   "heldBackWithNothingToShow": 384,
   "websitesResolved": {
     "applied": 87,
@@ -87,6 +87,10 @@
     },
     {
       "title": "2027 The 13th International Conference on Frontiers of Educational Technologies",
+      "reason": "already_filled_by_another_list"
+    },
+    {
+      "title": "2027 14th International Conference on Management and Education Innovation",
       "reason": "already_filled_by_another_list"
     }
   ],
