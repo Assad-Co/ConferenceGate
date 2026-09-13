@@ -6,7 +6,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { buildLaunchDataset, toCsv, type DetailSupply, type StructuredOutcome } from "./build";
+import { buildLaunchDataset, buildSearchIndexEntry, toCsv, type DetailSupply, type StructuredOutcome } from "./build";
+import { applySuppliedCorrections } from "./suppliedCorrections";
 import type { HarvestEvidence, ParseOptions } from "./parseEvidence";
 import type { LaunchConferenceRecord } from "./types";
 import { mapPredictHqEvent } from "./sources/predicthq";
@@ -240,12 +241,17 @@ function main(): void {
     resolvedUrlsFromDisk()
   );
 
+  const correctionsFile = path.join(DATA_DIR, "corrections/verified-2026-09-13.csv");
+  const suppliedCorrections = fs.existsSync(correctionsFile)
+    ? applySuppliedCorrections(result.dataset.records, fs.readFileSync(correctionsFile, "utf8"), options) : 0;
+  result.index.entries = result.dataset.records.map(buildSearchIndexEntry);
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(DATASET_JSON, JSON.stringify(result.dataset, null, 2) + "\n");
   fs.writeFileSync(DATASET_CSV, toCsv(result.dataset.records));
   fs.writeFileSync(SEARCH_INDEX, JSON.stringify(result.index) + "\n");
 
   const report = {
+    suppliedCorrections,
     generatedAt: result.dataset.generatedAt,
     horizonStart,
     evidenceRows: evidence.length,

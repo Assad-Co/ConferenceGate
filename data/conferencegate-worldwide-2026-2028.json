@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T03:07:58.243Z",
+  "generatedAt": "2026-09-13T14:52:04.684Z",
   "horizonStart": "2026-09-13",
   "years": [
     2026,
@@ -4678,9 +4678,9 @@
       "country": "Australia",
       "countryCode": "AU",
       "worldRegion": "Oceania",
-      "venue": "Brisbane Convention & Exhibition Centre (BCEC)",
+      "venue": "Brisbane Convention & Exhibition Centre",
       "format": "in-person",
-      "organization": "SPE",
+      "organization": "Society of Petroleum Engineers (SPE)",
       "category": "Petroleum & Energy",
       "categories": [
         "Petroleum & Energy",
@@ -4716,204 +4716,143 @@
         "sustainability",
         "asia"
       ],
-      "description": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026, Brisbane, Australia, October 13-15, 2026",
+      "description": "APOGCE 2026 is SPE's Asia-Pacific upstream energy technical conference covering exploration, production, energy transition, technical innovation and industry collaboration, with technical sessions, panels, plenaries, ePosters, educational programmes and an exhibition.",
       "sourceUrl": "https://www.spe-events.org/apogce2026",
       "sourceHost": "spe-events.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.spe-events.org/apogce2026",
       "evidence": {
-        "query": "SPE oil gas conference 2026 2027 2028",
-        "resultTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
-        "statedText": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026, Brisbane, Australia, October 13-15, 2026",
+        "query": "verified-2026-09-13",
+        "resultTitle": "SPE Asia Pacific Oil & Gas Conference and Exhibition 2026",
+        "statedText": "APOGCE 2026 is SPE's Asia-Pacific upstream energy technical conference covering exploration, production, energy transition, technical innovation and industry collaboration, with technical sessions, panels, plenaries, ePosters, educational programmes and an exhibition.",
         "retrievedAt": "2026-09-13",
-        "method": "web_search"
+        "method": "web_search",
+        "externalId": null
       },
       "provenance": {
         "title": {
-          "sourceUrl": "https://www.spe-events.org/apogce2026",
-          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
-          "confidence": "High"
+          "sourceUrl": "https://www.spe-events.org/apogce2026/about",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         },
         "dates": {
-          "sourceUrl": "https://www.spe-events.org/apogce2026",
-          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
+          "sourceUrl": "https://www.spe-events.org/apogce2026/about",
+          "sourcePageTitle": null,
           "confidence": "High"
         },
         "city": {
-          "sourceUrl": "https://www.spe-events.org/apogce2026",
-          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
-          "confidence": "High"
+          "sourceUrl": "https://www.spe-events.org/apogce2026/about",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         },
         "country": {
-          "sourceUrl": "https://www.spe-events.org/apogce2026",
-          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
-          "confidence": "High"
-        },
-        "organization": {
-          "sourceUrl": "https://www.spe-events.org/apogce2026",
-          "sourcePageTitle": "SPE APOGCE 2026 | 13-15 Oct 2026 | Brisbane, Australia",
-          "confidence": "High"
+          "sourceUrl": "https://www.spe-events.org/apogce2026/about",
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         }
       },
-      "corroboratingSourceUrls": [],
+      "corroboratingSourceUrls": [
+        "https://www.spe-events.org/apogce2026/about",
+        "https://www.spe-events.org/apogce2026/technical-programme",
+        "https://www.spe-events.org/apogce2026/about/committees",
+        "https://www.spe-events.org/apogce2026/distinguished-speakers",
+        "https://www.spe-events.org/apogce2026/register-now"
+      ],
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "webharvest-verified-2026, read-from-site-2026-09-details",
-        "venueName": "Brisbane Convention & Exhibition Centre (BCEC)",
-        "venueAddress": "South Brisbane, Australia",
-        "accommodation": "Official hotel block: Rydges South Bank Brisbane, 9 Glenelg St. Rates: King AUD 309; Twin AUD 319; Balcony King AUD 324, valid 10–18 Oct 2026, subject to availability.",
+        "source": "verified-2026-09-13",
+        "venueName": "Brisbane Convention & Exhibition Centre",
+        "venueAddress": "Brisbane, Australia.",
+        "accommodation": "Official room block at Rydges South Bank Brisbane, 9 Glenelg St, South Brisbane QLD 4101; rates for 10–18 Oct 2026: King AUD 309, Twin AUD 319, Balcony King AUD 324.",
         "program": {
           "availability": "stated",
-          "text": "Opening and keynote session, executive plenary, panel sessions, technical sessions, knowledge-sharing ePosters, exhibition, daily networking lunches and coffee breaks, welcome reception and digital proceedings."
+          "text": "13 Oct: 08:30–08:45 Welcome to Country; 08:45–09:00 Welcome and Opening Address; 09:00–10:30 Executive Plenary; 11:15–12:45 technical sessions; 14:00–15:30 technical sessions; 15:30–16:00 coffee break; 16:00–17:30 panels. Additional technical, panel, poster and educational programming continues 14–15 Oct."
         },
         "callForPapers": {
-          "status": "Open",
+          "status": null,
           "abstractDeadline": null,
           "submissionEmail": null,
           "lengthLimit": null,
-          "text": "Manuscript submission is compulsory for accepted authors. Accepted abstracts are reviewed by the programme committee, and final manuscripts are published in OnePetro on the first day of the event.",
-          "url": "https://www.spe-events.org/apogce2026/author-kit"
+          "text": "SPE technical-paper and abstract programme for APOGCE 2026, including accepted technical papers and the Asia Pacific Regional Student Paper Contest; conference programme lists paper IDs and authors for accepted presentations.",
+          "url": "https://www.spe-events.org/apogce2026/technical-programme"
         },
         "schedule": {
           "sessions": [],
           "themes": []
         },
         "keynotes": {
-          "availability": "unread",
-          "items": [],
-          "text": null,
-          "unstructuredReason": null
-        },
-        "committee": {
           "availability": "stated",
           "items": [
             {
+              "name": "The Honourable Dale Last",
+              "role": "Minister for Natural Resources and Mines, Manufacturing, Regional and Rural Development, Queensland Government",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Brett Darley",
+              "role": "COO, Australia and PNG Upstream Oil and Gas, Santos",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
               "name": "Steve Trench",
-              "role": "Conference Chair",
+              "role": "EVP Operations & Technical Services, Santos",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Santos",
-              "role": "Conference Chair",
+              "name": "Jennifer Miskimins",
+              "role": "2026 SPE President",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Bre Murillo",
-              "role": "Technical Programme Co-Chairs",
+              "name": "Khoo Choo Beng",
+              "role": "South Central Asset Manager, Shell QGC",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Pankaj Bhavnani",
-              "role": "Technical Programme Co-Chairs",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Shell QGC",
-              "role": "Technical Programme Co-Chairs",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Adelaide University",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Arrow Energy",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "ExxonMobil",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Halliburton",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Honeywell",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "INPEX",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "PETRONAS",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "PTTEP",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Shell",
-              "role": "Committee",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "SLB",
-              "role": "Committee",
+              "name": "Ajay Nalonnil",
+              "role": "Managing Director ANP Geozone, Baker Hughes.",
               "org": null,
               "title": null,
               "topic": null
             }
           ],
-          "text": "Conference Chair: Steve Trench, Santos. Technical Programme Co-Chairs: Bre Murillo, Santos; Pankaj Bhavnani, Shell QGC. Committee includes representatives from ADNOC, Adelaide University, Arrow Energy, ExxonMobil, Halliburton, Honeywell, INPEX, PETRONAS, PTTEP, Santos, Shell, SLB, Wood and others.",
-          "unstructuredReason": null
+          "text": "The Honourable Dale Last — Minister for Natural Resources and Mines, Manufacturing, Regional and Rural Development, Queensland Government; Brett Darley — COO, Australia and PNG Upstream Oil and Gas, Santos; Steve Trench — EVP Operations & Technical Services, Santos; Jennifer Miskimins — 2026 SPE President; Khoo Choo Beng — South Central Asset Manager, Shell QGC; Ajay Nalonnil — Managing Director ANP Geozone, Baker Hughes.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Conference Chair: Steve Trench — Santos. Technical Programme Co-Chairs: Bre Murillo — Santos; Pankaj Bhavnani — Shell QGC. Committee members include Aryan Sarlak — Actenum; Mohamed Osama Abd El-Meguid — ADNOC Onshore; Abbas Zeinijahromi and Alireza Salmachi — Adelaide University; Abhishek Rajora — Arrow Energy; Chris Mijnssen — Arrow Energy; Kevin Lay — AWT International.",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
           "availability": "stated",
           "items": [],
-          "text": "Standard full conference: SPE Member USD 1,020; Non-Member USD 1,170; Speaker/Author/Committee/Session Chair USD 960. One-day: Member USD 665; Non-Member USD 715. Student complimentary with valid ID; visitor complimentary in advance / USD 50 onsite.",
+          "text": "Full Conference Standard: SPE Member USD 1,020; Non-member USD 1,170; Speaker/Author/Committee/Session Chair USD 960. One-day: Member USD 665; Non-member USD 715. Student registration complimentary. Optional dinners, luncheons, tables and sponsorship packages are NOT included as attendee registration fees.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
-          "availability": "stated",
+          "availability": "unread",
           "items": [],
-          "text": "Origin; 6-featuredimage; SUT; JPT; Petroleum Australia; World Oils; Energy Stream; Tourism and Events Queensland",
-          "unstructuredReason": "no_recognisable_entries"
+          "text": null,
+          "unstructuredReason": null
         },
         "safetyNote": null,
         "registrationUrl": "https://www.spe-events.org/apogce2026/register-now"
       },
-      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/spe-apogce-2026/media/logos/SPE_Tagline_Logo_Blue_NEW.png",
-      "imageUrl": "https://assets.spe.org/dims4/default/2775462/2147483647/resize/x564%3E/quality/90/?url=http%3A%2F%2Fspe-brightspot.s3.us-east-2.amazonaws.com%2F89%2F15%2F73f80abd413588c8cbeee9b93d65%2Fjpt-2026-9-globalhero.jpg"
+      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/spe-apogce-2026/media/logos/APOGCE_Logo_Blue_SHORT.png",
+      "imageUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49EC4D60A02A6A7D/sites/spe-apogce-2026/media/home/Opening-Keynote-Photo.jpg"
     },
     {
       "id": "mit-ai-conference-ai-the-age-of-agency-2026-mountain-view",
@@ -5830,12 +5769,12 @@
       "datePrecision": "day",
       "startMonth": 10,
       "datesText": null,
-      "city": "San Jose",
+      "city": "San Jose, California",
       "region": null,
       "country": "United States",
       "countryCode": "US",
       "worldRegion": "North America",
-      "venue": "San Jose McEnery Convention Center",
+      "venue": "San Jose Convention Center",
       "format": "in-person",
       "organization": "PyTorch Foundation / Linux Foundation",
       "category": "Artificial Intelligence & Machine Learning",
@@ -5854,17 +5793,17 @@
         "north",
         "america"
       ],
-      "description": "PyTorch Foundation's North America conference for researchers, developers and practitioners working across the open-source AI stack, including PyTorch, vLLM, DeepSpeed, Ray, Helion and Safetensors.",
-      "sourceUrl": "https://events.linuxfoundation.org/",
+      "description": "Two-day open-source AI conference hosted by the PyTorch Foundation for AI researchers, developers and practitioners, covering PyTorch and ecosystem projects such as vLLM, DeepSpeed, Ray, Helion and Safetensors through keynotes, technical talks, posters and workshops.",
+      "sourceUrl": "https://events.linuxfoundation.org/pytorch-conference-north-america/",
       "sourceHost": "events.linuxfoundation.org",
       "sourceType": "official_site",
-      "officialUrl": "https://events.linuxfoundation.org/",
-      "logoUrl": "https://events.linuxfoundation.org/wp-content/themes/lfevents/src/images/lf-events-logo.svg",
-      "imageUrl": "https://events.linuxfoundation.org/wp-content/themes/lfevents/src/images/linux-foundation-hztl-white.svg",
+      "officialUrl": "https://events.linuxfoundation.org/pytorch-conference-north-america/",
+      "logoUrl": "https://events.linuxfoundation.org/wp-content/uploads/2026/03/pytorchcon_na26_black.svg",
+      "imageUrl": "https://events.linuxfoundation.org/wp-content/uploads/2026/03/pytorchcon_na26_black.svg",
       "evidence": {
-        "query": "ai-worldwide-2026-2028",
+        "query": "verified-2026-09-13",
         "resultTitle": "PyTorch Conference North America 2026",
-        "statedText": "PyTorch Foundation's North America conference for researchers, developers and practitioners working across the open-source AI stack, including PyTorch, vLLM, DeepSpeed, Ray, Helion and Safetensors.",
+        "statedText": "Two-day open-source AI conference hosted by the PyTorch Foundation for AI researchers, developers and practitioners, covering PyTorch and ecosystem projects such as vLLM, DeepSpeed, Ray, Helion and Safetensors through keynotes, technical talks, posters and workshops.",
         "retrievedAt": "2026-09-13",
         "method": "web_search",
         "externalId": null
@@ -5891,25 +5830,29 @@
           "confidence": "Medium"
         }
       },
-      "corroboratingSourceUrls": [],
+      "corroboratingSourceUrls": [
+        "https://events.linuxfoundation.org/pytorch-conference-north-america/program/meet-the-committees/",
+        "https://events.linuxfoundation.org/pytorch-conference-north-america/attend/venue-travel/",
+        "https://events.linuxfoundation.org/pytorch-conference-north-america/program/submission-reviewer-guidelines/"
+      ],
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "ai-worldwide-2026-2028",
-        "venueName": "San Jose McEnery Convention Center",
-        "venueAddress": "150 W San Carlos St, San Jose, CA 95113",
-        "accommodation": "Official room block at San Jose Marriott, 301 South Market St; conference rate starts at US$289 plus taxes/fees; room block closes 25 Sep 2026, subject to availability.",
+        "source": "verified-2026-09-13",
+        "venueName": "San Jose Convention Center",
+        "venueAddress": "150 W San Carlos St, San Jose, CA 95113.",
+        "accommodation": "Official room block at San Jose Marriott, 301 South Market St, San Jose, CA 95113; rates from USD 289 plus tax/fees, Wi-Fi and gym included; room block closes 25 Sep 2026 at 11:59 PM PDT, subject to sellout.",
         "program": {
           "availability": "stated",
-          "text": "Two days of keynotes, technical talks, hands-on workshops, posters and community sessions covering training/inference, compilers, responsible AI, security/privacy, frameworks, agentic AI, vLLM and production ML systems."
+          "text": "20 Oct schedule begins with registration at 07:30; keynote welcome at 09:00; PyTorch Updates at 09:15 followed by keynote and technical programming. Two-day schedule includes keynotes, technical tracks, posters and workshops through 21 Oct."
         },
         "callForPapers": {
           "status": null,
-          "abstractDeadline": "2026-05-01",
+          "abstractDeadline": null,
           "submissionEmail": null,
           "lengthLimit": null,
-          "text": "Call for Proposals sought breakout sessions and posters emphasizing implementation details, architectural insights and developer tooling across PyTorch Foundation projects and AI/ML technical tracks.",
-          "url": "https://pytorch.org/blog/call-for-proposals-open-for-pytorch-conference-north-america-2026/"
+          "text": "2026 CFP accepted session proposals and poster submissions. Program Committee review ran 8–23 Jun for sessions and 28 Jul–3 Aug for posters; session schedule announced 21 Jul and poster schedule 18 Aug.",
+          "url": "https://events.linuxfoundation.org/pytorch-conference-north-america/program/"
         },
         "schedule": {
           "sessions": [],
@@ -5920,137 +5863,91 @@
           "items": [
             {
               "name": "Mark Collier",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Mazin Gilbert",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Edward Yang",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Alban Desmaison",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Simon Mo",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Bill Jia",
-              "role": "Keynote Speakers",
+              "role": "Executive Director, PyTorch Foundation",
               "org": null,
               "title": null,
               "topic": null
             },
             {
               "name": "Brian Stevens",
-              "role": "Keynote Speakers",
+              "role": "SVP and AI CTO, Red Hat",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Ujval Kapasi",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Sara Hooker",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Jana van Greunen",
-              "role": "Keynote Speakers",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "Chris Lattner",
-              "role": "Keynote Speakers",
+              "name": "Bill Jia",
+              "role": "VP Engineering, Core ML/AI, Google Cloud",
               "org": null,
               "title": null,
               "topic": null
             },
             {
               "name": "Joelle Pineau",
-              "role": "Keynote Speakers",
+              "role": "Chief AI Officer, Cohere",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Yiwei Song",
-              "role": "Keynote Speakers",
+              "name": "Alban Desmaison",
+              "role": "Meta",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Mark Saroufim",
-              "role": "Keynote Speakers",
+              "name": "Mazin Gilbert",
+              "role": "Executive Director, Agentic AI Foundation",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Sara Hooker",
+              "role": "CEO & Co-Founder, Adaption",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ujval Kapasi",
+              "role": "VP AI & HPC Frameworks/Libraries, NVIDIA",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Chris Lattner",
+              "role": "EVP Advanced AI Software and Platforms, Qualcomm.",
               "org": null,
               "title": null,
               "topic": null
             }
           ],
-          "text": "Keynote Speakers: Mark Collier; Mazin Gilbert; Edward Yang; Alban Desmaison; Simon Mo; Bill Jia; Brian Stevens; Ujval Kapasi; Sara Hooker; Jana van Greunen; Chris Lattner; Joelle Pineau; Yiwei Song; Mark Saroufim.",
-          "unstructuredReason": null
+          "text": "Mark Collier — Executive Director, PyTorch Foundation; Brian Stevens — SVP and AI CTO, Red Hat; Bill Jia — VP Engineering, Core ML/AI, Google Cloud; Joelle Pineau — Chief AI Officer, Cohere; Alban Desmaison — Meta; Mazin Gilbert — Executive Director, Agentic AI Foundation; Sara Hooker — CEO & Co-Founder, Adaption; Ujval Kapasi — VP AI & HPC Frameworks/Libraries, NVIDIA; Chris Lattner — EVP Advanced AI Software and Platforms, Qualcomm.",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "committee": {
           "availability": "stated",
           "items": [],
-          "text": "Committee: Conference content and CFP managed by the PyTorch Foundation / Linux Foundation event programming team; speaker/CFP contact published as Cassandra Reyes-Jones.",
-          "unstructuredReason": "no_recognisable_entries"
+          "text": "Program Chairs: Jeff Daily — AMD Fellow, AMD; Alban Desmaison — Research Engineer, Meta; Mike Ruberry — Distinguished Engineer, NVIDIA. 2026 Program Committee includes Adrian Abeyta — Red Hat; Gnanaguruparan Aishvaryaadevi — Apple; Gaurav Arora — Pinterest; Piotr Bialecki — NVIDIA; Carol Chen — Red Hat; Andrea Frittoli — IBM; Digant Desai — Meta; Sayce Falk — Google; and additional named reviewers on the conference-specific committee page.",
+          "unstructuredReason": null
         },
         "fees": {
           "availability": "stated",
-          "items": [
-            {
-              "category": "Late attendee US",
-              "amount": 999,
-              "currency": null
-            },
-            {
-              "category": "academic US",
-              "amount": 249,
-              "currency": null
-            }
-          ],
-          "text": "Late attendee US$999; academic US$249. Earlier attendee rates were US$499 super-early, US$599 early and US$799 standard.",
-          "unstructuredReason": null
+          "items": [],
+          "text": "Conference registration: Early USD 479 (11 Apr–31 Jul); Standard USD 639 (1 Aug–4 Sep); Late USD 799 (5 Sep–11 Oct). Researcher/student rate published at USD 249 where eligible.",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
           "availability": "stated",
           "items": [],
-          "text": "Official sponsor program includes Diamond, Platinum, Gold, Silver, Bronze and Startup/Non-Profit/VC tiers; sponsor participation is administered by the Linux Foundation.",
+          "text": "Official PyTorch Foundation 2026 conference materials identify Google, Arm and Red Hat among Diamond/Platinum supporters.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null,
-        "registrationUrl": "https://events.linuxfoundation.org/pytorch-conference-north-america/register/"
+        "registrationUrl": "https://events.linuxfoundation.org/pytorch-conference-north-america/"
       }
     },
     {
@@ -9689,13 +9586,13 @@
       "datePrecision": "day",
       "startMonth": 11,
       "datesText": null,
-      "city": "Chicago",
+      "city": "Chicago, Illinois",
       "region": null,
       "country": "United States",
       "countryCode": "US",
       "worldRegion": "North America",
       "venue": "McCormick Place",
-      "format": "online",
+      "format": "in-person",
       "organization": "Radiological Society of North America (RSNA)",
       "category": "Medicine & Oncology",
       "categories": [
@@ -9720,26 +9617,26 @@
         "health",
         "rsna"
       ],
-      "description": "RSNA 112th Scientific Assembly and Annual Meeting, themed “At the Center of Care,” with scientific, education and technical-exhibit programming.",
+      "description": "RSNA's 112th Scientific Assembly and Annual Meeting, themed 'At the Center of Care,' is a major global radiology meeting featuring scientific research, education, plenaries, specialty programming and technical exhibits across medical imaging and related technologies.",
       "sourceUrl": "https://www.rsna.org/annual-meeting",
       "sourceHost": "rsna.org",
       "sourceType": "official_site",
       "officialUrl": "https://www.rsna.org/annual-meeting",
-      "logoUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/2026/rsna_2026_logo_color_fin.png?hash=209FF7E1087515064C3CACAF7024365E&rev=53148db37730402f90666a3f7fdf2436",
-      "imageUrl": null,
+      "logoUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/2026/RSNA_2026_Logo_Color_FIN",
+      "imageUrl": "https://www.rsna.org/-/media/images/rsna/annual-meeting/annual-meeting-crowd-near-technical-exhibits.png?h=461&hash=6BFEF4EE1BE98649E4A2A104BDE667B0&la=en&rev=41a6a8bf90844897b362317d7d46a769&w=722",
       "evidence": {
-        "query": "conferencegate-200-2026-2027-v3",
+        "query": "verified-2026-09-13",
         "resultTitle": "RSNA Annual Meeting 2026",
-        "statedText": "RSNA 112th Scientific Assembly and Annual Meeting, themed “At the Center of Care,” with scientific, education and technical-exhibit programming.",
+        "statedText": "RSNA's 112th Scientific Assembly and Annual Meeting, themed 'At the Center of Care,' is a major global radiology meeting featuring scientific research, education, plenaries, specialty programming and technical exhibits across medical imaging and related technologies.",
         "retrievedAt": "2026-09-13",
         "method": "web_search",
-        "externalId": "OFFICIAL VERIFIED"
+        "externalId": null
       },
       "provenance": {
         "title": {
           "sourceUrl": "https://www.rsna.org/annual-meeting",
           "sourcePageTitle": null,
-          "confidence": "High"
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://www.rsna.org/annual-meeting",
@@ -9757,25 +9654,29 @@
           "confidence": "Medium"
         }
       },
-      "corroboratingSourceUrls": [],
+      "corroboratingSourceUrls": [
+        "https://www.rsna.org/annual-meeting/abstract-submission",
+        "https://www.rsna.org/annual-meeting/attendee-resources/pricing-and-registration",
+        "https://www.rsna.org/annual-meeting/attendee-resources"
+      ],
       "origin": "launch_dataset",
       "supply": "curated_list",
       "details": {
-        "source": "conferencegate-200-2026-2027-v3, read-from-site-2026-09-details, sweep-2026-09-12",
+        "source": "verified-2026-09-13",
         "venueName": "McCormick Place",
-        "venueAddress": "Chicago, Illinois, USA",
-        "accommodation": "RSNA official hotel program offers up to 30% off participating Chicago hotels. Official partners include Maritz for registration and onPeak for housing-related services.",
+        "venueAddress": "Chicago, Illinois.",
+        "accommodation": "RSNA official hotel program is managed with onPeak and offers nearly 60 hotels with advertised savings up to 30%; hotel reservation deadline is 11 Nov 2026 and reservations generally require a one-night room-and-tax deposit.",
         "program": {
           "availability": "stated",
-          "text": "Educational courses and scientific sessions across radiology subspecialties; six live-streamed plenary sessions; Technical Exhibits 29 Nov–2 Dec; Annual Meeting 29 Nov–3 Dec 2026."
+          "text": "29 Nov: Opening Plenary 16:00–17:30 followed by Welcome Reception 17:30–18:30. Scientific sessions generally run 08:00–17:30; technical exhibits 10:00–17:00; poster sessions include morning and midday blocks. Additional plenaries include 30 Nov at 11:00 and 1 Dec at 11:00 and 13:30."
         },
         "callForPapers": {
           "status": null,
           "abstractDeadline": null,
           "submissionEmail": null,
           "lengthLimit": null,
-          "text": "2026 abstract submission cycle has been managed through RSNA; current submission deadline not captured in the official pages checked.",
-          "url": null
+          "text": "RSNA 2026 accepted abstracts in two categories: science and education, including scientific presentations and education exhibits, using online submission and double-blind peer review.",
+          "url": "https://www.rsna.org/annual-meeting/abstract-submission"
         },
         "schedule": {
           "sessions": [],
@@ -9785,105 +9686,64 @@
           "availability": "stated",
           "items": [
             {
-              "name": "Jeffrey S. Klein",
-              "role": "President’s Address",
+              "name": "Jeffrey S. Klein, MD",
+              "role": "President's Address",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Jonathan S. Lewin",
+              "name": "Jonathan S. Lewin, MD",
               "role": "Opening Session",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Gwendolyn M. Bryant-Smith",
-              "role": "Monday Morning Plenary Session",
+              "name": "Gwendolyn M. Bryant-Smith, MD",
+              "role": "Monday Morning Plenary",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Mark P. Bernstein",
-              "role": "Tuesday Morning Plenary Session",
+              "name": "Mark P. Bernstein, MD",
+              "role": "Tuesday Morning Plenary",
               "org": null,
               "title": null,
               "topic": null
             },
             {
-              "name": "Janice M. Newsome",
-              "role": "Tuesday Afternoon Plenary Session",
-              "org": null,
-              "title": null,
-              "topic": null
-            },
-            {
-              "name": "International Invitation Letter",
-              "role": "Speaker",
+              "name": "Janice M. Newsome, MD",
+              "role": "Tuesday Afternoon Plenary.",
               "org": null,
               "title": null,
               "topic": null
             }
           ],
-          "text": "President’s Address: Jeffrey S. Klein. Opening Session: Jonathan S. Lewin. Monday Morning Plenary Session: Gwendolyn M. Bryant-Smith. Tuesday Morning Plenary Session: Mark P. Bernstein. Tuesday Afternoon Plenary Session: Janice M. Newsome. Speaker: International Invitation Letter",
-          "unstructuredReason": null
+          "text": "Jeffrey S. Klein, MD — President's Address; Jonathan S. Lewin, MD — Opening Session; Gwendolyn M. Bryant-Smith, MD — Monday Morning Plenary; Mark P. Bernstein, MD — Tuesday Morning Plenary; Janice M. Newsome, MD — Tuesday Afternoon Plenary.",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "committee": {
-          "availability": "stated",
-          "items": [
-            {
-              "name": "Time Commitment",
-              "role": "Make an Impact.",
-              "org": null,
-              "title": null,
-              "topic": null
-            }
-          ],
-          "text": "RSNA Committees | Lead. Innovate. Make an Impact.: Time Commitment",
+          "availability": "unread",
+          "items": [],
+          "text": null,
           "unstructuredReason": null
         },
         "fees": {
           "availability": "stated",
-          "items": [
-            {
-              "category": "Members: Full Access member US",
-              "amount": 0,
-              "currency": null
-            },
-            {
-              "category": "Standard member US",
-              "amount": 500,
-              "currency": null
-            },
-            {
-              "category": "Select categories: Associate US",
-              "amount": 500,
-              "currency": null
-            },
-            {
-              "category": "First Year in Practice US",
-              "amount": 250,
-              "currency": null
-            },
-            {
-              "category": "trainee/student US",
-              "amount": 100,
-              "currency": null
-            }
-          ],
-          "text": "Members: Full Access member US$0; Standard member US$500; Basic member US$1,215 in-person & virtual / US$500 virtual. Select categories: Associate US$500; First Year in Practice US$250; trainee/student US$100; discount-eligible-country member US$610 in-person+virtual / US$250 virtual. Non-member Physician/Physicist/Scientist: US$2,425 in-person+virtual, US$1,405 in-person only, US$1,020 virtual, US$630 exhibits-only. Rates rise US$100 on 2 Oct for applicable categories.",
-          "unstructuredReason": null
+          "items": [],
+          "text": "Published registration includes multiple member/nonmember and access tiers. Examples: Nonmember Physician/Physicist/Scientist — In Person + Virtual USD 2,425; In Person USD 1,405; Virtual USD 1,020; Technical Exhibits Only USD 630. Medical Imaging Professional — In Person + Virtual USD 1,015; In Person USD 500; Virtual USD 515.",
+          "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
           "availability": "stated",
           "items": [],
-          "text": "RSNA 2026 logo mark; purchase; innovation; diverse; Impact",
+          "text": "Optum is identified by RSNA as sponsor of the RSNA 5K Fun Run during the 2026 annual meeting.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "safetyNote": null,
-        "registrationUrl": null
+        "registrationUrl": "https://www.rsna.org/annual-meeting/attendee-resources/pricing-and-registration"
       }
     },
     {
@@ -10550,15 +10410,15 @@
       "endDate": "2026-12-02",
       "datePrecision": "day",
       "startMonth": 12,
-      "datesText": "1-2 December 2026",
+      "datesText": null,
       "city": "Buenos Aires",
       "region": null,
       "country": "Argentina",
       "countryCode": "AR",
       "worldRegion": "South America",
-      "venue": null,
+      "venue": "Marriott Buenos Aires Downtown",
       "format": "in-person",
-      "organization": "AAPG, SPE, SEG, YPF (host)",
+      "organization": "URTeC / AAPG and SPE, hosted by YPF",
       "category": "Petroleum & Energy",
       "categories": [
         "Petroleum & Energy",
@@ -10582,16 +10442,20 @@
         "2026",
         "Petroleum & Energy"
       ],
-      "description": "URTeC Latin America Unconventional Resources Summit 2026, Summit, Buenos Aires, 1-2 December 2026",
+      "description": "Executive-level Latin America unconventional-resources summit focused on Vaca Muerta and regional development, bringing operators, technology providers, investors and technical leaders together for strategy, subsurface, completions, infrastructure, LNG and investment discussions.",
       "sourceUrl": "https://urtec.org/latinamerica/",
       "sourceHost": "urtec.org",
       "sourceType": "official_site",
       "officialUrl": "https://urtec.org/latinamerica/",
-      "corroboratingSourceUrls": [],
+      "corroboratingSourceUrls": [
+        "https://urtec.org/latinamerica/program/",
+        "https://urtec.org/latinamerica/registration/",
+        "https://urtec.org/latinamerica/hotel-travel/"
+      ],
       "evidence": {
-        "query": "curated:aapg-2026-2027",
+        "query": "verified-2026-09-13",
         "resultTitle": "URTeC Latin America Unconventional Resources Summit 2026",
-        "statedText": "URTeC Latin America Unconventional Resources Summit 2026, 1-2 December 2026, Buenos Aires, Argentina",
+        "statedText": "Executive-level Latin America unconventional-resources summit focused on Vaca Muerta and regional development, bringing operators, technology providers, investors and technical leaders together for strategy, subsurface, completions, infrastructure, LNG and investment discussions.",
         "retrievedAt": "2026-09-13",
         "method": "web_search",
         "externalId": null
@@ -10601,42 +10465,33 @@
       "provenance": {
         "title": {
           "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         },
         "dates": {
           "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
+          "sourcePageTitle": null,
           "confidence": "High"
         },
         "city": {
           "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         },
         "country": {
           "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
-        },
-        "venue": {
-          "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "Low"
-        },
-        "organization": {
-          "sourceUrl": "https://urtec.org/latinamerica/",
-          "sourcePageTitle": "aapg-2026-2027",
-          "confidence": "High"
+          "sourcePageTitle": null,
+          "confidence": "Medium"
         }
       },
       "details": {
-        "source": "aapg-2026-2027-details",
-        "venueName": null,
-        "venueAddress": null,
+        "source": "verified-2026-09-13",
+        "venueName": "Marriott Buenos Aires Downtown",
+        "venueAddress": "Buenos Aires, Argentina.",
+        "accommodation": "Official event hotel: Marriott Buenos Aires Downtown. Special Classic Room rate USD 215/night for the event period, with breakfast, spa and Wi-Fi; organizer housing information covers 30 Nov–2 Dec and notes applicable VAT rules.",
         "program": {
           "availability": "stated",
-          "text": "Executive-level summit on the business of unconventional resources in Argentina/Latin America (Vaca Muerta focus), hosted by YPF, jointly run by SPE, AAPG, SEG."
+          "text": "1 Dec: 09:00–09:30 Welcome; 09:30–10:00 keynote by Horacio Marín; 10:00–11:15 Vaca Muerta panel; 11:45–12:30 technical session; 12:30–14:00 lunch; 14:00–15:30 technical session; 16:30–17:30 reservoir-to-completion panel; 17:30–19:00 reception. 2 Dec: sessions from 09:00 through 17:30 plus student/young-professional programming 18:00–20:00."
         },
         "callForPapers": null,
         "schedule": {
@@ -10644,33 +10499,91 @@
           "themes": []
         },
         "keynotes": {
-          "availability": "not_announced",
-          "items": [],
-          "text": "Not yet announced",
+          "availability": "stated",
+          "items": [
+            {
+              "name": "Horacio Marín",
+              "role": "CEO, YPF",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fausto Caretta",
+              "role": "Upstream Managing Director, Pan American Energy",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Fernanda Raggio",
+              "role": "Exploration Director, YPF",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ricardo Veiga",
+              "role": "Exploration Senior Director, Tecpetrol",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Bob Fryklund",
+              "role": "Chief Upstream Strategist, S&P Global",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Lucas Pigliacampo",
+              "role": "CTO, Tenaris",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Ricardo Ferreiro",
+              "role": "President E&P, Tecpetrol",
+              "org": null,
+              "title": null,
+              "topic": null
+            },
+            {
+              "name": "Matías Weissel",
+              "role": "COO, Vista Energy.",
+              "org": null,
+              "title": null,
+              "topic": null
+            }
+          ],
+          "text": "Horacio Marín — CEO, YPF; Fausto Caretta — Upstream Managing Director, Pan American Energy; Fernanda Raggio — Exploration Director, YPF; Ricardo Veiga — Exploration Senior Director, Tecpetrol; Bob Fryklund — Chief Upstream Strategist, S&P Global; Lucas Pigliacampo — CTO, Tenaris; Ricardo Ferreiro — President E&P, Tecpetrol; Matías Weissel — COO, Vista Energy.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "committee": {
-          "availability": "not_announced",
+          "availability": "stated",
           "items": [],
-          "text": "Not yet announced",
+          "text": "Event programme leadership/chairs include Carlos Macellari — AAPG Chair; Alejandro Lerza — SPE Chair; Fernanda Raggio — YPF Chair. These are edition-specific Latin America summit roles and are not copied from the general URTeC 2026 committee.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "fees": {
-          "availability": "not_announced",
+          "availability": "stated",
           "items": [],
-          "text": "Not yet published",
+          "text": "Early Bird through 2 Nov: Professional Nonmember USD 1,095; Member USD 995; One-Day USD 595; Academic USD 395; Exhibition Only USD 195. Standard: Professional Nonmember USD 1,195; Member USD 1,095; One-Day USD 695; Academic USD 495; Exhibition Only USD 195. The previously extracted USD 8,200 figure is NOT an attendee registration fee.",
           "unstructuredReason": "no_recognisable_entries"
         },
         "sponsors": {
-          "availability": "not_announced",
+          "availability": "stated",
           "items": [],
-          "text": "Hosted by YPF. Broader URTeC (main US 2026 event, separate conference) sponsor tiers are published - Emerald: Chevron, ExxonMobil; Sapphire: Core Laboratories, Devon - but these are NOT confirmed as sponsors of the Latin America Summit specifically.",
-          "unstructuredReason": "withdrawn_in_source"
+          "text": "YPF — Principal Sponsor / host organization for the Latin America summit.",
+          "unstructuredReason": "no_recognisable_entries"
         },
-        "safetyNote": null
+        "safetyNote": null,
+        "registrationUrl": "https://urtec.org/latinamerica/registration/"
       },
-      "logoUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/07/URTeC-latinamerica-logo-white-scaled.png",
-      "imageUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/07/Horacio-Marin.png"
+      "logoUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/09/Title-2-1024x503.png",
+      "imageUrl": "https://urtec.org/latinamerica/wp-content/uploads/sites/6/2026/09/Title-2-1024x503.png"
     },
     {
       "id": "cell-symposia-decoding-cellular-complexity-single-cell-biology-in-the-",

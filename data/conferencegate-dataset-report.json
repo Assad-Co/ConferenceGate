@@ -1,5 +1,6 @@
 {
-  "generatedAt": "2026-09-13T03:07:58.243Z",
+  "suppliedCorrections": 4,
+  "generatedAt": "2026-09-13T14:52:04.684Z",
   "horizonStart": "2026-09-13",
   "evidenceRows": 325,
   "apiEventRows": 70,
@@ -100,7 +101,7 @@
     "2027": 116
   },
   "countries": 37,
-  "cities": 111,
+  "cities": 113,
   "categories": 38,
   "worldRegions": {
     "Oceania": 77,
@@ -112,9 +113,9 @@
     "Africa": 2
   },
   "formats": {
-    "in-person": 245,
+    "in-person": 246,
     "hybrid": 5,
-    "online": 3
+    "online": 2
   },
   "sourceTypes": {
     "official_site": 249,
@@ -127,11 +128,11 @@
     "city": "100.0%",
     "country": "100.0%",
     "officialUrl": "98.4%",
-    "venue": "24.1%",
+    "venue": "24.5%",
     "organization": "87.0%",
     "category": "100.0%",
     "description": "100.0%",
-    "corroborated": "2.0%"
+    "corroborated": "3.6%"
   },
   "notAttempted": {
     "submissionDeadline": "0.0%",
