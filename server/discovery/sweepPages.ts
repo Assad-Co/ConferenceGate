@@ -1,7 +1,7 @@
 import { findSectionPages } from "./deepSections";
 import { findFeePages } from "./feePages";
 import { decodeEntities } from "./html";
-import { candidateUrlBelongsToEvent, pageBelongsToEvent, type EventIdentity } from "./eventIdentity";
+import { candidateUrlBelongsToEvent, pageBelongsToEvent, pageIdentityFrom, type EventIdentity } from "./eventIdentity";
 
 export interface SweepPage { html: string; finalUrl: string }
 export interface RejectedPage { url: string; stage: string; reason: string }
@@ -36,9 +36,22 @@ export function sweepUrlVerdict(identity: EventIdentity, raw: string) {
   let pathname: string;
   try { pathname = decodeURIComponent(new URL(raw).pathname); }
   catch { return { ok: false, reason: "unparseable_url" }; }
-  const years = pathname.match(/\b20\d{2}\b/g)?.map(Number) ?? [];
-  if (identity.year && years.length && !years.includes(identity.year)) return { ok: false, reason: "url_states_other_year" };
+  if (/\.(?:png|jpe?g|gif|webp|avif|svg|ico|pdf|docx?|pptx?|xlsx?|zip|mp4|mp3)(?:$|\/)/i.test(pathname)) return { ok: false, reason: "not_html_page" };
+  // Underscores and letters are word characters: word boundaries miss CSRS_2018_Final.
+  const years = [...pathname.matchAll(/(?:^|[^0-9])(20\d{2})(?!\d)/g)].map(match => Number(match[1]));
+  if (identity.year && years.some(year => year !== identity.year)) return { ok: false, reason: "url_states_other_year" };
   return candidateUrlBelongsToEvent(identity, raw);
+}
+
+export function specificPageVerdict(identity: EventIdentity, page: SweepPage, required = false) {
+  const verdict = pageBelongsToEvent(identity, page.finalUrl, page.html);
+  if (!verdict.ok || !required) return verdict;
+  const heading = pageIdentityFrom(page.html);
+  const words = `${heading.title || ""} ${heading.heading || ""}`.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ");
+  const hits = identity.titleTokens.filter(token => words.includes(token)).length;
+  return hits >= Math.max(2, Math.ceil(identity.titleTokens.length * 0.6))
+    ? { ok: true, reason: "specific_event_heading" }
+    : { ok: false, reason: "shared_official_url_without_specific_event_heading" };
 }
 
 /** Bounded sitemap index traversal. Sitemap fetches are always free and never use Firecrawl. */
@@ -78,6 +91,7 @@ export async function crawlSweepPages(options: {
   readPage: (url: string, guessed: boolean) => Promise<SweepPage>;
   readXml: (url: string) => Promise<string>;
   maxPages?: number;
+  requireSpecificIdentity?: boolean;
 }): Promise<{ pages: SweepPage[]; rejected: RejectedPage[] }> {
   const { identity, home, readPage, readXml } = options;
   const pages: SweepPage[] = [], rejected: RejectedPage[] = [];
@@ -97,7 +111,7 @@ export async function crawlSweepPages(options: {
     for (const url of findFeePages(page.html, page.finalUrl, 4)) enqueue(url, depth, false, 0);
   };
   const homeVerdict = sweepUrlVerdict(identity, home.finalUrl);
-  const homePageVerdict = pageBelongsToEvent(identity, home.finalUrl, home.html);
+  const homePageVerdict = specificPageVerdict(identity, home, options.requireSpecificIdentity);
   if (!homeVerdict.ok || !homePageVerdict.ok) {
     reject(home.finalUrl, "home", !homeVerdict.ok ? homeVerdict.reason : homePageVerdict.reason);
     return { pages, rejected };
@@ -115,7 +129,7 @@ export async function crawlSweepPages(options: {
     try {
       const page = await readPage(next.url, next.guessed);
       const urlVerdict = sweepUrlVerdict(identity, page.finalUrl);
-      const pageVerdict = pageBelongsToEvent(identity, page.finalUrl, page.html);
+      const pageVerdict = specificPageVerdict(identity, page, options.requireSpecificIdentity);
       if (!urlVerdict.ok || !pageVerdict.ok) {
         reject(page.finalUrl, "page", !urlVerdict.ok ? urlVerdict.reason : pageVerdict.reason); continue;
       }

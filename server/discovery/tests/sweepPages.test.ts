@@ -1,10 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { eventIdentityFrom } from "../eventIdentity";
-import { conventionalSectionUrls, crawlSweepPages, sitemapSectionUrls, sweepUrlVerdict } from "../sweepPages";
+import { conventionalSectionUrls, crawlSweepPages, sitemapSectionUrls, sweepUrlVerdict, specificPageVerdict } from "../sweepPages";
 
 const identity = eventIdentityFrom({ title: "Example Science Congress", official_url: "https://society.example/events/science/2026", start_year: 2026 })!;
 const base = identity.officialUrl;
+test("filters binary and old underscored paths before fetching", () => {
+  for (const suffix of ["programme.png", "programme.jpg?download=1", "programme.pdf", "CSRS_2018_Final_Program", "CSRS2017Programme"]) {
+    assert.equal(sweepUrlVerdict(identity, base + "/" + suffix).ok, false, suffix);
+  }
+});
+
+test("shared root URL cannot donate parent conference rosters to workshops", async () => {
+  const workshop = eventIdentityFrom({ title: "Distilling Reasoning: From Chain-of-Thought to Agentic Capabilities in Smaller Models — NeurIPS 2026", official_url: "https://neurips.cc/", start_year: 2026 })!;
+  const parent = { finalUrl: "https://neurips.cc/", html: "<title>NeurIPS 2026</title><h1>NeurIPS 2026 Committee</h1>" };
+  assert.equal(specificPageVerdict(workshop, parent, true).ok, false);
+  assert.equal(specificPageVerdict(workshop, { ...parent, html: "<h1>Distilling Reasoning: From Chain-of-Thought to Agentic Capabilities in Smaller Models 2026</h1>" }, true).ok, true);
+  const result = await crawlSweepPages({ identity: workshop, home: parent, requireSpecificIdentity: true, readXml: async () => { throw Error("unexpected read"); }, readPage: async () => { throw Error("unexpected read"); }});
+  assert.deepEqual(result.pages, []);
+});
 const home = { finalUrl: base, html: '<h1>Example Science Congress 2026</h1><a href="/events/science/2026/programme">Programme</a>' };
 
 test("guesses stay within the event path, excluding society root and sibling events", () => {

@@ -18,6 +18,8 @@ const FIRECRAWL_MIN_START_INTERVAL_MS = 7000;
 const FIRECRAWL_MAX_ATTEMPTS = 3;
 let firecrawlQueue: Promise<void> = Promise.resolve();
 let nextFirecrawlStartAt = 0;
+let scrapeUnavailable: string | null = null;
+export function firecrawlScrapeUnavailableReason(): string | null { return scrapeUnavailable; }
 
 async function scheduleFirecrawlRequest<T>(request: () => Promise<T>): Promise<T> {
   const previous = firecrawlQueue;
@@ -53,12 +55,14 @@ export function isFirecrawlConfigured(): boolean {
  *  extraction keep working unchanged) plus markdown as a fallback body for pages it only renders
  *  as text. Returns null — never throws — on any failure, so a caller treats it like any other
  *  read that didn't work. */
-export async function firecrawlScrape(url: string): Promise<{ html: string; markdown: string } | null> {
-  if (!isFirecrawlConfigured()) return null;
+export async function firecrawlScrape(url: string, options: { maxAttempts?: number } = {}): Promise<{ html: string; markdown: string } | null> {
+  if (!isFirecrawlConfigured() || scrapeUnavailable) return null;
+  const maxAttempts = Math.max(1, Math.min(FIRECRAWL_MAX_ATTEMPTS, options.maxAttempts ?? FIRECRAWL_MAX_ATTEMPTS));
 
-  for (let attempt = 1; attempt <= FIRECRAWL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const outcome = await scheduleFirecrawlRequest(async () => {
+        if (scrapeUnavailable) return { res: new Response(null, { status: 402 }), body: { error: scrapeUnavailable } };
         const res = await fetch(`${FIRECRAWL_API_BASE}/v1/scrape`, {
           method: "POST",
           headers: {
@@ -74,11 +78,14 @@ export async function firecrawlScrape(url: string): Promise<{ html: string; mark
           signal: AbortSignal.timeout(SCRAPE_TIMEOUT_MS),
         });
         const body = await res.json().catch(() => null);
+        if (res.status === 402 || res.status === 401 || /insufficient credits|credits? (?:exhausted|depleted)|quota exceeded/i.test(String(body?.error || body?.message || ""))) {
+          scrapeUnavailable = res.status === 401 ? "API authentication failed" : "Firecrawl credits exhausted";
+        }
         return { res, body };
       });
 
       if (outcome.res.status === 429) {
-        if (attempt < FIRECRAWL_MAX_ATTEMPTS) {
+        if (attempt < maxAttempts) {
           const delay = retryDelayMs(outcome.res, outcome.body, attempt);
           console.warn(`Firecrawl rate limit reached; queued ${url} for retry in ${Math.ceil(delay / 1000)}s`);
           await new Promise((resolve) => setTimeout(resolve, delay));
@@ -101,7 +108,7 @@ export async function firecrawlScrape(url: string): Promise<{ html: string; mark
       }
       return { html, markdown };
     } catch (error: any) {
-      if (attempt < FIRECRAWL_MAX_ATTEMPTS) {
+      if (attempt < maxAttempts && !scrapeUnavailable) {
         await new Promise((resolve) => setTimeout(resolve, 3000 * attempt));
         continue;
       }

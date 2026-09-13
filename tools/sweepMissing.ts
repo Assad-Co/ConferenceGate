@@ -41,7 +41,7 @@ import { tmpdir } from "node:os";
 import { crawlSweepPages } from "../server/discovery/sweepPages";
 import { extractDeepSections, type DeepSectionExtraction } from "../server/discovery/deepSections";
 import { feesCell, feesFromPage, type FeeLine } from "../server/discovery/feePages";
-import { firecrawlScrape, isFirecrawlConfigured } from "../server/firecrawl";
+import { firecrawlScrape, isFirecrawlConfigured, firecrawlScrapeUnavailableReason } from "../server/firecrawl";
 import { eventIdentityFrom,
   type EventIdentity } from "../server/discovery/eventIdentity";
 import { isCredibleAffiliation, isCredibleName } from "../server/discovery/entryQuality";
@@ -93,11 +93,11 @@ async function getHtml(url: string, ms = 20000): Promise<{ html: string; finalUr
     readStats.direct += 1;
     return direct;
   } catch (error) {
-    if (!FIRECRAWL || rendered.has(url)) { readStats.refused += 1; throw error; }
+    if (!FIRECRAWL || firecrawlScrapeUnavailableReason() || rendered.has(url) || /not html:|^404$|^410$/.test((error as Error).message)) { readStats.refused += 1; throw error; }
     if (readStats.firecrawl >= MAX_FIRECRAWL) { readStats.overCap += 1; throw error; }
     rendered.add(url);
     readStats.firecrawl += 1;
-    const scraped = await firecrawlScrape(url);
+    const scraped = await firecrawlScrape(url, { maxAttempts: 1 });
     if (!scraped?.html) { readStats.refused += 1; throw new Error(`unread after firecrawl: ${(error as Error).message}`); }
     return { html: scraped.html, finalUrl: url };
   }
@@ -165,6 +165,14 @@ interface Rec { title: string; officialUrl: string | null; logoUrl: string | nul
 
 const dataset = JSON.parse(await readFile(path.resolve(DATASET), "utf8"));
 const all: Rec[] = Array.isArray(dataset.records) ? dataset.records : Object.values(dataset.records ?? dataset);
+const titlesByOfficialUrl = new Map<string, Set<string>>();
+const officialKey = (url: string) => url.replace(/\/+$/, "").toLowerCase();
+for (const record of all) {
+  if (!record.officialUrl) continue;
+  const key = officialKey(record.officialUrl);
+  const titles = titlesByOfficialUrl.get(key) ?? new Set<string>();
+  titles.add(record.title.toLowerCase()); titlesByOfficialUrl.set(key, titles);
+}
 const SECTIONS = ["program", "keynotes", "committee", "sponsors", "fees"] as const;
 
 /**
@@ -206,6 +214,7 @@ async function handle(record: Rec, index: number) {
     const found: DeepSectionExtraction = { program: null, speakers: [], committee: [], sponsors: [], community: null };
     if (!identity) throw new Error("invalid event identity");
     const crawl = await crawlSweepPages({ identity, home,
+      requireSpecificIdentity: (titlesByOfficialUrl.get(officialKey(site))?.size ?? 0) > 1,
       readPage: async (url, guessed) => {
         if (!guessed) return getHtml(url);
         const page = await directHtml(url, 10000);
@@ -314,6 +323,7 @@ console.log(`\n================ REPORT ================`);
 console.log(`records asked            ${stats.considered}`);
 console.log(`pages read direct        ${readStats.direct}`);
 console.log(`firecrawl attempts       ${readStats.firecrawl}${FIRECRAWL ? "" : "  (no key: route disabled)"}`);
+console.log(`firecrawl stopped reason ${firecrawlScrapeUnavailableReason() ?? "none"}`);
 console.log(`pages nothing could read ${readStats.refused}`);
 console.log(`pages left at the cap     ${readStats.overCap}${readStats.overCap ? `  (raise --max-firecrawl above ${MAX_FIRECRAWL} to read them)` : ""}`);
 console.log(`sites unreachable        ${stats.unreachable}`);
