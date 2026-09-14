@@ -9,8 +9,8 @@
 #   OPTION A — dashboard, no blueprint (recommended, nothing in this repo changes)
 #     New + → Cron Job → connect this repository
 #       Build command:  npm install
-#       Command:        npm run discovery -- phase1 --out /tmp/phase1 --max-pages 400
-#       Schedule:       0 3 * * 1        (03:00 UTC every Monday)
+#       Command:        npm run automation
+#       Schedule:       17 */8 * * *     (every 8 hours)
 #     Add the environment variables listed under the worker below. Done.
 #
 #   OPTION B — this blueprint
