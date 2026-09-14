@@ -317,6 +317,20 @@ const DISCOVERY_SUGGESTIONS = [
   'Science',
   'Environment',
   'Medicine',
+  'Agriculture',
+  'Architecture',
+  'Arts & Culture',
+  'Blockchain',
+  'Climate',
+  'Data Science',
+  'Economics',
+  'Manufacturing',
+  'Marketing',
+  'Mathematics',
+  'Physics',
+  'Robotics',
+  'Social Sciences',
+  'Tourism',
   'Virtual conferences',
   'Open call for papers',
 ];
@@ -727,7 +741,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       setFormatFilter('');
       setSearchInput('');
       setSubmittedSearchTerm('');
-    } else if (['Artificial Intelligence','Cybersecurity','Engineering','Healthcare','Energy','Sustainability','Business','Education','Finance','Law','Science','Environment','Medicine'].includes(normalized)) {
+    } else if (DISCOVERY_SUGGESTIONS.slice(0, -2).includes(normalized)) {
       setCategoryFilter(normalized);
       setCfpOnly(false);
       setSearchInput('');
