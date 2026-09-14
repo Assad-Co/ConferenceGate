@@ -426,9 +426,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
     switch (sectionState(section)) {
       case 'not_announced':
-        return `The organiser has not announced ${subject} yet.`;
+        return 'Not yet announced.';
       case 'unread':
-        return `${subject[0].toUpperCase()}${subject.slice(1)} could not be retrieved; this does not mean the conference has none.`;
+        return 'Not yet announced.';
       default:
         return crawled;
     }
