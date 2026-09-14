@@ -311,6 +311,12 @@ const DISCOVERY_SUGGESTIONS = [
   'Energy',
   'Sustainability',
   'Business',
+  'Education',
+  'Finance',
+  'Law',
+  'Science',
+  'Environment',
+  'Medicine',
   'Virtual conferences',
   'Open call for papers',
 ];
@@ -452,6 +458,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [countryFilter, setCountryFilter] = useState('');
   const [formatFilter, setFormatFilter] = useState('');
   const [timingFilter, setTimingFilter] = useState('');
+  const [cfpOnly, setCfpOnly] = useState(false);
 
   // The real lowest published registration price for a conference — the figure a reader actually
   // compares against when deciding whether an event is in their budget. Only conferences with at
@@ -541,7 +548,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (!withinDateWindow({ start: conf.dates.start }, { effectiveStartMonth, endAtMonth })) return false;
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
-    if (formatTerm && confFormat !== formatTerm) return false;
+    if (formatTerm && confFormat !== formatTerm && !(formatTerm === 'virtual' && confFormat === 'online')) return false;
+    if (cfpOnly && !conf.cfpStatus) return false;
     if (timingFilter === 'one-day' && duration !== 1) return false;
     if (timingFilter === 'multi-day' && duration < 2) return false;
     if (timingFilter === 'weekend' && !touchesWeekend) return false;
@@ -689,8 +697,21 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   const submitDiscoverySearch = (term = searchTerm) => {
     const normalized = term.trim();
-    setSearchInput(term);
-    setSubmittedSearchTerm(normalized);
+    if (normalized === 'Virtual conferences') {
+      setFormatFilter('Virtual');
+      setCfpOnly(false);
+      setSearchInput('');
+      setSubmittedSearchTerm('');
+    } else if (normalized === 'Open call for papers') {
+      setCfpOnly(true);
+      setFormatFilter('');
+      setSearchInput('');
+      setSubmittedSearchTerm('');
+    } else {
+      setSearchInput(term);
+      setSubmittedSearchTerm(normalized);
+      setCfpOnly(false);
+    }
     lastWebQueryRef.current = null;
     setSearchSubmitCount((count) => count + 1);
   };
@@ -1354,3 +1375,4 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     </div>
   );
 };
+
