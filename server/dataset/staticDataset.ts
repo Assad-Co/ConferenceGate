@@ -265,15 +265,7 @@ function pagesWereRead(record: LaunchConferenceRecord): boolean {
       : "unread",
     details.fees.availability,
   ].filter((state) => state !== "unread");
-  if (answered.length >= 2) return true;
-  return (
-    Boolean(details.callForPapers)
-    || details.schedule.sessions.length > 0
-    || details.keynotes.items.length > 0
-    || details.committee.items.length > 0
-    || details.sponsors.items.length > 0
-    || details.fees.items.length > 0
-  );
+  return answered.length >= 5;
 }
 
 export function hasSomethingToShow(record: LaunchConferenceRecord, today?: string): boolean {
