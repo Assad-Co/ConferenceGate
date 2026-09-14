@@ -67,7 +67,20 @@ export function loadLaunchDataset(): LoadedDataset {
   if (cached) return cached;
   const dataset = readJsonFile<LaunchDataset>(LAUNCH_DATASET_FILE);
   const index = readJsonFile<LaunchSearchIndex>(LAUNCH_INDEX_FILE);
-  const records = Array.isArray(dataset?.records) ? dataset!.records : [];
+  const imported = readJsonFile<{ records: LaunchConferenceRecord[] }>("energy-verified-2026-09-14.json");
+  const baseRecords = Array.isArray(dataset?.records) ? dataset!.records : [];
+  const importedRecords = Array.isArray(imported?.records) ? imported.records : [];
+  const identity = (record: LaunchConferenceRecord) =>
+    `${(record.officialUrl || record.sourceUrl).replace(/\/$/, "").toLowerCase()}|${record.startDate}`;
+  const recordsByIdentity = new Map(baseRecords.map((record) => [identity(record), record]));
+  for (const record of importedRecords) {
+    const key = identity(record);
+    const existing = recordsByIdentity.get(key);
+    recordsByIdentity.set(key, existing
+      ? { ...existing, ...record, id: existing.id, logoUrl: existing.logoUrl || record.logoUrl, imageUrl: existing.imageUrl || record.imageUrl }
+      : record);
+  }
+  const records = [...recordsByIdentity.values()];
   const byUrl = new Map<string, LaunchConferenceRecord[]>();
   const fileUnder = (url: string | null | undefined, record: LaunchConferenceRecord) => {
     if (!url) return;

@@ -1,0 +1,580 @@
+{
+  "generatedAt": "2026-09-14T00:00:00Z",
+  "records": [
+    {
+      "id": "aee-africa-energy-conference-2026",
+      "title": "AEE Africa Energy Conference 2026",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-28",
+      "endDate": "2026-10-29",
+      "datePrecision": "day",
+      "startMonth": 10,
+      "datesText": "2026-10-28 to 2026-10-29",
+      "city": "Cape Town",
+      "region": null,
+      "country": "South Africa",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Two Oceans Aquarium",
+      "format": "in-person",
+      "organization": "Association of Energy Engineers and its Southern Africa Chapter",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "Professional conference on African energy access, efficient infrastructure and practical energy management.",
+      "sourceUrl": "https://aeeafrica.org/",
+      "sourceHost": "aeeafrica.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://aeeafrica.org/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "AEE Africa Energy Conference 2026",
+        "statedText": "AEE Africa Energy Conference 2026\n2026-10-28\n2026-10-29\nCape Town\nSouth Africa\nTwo Oceans Aquarium\nOrganiser lists The Portswood Hotel and The Commodore Hotel.\nAssociation of Energy Engineers and its Southern Africa Chapter\nProfessional conference on African energy access, efficient infrastructure and practical energy management.\nhttps://aeeafrica.org/\nhttps://aeeafrica.org/ | https://aeeafrica.org/travel/ | https://aeeafrica.org/conference-topics/\nhttps://aeeafrica.org/registration-pricing/\nPublished technical topics include industrial efficiency; renewable development; building performance; energy data and measurement; clean mobility; ESCO markets.\nDr. Kgosientsho David Ramokgopa — Minister of Electricity & Energy; opening keynote.\nLTM Energy Group; Syntiro / Energy Partners Sustainability; SASOL SA; NCPC-SA; SANEDI; Aim Dynamics.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://aeeafrica.org/",
+        "https://aeeafrica.org/travel/",
+        "https://aeeafrica.org/conference-topics/"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "Two Oceans Aquarium",
+        "venueAddress": null,
+        "program": {
+          "availability": "stated",
+          "text": "Published technical topics include industrial efficiency; renewable development; building performance; energy data and measurement; clean mobility; ESCO markets."
+        },
+        "callForPapers": null,
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Dr. Kgosientsho David Ramokgopa — Minister of Electricity & Energy; opening keynote.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "LTM Energy Group; Syntiro / Energy Partners Sustainability; SASOL SA; NCPC-SA; SANEDI; Aim Dynamics.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://aeeafrica.org/registration-pricing/",
+        "accommodation": "Organiser lists The Portswood Hotel and The Commodore Hotel."
+      }
+    },
+    {
+      "id": "clean-energy-transition-asia-ceta-summit-exhibition-2026",
+      "title": "Clean Energy Transition Asia (CETA) Summit & Exhibition 2026",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-04",
+      "endDate": "2026-11-05",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": "2026-11-04 to 2026-11-05",
+      "city": "Kuala Lumpur",
+      "region": null,
+      "country": "Malaysia",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "MITEC Kuala Lumpur",
+      "format": "in-person",
+      "organization": "The C0_Lab",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "ASEAN clean-energy investment and procurement summit covering renewables, storage, hydrogen, grids and carbon management.",
+      "sourceUrl": "https://ceta.asia/",
+      "sourceHost": "ceta.asia",
+      "sourceType": "official_site",
+      "officialUrl": "https://ceta.asia/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "Clean Energy Transition Asia (CETA) Summit & Exhibition 2026",
+        "statedText": "Clean Energy Transition Asia (CETA) Summit & Exhibition 2026\n2026-11-04\n2026-11-05\nKuala Lumpur\nMalaysia\nMITEC Kuala Lumpur\nThe C0_Lab\nASEAN clean-energy investment and procurement summit covering renewables, storage, hydrogen, grids and carbon management.\nhttps://ceta.asia/\nhttps://ceta.asia/ | https://ceta.asia/summit-2026\nStandard delegate USD 1300; group USD 1040; early bird USD 910 ended 2026-08-04.\nhttps://ceta.asia/summit-2026\nDay 1: ASEAN transition, gas, grid investment and corporate procurement. Day 2: ASEAN Power Grid, international trade, hydrogen, nuclear and project finance.\nFadillah Yusof — Deputy Prime Minister II and PETRA Minister; Azli Mohamed — President & CEO, Gas Malaysia Berhad; Sue-Ern Tan — Head, IEA Regional Cooperation Centre.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://ceta.asia/",
+        "https://ceta.asia/summit-2026"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "MITEC Kuala Lumpur",
+        "venueAddress": null,
+        "program": {
+          "availability": "stated",
+          "text": "Day 1: ASEAN transition, gas, grid investment and corporate procurement. Day 2: ASEAN Power Grid, international trade, hydrogen, nuclear and project finance."
+        },
+        "callForPapers": null,
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Fadillah Yusof — Deputy Prime Minister II and PETRA Minister; Azli Mohamed — President & CEO, Gas Malaysia Berhad; Sue-Ern Tan — Head, IEA Regional Cooperation Centre.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Standard delegate USD 1300; group USD 1040; early bird USD 910 ended 2026-08-04.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://ceta.asia/summit-2026",
+        "accommodation": null
+      }
+    },
+    {
+      "id": "9th-latin-america-energy-summit-2026",
+      "title": "9th Latin America Energy Summit 2026",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-04-15",
+      "endDate": "2026-04-16",
+      "datePrecision": "day",
+      "startMonth": 4,
+      "datesText": "2026-04-15 to 2026-04-16",
+      "city": "Santiago",
+      "region": null,
+      "country": "Chile",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Hilton Doubletree Hotel, Av Vitacura 2727, Las Condes",
+      "format": "in-person",
+      "organization": "Industry Exchange LLC",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "Regional meeting on electricity investment, renewable infrastructure and the role of natural gas in South American power markets.",
+      "sourceUrl": "https://www.latamenergysummit.com/",
+      "sourceHost": "www.latamenergysummit.com",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.latamenergysummit.com/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "9th Latin America Energy Summit 2026",
+        "statedText": "9th Latin America Energy Summit 2026\n2026-04-15\n2026-04-16\nSantiago\nChile\nHilton Doubletree Hotel, Av Vitacura 2727, Las Condes\nOrganiser published USD 209 plus taxes at Hilton Doubletree, subject to availability; homepage subsequently reports sold out.\nIndustry Exchange LLC\nRegional meeting on electricity investment, renewable infrastructure and the role of natural gas in South American power markets.\nhttps://www.latamenergysummit.com/\nhttps://www.latamenergysummit.com/ | https://www.latamenergysummit.com/hotel | https://www.latamenergysummit.com/speakers-2026 | https://www.latamenergysummit.com/latin-america-electric-power-event\nPublished discussion topics: generation capacity and backup supply; transmission permitting; financing; renewable tenders; regional electricity integration.\nXimena Ríncon — Chilean Energy Minister; Vicente Camino — Managing Director Supply & Energy Management, Engie Chile; Alfredo Solar — General Manager, Atlas Renewable Energy.\nOfficial partners shown: Empresas Eléctricas; GIE; ACEN.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://www.latamenergysummit.com/",
+        "https://www.latamenergysummit.com/hotel",
+        "https://www.latamenergysummit.com/speakers-2026",
+        "https://www.latamenergysummit.com/latin-america-electric-power-event"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "Hilton Doubletree Hotel, Av Vitacura 2727, Las Condes",
+        "venueAddress": null,
+        "program": {
+          "availability": "stated",
+          "text": "Published discussion topics: generation capacity and backup supply; transmission permitting; financing; renewable tenders; regional electricity integration."
+        },
+        "callForPapers": null,
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Ximena Ríncon — Chilean Energy Minister; Vicente Camino — Managing Director Supply & Energy Management, Engie Chile; Alfredo Solar — General Manager, Atlas Renewable Energy.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Official partners shown: Empresas Eléctricas; GIE; ACEN.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": null,
+        "accommodation": "Organiser published USD 209 plus taxes at Hilton Doubletree, subject to availability; homepage subsequently reports sold out."
+      }
+    },
+    {
+      "id": "2026-2nd-ieee-international-conference-on-smart-power-control-and-renewable-energy-icspcre-2026",
+      "title": "2026 2nd IEEE International Conference on Smart Power Control and Renewable Energy (ICSPCRE-2026)",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-12-04",
+      "endDate": "2026-12-06",
+      "datePrecision": "day",
+      "startMonth": 12,
+      "datesText": "2026-12-04 to 2026-12-06",
+      "city": "Rourkela",
+      "region": null,
+      "country": "India",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Department of Electrical Engineering, National Institute of Technology Rourkela",
+      "format": "hybrid",
+      "organization": "NIT Rourkela Department of Electrical Engineering and IEEE Student Branch – NIT Rourkela",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "Hybrid research conference on renewable-energy systems, smart power control, power electronics and electric vehicles.",
+      "sourceUrl": "https://www.icspcre.org/",
+      "sourceHost": "www.icspcre.org",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.icspcre.org/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "2026 2nd IEEE International Conference on Smart Power Control and Renewable Energy (ICSPCRE-2026)",
+        "statedText": "2026 2nd IEEE International Conference on Smart Power Control and Renewable Energy (ICSPCRE-2026)\n2026-12-04\n2026-12-06\nRourkela\nIndia\nDepartment of Electrical Engineering, National Institute of Technology Rourkela\nNIT Rourkela Department of Electrical Engineering and IEEE Student Branch – NIT Rourkela\nHybrid research conference on renewable-energy systems, smart power control, power electronics and electric vehicles.\nhttps://www.icspcre.org/\nhttps://www.icspcre.org/\nIEEE-format papers up to six pages; accepted, registered and presented papers submitted for possible IEEE Xplore publication.\n2026-08-31\nhttps://www.icspcre.org/\nC. K. Chanda — Technical Program Chair, IIEST Shibpur; Canbing Li — SJTU; Sovan Dalai — Jadavpur University; Pravat Kumar Ray — General Chair, NIT Rourkela.\nTechnical co-sponsors: IEEE Power & Energy Society; IEEE Industry Applications Society; IEEE Industrial Electronics Society. Support: IEEE Rourkela Subsection and IEEE Kolkata Section.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://www.icspcre.org/"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "Department of Electrical Engineering, National Institute of Technology Rourkela",
+        "venueAddress": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-08-31",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "IEEE-format papers up to six pages; accepted, registered and presented papers submitted for possible IEEE Xplore publication.",
+          "url": "https://www.icspcre.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "C. K. Chanda — Technical Program Chair, IIEST Shibpur; Canbing Li — SJTU; Sovan Dalai — Jadavpur University; Pravat Kumar Ray — General Chair, NIT Rourkela.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Technical co-sponsors: IEEE Power & Energy Society; IEEE Industry Applications Society; IEEE Industrial Electronics Society. Support: IEEE Rourkela Subsection and IEEE Kolkata Section.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": null,
+        "accommodation": null
+      }
+    },
+    {
+      "id": "energy-and-resources-law-association-national-conference-2026",
+      "title": "Energy and Resources Law Association National Conference 2026",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-21",
+      "endDate": "2026-10-23",
+      "datePrecision": "day",
+      "startMonth": 10,
+      "datesText": "2026-10-21 to 2026-10-23",
+      "city": "Adelaide",
+      "region": null,
+      "country": "Australia",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "SkyCity Adelaide, North Terrace",
+      "format": "in-person",
+      "organization": "Energy and Resources Law Association; conference management: All Occasions Group",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "Energy and resources law conference addressing investment, decarbonisation, regulatory risk and commercial developments across power and renewables.",
+      "sourceUrl": "https://www.erlawnc.com.au/",
+      "sourceHost": "www.erlawnc.com.au",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.erlawnc.com.au/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "Energy and Resources Law Association National Conference 2026",
+        "statedText": "Energy and Resources Law Association National Conference 2026\n2026-10-21\n2026-10-23\nAdelaide\nAustralia\nSkyCity Adelaide, North Terrace\nEnergy and Resources Law Association; conference management: All Occasions Group\nEnergy and resources law conference addressing investment, decarbonisation, regulatory risk and commercial developments across power and renewables.\nhttps://www.erlawnc.com.au/\nhttps://www.erlawnc.com.au/ | https://www.erlawnc.com.au/speakers\nConference speakers: Alex Gee — Partner, MinterEllison Energy & Resources; Ryan Hartfield — General Counsel, PTTEP.\nKate Bickford — Chair, 2026 National Conference Business Programme Committee; HWLE Lawyers.\nStrategic partners: Clayton Utz; MinterEllison; Rio Tinto.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://www.erlawnc.com.au/",
+        "https://www.erlawnc.com.au/speakers"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "SkyCity Adelaide, North Terrace",
+        "venueAddress": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": null,
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Conference speakers: Alex Gee — Partner, MinterEllison Energy & Resources; Ryan Hartfield — General Counsel, PTTEP.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Kate Bickford — Chair, 2026 National Conference Business Programme Committee; HWLE Lawyers.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Strategic partners: Clayton Utz; MinterEllison; Rio Tinto.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "safetyNote": null,
+        "registrationUrl": null,
+        "accommodation": null
+      }
+    },
+    {
+      "id": "48th-new-zealand-geothermal-workshop-2026",
+      "title": "48th New Zealand Geothermal Workshop 2026",
+      "acronym": null,
+      "series": null,
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-11-18",
+      "endDate": "2026-11-20",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": "2026-11-18 to 2026-11-20",
+      "city": "Auckland",
+      "region": null,
+      "country": "New Zealand",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Faculty of Engineering and Design, University of Auckland",
+      "format": "hybrid",
+      "organization": "University of Auckland / NZGW Organising Committee",
+      "category": "Energy",
+      "categories": [
+        "Energy"
+      ],
+      "topics": [
+        "Energy"
+      ],
+      "keywords": [
+        "Energy"
+      ],
+      "description": "Geothermal research workshop covering engineering, direct use, scaling and corrosion, community impacts and Māori knowledge.",
+      "sourceUrl": "https://www.geothermalworkshop.co.nz/",
+      "sourceHost": "www.geothermalworkshop.co.nz",
+      "sourceType": "official_site",
+      "officialUrl": "https://www.geothermalworkshop.co.nz/",
+      "logoUrl": null,
+      "imageUrl": null,
+      "evidence": {
+        "query": "Energy conferences official sources",
+        "resultTitle": "48th New Zealand Geothermal Workshop 2026",
+        "statedText": "48th New Zealand Geothermal Workshop 2026\n2026-11-18\n2026-11-20\nAuckland\nNew Zealand\nFaculty of Engineering and Design, University of Auckland\nUniversity of Auckland / NZGW Organising Committee\nGeothermal research workshop covering engineering, direct use, scaling and corrosion, community impacts and Māori knowledge.\nhttps://www.geothermalworkshop.co.nz/\nhttps://www.geothermalworkshop.co.nz/ | https://www.geothermalworkshop.co.nz/registration/ | https://www.geothermalworkshop.co.nz/submissions/\nAbstracts up to 300 words; accepted authors submit Word papers up to eight pages. Full-paper deadline 2026-07-06.\n2026-05-25\nhttps://www.geothermalworkshop.co.nz/submissions/\nNZD incl. GST: early full 1100 and student 475 until 2026-10-09; standard full 1400 and student 550. Restricted international virtual attendance 500.\nhttps://www.geothermalworkshop.co.nz/registration/\nOrganising committee: Sadiq J. Zarrouk; John O’Sullivan; Di Whiting; Bridget Lynne; Mike O’Sullivan; Michael Gravatt.",
+        "retrievedAt": "2026-09-14T00:00:00Z",
+        "method": "web_search"
+      },
+      "provenance": {},
+      "corroboratingSourceUrls": [
+        "https://www.geothermalworkshop.co.nz/",
+        "https://www.geothermalworkshop.co.nz/registration/",
+        "https://www.geothermalworkshop.co.nz/submissions/"
+      ],
+      "origin": "launch_dataset",
+      "supply": "curated_list",
+      "details": {
+        "source": "energy_verified_batch_2026-09-14.csv",
+        "venueName": "Faculty of Engineering and Design, University of Auckland",
+        "venueAddress": null,
+        "program": {
+          "availability": "unread",
+          "text": null
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-05-25",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "Abstracts up to 300 words; accepted authors submit Word papers up to eight pages. Full-paper deadline 2026-07-06.",
+          "url": "https://www.geothermalworkshop.co.nz/submissions/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "stated",
+          "items": [],
+          "text": "Organising committee: Sadiq J. Zarrouk; John O’Sullivan; Di Whiting; Bridget Lynne; Mike O’Sullivan; Michael Gravatt.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "NZD incl. GST: early full 1100 and student 475 until 2026-10-09; standard full 1400 and student 550. Restricted international virtual attendance 500.",
+          "unstructuredReason": "no_recognisable_entries"
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null,
+          "unstructuredReason": null
+        },
+        "safetyNote": null,
+        "registrationUrl": "https://www.geothermalworkshop.co.nz/registration/",
+        "accommodation": null
+      }
+    }
+  ]
+}
