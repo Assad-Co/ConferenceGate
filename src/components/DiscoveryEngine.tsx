@@ -459,6 +459,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [formatFilter, setFormatFilter] = useState('');
   const [timingFilter, setTimingFilter] = useState('');
   const [cfpOnly, setCfpOnly] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   // The real lowest published registration price for a conference — the figure a reader actually
   // compares against when deciding whether an event is in their budget. Only conferences with at
@@ -532,6 +533,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       conf.location?.country,
     ].filter(Boolean).join(' ').toLowerCase();
     const confCountry = (conf.location?.country || '').toLowerCase();
+    const categories = [conf.category, ...(conf.categories || [])].filter(Boolean).join(' ').toLowerCase();
     const confFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
     const duration = conferenceDurationDays(conf.dates.start, conf.dates.end);
     const startDay = new Date(`${conf.dates.start}T12:00:00`).getDay();
@@ -548,6 +550,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (!withinDateWindow({ start: conf.dates.start }, { effectiveStartMonth, endAtMonth })) return false;
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
+    if (categoryFilter && !categories.includes(categoryFilter.toLowerCase())) return false;
     if (formatTerm && confFormat !== formatTerm && !(formatTerm === 'virtual' && confFormat === 'online')) return false;
     if (cfpOnly && !conf.cfpStatus) return false;
     if (timingFilter === 'one-day' && duration !== 1) return false;
@@ -705,6 +708,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     } else if (normalized === 'Open call for papers') {
       setCfpOnly(true);
       setFormatFilter('');
+      setSearchInput('');
+      setSubmittedSearchTerm('');
+    } else if (['Artificial Intelligence','Cybersecurity','Engineering','Healthcare','Energy','Sustainability','Business','Education','Finance','Law','Science','Environment','Medicine'].includes(normalized)) {
+      setCategoryFilter(normalized);
+      setCfpOnly(false);
       setSearchInput('');
       setSubmittedSearchTerm('');
     } else {
@@ -983,7 +991,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 {suggestion}
               </button>
             ))}
-            {(searchTerm || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter || priceFilterActive) && (
+            {(searchTerm || categoryFilter || cfpOnly || startFromMonth || endAtMonth || locationFilter || countryFilter || formatFilter || timingFilter || priceFilterActive) && (
               <button
                 type="button"
                 onClick={() => {
@@ -997,6 +1005,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   setCountryFilter('');
                   setFormatFilter('');
                   setTimingFilter('');
+                  setCategoryFilter('');
+                  setCfpOnly(false);
                   setPriceRange(null);
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
