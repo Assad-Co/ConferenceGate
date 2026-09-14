@@ -1,8 +1,8 @@
-Warning: truncated output (original token count: 513554)
-... 1005639 bytes omitted ...
+Warning: truncated output (original token count: 515629)
+... 1013938 bytes omitted ...
 
 {
-  "generatedAt": "2026-09-14T08:57:52.334Z",
+  "generatedAt": "2026-09-14T08:59:16.703Z",
   "horizonStart": "2026-09-14",
   "years": [
     2026,
@@ -4854,192 +4854,7 @@ Warning: truncated output (original token count: 513554)
         "safetyNote": null,
         "registrationUrl": "https://www.spe-events.org/apogce2026/register-now"
       },
-      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49…172152 tokens truncated…IK Avenue, Jakarta, Indonesia.",
-        "venueAddress": null,
-        "accommodation": null,
-        "program": {
-          "availability": "stated",
-          "text": "Aug 26: 08:00 registration, 09:00–12:00 opening ceremony and HARMONI Awards, followed by conference sessions and expo programming through 19:00. Day 2 continues retail strategy and industry sessions."
-        },
-        "callForPapers": {
-          "status": null,
-          "text": "Official exhibitor and conference participation routes are available through the 2026 summit/expo registration system.",
-          "url": "https://indonesiaretailsummit.com/"
-        },
-        "schedule": {
-          "sessions": [],
-          "themes": []
-        },
-        "keynotes": {
-          "availability": "stated",
-          "items": [],
-          "text": "Dr. Airlangga Hartarto — Coordinating Minister for Economic Affairs, Indonesia; Budihardjo Iduansjah — Chairman, HIPPINDO; Haryanto Pratantara — Head of Committee, Indonesia Retail Summit & Expo 2026; Dr Fetty Kwartati — Head of HARMONI Awards Committee."
-        },
-        "committee": {
-          "availability": "stated",
-          "items": [],
-          "text": "Haryanto Pratantara — Head of Committee, Indonesia Retail Summit & Expo 2026 and Secretary General of HIPPINDO; Dr Fetty Kwartati — Head of HARMONI Awards Committee and Executive Director of HIPPINDO."
-        },
-        "sponsors": {
-          "availability": "unread",
-          "items": [],
-          "text": null
-        },
-        "fees": {
-          "availability": "stated",
-          "items": [],
-          "text": "The official registration platform provides both free Expo Pass and paid Conference Pass ticket categories."
-        },
-        "registrationUrl": "https://register.indonesiaretailsummit.com/"
-      },
-      "logoUrl": null,
-      "imageUrl": null
-    },
-    {
-      "id": "money20-20-middle-east-2026",
-      "title": "Money20/20 Middle East 2026",
-      "acronym": null,
-      "series": "Money20/20 Middle East 2026",
-      "edition": null,
-      "year": 2026,
-      "startDate": "2026-09-14",
-      "endDate": "2026-09-16",
-      "datePrecision": "day",
-      "startMonth": 9,
-      "datesText": null,
-      "city": "Riyadh",
-      "region": null,
-      "country": "Saudi Arabia",
-      "countryCode": null,
-      "worldRegion": null,
-      "venue": "Riyadh Exhibition & Convention Center, Malham, Riyadh.",
-      "format": "in-person",
-      "organization": "Money20/20 / Tahaluf / Fintech Saudi",
-      "category": "Business & Management",
-      "categories": [
-        "Business & Management"
-      ],
-      "topics": [
-        "business",
-        "management"
-      ],
-      "keywords": [
-        "business"
-      ],
-      "description": "Business category: FinTech / Banking / Payments / Investment / Financial Services. Money20/20 Middle East brings banks, fintechs, payment companies, investors, regulators and technology firms together in Riyadh.",
-      "sourceUrl": "https://money2020middleeast.com/2026-speakers | https://money2020middleeast.com/tickets-2026 | https://app.money2020middleeast.com/c/money-2020 | https://ct.com/press-releases/money2020-middle-east-returns-to-riyadh-as-global-fintech-leaders-gather-to-shape-the-future-of-finance",
-      "sourceHost": "money2020middleeast.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://money2020middleeast.com/",
-      "corroboratingSourceUrls": [],
-      "evidence": {
-        "query": "business-csv",
-        "resultTitle": "Money20/20 Middle East 2026",
-        "statedText": "Business category: FinTech / Banking / Payments / Investment / Financial Services. Money20/20 Middle East brings banks, fintechs, payment companies, investors, regulators and technology firms together in Riyadh.",
-        "retrievedAt": "2026-09-14",
-        "method": "curated_list"
-      },
-      "origin": "curated_list",
-      "supply": "curated_list",
-      "provenance": {},
-      "details": {
-        "source": "business-csv-2026-09-14",
-        "venueName": "Riyadh Exhibition & Convention Center, Malham, Riyadh.",
-        "venueAddress": null,
-        "accommodation": null,
-        "program": {
-          "availability": "stated",
-          "text": "The 2026 event uses multiple programme formats and stages including Executive Summit, Boardroom, Next-Gen Money, Off the Record, Bridge and Capital, with keynotes, panels, fireside chats and executive sessions across Sep 14–16."
-        },
-        "callForPapers": {
-          "status": null,
-          "text": null,
-          "url": null
-        },
-        "schedule": {
-          "sessions": [],
-          "themes": []
-        },
-        "keynotes": {
-          "availability": "stated",
-          "items": [],
-          "text": "H.E. Mohammed Aljadaan — Minister of Finance, Saudi Arabia; H.E. Ayman Al-Sayari — Governor, Saudi Central Bank (SAMA); Eng. Naji Al Tamimi — CEO, Insurance Authority."
-        },
-        "committee": {
-          "availability": "unread",
-          "items": [],
-          "text": null
-        },
-        "sponsors": {
-          "availability": "stated",
-          "items": [],
-          "text": "Confirmed partners/sponsors include Visa and Tamara as Founding Partners; BARQ, ELM, Tiqmo and Arab National Bank as strategic sponsors; and Foodics, Hakbah, Gulf International Bank, Safqah Capital and Al Rajhi Takaful among platinum sponsors."
-        },
-        "fees": {
-          "availability": "stated",
-          "items": [],
-          "text": "Published 2026 ticket categories include Expo access from USD 0/50, Silver passes around USD 750–1,200, and Gold access around USD 3,250, depending on ticket phase/category."
-        },
-        "registrationUrl": "https://money2020middleeast.com/tickets-2026"
-      },
-      "logoUrl": null,
-      "imageUrl": null
-    },
-    {
-      "id": "nrf-2026-retail-s-big-show-europe",
-      "title": "NRF 2026: Retail's Big Show Europe",
-      "acronym": null,
-      "series": "NRF 2026: Retail's Big Show Europe",
-      "edition": null,
-      "year": 2026,
-      "startDate": "2026-09-15",
-      "endDate": "2026-09-17",
-      "datePrecision": "day",
-      "startMonth": 9,
-      "datesText": null,
-      "city": "Paris",
-      "region": null,
-      "country": "France",
-      "countryCode": null,
-      "worldRegion": null,
-      "venue": "Paris Expo Porte de Versailles, Paris, France.",
-      "format": "in-person",
-      "organization": "National Retail Federation / Comexposium",
-      "category": "Business & Management",
-      "categories": [
-        "Business & Management"
-      ],
-      "topics": [
-        "business",
-        "management"
-      ],
-      "keywords": [
-        "business"
-      ],
-      "description": "Business category: Retail / E-commerce / Retail Technology / Customer Experience. NRF Retail's Big Show Europe brings retailers, brands and technology providers together around the future of European retail.",
-      "sourceUrl": "https://www.nrfbigshoweurope.com/en/ | https://www.nrfbigshoweurope.com/en/attend | https://www.nrfbigshoweurope.com/fr-FR/agenda",
-      "sourceHost": "www.nrfbigshoweurope.com",
-      "sourceType": "official_site",
-      "officialUrl": "https://www.nrfbigshoweurope.com/en/",
-      "corroboratingSourceUrls": [],
-      "evidence": {
-        "query": "business-csv",
-        "resultTitle": "NRF 2026: Retail's Big Show Europe",
-        "statedText": "Business category: Retail / E-commerce / Retail Technology / Customer Experience. NRF Retail's Big Show Europe brings retailers, brands and technology providers together around the future of European retail.",
-        "retrievedAt": "2026-09-14",
-        "method": "curated_list"
-      },
-      "origin": "curated_list",
-      "supply": "curated_list",
-      "provenance": {},
-      "details": {
-        "source": "business-csv-2026-09-14",
-        "venueName": "Paris Expo Porte de Versailles, Paris, France.",
-        "venueAddress": null,
-        "accommodation": null,
-        "program": {
-          "availability": "stated",
-          "text": "Sep 15–17: full conference programme with keynotes, retail strategy sessions, technology themes, networking, Business Meetings and in-store tours; the official app includes agenda, speakers and sponsors."
+      "logoUrl": "https://cdn.asp.events/CLIENT_SPE__29FE44FF_5056_B733_49…172152 tokens truncated…ponsors."
         },
         "callForPapers": {
           "status": null,
@@ -8941,6 +8756,186 @@ Warning: truncated output (original token count: 513554)
           "text": "Official visitor registration for the 2027 edition is open through the event website."
         },
         "registrationUrl": "https://www.middleeast-energy.com/en/home.html"
+      },
+      "logoUrl": null,
+      "imageUrl": null
+    },
+    {
+      "id": "ecommerce-day-argentina-2026",
+      "title": "eCommerce Day Argentina 2026",
+      "acronym": null,
+      "series": "eCommerce Day Argentina 2026",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-08-27",
+      "endDate": "2026-08-29",
+      "datePrecision": "day",
+      "startMonth": 8,
+      "datesText": null,
+      "city": "Buenos Aires",
+      "region": null,
+      "country": "Argentina",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Centro de Convenciones de Buenos Aires, Av. Pres. Figueroa Alcorta 2099, Buenos Aires, Argentina (main in-person conference Aug 27; associated online/special activities extend through Aug 29).",
+      "format": "in-person",
+      "organization": "eCommerce Institute / Cámara Argentina de Comercio Electrónico (CACE)",
+      "category": "Business & Management",
+      "categories": [
+        "Business & Management"
+      ],
+      "topics": [
+        "business",
+        "management"
+      ],
+      "keywords": [
+        "business"
+      ],
+      "description": "Business category: E-commerce / Retail / Digital Marketing / AI for Business. The 20th Argentina edition focuses on digital commerce, unified commerce, artificial intelligence, retail, customer experience and digital-business transformation.",
+      "sourceUrl": "https://ecommerceday.org.ar/2026/ | https://ecommerceday.org.ar/2026/agenda/ | https://ecommerceday.org.ar/2026/reserva-tu-lugar/",
+      "sourceHost": "ecommerceday.org.ar",
+      "sourceType": "official_site",
+      "officialUrl": "https://ecommerceday.org.ar/2026/",
+      "corroboratingSourceUrls": [],
+      "evidence": {
+        "query": "business-csv",
+        "resultTitle": "eCommerce Day Argentina 2026",
+        "statedText": "Business category: E-commerce / Retail / Digital Marketing / AI for Business. The 20th Argentina edition focuses on digital commerce, unified commerce, artificial intelligence, retail, customer experience and digital-business transformation.",
+        "retrievedAt": "2026-09-14",
+        "method": "curated_list"
+      },
+      "origin": "curated_list",
+      "supply": "curated_list",
+      "provenance": {},
+      "details": {
+        "source": "business-csv-2026-09-14",
+        "venueName": "Centro de Convenciones de Buenos Aires, Av. Pres. Figueroa Alcorta 2099, Buenos Aires, Argentina (main in-person conference Aug 27; associated online/special activities extend through Aug 29).",
+        "venueAddress": null,
+        "accommodation": null,
+        "program": {
+          "availability": "stated",
+          "text": "Aug 27 main conference: 07:45 accreditation; 08:45 plenary opening; 09:00–09:45 unified-commerce AI welcome; 09:50–10:05 digital-ecosystem session; 10:10–10:30 Meta Business Agents case; further plenaries, IT Camp and Meet & Greet programming. Online and special activities continue through Aug 29."
+        },
+        "callForPapers": {
+          "status": null,
+          "text": "The official 2026 agenda includes an application route to participate as a speaker. The edition also ran startup and AI-for-commerce competitions and awards participation.",
+          "url": "https://ecommerceday.org.ar/2026/agenda/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Marcos Pueyrredon — Co-Founder, VTEX & President, eCommerce Institute; Andrés Zaied — President, CACE & Digital Channels Manager, On City; Agustina Fainguersch — Managing Director Spanish Speaking Latam & Miami, Meta; Gloria Crawley-Boevey — VP Personalization LAC, Mastercard; Constanza Reccia Bortolazzi — Head of AI & Business Process Transformation, Santander Argentina."
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null
+        },
+        "sponsors": {
+          "availability": "stated",
+          "items": [],
+          "text": "Programme sessions identify participating/partner brands including Mastercard, Meta and other digital-commerce ecosystem companies; sponsorship opportunities are officially administered by the event."
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "In-person General ARS 200,000; General + AI Manager Program Foundations ARS 285,000 promotional price; VIP ARS 500,000; virtual access Aug 27–29 free. CACE members receive 50% off specified tickets."
+        },
+        "registrationUrl": "https://ecommerceday.org.ar/2026/reserva-tu-lugar/"
+      },
+      "logoUrl": null,
+      "imageUrl": null
+    },
+    {
+      "id": "13th-annual-fintech-banking-summit-2026",
+      "title": "13th Annual FinTech & Banking Summit 2026",
+      "acronym": null,
+      "series": "13th Annual FinTech & Banking Summit 2026",
+      "edition": null,
+      "year": 2026,
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-15",
+      "datePrecision": "day",
+      "startMonth": 10,
+      "datesText": null,
+      "city": "Sydney",
+      "region": null,
+      "country": "Australia",
+      "countryCode": null,
+      "worldRegion": null,
+      "venue": "Ashurst Conference Centre, Level 8, 39 Martin Place, Sydney NSW 2000, Australia.",
+      "format": "in-person",
+      "organization": "FinTech Summit Australia",
+      "category": "Business & Management",
+      "categories": [
+        "Business & Management"
+      ],
+      "topics": [
+        "business",
+        "management"
+      ],
+      "keywords": [
+        "business"
+      ],
+      "description": "Business category: FinTech / Banking / AI for Business / Digital Assets. The 13th annual summit focuses on challenger banking, bank-fintech collaboration, AI in banking and finance, and digital assets/stablecoins/crypto.",
+      "sourceUrl": "https://fintechsummit.com.au/",
+      "sourceHost": "fintechsummit.com.au",
+      "sourceType": "official_site",
+      "officialUrl": "https://fintechsummit.com.au/",
+      "corroboratingSourceUrls": [],
+      "evidence": {
+        "query": "business-csv",
+        "resultTitle": "13th Annual FinTech & Banking Summit 2026",
+        "statedText": "Business category: FinTech / Banking / AI for Business / Digital Assets. The 13th annual summit focuses on challenger banking, bank-fintech collaboration, AI in banking and finance, and digital assets/stablecoins/crypto.",
+        "retrievedAt": "2026-09-14",
+        "method": "curated_list"
+      },
+      "origin": "curated_list",
+      "supply": "curated_list",
+      "provenance": {},
+      "details": {
+        "source": "business-csv-2026-09-14",
+        "venueName": "Ashurst Conference Centre, Level 8, 39 Martin Place, Sydney NSW 2000, Australia.",
+        "venueAddress": null,
+        "accommodation": null,
+        "program": {
+          "availability": "stated",
+          "text": "Published programme includes 09:00–09:30 opening keynote on Open Banking; 09:45–10:15 CDR/Open Banking keynote; 10:30–11:00 Open Banking case-study keynote; 11:15–11:45 Open Banking & CDR panel; additional banking/fintech sessions follow."
+        },
+        "callForPapers": {
+          "status": null,
+          "text": null,
+          "url": null
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": []
+        },
+        "keynotes": {
+          "availability": "stated",
+          "items": [],
+          "text": "Andrew Boyd — General Manager & Head of Digital Native Business, AWS; Senator Andrew Bragg — Australian Senator; Lisa Schutz — Founder & CEO, Verifier; Jill Berry — CEO, Adatree; Josh Foreman — Founder, InDebted."
+        },
+        "committee": {
+          "availability": "unread",
+          "items": [],
+          "text": null
+        },
+        "sponsors": {
+          "availability": "unread",
+          "items": [],
+          "text": null
+        },
+        "fees": {
+          "availability": "stated",
+          "items": [],
+          "text": "Pre-program Early Bird AUD 350 + GST; after programme release: Startups/ScaleUps AUD 500 + GST; FSIs/Banks/Others AUD 700 + GST."
+        },
+        "registrationUrl": "https://fintechsummit.com.au/"
       },
       "logoUrl": null,
       "imageUrl": null
