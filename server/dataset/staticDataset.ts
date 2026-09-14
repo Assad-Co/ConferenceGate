@@ -487,6 +487,23 @@ export function descriptionWorthShowing(record: LaunchConferenceRecord): string 
   return novel.length >= 3 ? text : null;
 }
 
+function derivedCategory(record: LaunchConferenceRecord): string | null {
+  const subject = [record.title, record.description, ...record.topics, ...record.keywords].filter(Boolean).join(" ").toLowerCase();
+  const patterns: Array<[string, RegExp]> = [
+    ["Artificial Intelligence", /artificial intelligence|machine learning|deep learning|\bai\b/],
+    ["Cybersecurity", /cybersecurity|cyber security|information security/],
+    ["Healthcare", /healthcare|medical|medicine|clinical|nursing|pharma/],
+    ["Energy", /energy|renewable|solar|wind power|hydrogen|petroleum|oil and gas|electricity/],
+    ["Environment", /environment|ecolog|climate|conservation/],
+    ["Finance", /finance|banking|fintech|investment/],
+    ["Education", /education|teaching|learning|pedagog|academic|edtech/],
+    ["Engineering", /engineering/],
+    ["Business", /business|management|entrepreneur|commerce|marketing|trade/],
+    ["Science", /science|scientific|physics|chemistry|biology/],
+  ];
+  return patterns.find(([, pattern]) => pattern.test(subject))?.[0] || record.category || null;
+}
+
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
   const place = [record.city, record.country].filter(Boolean).join(", ");
   const when = datesLineFor(record) ?? "";
@@ -506,7 +523,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     // Needed by the mark, which must not head five AAPG events with the society's own name.
     organization: record.organization,
     // What it is about, which is what the drawn banner keys its palette on.
-    category: record.category,
+    category: derivedCategory(record),
     categories: record.categories,
     cfpStatus: (() => {
       const cfp = record.details?.callForPapers;
