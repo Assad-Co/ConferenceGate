@@ -446,7 +446,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [searchSubmitCount, setSearchSubmitCount] = useState(0);
   // "YYYY-MM" — only conferences whose real start date falls in this month or later are shown.
   // Defaults to next month onward (see nextMonthValue above); cleared to '' shows every date.
-  const [startFromMonth, setStartFromMonth] = useState(nextMonthValue());
+  // Start at the catalogue's current supported month so the default browse shows the full
+  // upcoming worldwide inventory instead of silently skipping the current month.
+  const [startFromMonth, setStartFromMonth] = useState(DISCOVERY_MINIMUM_MONTH);
   const [endAtMonth, setEndAtMonth] = useState('');
   const effectiveStartMonth =
     startFromMonth && startFromMonth > DISCOVERY_MINIMUM_MONTH
