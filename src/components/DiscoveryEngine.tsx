@@ -548,7 +548,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     ].filter(Boolean).join(' ').toLowerCase();
     const confCountry = (conf.location?.country || '').toLowerCase();
     const categoryData = conf as Conference & { category?: string; categories?: string[] };
-    const categories = [categoryData.category, ...(categoryData.categories || [])].filter(Boolean).join(' ').toLowerCase();
+    const categories = [categoryData.category, ...(categoryData.categories || []), conf.title, conf.description, ...(conf.topics || [])]
+      .filter(Boolean).join(' ').toLowerCase();
     const rawFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
     const confFormat = rawFormat === 'physical' ? 'inperson' : rawFormat === 'online' ? 'virtual' : rawFormat;
     const duration = conferenceDurationDays(conf.dates.start, conf.dates.end);
@@ -595,7 +596,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       if (wanted === 'inperson' && actual !== 'inperson') return false;
       if (wanted === 'hybrid' && actual !== 'hybrid') return false;
     }
-    if (categoryFilter && !(result.category || '').toLowerCase().includes(categoryFilter.toLowerCase())) return false;
+    if (categoryFilter) {
+      const categoryEvidence = [result.category, result.title, result.description, result.snippet, result.displayLink]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!categoryEvidence.includes(categoryFilter.toLowerCase())) return false;
+    }
     if (cfpOnly) {
       const evidence = [...(result.sections || []), result.title, result.snippet].join(' ').toLowerCase();
       if (!evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
