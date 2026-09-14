@@ -456,7 +456,6 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
 
   return ranked
     .sort((left, right) => right.score - left.score)
-    .slice(0, 20)
     .map(({ result }) => result);
 }
 
@@ -713,7 +712,7 @@ export async function searchConferences(
   // Neither path fetches anything.
   const results = deduplicateStoredConferences([
     ...(await storedConferencesOrEmpty(query)),
-    ...searchLaunchDataset(query),
+    ...searchLaunchDataset(query, Number.MAX_SAFE_INTEGER),
   ]);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
@@ -776,7 +775,7 @@ export async function searchWebForConferenceFactsByProvider(query: string, count
  * contains "academic" AND "technical" AND "2026" — which is why the page opened empty against a
  * database full of conferences. Browsing has no query to match, so it does not run the matcher.
  */
-export async function browseStoredConferences(limit = 60): Promise<LiveSearchResult[]> {
+export async function browseStoredConferences(limit = 10000): Promise<LiveSearchResult[]> {
   const cacheKey = `browse:${limit}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
@@ -798,7 +797,7 @@ export async function browseStoredConferences(limit = 60): Promise<LiveSearchRes
   upcoming.sort((left, right) => left.time - right.time);
   const results = deduplicateStoredConferences(
     [...upcoming, ...rest].map((entry) => entry.result)
-  ).slice(0, Math.max(1, Math.min(limit, 200)));
+  ).slice(0, Math.max(1, Math.min(limit, 10000)));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -846,7 +845,7 @@ braveSearchRouter.get(
     const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
     // Nothing typed: hand back the stored catalogue rather than an empty page.
     if (req.query.browse === "true") {
-      return res.json({ results: await browseStoredConferences(Number(req.query.limit) || 60) });
+      return res.json({ results: await browseStoredConferences(Number(req.query.limit) || 10000) });
     }
     // Discover's default (nothing-typed) view fires several background subject searches at once
     // and marks them low priority so a person's actual typed search always jumps the queue ahead

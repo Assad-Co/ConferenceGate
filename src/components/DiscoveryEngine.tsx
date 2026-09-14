@@ -607,11 +607,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       if (wanted === 'inperson' && actual !== 'inperson') return false;
       if (wanted === 'hybrid' && actual !== 'hybrid') return false;
     }
-    if (categoryFilter) {
-      const categoryEvidence = [result.category, result.title, result.description, result.snippet, result.displayLink]
-        .filter(Boolean).join(' ').toLowerCase();
-      if (!categoryEvidence.includes(categoryFilter.toLowerCase())) return false;
-    }
+    // Category matches are evaluated against the complete stored record on the server.
     if (cfpOnly) {
       const evidence = [...(result.sections || []), result.title, result.snippet].join(' ').toLowerCase();
       if (!evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
@@ -692,7 +688,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             // country filter entirely — so choosing a country filtered the app's own handful of
             // records and silently left all 359 catalogue results in place, or dropped them.
             if (!matchesCountry(result, countryFilter)) continue;
-            const identity = liveResultIdentity(result.title) || result.link;
+            const identity = `${result.link}|${result.title}|${result.startDate || ''}`;
             const existing = byIdentity.get(identity);
             if (!existing) {
               byIdentity.set(identity, result);
@@ -748,21 +744,25 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const submitDiscoverySearch = (term = searchTerm) => {
     const normalized = term.trim();
     if (normalized === 'Virtual conferences') {
+      setCategoryFilter('');
       setFormatFilter('Virtual');
       setCfpOnly(false);
       setSearchInput('');
       setSubmittedSearchTerm('');
     } else if (normalized === 'Open call for papers') {
+      setCategoryFilter('');
       setCfpOnly(true);
       setFormatFilter('');
       setSearchInput('');
       setSubmittedSearchTerm('');
     } else if (DISCOVERY_SUGGESTIONS.slice(0, -2).includes(normalized)) {
       setCategoryFilter(normalized);
+      setFormatFilter('');
       setCfpOnly(false);
       setSearchInput('');
       setSubmittedSearchTerm(normalized);
     } else {
+      setCategoryFilter('');
       setSearchInput(term);
       setSubmittedSearchTerm(normalized);
       setCfpOnly(false);

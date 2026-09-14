@@ -558,7 +558,7 @@ export function browseLaunchDataset(limit = 60, now = new Date()): LaunchSearchR
     .sort((left, right) => left.time - right.time);
   const undated = records.filter((record) => !Number.isFinite(Date.parse(record.startDate || "")));
   return [...dated.map((entry) => entry.record), ...undated]
-    .slice(0, Math.max(1, Math.min(limit, 200)))
+    .slice(0, Math.max(1, Math.min(limit, 10000)))
     .map(toResult);
 }
 

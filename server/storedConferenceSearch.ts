@@ -19,6 +19,36 @@ export interface StoredConferenceSearchFields {
   community?: unknown;
 }
 
+const CATEGORY_PATTERNS: Record<string, string> = {
+  "artificial intelligence": "artificial intelligence|machine learning|deep learning|\\bai\\b",
+  "cybersecurity": "cybersecurity|cyber security|information security|network security",
+  "engineering": "engineering",
+  "healthcare": "healthcare|health care|medical|medicine|clinical|nursing|pharma",
+  "energy": "energy|renewable|solar|wind power|hydrogen|petroleum|oil and gas|electricity",
+  "sustainability": "sustainab|circular economy|decarbon",
+  "business": "business|management|entrepreneur|commerce|marketing|finance|trade",
+  "education": "educat|teaching|learning|pedagog|academic|edtech",
+  "finance": "financ|banking|fintech|investment",
+  "law": "\\blaw\\b|legal|jurisprud",
+  "science": "science|scientific|physics|chemistry|biology",
+  "environment": "environment|ecolog|climate|conservation",
+  "medicine": "medicin|medical|clinical|health|pharma",
+  "agriculture": "agricultur|farming|agronom|crop",
+  "architecture": "architectur|urban design",
+  "arts culture": "\\barts\\b|cultur|humanities",
+  "blockchain": "blockchain|web3|cryptocurrency",
+  "climate": "climate|global warming|decarbon",
+  "data science": "data science|data analytics|big data",
+  "economics": "economic|econometr",
+  "manufacturing": "manufactur|industrial production",
+  "marketing": "marketing|advertising",
+  "mathematics": "mathematic|statistics",
+  "physics": "physics|quantum|photonics",
+  "robotics": "robot|automation",
+  "social sciences": "social science|sociolog|psycholog|anthropolog|political science",
+  "tourism": "tourism|hospitality|travel"
+};
+
 const QUERY_STOP_WORDS = new Set([
   "conference", "conferences", "official", "website", "upcoming", "current",
   "from", "until", "and", "the", "in", "of", "for", "worldwide",
@@ -112,7 +142,12 @@ export function scoreStoredConferenceRecord(
     ]) },
   ];
   const allText = groups.map((group) => group.text).filter(Boolean).join(" ");
-  if (tokens.length > 0 && !tokens.every((token) => tokenMatches(allText, token))) return null;
+  const categoryPattern = CATEGORY_PATTERNS[normalize(query)];
+  if (categoryPattern) {
+    // Classify from the conference subject, not incidental mentions in sponsor rosters or URLs.
+    const subject = groups.slice(0, 3).map((group) => group.text).join(" ");
+    if (!new RegExp(categoryPattern, "i").test(subject)) return null;
+  } else if (tokens.length > 0 && !tokens.every((token) => tokenMatches(allText, token))) return null;
 
   let score = 0;
   for (const token of tokens) {
