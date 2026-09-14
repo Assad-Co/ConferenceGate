@@ -874,12 +874,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         : "Couldn't read this page's full content — the summary above comes from the search result snippet only."}
                     </p>
                   ) : (
-                    !data?.overviewSummary && (
-                      <p className="text-[11px] text-slate-400 italic">
-                        This website was read, but it didn't state a description of itself that
-                        could be quoted — the summary above comes from the search result snippet.
-                      </p>
-                    )
+                    null
                   )}
                 </div>
               </div>
