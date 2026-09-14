@@ -534,7 +534,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     ].filter(Boolean).join(' ').toLowerCase();
     const confCountry = (conf.location?.country || '').toLowerCase();
     const categories = [conf.category, ...(conf.categories || [])].filter(Boolean).join(' ').toLowerCase();
-    const confFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
+    const rawFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
+    const confFormat = rawFormat === 'physical' ? 'inperson' : rawFormat === 'online' ? 'virtual' : rawFormat;
     const duration = conferenceDurationDays(conf.dates.start, conf.dates.end);
     const startDay = new Date(`${conf.dates.start}T12:00:00`).getDay();
     const endDay = new Date(`${conf.dates.end}T12:00:00`).getDay();
@@ -551,7 +552,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (locationTerm && !confLocation.includes(locationTerm)) return false;
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
     if (categoryFilter && !categories.includes(categoryFilter.toLowerCase())) return false;
-    if (formatTerm && confFormat !== formatTerm && !(formatTerm === 'virtual' && confFormat === 'online')) return false;
+    if (formatTerm && confFormat !== formatTerm) return false;
     if (cfpOnly && !conf.cfpStatus) return false;
     if (timingFilter === 'one-day' && duration !== 1) return false;
     if (timingFilter === 'multi-day' && duration < 2) return false;
