@@ -572,6 +572,21 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // Live web results always populate the page — the typed search term if there is one,
   // otherwise a fixed default query so Discover is never empty.
   const [webResults, setWebResults] = useState<LiveSearchResult[] | null>(null);
+  const visibleWebResults = (webResults || []).filter((result) => {
+    if (formatFilter) {
+      const wanted = formatFilter.toLowerCase().replace(/[-\s]+/g, '');
+      const actual = (result.format || '').toLowerCase().replace(/[-\s]+/g, '');
+      if (wanted === 'virtual' && actual !== 'online') return false;
+      if (wanted === 'inperson' && actual !== 'inperson') return false;
+      if (wanted === 'hybrid' && actual !== 'hybrid') return false;
+    }
+    if (categoryFilter && !(result.category || '').toLowerCase().includes(categoryFilter.toLowerCase())) return false;
+    if (cfpOnly) {
+      const evidence = [...(result.sections || []), result.title, result.snippet].join(' ').toLowerCase();
+      if (!evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
+    }
+    return true;
+  });
 
   const locationOptions = useMemo(() => {
     // Built from the conferences actually loaded, never from the static table.
@@ -1253,15 +1268,15 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         )}
 
-        {!webSearchLoading && !webSearchError && webResults && webResults.length === 0 && (
+        {!webSearchLoading && !webSearchError && webResults && visibleWebResults.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <p className="text-xs text-slate-400">No current or upcoming conference websites found. Try different keywords or broader filters.</p>
           </div>
         )}
 
-        {!webSearchError && webResults && webResults.length > 0 && (
+        {!webSearchError && webResults && visibleWebResults.length > 0 && (
           <div className="space-y-6">
-            {webResults.map((result, idx) => (
+            {visibleWebResults.map((result, idx) => (
               <div
                 key={idx}
                 onClick={() => onOpenExternalResult(result)}
