@@ -533,7 +533,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       conf.location?.country,
     ].filter(Boolean).join(' ').toLowerCase();
     const confCountry = (conf.location?.country || '').toLowerCase();
-    const categories = [conf.category, ...(conf.categories || [])].filter(Boolean).join(' ').toLowerCase();
+    const categoryData = conf as Conference & { category?: string; categories?: string[] };
+    const categories = [categoryData.category, ...(categoryData.categories || [])].filter(Boolean).join(' ').toLowerCase();
     const rawFormat = (conf.format || '').toLowerCase().replace(/[-\s]+/g, '');
     const confFormat = rawFormat === 'physical' ? 'inperson' : rawFormat === 'online' ? 'virtual' : rawFormat;
     const duration = conferenceDurationDays(conf.dates.start, conf.dates.end);
