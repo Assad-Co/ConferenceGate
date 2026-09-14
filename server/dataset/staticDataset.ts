@@ -40,7 +40,9 @@ function readJsonFile<T>(fileName: string): T | null {
     const filePath = path.join(directory, fileName);
     try {
       if (!fs.existsSync(filePath)) continue;
-      return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
+      const raw = fs.readFileSync(filePath, "utf8");
+      const jsonStart = raw.indexOf("{");
+      return JSON.parse(jsonStart >= 0 ? raw.slice(jsonStart) : raw) as T;
     } catch (error) {
       // A malformed dataset must degrade to "no static records", never take the server down.
       console.warn(`[launch-dataset] could not read ${filePath}:`, (error as Error).message);
@@ -866,3 +868,4 @@ export function fillGapsFromLaunchRecord(
   };
   return merged;
 }
+
