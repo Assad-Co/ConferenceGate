@@ -117,7 +117,9 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   if (!details) return [];
   const filled: string[] = [];
   if (details.program.availability === "stated" || details.schedule.sessions.length) filled.push("agenda");
-  if (details.callForPapers) filled.push("cfp");
+  const cfp = details.callForPapers;
+  if (cfp && [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text, cfp.url]
+    .some((value) => typeof value === "string" && value.trim().length > 0)) filled.push("cfp");
   if (details.keynotes.availability === "stated") filled.push("speakers");
   if (details.committee.availability === "stated") filled.push("committee");
   if (details.sponsors.availability === "stated") filled.push("sponsors");
@@ -506,7 +508,11 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     // What it is about, which is what the drawn banner keys its palette on.
     category: record.category,
     categories: record.categories,
-    cfpStatus: record.details?.callForPapers?.status || (record.details?.callForPapers ? "Open" : null),
+    cfpStatus: (() => {
+      const cfp = record.details?.callForPapers;
+      return cfp && [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text, cfp.url]
+        .some((value) => typeof value === "string" && value.trim().length > 0) ? (cfp.status || "Published") : null;
+    })(),
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
