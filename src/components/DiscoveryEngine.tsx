@@ -614,8 +614,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     }
     // Category matches are evaluated against the complete stored record on the server.
     if (cfpOnly) {
-      const evidence = [...(result.sections || []), result.title, result.snippet].join(' ').toLowerCase();
-      if (!result.cfpStatus && !evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
+      const evidence = [result.title, result.snippet].join(' ').toLowerCase();
+      if (!result.cfpStatus && !evidence.includes('call for paper')) return false;
     }
     return true;
   });
