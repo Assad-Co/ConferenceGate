@@ -761,7 +761,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       setCategoryFilter(normalized);
       setCfpOnly(false);
       setSearchInput('');
-      setSubmittedSearchTerm('');
+      setSubmittedSearchTerm(normalized);
     } else {
       setSearchInput(term);
       setSubmittedSearchTerm(normalized);
