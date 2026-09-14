@@ -179,7 +179,16 @@ function rankLiveSearchResults(results: LiveSearchResult[], query: string): Live
 const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
   const [failed, setFailed] = React.useState(false);
   const abbreviation = fallbackConferenceAbbreviation(result);
-  const icon = failed ? null : result.favicon;
+  let siteIcon: string | null = result.favicon;
+  if (!siteIcon) {
+    try {
+      const host = new URL(result.link).hostname;
+      if (host) siteIcon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+    } catch {
+      siteIcon = null;
+    }
+  }
+  const icon = failed ? null : siteIcon;
   const isOwnLogo = result.logoSource === 'stated';
 
   if (icon) {
