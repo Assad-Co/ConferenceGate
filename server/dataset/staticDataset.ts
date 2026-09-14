@@ -505,6 +505,8 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     organization: record.organization,
     // What it is about, which is what the drawn banner keys its palette on.
     category: record.category,
+    categories: record.categories,
+    cfpStatus: record.details?.callForPapers?.status || (record.details?.callForPapers ? "Open" : null),
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.

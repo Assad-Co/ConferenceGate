@@ -603,14 +603,19 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (formatFilter) {
       const wanted = formatFilter.toLowerCase().replace(/[-\s]+/g, '');
       const actual = (result.format || '').toLowerCase().replace(/[-\s]+/g, '');
-      if (wanted === 'virtual' && actual !== 'online') return false;
+      if (wanted === 'virtual' && actual !== 'online' && actual !== 'hybrid') return false;
       if (wanted === 'inperson' && actual !== 'inperson') return false;
       if (wanted === 'hybrid' && actual !== 'hybrid') return false;
+    }
+    if (categoryFilter) {
+      const categoryText = [result.category, ...(result.categories || []), result.title, result.description, result.snippet]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!categoryText.includes(categoryFilter.toLowerCase())) return false;
     }
     // Category matches are evaluated against the complete stored record on the server.
     if (cfpOnly) {
       const evidence = [...(result.sections || []), result.title, result.snippet].join(' ').toLowerCase();
-      if (!evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
+      if (!result.cfpStatus && !evidence.includes('call for paper') && !evidence.includes('cfp')) return false;
     }
     return true;
   });

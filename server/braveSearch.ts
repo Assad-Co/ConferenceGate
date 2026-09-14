@@ -26,6 +26,8 @@ export interface LiveSearchResult {
   location?: { city: string | null; country: string | null } | null;
   /** Its subject, and how it is held — the card states both as chips. */
   category?: string | null;
+  categories?: string[];
+  cfpStatus?: string | null;
   format?: "in-person" | "hybrid" | "online" | null;
   /** What the conference is, where the record holds a description of its own. */
   description?: string | null;
