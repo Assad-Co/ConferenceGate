@@ -706,7 +706,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             // to read it — nothing to show, nothing known, and a tab that can only say so. Those
             // are not offered; one line under the strip names them instead, so the page still
             // never implies the conference has no speakers, and says it once rather than six times.
-            .filter((tab) => !UNREAD_ONLY_TABS.has(tab.id) || sectionState(SECTION_OF[tab.id]) !== 'unread')
             .map((tab) => (
             <button
               key={tab.id}
