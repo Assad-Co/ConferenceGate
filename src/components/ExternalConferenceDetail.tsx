@@ -348,11 +348,39 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     setData(null);
     setPollGaveUp(false);
 
-    extractConferenceDetails(result.link, result.title, activeTabRef.current).then((extracted) => {
-      if (cancelled) return;
-      setData(extracted);
-      setLoading(false);
+    // Never leave the detail page behind an infinite spinner. The API helper has its own
+    // request timeout, but the UI also needs a hard upper bound in case a browser/runtime
+    // fails to abort a stalled fetch or a future helper implementation rejects unexpectedly.
+    const timeout = new Promise<ExtractedConferenceDetails>((resolve) => {
+      window.setTimeout(() => resolve({
+        extracted: false,
+        fetchFailed: true,
+        crawlComplete: true,
+        sectionsNotRead: true,
+        sectionAvailability: {},
+        section_notes: {},
+        overview: null,
+        registrationFees: [],
+        agendaSessions: [],
+        speakers: [],
+        committee: [],
+        sponsors: [],
+        hotels: [],
+        cfpTopics: [],
+        socialLinks: [],
+      } as ExtractedConferenceDetails), 4000);
     });
+
+    Promise.race([
+      extractConferenceDetails(result.link, result.title, activeTabRef.current),
+      timeout,
+    ])
+      .catch(() => null)
+      .then((extracted) => {
+        if (cancelled) return;
+        if (extracted) setData(extracted);
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -393,14 +421,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     if (stated) return stated;
     return data?.fetchFailed || data?.sectionsNotRead ? 'unread' : 'stated';
   };
-
-  // The sections nobody managed to read, named once under the tab strip rather than apologised for
-  // inside a tab apiece. A section the organiser has simply not announced is not in here: that was
-  // answered, and its tab says so.
-  const unreadSectionNames = Object.keys(SECTION_LABEL)
-    .filter((tab) => sectionState(SECTION_OF[tab]) === 'unread')
-    .map((tab) => SECTION_LABEL[tab]);
-
 
   /** What to tell the reader about a section holding nothing, given why it holds nothing. */
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
@@ -720,22 +740,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             </button>
           ))}
         </div>
-        {/* Said once, where the missing tabs would have been, instead of six times inside them. */}
-        {unreadSectionNames.length > 0 && (
-          <div className="px-6 pb-4 text-[11px] text-slate-400 leading-relaxed">
-            Not read from this conference&rsquo;s site: {unreadSectionNames.join(', ')}. That is what
-            this catalogue could not retrieve, not a statement that the conference has none.
-            {result.link && (
-              <>
-                {' '}
-                <a href={result.link} target="_blank" rel="noopener noreferrer"
-                   className="text-blue-600 hover:underline font-semibold">
-                  The organiser&rsquo;s site
-                </a>{' '}has them if anywhere does.
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Tab Content Area */}
@@ -1743,3 +1747,4 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     </div>
   );
 };
+
