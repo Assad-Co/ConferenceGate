@@ -12,7 +12,7 @@
     "postinstall": "node scripts/installBrowser.mjs",
     "install:browser": "playwright-core install chromium",
     "discovery": "tsx server/discovery/cli.ts",
-    "automation": "tsx server/discovery/cli.ts automate --target 5000 --published-target 5000 --batch-pages 500 --enrichment-limit 600 --max-search-queries 14 --enrichment-search-queries 6 --max-jina-pages 100 --enrichment-jina-pages 50 --schedule-hours 8 --run-time-budget-ms 3300000 --repeat-for-ms 25200000 --quiet",
+    "automation": "node scripts/repairApifyDiscoveryEvidence.mjs && tsx server/discovery/cli.ts automate --target 5000 --published-target 5000 --batch-pages 500 --enrichment-limit 600 --max-search-queries 14 --enrichment-search-queries 6 --max-jina-pages 100 --enrichment-jina-pages 50 --schedule-hours 8 --run-time-budget-ms 3300000 --repeat-for-ms 25200000 --quiet",
     "test:discovery": "node scripts/runDiscoveryTests.mjs",
     "dataset:build": "tsx server/dataset/cli.ts",
     "dataset:ingest": "tsx server/dataset/ingest.ts",
@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/cookie-parser": "^1.4.10",
+    "@types/cookie-parser": "^2.4.10",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.14.0",
