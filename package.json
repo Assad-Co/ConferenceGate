@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "node scripts/patchImportedPublicationGuards.mjs && node scripts/patchLinkedInProfileUI.mjs && node scripts/patchLinkedInQuickJoin.mjs && node scripts/patchConferenceImageIntegration.mjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "node scripts/patchImportedPublicationGuards.mjs && node scripts/patchLinkedInProfileUI.mjs && node scripts/patchLinkedInQuickJoin.mjs && node scripts/patchLinkedInConferenceSignals.mjs && node scripts/patchConferenceImageIntegration.mjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node scripts/repairApifyDiscoveryEvidence.mjs && node scripts/importApifyValidated.mjs && node scripts/importLinkedInValidated.mjs && (node scripts/enrichConferenceImages.mjs || true) && node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
