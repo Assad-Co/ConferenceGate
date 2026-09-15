@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Loader2, AlertCircle } from 'lucide-react';
+import { X, Loader2, AlertCircle, Linkedin, CheckCircle2 } from 'lucide-react';
+import { refreshLinkedInProfileEnrichment } from '../api/linkedinProfile';
 
 export interface EditProfileValues {
   name: string;
@@ -71,10 +72,51 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [linkedinUrl, setLinkedinUrl] = useState(initialValues.linkedinUrl);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [linkedinImporting, setLinkedinImporting] = useState(false);
+  const [linkedinImportError, setLinkedinImportError] = useState<string | null>(null);
+  const [linkedinImportSummary, setLinkedinImportSummary] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const copy = VARIANT_COPY[variant];
+
+  const handleLinkedInImport = async () => {
+    if (!linkedinUrl.trim()) {
+      setLinkedinImportError('Enter your LinkedIn profile URL or username first.');
+      return;
+    }
+
+    setLinkedinImportError(null);
+    setLinkedinImportSummary(null);
+    setLinkedinImporting(true);
+
+    try {
+      const result = await refreshLinkedInProfileEnrichment(linkedinUrl.trim());
+      const profile = result.profile;
+
+      setLinkedinUrl(profile.linkedinUrl || linkedinUrl);
+
+      // Never silently replace fields the member has already written. Import only fills blanks;
+      // the full professional history is stored separately with LinkedIn provenance.
+      if (!title.trim() && profile.currentTitle) setTitle(profile.currentTitle);
+      if (!organization.trim() && profile.currentOrganization) setOrganization(profile.currentOrganization);
+      if (!city.trim() && profile.city) setCity(profile.city);
+      if (!country.trim() && profile.country) setCountry(profile.country);
+      if (!bio.trim() && profile.about) setBio(profile.about.slice(0, 600));
+
+      const parts = [
+        `${result.counts.experience} experience`,
+        `${result.counts.education} education`,
+        `${result.counts.publications} publication${result.counts.publications === 1 ? '' : 's'}`,
+        `${result.counts.patents} patent${result.counts.patents === 1 ? '' : 's'}`,
+      ];
+      setLinkedinImportSummary(`Imported ${parts.join(' · ')}`);
+    } catch (err: any) {
+      setLinkedinImportError(err?.message || 'Could not import your LinkedIn profile. Please try again.');
+    } finally {
+      setLinkedinImporting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +148,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
           <h2 className="text-lg font-extrabold text-slate-900">{copy.title}</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
@@ -178,10 +220,48 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             <input
               type="text"
               value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
+              onChange={(e) => {
+                setLinkedinUrl(e.target.value);
+                setLinkedinImportError(null);
+                setLinkedinImportSummary(null);
+              }}
               placeholder="e.g. jane-smith or linkedin.com/in/jane-smith"
               className={inputClass}
             />
+
+            {variant === 'professional' && (
+              <div className="mt-2.5">
+                <button
+                  type="button"
+                  onClick={handleLinkedInImport}
+                  disabled={linkedinImporting || saving || !linkedinUrl.trim()}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0959a8] disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer"
+                >
+                  {linkedinImporting
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Linkedin className="w-4 h-4" />}
+                  {linkedinImporting ? 'Importing LinkedIn profile…' : 'Import professional profile'}
+                </button>
+                <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400">
+                  With your click, ConferenceGate imports public professional data from this profile:
+                  experience, education, publications, patents and certifications. Existing fields are not overwritten.
+                </p>
+              </div>
+            )}
+
+            {linkedinImportSummary && (
+              <div className="mt-2 flex items-start gap-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{linkedinImportSummary}</span>
+              </div>
+            )}
+
+            {linkedinImportError && (
+              <div className="mt-2 flex items-start gap-2 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{linkedinImportError}</span>
+              </div>
+            )}
           </div>
           <div>
             <label className={labelClass}>{copy.bioLabel}</label>
@@ -213,7 +293,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || linkedinImporting}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white font-bold text-sm rounded-full transition-colors cursor-pointer"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
