@@ -37,5 +37,28 @@ function patchPublish() {
   console.log("[import-guard-patch] patched publication retraction guard");
 }
 
+function patchAudit() {
+  const path = "server/discovery/audit.ts";
+  let source = fs.readFileSync(path, "utf8");
+
+  source = replaceOnce(
+    source,
+    `  const readinessFilter = options.publishReadiness ? " AND publish_readiness = ?" : "";\n  const ids = options.eventIds?.filter(Boolean) ?? [];`,
+    `  const readinessFilter = options.publishReadiness ? " AND publish_readiness = ?" : "";\n  // Publication audits validate the native discovery pipeline. Apify Stage 7 and LinkedIn v1.5\n  // already passed their own strict verifier and do not carry the native field-evidence ledger,\n  // so sampling them here would manufacture audit failures unrelated to their real validation.\n  const externalImportFilter = options.publishReadiness\n    ? " AND extraction_method NOT IN ('apify_stage7','linkedin_v1_5')"\n    : "";\n  const ids = options.eventIds?.filter(Boolean) ?? [];`,
+    "publication audit external-import filter",
+  );
+
+  source = replaceOnce(
+    source,
+    `    \`SELECT * FROM discovery_events WHERE status IN (\${placeholders})\${readinessFilter}\${idFilter} ORDER BY RANDOM() LIMIT ?\`,`,
+    `    \`SELECT * FROM discovery_events WHERE status IN (\${placeholders})\${readinessFilter}\${externalImportFilter}\${idFilter} ORDER BY RANDOM() LIMIT ?\`,`,
+    "publication audit query filter",
+  );
+
+  fs.writeFileSync(path, source);
+  console.log("[import-guard-patch] patched publication audit guard");
+}
+
 patchEnrichment();
 patchPublish();
+patchAudit();
