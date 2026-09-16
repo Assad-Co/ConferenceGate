@@ -10,6 +10,18 @@ function replaceOnce(before, after, label) {
   source = source.slice(0, index) + after + source.slice(index + before.length);
 }
 
+function replaceOneOf(befores, after, label) {
+  if (source.includes(after)) return;
+  for (const before of befores) {
+    const index = source.indexOf(before);
+    if (index !== -1) {
+      source = source.slice(0, index) + after + source.slice(index + before.length);
+      return;
+    }
+  }
+  throw new Error(`[linkedin-deep-refinement] anchor not found (${label})`);
+}
+
 replaceOnce(
 `function explicitRegistrationClaim(value: string): boolean {
   return /\\b(?:i(?:'|’)m\\s+registered|i\\s+(?:registered|have registered)|registered for|my registration (?:is|was) confirmed|registration confirmed for me|see you at)\\b/i.test(value);
@@ -20,21 +32,7 @@ replaceOnce(
   'registration must remain first-person',
 );
 
-replaceOnce(
-`    conferenceActivity.push({
-      id,
-      kind,
-      label,
-      role: memberClaimed ? role : null,
-      year,
-      sourceUrl,
-      evidenceText: content.length > 900 ? content.slice(0, 897) + "…" : content,
-      confidence,
-      memberClaimed,
-      repostOrQuote,
-      verified: false,
-    });`,
-`    const richEvidence = content.length > 900 ? content.slice(0, 897) + "…" : content;
+const refinedConferencePush = `    const richEvidence = content.length > 900 ? content.slice(0, 897) + "…" : content;
     conferenceActivity.push({
       id,
       kind,
@@ -79,7 +77,38 @@ replaceOnce(
     addSupplemental("PATENT", hasPatent, !repostOrQuote && explicitPatentClaim(content), !repostOrQuote && explicitPatentClaim(content) ? 96 : repostOrQuote ? 55 : 76);
     addSupplemental("PUBLICATION", hasPublication, !repostOrQuote && explicitPublicationClaim(content), !repostOrQuote && explicitPublicationClaim(content) ? 95 : repostOrQuote ? 55 : 76);
     addSupplemental("CERTIFICATE", hasCertificate, !repostOrQuote && explicitCertificateClaim(content), !repostOrQuote && explicitCertificateClaim(content) ? 94 : repostOrQuote ? 52 : hasMedia ? 78 : 70);
-    addSupplemental("AWARD", hasAward && !hasCertificate, !repostOrQuote && selfClaim, !repostOrQuote && selfClaim ? 91 : repostOrQuote ? 52 : 74);`,
+    addSupplemental("AWARD", hasAward && !hasCertificate, !repostOrQuote && selfClaim, !repostOrQuote && selfClaim ? 91 : repostOrQuote ? 52 : 74);`;
+
+replaceOneOf(
+  [
+`    conferenceActivity.push({
+      id,
+      kind,
+      label,
+      role: memberClaimed ? role : null,
+      year,
+      sourceUrl,
+      evidenceText: content.length > 900 ? content.slice(0, 897) + "…" : content,
+      confidence,
+      memberClaimed,
+      repostOrQuote,
+      verified: false,
+    });`,
+`    conferenceActivity.push({
+      id,
+      kind,
+      label,
+      role: memberClaimed ? role : null,
+      year,
+      sourceUrl,
+      evidenceText: label,
+      confidence,
+      memberClaimed,
+      repostOrQuote,
+      verified: false,
+    });`,
+  ],
+  refinedConferencePush,
   'multiple achievements per post and richer evidence',
 );
 
