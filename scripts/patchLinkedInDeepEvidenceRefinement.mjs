@@ -28,13 +28,13 @@ replaceOnce(
       role: memberClaimed ? role : null,
       year,
       sourceUrl,
-      evidenceText: label,
+      evidenceText: content.length > 900 ? content.slice(0, 897) + "…" : content,
       confidence,
       memberClaimed,
       repostOrQuote,
       verified: false,
     });`,
-`    const richEvidence = content.length > 900 ? \`${'${content.slice(0, 897)}'}…\` : content;
+`    const richEvidence = content.length > 900 ? content.slice(0, 897) + "…" : content;
     conferenceActivity.push({
       id,
       kind,
@@ -60,7 +60,7 @@ replaceOnce(
     ) => {
       if (!present || supplementalKind === kind) return;
       conferenceActivity.push({
-        id: \`${'${id}'}:${'${supplementalKind.toLowerCase()}'}\`,
+        id: id + ":" + supplementalKind.toLowerCase(),
         kind: supplementalKind,
         label,
         role: null,
