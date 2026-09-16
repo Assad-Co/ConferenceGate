@@ -101,21 +101,8 @@ patchFile('server/linkedinConferenceActivityBootstrap.ts', [
     'accept only LinkedIn person-photo URLs',
   ],
   [
-`    await dbRun(
-      `UPDATE users SET avatar = CASE
-         WHEN COALESCE(TRIM(avatar), '') = '' OR avatar LIKE 'data:image/svg+xml%' THEN ?
-         ELSE avatar
-       END
-       WHERE id = ?`,
-      [avatarValue, userId],
-    );`,
-`    // Refresh LinkedIn is an explicit sync action. Once the author identity matches the requested
-    // profile exactly, use that portrait to repair any stale/wrong auto-imported logo. Members can
-    // still use Change Photo afterwards if they prefer a custom image.
-    await dbRun(
-      `UPDATE users SET avatar = ? WHERE id = ?`,
-      [avatarValue, userId],
-    );`,
+    "    await dbRun(\n      `UPDATE users SET avatar = CASE\n         WHEN COALESCE(TRIM(avatar), '') = '' OR avatar LIKE 'data:image/svg+xml%' THEN ?\n         ELSE avatar\n       END\n       WHERE id = ?`,\n      [avatarValue, userId],\n    );",
+    "    // Refresh LinkedIn is an explicit sync action. Once the author identity matches the requested\n    // profile exactly, use that portrait to repair any stale/wrong auto-imported logo. Members can\n    // still use Change Photo afterwards if they prefer a custom image.\n    await dbRun(\n      `UPDATE users SET avatar = ? WHERE id = ?`,\n      [avatarValue, userId],\n    );",
     'replace stale auto-imported logo with exact member portrait',
   ],
 ]);
