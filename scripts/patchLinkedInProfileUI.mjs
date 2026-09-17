@@ -87,6 +87,9 @@ patchFile('src/components/EditProfileModal.tsx', [
   ],
 ]);
 
+// Public-URL-only LinkedIn UX. This button never starts OAuth. It simply moves the user to
+// the signup form where they paste their public linkedin.com/in/... URL; the existing onboarding
+// import then builds the profile automatically.
 patchFile('src/components/auth/LinkedInSignInButton.tsx', [
   [
     "interface LinkedInSignInButtonProps {\n  text?: 'signin_with' | 'signup_with';\n}",
@@ -94,8 +97,8 @@ patchFile('src/components/auth/LinkedInSignInButton.tsx', [
     'fallback prop',
   ],
   [
-    "export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with' }) => {\n  if (!CLIENT_ID) return null;",
-    "export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with', onUnavailable }) => {\n  if (!CLIENT_ID) {\n    return (\n      <button\n        type=\"button\"\n        onClick={onUnavailable}\n        className=\"w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-bold rounded-full transition-colors cursor-pointer\"\n      >\n        <Linkedin className=\"w-4 h-4 text-[#0A66C2]\" />\n        Use public LinkedIn profile\n      </button>\n    );\n  }",
-    'visible fallback button',
+    "export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with' }) => {\n  if (!CLIENT_ID) return null;\n\n  return (\n    <a\n      href=\"/api/auth/linkedin/start\"\n      className=\"w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-bold rounded-full transition-colors cursor-pointer\"\n    >\n      <Linkedin className=\"w-4 h-4 text-[#0A66C2]\" />\n      {text === 'signup_with' ? 'Sign up with LinkedIn' : 'Sign in with LinkedIn'}\n    </a>\n  );\n};",
+    "export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with', onUnavailable }) => {\n  return (\n    <button\n      type=\"button\"\n      onClick={onUnavailable}\n      className=\"w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-bold rounded-full transition-colors cursor-pointer\"\n    >\n      <Linkedin className=\"w-4 h-4 text-[#0A66C2]\" />\n      {text === 'signup_with' ? 'Build profile from LinkedIn' : 'Use public LinkedIn profile'}\n    </button>\n  );\n};",
+    'public URL fallback button',
   ],
 ]);
