@@ -15,6 +15,9 @@ function replaceOnce(source, before, after, label, path) {
 }
 
 // 1) Restore automatic avatar writes from the identity-checked public LinkedIn profile import.
+//    Also support the actual HarvestAPI output field `avatarUrl` (plus `avatar`) before the older
+//    photo/profilePicture aliases. The earlier code never read avatarUrl, so valid portraits could
+//    be present in the provider response while ConferenceGate still displayed generated initials.
 {
   const path = 'server/linkedinProfileBootstrap.ts';
   let source = fs.readFileSync(path, 'utf8');
@@ -40,8 +43,41 @@ function replaceOnce(source, before, after, label, path) {
     throw new Error('[linkedin-auto-avatar] final avatar SQL block not found');
   }
 
+  const providerPhotoBefore = [
+    '  const providerProfilePhotoUrl = [',
+    '    imageUrlFrom(profile.photo),',
+  ].join('\n');
+
+  const providerPhotoAfter = [
+    '  const providerProfilePhotoUrl = [',
+    '    imageUrlFrom(profile.avatarUrl),',
+    '    imageUrlFrom(profile.avatar),',
+    '    imageUrlFrom(profile.photo),',
+  ].join('\n');
+
+  if (!source.includes(providerPhotoAfter)) {
+    if (source.includes(providerPhotoBefore)) {
+      source = source.replace(providerPhotoBefore, providerPhotoAfter);
+    } else {
+      console.warn('[linkedin-auto-avatar] provider photo list shape changed; avatarUrl alias was not inserted');
+    }
+  }
+
+  // Keep the temporary signed-in diagnostic useful if it is present in this build.
+  const diagnosticBefore = [
+    '      describePhotoField("photo", profile.photo),',
+  ].join('\n');
+  const diagnosticAfter = [
+    '      describePhotoField("avatarUrl", profile.avatarUrl),',
+    '      describePhotoField("avatar", profile.avatar),',
+    '      describePhotoField("photo", profile.photo),',
+  ].join('\n');
+  if (!source.includes(diagnosticAfter) && source.includes(diagnosticBefore)) {
+    source = source.replace(diagnosticBefore, diagnosticAfter);
+  }
+
   fs.writeFileSync(path, source);
-  console.log('[linkedin-auto-avatar] public LinkedIn profile import now sets the ConferenceGate avatar automatically');
+  console.log('[linkedin-auto-avatar] public LinkedIn profile import reads avatarUrl and sets the ConferenceGate avatar automatically');
 }
 
 // 2) Remove the separate Sync LinkedIn Photo control. The public URL flow is the primary UX.
@@ -68,8 +104,8 @@ function replaceOnce(source, before, after, label, path) {
   console.log('[linkedin-auto-avatar] removed redundant Sync LinkedIn Photo button');
 }
 
-// 3) One-time background repair for existing accounts that already have a LinkedIn URL but
-// still show generated initials. This runs once per browser session and does not block login.
+// 3) Background repair for existing accounts that already have a LinkedIn URL but still show
+// generated initials. The versioned key intentionally forces one fresh attempt after this fix.
 {
   const path = 'src/App.tsx';
   let source = fs.readFileSync(path, 'utf8');
@@ -106,12 +142,17 @@ function replaceOnce(source, before, after, label, path) {
     '          user.linkedinUrl && (!user.avatar || user.avatar.startsWith("data:image/svg+xml"))',
     '        );',
     '        if (needsLinkedInAvatar) {',
-    '          const repairKey = `cg_linkedin_avatar_repair:${user.id}`;',
+    '          const repairKey = `cg_linkedin_avatar_repair_v2:${user.id}`;',
     '          if (!sessionStorage.getItem(repairKey)) {',
     '            sessionStorage.setItem(repairKey, "1");',
-    '            syncLinkedInOnboarding(user.linkedinUrl!).catch(() => {',
-    '              // Non-blocking. Signup/login still succeeds even if the provider is temporarily unavailable.',
-    '            });',
+    '            syncLinkedInOnboarding(user.linkedinUrl!)',
+    '              .then(() => fetchCurrentUser())',
+    '              .then((refreshedUser) => {',
+    '                if (refreshedUser) applyAuthUser(refreshedUser);',
+    '              })',
+    '              .catch(() => {',
+    '                // Non-blocking. Signup/login still succeeds even if the provider is temporarily unavailable.',
+    '              });',
     '          }',
     '        }',
     '      })',
@@ -121,5 +162,5 @@ function replaceOnce(source, before, after, label, path) {
 
   source = replaceOnce(source, before, after, 'automatic repair after login', path);
   fs.writeFileSync(path, source);
-  console.log('[linkedin-auto-avatar] existing LinkedIn accounts auto-repair missing profile photos in the background');
+  console.log('[linkedin-auto-avatar] existing LinkedIn accounts auto-repair missing profile photos and refresh the live UI');
 }
