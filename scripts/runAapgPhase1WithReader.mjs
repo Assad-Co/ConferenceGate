@@ -1,10 +1,12 @@
 // AAPG blocks plain Render fetches with HTTP 403. Phase 1 still needs to run from the
-// production service, so this wrapper preserves the normal direct-fetch path and transparently
-// retries refused AAPG pages through Jina Reader. The existing importer remains the authority for
-// parsing, validation, tabs, logos, and database writes.
+// production service, so this wrapper routes AAPG-owned pages through Jina Reader first and
+// falls back to a normal fetch only if the hosted reader fails. The existing importer remains
+// the authority for parsing, validation, tabs, logos, and database writes.
 
 const nativeFetch = globalThis.fetch.bind(globalThis);
 const JINA_TIMEOUT_MS = 18000;
+
+console.log('[aapg-phase1-v3] reader-first bootstrap active');
 
 function escapeHtml(value = "") {
   return String(value)
@@ -15,8 +17,6 @@ function escapeHtml(value = "") {
 }
 
 function inlineMarkdown(value = "") {
-  // Protect images and links before escaping ordinary text. Jina returns absolute URLs for most
-  // targets; relative links are still resolved by the existing importer against the AAPG page.
   const tokens = [];
   let text = String(value)
     .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_, alt, url) => {
@@ -113,23 +113,24 @@ globalThis.fetch = async function conferenceGateAapgFetch(input, init) {
   if (!isAapgPage(input)) return nativeFetch(input, init);
 
   try {
-    const direct = await nativeFetch(input, init);
-    if (direct.ok) return direct;
-    if (![401, 403, 429, 503].includes(direct.status)) return direct;
-    console.log(`[aapg-phase1] direct ${direct.status}; retrying via Jina Reader ${rawUrl}`);
-  } catch (error) {
-    console.log(`[aapg-phase1] direct fetch failed; retrying via Jina Reader ${rawUrl}: ${error?.message || error}`);
-  }
-
-  try {
     const html = await readViaJina(rawUrl);
-    console.log(`[aapg-phase1] Jina recovered ${rawUrl} chars=${html.length}`);
+    console.log(`[aapg-phase1-v3] Jina recovered ${rawUrl} chars=${html.length}`);
     return new Response(html, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8", "x-conferencegate-reader": "jina" },
     });
   } catch (error) {
-    console.warn(`[aapg-phase1] Jina fallback failed ${rawUrl}: ${error?.message || error}`);
+    console.warn(`[aapg-phase1-v3] Jina failed ${rawUrl}: ${error?.message || error}; trying direct`);
+  }
+
+  try {
+    const direct = await nativeFetch(input, init);
+    if (!direct.ok) {
+      console.warn(`[aapg-phase1-v3] direct fallback ${direct.status} ${rawUrl}`);
+    }
+    return direct;
+  } catch (error) {
+    console.warn(`[aapg-phase1-v3] all routes failed ${rawUrl}: ${error?.message || error}`);
     return new Response("AAPG page unavailable", { status: 502, headers: { "content-type": "text/plain" } });
   }
 };
