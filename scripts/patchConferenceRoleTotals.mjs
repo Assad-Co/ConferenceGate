@@ -46,13 +46,19 @@ const countAfter = `${countAnchor}
   const totalConferenceRoleCount = Math.max(uniqueStrongRoleSignals.length, categorizedConferenceRoleCount);`;
 replaceOnce(countAnchor, countAfter, 'conference role totals');
 
-// Top profile summary: display all conference roles, not only committee positions.
-const topBefore = `<div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
-            <div className="text-xl font-extrabold text-indigo-700">{committeePositionCount} Positions</div>`;
+// Top profile summary: the base component may still reference the original contribution directly,
+// while a prior patch may already have converted it to committeePositionCount. Accept both forms.
+const topBeforeCandidates = [
+  `<div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
+            <div className="text-xl font-extrabold text-indigo-700">{committeePositionCount} Positions</div>`,
+  `<div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
+            <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees} Positions</div>`,
+];
 const topAfter = `<div className="text-[10px] font-bold text-slate-400 uppercase">Conference Roles</div>
             <div className="text-xl font-extrabold text-indigo-700">{totalConferenceRoleCount} Roles</div>`;
 if (!source.includes(topAfter)) {
-  if (!source.includes(topBefore)) throw new Error('[conference-role-totals] top role summary anchor not found');
+  const topBefore = topBeforeCandidates.find((candidate) => source.includes(candidate));
+  if (!topBefore) throw new Error('[conference-role-totals] top role summary anchor not found');
   source = source.replace(topBefore, topAfter);
 }
 
