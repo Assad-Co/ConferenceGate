@@ -1,9 +1,11 @@
 import fs from 'node:fs';
 
-// Full-history LinkedIn conference evidence for every ConferenceGate member who supplied a
-// public linkedin.com/in/... URL. HarvestAPI documents maxPosts=0 as "scrape all posts".
-// This patch runs LAST among the LinkedIn patches so it can safely upgrade the final generated
-// server/client behavior without disturbing older migration patches.
+// Complete public LinkedIn conference-history scan for every ConferenceGate member who supplied a
+// linkedin.com/in/... URL. HarvestAPI documents maxPosts=0 as "scrape all posts". A server-side
+// source version makes this a one-time historical backfill per account (across devices), while
+// future logins only perform a cheap status read unless the scan failed or the version changes.
+
+const FULL_HISTORY_SOURCE_ACTOR = 'harvestapi/linkedin-profile-posts:all-v1';
 
 // ---------------------------------------------------------------------------
 // 1) SERVER: ask the public-profile posts actor for the complete available history.
@@ -12,16 +14,21 @@ import fs from 'node:fs';
   const path = 'server/linkedinConferenceActivityBootstrap.ts';
   let source = fs.readFileSync(path, 'utf8');
 
-  // The role-integration patch previously raised the scan to 1000. Zero is the provider's
-  // documented all-posts mode and overrides pagination.
   if (source.includes('const MAX_POSTS = 1000;')) {
     source = source.replace('const MAX_POSTS = 1000;', 'const MAX_POSTS = 0;');
   } else if (!source.includes('const MAX_POSTS = 0;')) {
     throw new Error('[linkedin-all-posts] MAX_POSTS anchor not found');
   }
 
-  // maxItems=0 on the synchronous dataset endpoint is ambiguous and can suppress output.
-  // In all-posts mode let the actor return its complete dataset instead.
+  const actorBefore = 'const SOURCE_ACTOR = "harvestapi/linkedin-profile-posts";';
+  const actorAfter = `const SOURCE_ACTOR = "${FULL_HISTORY_SOURCE_ACTOR}";`;
+  if (!source.includes(actorAfter)) {
+    if (!source.includes(actorBefore)) throw new Error('[linkedin-all-posts] SOURCE_ACTOR anchor not found');
+    source = source.replace(actorBefore, actorAfter);
+  }
+
+  // maxItems=0 on the dataset endpoint can suppress the response. In all-posts mode simply omit
+  // that output limiter and let the actor return the complete dataset it scraped.
   const maxItemsBefore = '    endpoint.searchParams.set("maxItems", String(MAX_POSTS));';
   const maxItemsAfter = '    if (MAX_POSTS > 0) endpoint.searchParams.set("maxItems", String(MAX_POSTS));';
   if (!source.includes(maxItemsAfter)) {
@@ -29,9 +36,9 @@ import fs from 'node:fs';
     source = source.replace(maxItemsBefore, maxItemsAfter);
   }
 
-  // A hard request-level charge ceiling can stop an all-history run before the oldest posts are
-  // reached. Complete history is therefore the default. Operators can still set an explicit cap
-  // in Render with LINKEDIN_POST_SCAN_MAX_CHARGE_USD if they later want one.
+  // Do not silently truncate old history with the previous hard charge ceiling. Complete history
+  // is the default; an operator can explicitly set LINKEDIN_POST_SCAN_MAX_CHARGE_USD in Render if
+  // a budget ceiling is wanted later.
   const chargeCandidates = [
     '    endpoint.searchParams.set("maxTotalChargeUsd", "2.50");',
     '    endpoint.searchParams.set("maxTotalChargeUsd", "1.20");',
@@ -56,82 +63,73 @@ import fs from 'node:fs';
     source = source.replace(postsAnchor, postsAfter);
   }
 
+  // Classification still examines every returned post, but raw_posts persists only posts that
+  // generated useful ConferenceGate evidence. This keeps Turso rows small enough to scale across
+  // many members while preserving all evidence-bearing source records for diagnostics.
+  const classifyAnchor = '  const { conferenceActivity, callsForPapers } = classifyPosts(posts, requestedUrl);';
+  if (!source.includes('const relevantRawLinkedInPosts = posts.filter')) {
+    const relevantBlock = `${classifyAnchor}
+  const relevantRawPostIds = new Set(
+    [...conferenceActivity, ...callsForPapers].map((item: any) => String(item.id || '').split(':')[0]).filter(Boolean),
+  );
+  const relevantRawLinkedInPosts = posts.filter((post, index) => relevantRawPostIds.has(postId(post, index)));`;
+    if (!source.includes(classifyAnchor)) throw new Error('[linkedin-all-posts] classify result anchor not found');
+    source = source.replace(classifyAnchor, relevantBlock);
+  }
+
+  const rawStoreBefore = '      JSON.stringify(posts),';
+  const rawStoreAfter = '      JSON.stringify(relevantRawLinkedInPosts),';
+  if (!source.includes(rawStoreAfter)) {
+    if (!source.includes(rawStoreBefore)) throw new Error('[linkedin-all-posts] raw_posts storage anchor not found');
+    source = source.replace(rawStoreBefore, rawStoreAfter);
+  }
+
   fs.writeFileSync(path, source);
   console.log('[linkedin-all-posts] server configured for complete available public LinkedIn post history');
 }
 
 // ---------------------------------------------------------------------------
-// 2) ONBOARDING: when a new member supplies a LinkedIn URL, remember that the complete-history
-//    conference scan succeeded. This prevents an immediate duplicate scan when App mounts.
-// ---------------------------------------------------------------------------
-{
-  const path = 'src/api/linkedinOnboarding.ts';
-  let source = fs.readFileSync(path, 'utf8');
-
-  const returnAnchor = `  return {
-    profile: profileResult.status === 'fulfilled' ? profileResult.value : null,
-    conference: conferenceResult.status === 'fulfilled' ? conferenceResult.value : null,
-    warnings,
-  };`;
-
-  if (!source.includes('cg_linkedin_all_posts_v1:')) {
-    const replacement = `  const conference = conferenceResult.status === 'fulfilled' ? conferenceResult.value : null;
-  if (conference && typeof window !== 'undefined') {
-    const normalizedUrl = linkedinUrl.trim().toLowerCase().replace(/\\/+$/, '');
-    localStorage.setItem('cg_linkedin_all_posts_v1:' + normalizedUrl, new Date().toISOString());
-    window.dispatchEvent(new CustomEvent('conferencegate:linkedin-activity-refreshed', { detail: conference.activity }));
-  }
-
-  return {
-    profile: profileResult.status === 'fulfilled' ? profileResult.value : null,
-    conference,
-    warnings,
-  };`;
-    if (!source.includes(returnAnchor)) throw new Error('[linkedin-all-posts] onboarding return anchor not found');
-    source = source.replace(returnAnchor, replacement);
-  }
-
-  fs.writeFileSync(path, source);
-  console.log('[linkedin-all-posts] onboarding marks successful complete-history scans');
-}
-
-// ---------------------------------------------------------------------------
-// 3) APP: every existing ConferenceGate account with a public LinkedIn URL gets one automatic
-//    full-history backfill on first use of this version. New accounts are already marked by the
-//    onboarding step above. Failures remove no permanent marker, so a later login/reload retries.
+// 2) APP: every account with a LinkedIn URL checks whether its stored conference evidence came
+//    from the all-history scanner. Existing/legacy accounts get one automatic full backfill;
+//    already-migrated accounts do not pay for a repeated scan on later sign-ins or other devices.
 // ---------------------------------------------------------------------------
 {
   const path = 'src/App.tsx';
   let source = fs.readFileSync(path, 'utf8');
 
   const onboardingImport = "import { syncLinkedInOnboarding } from './api/linkedinOnboarding';";
-  const activityImport = "import { refreshLinkedInConferenceActivity } from './api/linkedinConferenceActivity';";
+  const activityImport = "import { fetchLinkedInConferenceActivity, refreshLinkedInConferenceActivity } from './api/linkedinConferenceActivity';";
   if (!source.includes(activityImport)) {
     if (!source.includes(onboardingImport)) throw new Error('[linkedin-all-posts] App onboarding import anchor not found');
     source = source.replace(onboardingImport, onboardingImport + '\n' + activityImport);
   }
 
   const logoutAnchor = '  const handleLogout = async () => {';
-  if (!source.includes('cg_linkedin_all_posts_v1:')) {
-    const block = `  // Complete LinkedIn conference-history backfill for every account that has supplied a public
-  // profile URL. It runs in the background and never blocks sign-in or the rest of ConferenceGate.
-  // A browser-local version marker prevents paying for the same full historical scan on every page
-  // load; a failed scan is not marked and will retry later.
+  if (!source.includes('FULL_LINKEDIN_HISTORY_SOURCE_V1')) {
+    const block = `  const FULL_LINKEDIN_HISTORY_SOURCE_V1 = '${FULL_HISTORY_SOURCE_ACTOR}';
+
+  // Backfill every linked account exactly once for this scanner version. Login stays fast because
+  // the expensive public-post scan runs in the background; subsequent logins only read the cached
+  // server-side source version. If the scan fails, the legacy source remains and a later login can retry.
   useEffect(() => {
     if (!authUser?.id || !authUser.linkedinUrl || typeof window === 'undefined') return;
-    const normalizedUrl = authUser.linkedinUrl.trim().toLowerCase().replace(/\\/+$/, '');
-    const fullHistoryKey = 'cg_linkedin_all_posts_v1:' + normalizedUrl;
-    if (localStorage.getItem(fullHistoryKey)) return;
-
     let cancelled = false;
-    refreshLinkedInConferenceActivity(authUser.linkedinUrl)
+
+    fetchLinkedInConferenceActivity()
+      .then((current) => {
+        if (cancelled) return null;
+        if (current.activity?.sourceActor === FULL_LINKEDIN_HISTORY_SOURCE_V1) {
+          window.dispatchEvent(new CustomEvent('conferencegate:linkedin-activity-refreshed', { detail: current.activity }));
+          return null;
+        }
+        return refreshLinkedInConferenceActivity(authUser.linkedinUrl);
+      })
       .then((result) => {
-        if (cancelled) return;
-        localStorage.setItem(fullHistoryKey, new Date().toISOString());
+        if (cancelled || !result) return;
         window.dispatchEvent(new CustomEvent('conferencegate:linkedin-activity-refreshed', { detail: result.activity }));
       })
       .catch(() => {
-        // No marker on failure: the next session/reload can retry the complete public-history scan.
+        // Do not mark a failed account as migrated; the next login/reload gets another chance.
       });
 
     return () => { cancelled = true; };
@@ -143,12 +141,11 @@ import fs from 'node:fs';
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-all-posts] every linked ConferenceGate account gets a background complete-history scan');
+  console.log('[linkedin-all-posts] every linked ConferenceGate account gets one server-versioned full-history backfill');
 }
 
 // ---------------------------------------------------------------------------
-// 4) PROFILE UI: when the background scan finishes, update role/attendance counters immediately
-//    instead of requiring the member to reload the Profile page.
+// 3) PROFILE UI: update role/attendance cards immediately when the background migration finishes.
 // ---------------------------------------------------------------------------
 {
   const path = 'src/components/UserProfileView.tsx';
