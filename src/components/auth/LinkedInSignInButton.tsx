@@ -1,18 +1,14 @@
 import React from 'react';
 import { Linkedin } from 'lucide-react';
 
-const CLIENT_ID = import.meta.env.VITE_LINKEDIN_CLIENT_ID as string | undefined;
-
 interface LinkedInSignInButtonProps {
   text?: 'signin_with' | 'signup_with';
 }
 
-// Unlike Google Identity Services, LinkedIn has no embeddable JS button — signing in is a plain
-// full-page redirect to LinkedIn's own consent screen, so this is just a styled link rather than
-// a script-rendered widget.
+// LinkedIn OAuth is handled entirely by the ConferenceGate backend. The browser only needs
+// to navigate to /api/auth/linkedin/start, so no VITE_LINKEDIN_CLIENT_ID is required here.
+// The server decides whether LinkedIn is configured and returns a clear error if it is not.
 export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with' }) => {
-  if (!CLIENT_ID) return null;
-
   return (
     <a
       href="/api/auth/linkedin/start"
