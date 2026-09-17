@@ -21,10 +21,8 @@ import fs from 'node:fs';
   const rolePatterns: Array<[RegExp, string, string]> = [
     [/\\btechnical program(?:me)? committee co[- ]?chair\\b/i, "Technical Program Committee Co-Chair", "committee"],
     [/\\bscientific program(?:me)? committee co[- ]?chair\\b/i, "Scientific Program Committee Co-Chair", "committee"],
-    [/\\bprogram(?:me)? committee co[- ]?chair\\b/i, "Program Committee Co-Chair", "committee"],
     [/\\btechnical program(?:me)? committee chair\\b/i, "Technical Program Committee Chair", "committee"],
     [/\\bscientific program(?:me)? committee chair\\b/i, "Scientific Program Committee Chair", "committee"],
-    [/\\bprogram(?:me)? committee chair\\b/i, "Program Committee Chair", "committee"],
     [/\\bsession co[- ]?chair\\b/i, "Session Co-Chair", "sessionChair"],
     [/\\bsession chair\\b/i, "Session Chair", "sessionChair"],
     [/\\btrack co[- ]?chair\\b/i, "Track Co-Chair", "sessionChair"],
