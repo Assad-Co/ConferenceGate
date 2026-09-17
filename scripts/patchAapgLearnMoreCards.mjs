@@ -16,6 +16,9 @@ if (src.includes('[AAPG_LEARN_MORE_CARD_V2]')) {
 const helperAnchor = 'function distinctTitleTokens(title) {';
 if (!src.includes(helperAnchor)) throw new Error('AAPG card patch: helper anchor not found');
 
+// Keep the injected source free of nested template literals. This patch itself is an ESM file,
+// so nested backticks inside a String.raw template would terminate the outer string before the
+// patch ever runs on Render.
 const helpers = String.raw`
 // [AAPG_LEARN_MORE_CARD_V2]
 // AAPG cards often keep the event title/date/logo as plain card content and put the actual
@@ -45,13 +48,12 @@ function cardLogoFromFragment(fragment, base, title) {
     if (!raw && attrs.srcset) raw = attrs.srcset.split(',')[0]?.trim().split(/\s+/)[0] || '';
     const url = absoluteUrl(raw, base);
     if (!url) continue;
-    const hay = `${attrs.alt || ''} ${attrs.title || ''} ${attrs.class || ''} ${url}`.toLowerCase();
+    const hay = [attrs.alt || '', attrs.title || '', attrs.class || '', url].join(' ').toLowerCase();
     let score = 0;
     if (/logo|section|region|event|conference|brand/.test(hay)) score += 4;
     if (/aapg|southwest|sws|wtgs/.test(hay)) score += 5;
     for (const token of tokens) if (hay.includes(token)) score += 2;
     if (/speaker|avatar|portrait|sponsor|facebook|linkedin|twitter|youtube|icon-arrow|chevron/.test(hay)) score -= 8;
-    // Prefer the image physically nearest the button/title when scores tie.
     score += Math.min(2, m.index / Math.max(1, fragment.length));
     if (score > bestScore) { bestScore = score; best = url; }
   }
@@ -71,7 +73,7 @@ function discoverLearnMoreCards(html) {
     if (!date) continue;
     const title = cardTitleBeforeDate(lines, date.raw);
     if (!title) continue;
-    const key = `${normalizeTitle(title)}|${date.start}`;
+    const key = normalizeTitle(title) + '|' + date.start;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
@@ -90,16 +92,14 @@ function discoverLearnMoreCards(html) {
 
 function mergeCalendarCandidates(primary, cardCandidates) {
   const map = new Map();
-  for (const item of primary) map.set(`${normalizeTitle(item.title)}|${item.startDate}`, item);
+  for (const item of primary) map.set(normalizeTitle(item.title) + '|' + item.startDate, item);
   for (const card of cardCandidates) {
-    const key = `${normalizeTitle(card.title)}|${card.startDate}`;
+    const key = normalizeTitle(card.title) + '|' + card.startDate;
     const old = map.get(key);
     if (!old) {
       map.set(key, card);
       continue;
     }
-    // The card's LEARN MORE button is the intended deep-link. Preserve any title-parser fields
-    // we already had, but let the card supply the detail URL and logo when present.
     map.set(key, {
       ...old,
       url: card.url || old.url,
