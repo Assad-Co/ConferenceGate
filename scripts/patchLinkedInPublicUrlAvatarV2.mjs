@@ -68,7 +68,7 @@ const injected = String.raw`  // Public-URL-only avatar fallback v2. This runs o
           method: 'POST',
           signal: controllerA.signal,
           headers: {
-            Authorization: \`Bearer \${publicAvatarToken}\`,
+            Authorization: 'Bearer ' + publicAvatarToken,
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
@@ -122,7 +122,7 @@ const injected = String.raw`  // Public-URL-only avatar fallback v2. This runs o
             method: 'POST',
             signal: controllerB.signal,
             headers: {
-              Authorization: \`Bearer \${publicAvatarToken}\`,
+              Authorization: 'Bearer ' + publicAvatarToken,
               'Content-Type': 'application/json',
               Accept: 'application/json',
             },
