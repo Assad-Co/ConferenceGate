@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 
 // Final role reconciliation. This deliberately does not depend on the earlier classifier's
-// memberClaim/repost decisions. It re-reads every stored public post, requires the post author to
-// match the linked member, requires explicit first-person participation wording, and then extracts
-// every specific conference role from the evidence. This is the last authority used by the profile.
+// memberClaim/repost decisions. It re-reads every stored public post returned for the member's
+// exact public profile, requires explicit first-person participation wording, and extracts every
+// specific conference role from that evidence. This is the last authority used by the profile.
 
 {
   const path = 'server/linkedinConferenceActivityBootstrap.ts';
@@ -59,7 +59,13 @@ import fs from 'node:fs';
   const output: LinkedInConferenceSignal[] = [];
   posts.forEach((raw, index) => {
     const post = raw && typeof raw === "object" ? raw as Record<string, any> : {};
-    if (!targetAuthorMatches(post, requestedUrl)) return;
+
+    // The actor is already called with one exact linkedin.com/in/... profile. Provider author fields
+    // are inconsistent and previously caused valid original posts to be rejected. Reject only an
+    // explicitly marked repost/quote here; then require explicit first-person participation words.
+    const type = clean(post.type || post.postType).toLowerCase();
+    const explicitRepost = post.isRepost === true || post.repost === true || post.isQuotePost === true || post.quotePost === true || /repost|quote|reshare/.test(type);
+    if (explicitRepost) return;
 
     const content = postText(post);
     if (!content || !explicitParticipation(content)) return;
@@ -109,7 +115,7 @@ import fs from 'node:fs';
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-role-final-v4] installed final author-matched explicit-role reconciliation');
+  console.log('[linkedin-role-final-v4] installed final explicit-role reconciliation');
 }
 
 {
