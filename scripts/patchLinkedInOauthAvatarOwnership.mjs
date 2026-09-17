@@ -28,14 +28,15 @@ import fs from 'node:fs';
   ].join('\n');
 
   if (!source.includes(oauthOwned)) {
-    if (!source.includes(legacyForceSync)) {
-      throw new Error('[linkedin-oauth-avatar] legacy public-profile avatar writer not found');
+    if (source.includes(legacyForceSync)) {
+      source = source.replace(legacyForceSync, oauthOwned);
+      console.log('[linkedin-oauth-avatar] authenticated LinkedIn OAuth picture owns the account avatar');
+    } else {
+      console.warn('[linkedin-oauth-avatar] public-profile avatar writer shape changed; leaving it untouched');
     }
-    source = source.replace(legacyForceSync, oauthOwned);
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-oauth-avatar] authenticated LinkedIn OAuth picture owns the account avatar');
 }
 
 {
@@ -66,12 +67,13 @@ import fs from 'node:fs';
 
   if (!source.includes(after)) {
     const index = source.indexOf(before);
-    if (index === -1) {
-      throw new Error('[linkedin-oauth-avatar] profile Change Photo anchor not found');
+    if (index !== -1) {
+      source = source.slice(0, index) + after + source.slice(index + before.length);
+      console.log('[linkedin-oauth-avatar] profile now exposes a secure Sync LinkedIn Photo action');
+    } else {
+      console.warn('[linkedin-oauth-avatar] Change Photo UI anchor changed; secure OAuth route remains available');
     }
-    source = source.slice(0, index) + after + source.slice(index + before.length);
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-oauth-avatar] profile now exposes a secure Sync LinkedIn Photo action');
 }
