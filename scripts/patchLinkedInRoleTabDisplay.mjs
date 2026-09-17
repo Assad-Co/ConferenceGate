@@ -28,9 +28,11 @@ import fs from 'node:fs';
   fs.writeFileSync(path, source);
 }
 
-// Final fallback for the main profile counters. Some existing records were stored before multi-role
-// classification existed, but their evidenceText still contains the member's explicit role wording.
-// Derive roles from that stored evidence so the cards update immediately without waiting for a new import.
+// FINAL role fallback for the main profile counters.
+// Old stored activity can still be tagged as CONFERENCE_MENTION even when its evidence text contains
+// explicit member roles. Because these rows came from the member's own public LinkedIn posts, an
+// explicit role phrase is sufficient evidence; do not require a narrow intro phrase such as
+// "proud to" or "I presented". Reposts/quotes remain excluded.
 {
   const path = 'src/components/UserProfileView.tsx';
   let source = fs.readFileSync(path, 'utf8');
@@ -41,10 +43,18 @@ import fs from 'node:fs';
   const evidenceDerivedRoleSignals = useMemo(() => {
     const rolePatterns: Array<[RegExp, string]> = [
       [/\\btechnical program(?:me)? committee co[- ]?chair\\b/i, 'Technical Program Committee Co-Chair'],
+      [/\\bscientific program(?:me)? committee co[- ]?chair\\b/i, 'Scientific Program Committee Co-Chair'],
+      [/\\bprogram(?:me)? committee co[- ]?chair\\b/i, 'Program Committee Co-Chair'],
+      [/\\btechnical committee co[- ]?chair\\b/i, 'Technical Committee Co-Chair'],
+      [/\\bscientific committee co[- ]?chair\\b/i, 'Scientific Committee Co-Chair'],
+      [/\\bsession co[- ]?chair\\b/i, 'Session Co-Chair'],
       [/\\bsession chair\\b/i, 'Session Chair'],
+      [/\\btrack co[- ]?chair\\b/i, 'Track Co-Chair'],
+      [/\\btrack chair\\b/i, 'Track Chair'],
       [/\\bcore presenter\\b/i, 'Core Presenter'],
-      [/\\boral presenter\\b/i, 'Oral Presenter'],
-      [/\\bposter presenter\\b/i, 'Poster Presenter'],
+      [/\\boral presenter\\b|\\boral presentation presenter\\b/i, 'Oral Presenter'],
+      [/\\btechnical presenter\\b/i, 'Technical Presenter'],
+      [/\\bposter presenter\\b|\\bposter presentation\\b|\\bmy poster\\b/i, 'Poster Presenter'],
       [/\\bkeynote(?: speaker)?\\b/i, 'Keynote Speaker'],
       [/\\bplenary(?: speaker)?\\b/i, 'Plenary Speaker'],
       [/\\bpanelist\\b|\\bpanellist\\b/i, 'Panelist'],
@@ -55,10 +65,18 @@ import fs from 'node:fs';
     linkedInSignals.forEach((signal) => {
       if (signal.repostOrQuote) return;
       const evidence = String(signal.evidenceText || signal.label || '');
-      if (!/\\b(honou?red to|proud to|pleased to|delighted to|i\\s+(?:attended|participated|joined|presented|chaired|served|took part)|my\\s+(?:presentation|poster|paper|session))\\b/i.test(evidence)) return;
+      if (!evidence.trim()) return;
       rolePatterns.forEach(([pattern, role], index) => {
         if (!pattern.test(evidence)) return;
-        output.push({ ...signal, id: signal.id + ':evidence-role:' + index, kind: 'CONFERENCE_ROLE', role, memberClaimed: true, confidence: 95 });
+        output.push({
+          ...signal,
+          id: signal.id + ':evidence-role:' + index,
+          kind: 'CONFERENCE_ROLE',
+          role,
+          memberClaimed: true,
+          repostOrQuote: false,
+          confidence: Math.max(95, signal.confidence || 0),
+        });
       });
     });
     return output;
@@ -79,4 +97,4 @@ import fs from 'node:fs';
   fs.writeFileSync(path, source);
 }
 
-console.log('[linkedin-role-tab-display] LinkedIn evidence text now feeds leadership counters and role lists');
+console.log('[linkedin-role-tab-display] explicit role phrases in stored member LinkedIn evidence now feed all role counters and lists');
