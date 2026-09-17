@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
+import { copyLinkedInAvatarToDataUrl } from "./linkedinAvatar";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -500,11 +501,23 @@ const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || null;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || null;
 const LINKEDIN_STATE_COOKIE = "cg_li_state";
 const LINKEDIN_PENDING_COOKIE = "cg_li_pending";
+const LINKEDIN_LINK_COOKIE = "cg_li_link_user";
 const LINKEDIN_OAUTH_TTL_MS = 10 * 60 * 1000; // 10 minutes — just long enough to complete the redirect round trip
 
 function linkedinRedirectUri(req: Request): string {
   const base = (process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
   return `${base}/api/auth/linkedin/callback`;
+}
+
+function readLinkedInLinkUser(req: Request): string | null {
+  const token = req.cookies?.[LINKEDIN_LINK_COOKIE];
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, getJwtSecret()) as { userId?: string };
+    return typeof payload.userId === "string" && payload.userId ? payload.userId : null;
+  } catch {
+    return null;
+  }
 }
 
 authRouter.get("/linkedin/start", (req, res) => {
@@ -521,6 +534,23 @@ authRouter.get("/linkedin/start", (req, res) => {
     path: "/",
   });
 
+  // If this flow starts while the member is already signed in, remember that exact account.
+  // The callback can then link/sync LinkedIn to it even when the ConferenceGate and LinkedIn
+  // email addresses differ. Logged-out use remains a normal LinkedIn sign-in/signup flow.
+  const linkingUserId = verifySessionToken(req.cookies?.[COOKIE_NAME]);
+  if (linkingUserId) {
+    const linkToken = jwt.sign({ userId: linkingUserId }, getJwtSecret(), { expiresIn: "10m" });
+    res.cookie(LINKEDIN_LINK_COOKIE, linkToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: LINKEDIN_OAUTH_TTL_MS,
+      path: "/",
+    });
+  } else {
+    res.clearCookie(LINKEDIN_LINK_COOKIE, { path: "/" });
+  }
+
   const params = new URLSearchParams({
     response_type: "code",
     client_id: LINKEDIN_CLIENT_ID,
@@ -534,7 +564,9 @@ authRouter.get("/linkedin/start", (req, res) => {
 authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
   const { code, state, error } = req.query as Record<string, string | undefined>;
   const cookieState = req.cookies?.[LINKEDIN_STATE_COOKIE];
+  const linkingUserId = readLinkedInLinkUser(req);
   res.clearCookie(LINKEDIN_STATE_COOKIE, { path: "/" });
+  res.clearCookie(LINKEDIN_LINK_COOKIE, { path: "/" });
 
   if (error || !code || !state || !cookieState || state !== cookieState || !LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
     return res.redirect("/?authError=linkedin_failed");
@@ -572,6 +604,35 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
     const name: string = profile.name || email || "LinkedIn Member";
     const picture: string | null = typeof profile.picture === "string" ? profile.picture : null;
 
+    // New approach: download the authenticated OpenID picture on the server and persist a
+    // ConferenceGate-owned data URL. The browser never needs to hot-link LinkedIn's CDN.
+    const ownedAvatar = await copyLinkedInAvatarToDataUrl(picture);
+
+    // A signed-in member explicitly starting LinkedIn OAuth is linking/syncing that exact
+    // ConferenceGate account. This avoids relying on the two services sharing the same email.
+    if (linkingUserId) {
+      const linkingRow = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [linkingUserId]);
+      if (!linkingRow) {
+        return res.redirect("/?authError=linkedin_failed");
+      }
+
+      const alreadyLinked = await dbGet<UserRow>("SELECT * FROM users WHERE linkedin_id = ?", [linkedinId]);
+      if (alreadyLinked && alreadyLinked.id !== linkingRow.id) {
+        return res.redirect("/?authError=linkedin_already_linked");
+      }
+
+      if (ownedAvatar) {
+        await dbRun("UPDATE users SET linkedin_id = ?, avatar = ? WHERE id = ?", [linkedinId, ownedAvatar, linkingRow.id]);
+      } else {
+        await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, linkingRow.id]);
+      }
+
+      const refreshed = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [linkingRow.id]))!;
+      const token = signToken(refreshed.id);
+      setSessionCookie(res, token);
+      return res.redirect("/?linkedinSynced=1");
+    }
+
     let row = await dbGet<UserRow>("SELECT * FROM users WHERE linkedin_id = ?", [linkedinId]);
 
     if (!row && email) {
@@ -583,15 +644,18 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
     }
 
     if (row) {
-      const token = signToken(row.id);
+      if (ownedAvatar) {
+        await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [ownedAvatar, row.id]);
+        row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [row.id]);
+      }
+      const token = signToken(row!.id);
       setSessionCookie(res, token);
-      return res.redirect("/");
+      return res.redirect("/?linkedinSynced=1");
     }
 
-    // Brand-new account — stash the verified LinkedIn identity in a short-lived signed cookie
-    // and send the browser to the role picker, mirroring the Google Sign-In new-account flow.
-    // (LinkedIn's authorization code is single-use, so unlike Google's ID token it can't just
-    // be replayed once the person picks a role — the verified profile has to be held server-side.)
+    // Brand-new account — stash only the short-lived LinkedIn picture URL in the signed cookie.
+    // After the person chooses a role, the server downloads/copies it into ConferenceGate before
+    // the account is written. We never persist the LinkedIn CDN URL as the account avatar.
     const pendingToken = jwt.sign({ linkedinId, name, email, avatar: picture }, getJwtSecret(), {
       expiresIn: "10m",
     });
@@ -649,20 +713,25 @@ authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
 
   const normalizedRole = role.toLowerCase() as AuthRole;
   const normalizedEmail = pending.email.toLowerCase();
+  const ownedAvatar = await copyLinkedInAvatarToDataUrl(pending.avatar);
 
   // Someone may already have an account under this email (e.g. signed up with a password) —
   // link the LinkedIn identity to it instead of creating a duplicate account.
   const existingByEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   let row: UserRow;
   if (existingByEmail) {
-    await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [pending.linkedinId, existingByEmail.id]);
+    if (ownedAvatar) {
+      await dbRun("UPDATE users SET linkedin_id = ?, avatar = ? WHERE id = ?", [pending.linkedinId, ownedAvatar, existingByEmail.id]);
+    } else {
+      await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [pending.linkedinId, existingByEmail.id]);
+    }
     row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [existingByEmail.id]))!;
   } else {
     const id = crypto.randomUUID();
     await dbRun(
       `INSERT INTO users (id, email, password_hash, linkedin_id, role, name, avatar)
        VALUES (?, ?, NULL, ?, ?, ?, ?)`,
-      [id, normalizedEmail, pending.linkedinId, normalizedRole, pending.name, pending.avatar]
+      [id, normalizedEmail, pending.linkedinId, normalizedRole, pending.name, ownedAvatar]
     );
     row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
   }
