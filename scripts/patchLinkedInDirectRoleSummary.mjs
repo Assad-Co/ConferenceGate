@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 
 // Independent final fallback for conference-role counters.
-// This does NOT depend on the legacy conferenceActivity classifier. It reads the full raw LinkedIn
-// post history already stored for the exact public profile, extracts explicit first-person roles,
-// returns a direct role summary from /api/linkedin-conference/me, and merges those roles into the
-// profile's existing role pipeline. This is intentionally the last role patch in the build.
+// This does NOT depend on the legacy conferenceActivity classifier or on any one HarvestAPI field
+// name. It reads the full raw LinkedIn post history already stored for the exact public profile,
+// recursively extracts human-readable strings from every returned post shape, detects explicit
+// first-person conference roles, returns a direct role summary from /api/linkedin-conference/me,
+// and merges those roles into the profile's existing role pipeline. This is intentionally the last
+// role patch in the build.
 
 // ---------------------------------------------------------------------------
 // 1) SERVER: derive role summary directly from raw_posts on every /me read.
@@ -17,12 +19,40 @@ import fs from 'node:fs';
     const anchor = 'router.get("/me", requireMember, safe(async (req, res) => {';
     if (!source.includes(anchor)) throw new Error('[linkedin-role-direct] server /me route anchor not found');
 
-    const helper = `function deriveDirectRoleSummary(posts: any[]) {
+    const helper = `function collectDirectLinkedInStrings(value: unknown, depth = 0, out: string[] = []): string[] {
+  if (value == null || depth > 10 || out.length >= 500) return out;
+  if (typeof value === "string") {
+    const text = clean(value);
+    if (text && text.length >= 4 && text.length <= 8000 && !/^https?:\\/\\//i.test(text)) out.push(text);
+    return out;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectDirectLinkedInStrings(item, depth + 1, out);
+    return out;
+  }
+  if (typeof value === "object") {
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (/^(?:url|uri|urn|id|imageUrl|videoUrl|trackingId|entityUrn)$/i.test(key)) continue;
+      collectDirectLinkedInStrings(child, depth + 1, out);
+      if (out.length >= 500) break;
+    }
+  }
+  return out;
+}
+
+function directLinkedInPostText(post: Record<string, any>): string {
+  const values = [...new Set(collectDirectLinkedInStrings(post))];
+  return clean(values.join(" | "));
+}
+
+function deriveDirectRoleSummary(posts: any[]) {
   const rolePatterns: Array<[RegExp, string, string]> = [
     [/\\btechnical program(?:me)? committee co[- ]?chair\\b/i, "Technical Program Committee Co-Chair", "committee"],
     [/\\bscientific program(?:me)? committee co[- ]?chair\\b/i, "Scientific Program Committee Co-Chair", "committee"],
+    [/\\bprogram(?:me)? committee co[- ]?chair\\b/i, "Program Committee Co-Chair", "committee"],
     [/\\btechnical program(?:me)? committee chair\\b/i, "Technical Program Committee Chair", "committee"],
     [/\\bscientific program(?:me)? committee chair\\b/i, "Scientific Program Committee Chair", "committee"],
+    [/\\bprogram(?:me)? committee chair\\b/i, "Program Committee Chair", "committee"],
     [/\\bsession co[- ]?chair\\b/i, "Session Co-Chair", "sessionChair"],
     [/\\bsession chair\\b/i, "Session Chair", "sessionChair"],
     [/\\btrack co[- ]?chair\\b/i, "Track Co-Chair", "sessionChair"],
@@ -40,10 +70,13 @@ import fs from 'node:fs';
     [/\\b(?:technical|scientific|program|programme|organizing|organising|steering|advisory) committee member\\b|\\bcommittee member\\b/i, "Committee Member", "committee"],
   ];
 
-  const firstPerson = /\\b(?:honou?red to take part|honou?red to participate|proud to contribute(?: as)?|pleased to contribute(?: as)?|delighted to contribute(?: as)?|served as|serving as|participated as|joined as|contributed as|i\\s+(?:presented|spoke|chaired|moderated|served|participated|joined|contributed)|my\\s+(?:presentation|poster|paper|session|role)|pleased to|delighted to|excited to|thrilled to|privileged to)\\b/i;
+  const firstPerson = /\\b(?:honou?red to take part|honou?red to participate|proud to contribute(?: as)?|proud to (?:serve|present|chair|speak)|pleased to contribute(?: as)?|delighted to contribute(?: as)?|served as|serving as|participated as|joined as|contributed as|taking part as|i\\s+(?:presented|spoke|chaired|moderated|served|participated|joined|contributed|present)|my\\s+(?:presentation|poster|paper|session|role)|pleased to (?:present|speak|serve|chair|participate)|delighted to (?:present|speak|serve|chair|participate)|excited to (?:present|speak|serve|chair|participate)|thrilled to (?:present|speak|serve|chair|participate)|privileged to (?:present|speak|serve|chair|participate))\\b/i;
 
   const entries: any[] = [];
   const seen = new Set<string>();
+  let textPosts = 0;
+  let firstPersonPosts = 0;
+  let rolePhrasePosts = 0;
 
   posts.forEach((raw, index) => {
     const post = raw && typeof raw === "object" ? raw as Record<string, any> : {};
@@ -51,8 +84,17 @@ import fs from 'node:fs';
     const explicitRepost = post.isRepost === true || post.repost === true || post.isQuotePost === true || post.quotePost === true || /repost|quote|reshare/.test(type);
     if (explicitRepost) return;
 
-    const text = postText(post);
-    if (!text || !firstPerson.test(text)) return;
+    // HarvestAPI has returned several different post schemas over time. Never assume the body is
+    // in content/text/commentary. Recursively inspect all human-readable strings in the one raw post.
+    const text = directLinkedInPostText(post);
+    if (!text) return;
+    textPosts += 1;
+
+    const matchedRoles = rolePatterns.filter(([pattern]) => pattern.test(text));
+    if (matchedRoles.length > 0) rolePhrasePosts += 1;
+    if (!firstPerson.test(text)) return;
+    firstPersonPosts += 1;
+    if (!matchedRoles.length) return;
 
     const sourceUrl = postUrl(post);
     const baseId = postId(post, index);
@@ -60,8 +102,7 @@ import fs from 'node:fs';
     const yearText = clean(post.postedAt || post.publishedAt || post.createdAt || post.date || post.timestamp || post.postedOn || "");
     const year = extractYear(text) || Number((yearText.match(/\\b(20\\d{2})\\b/) || [])[1] || 0) || null;
 
-    for (const [pattern, role, category] of rolePatterns) {
-      if (!pattern.test(text)) continue;
+    for (const [, role, category] of matchedRoles) {
       const key = (sourceUrl || baseId) + '|' + role.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
@@ -72,7 +113,7 @@ import fs from 'node:fs';
         sourceUrl,
         label,
         year,
-        evidenceText: text.length > 1400 ? text.slice(0, 1397) + "…" : text,
+        evidenceText: text.length > 1800 ? text.slice(0, 1797) + "…" : text,
       });
     }
   });
@@ -85,6 +126,7 @@ import fs from 'node:fs';
     panel: entries.filter((entry) => entry.category === "panel").length,
     workshop: entries.filter((entry) => entry.category === "workshop").length,
     roles: entries,
+    debug: { textPosts, firstPersonPosts, rolePhrasePosts },
   };
 }
 
@@ -109,7 +151,7 @@ import fs from 'node:fs';
   );
   const rawPosts = parseArray(rawRow?.raw_posts);
   const roleSummary = deriveDirectRoleSummary(rawPosts);
-  console.log(\`[linkedin-role-direct] raw_posts=\${rawPosts.length} roles=\${roleSummary.total} presenter=\${roleSummary.presenter} committee=\${roleSummary.committee} session_chair=\${roleSummary.sessionChair}\`);
+  console.log(\`[linkedin-role-direct] raw_posts=\${rawPosts.length} text_posts=\${roleSummary.debug.textPosts} first_person_posts=\${roleSummary.debug.firstPersonPosts} role_phrase_posts=\${roleSummary.debug.rolePhrasePosts} roles=\${roleSummary.total} presenter=\${roleSummary.presenter} committee=\${roleSummary.committee} session_chair=\${roleSummary.sessionChair}\`);
   res.json({
     activity,
     roleSummary,
@@ -120,7 +162,7 @@ import fs from 'node:fs';
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-role-direct] server direct raw-post role summary installed');
+  console.log('[linkedin-role-direct] schema-independent recursive raw-post role summary installed');
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +193,7 @@ export interface LinkedInDirectRoleSummary {
   panel: number;
   workshop: number;
   roles: LinkedInDirectRoleEntry[];
+  debug?: { textPosts: number; firstPersonPosts: number; rolePhrasePosts: number };
 }
 
 `;
@@ -264,5 +307,5 @@ export interface LinkedInDirectRoleSummary {
   }
 
   fs.writeFileSync(path, source);
-  console.log('[linkedin-role-direct] profile merges direct raw-post roles into all counters and lists');
+  console.log('[linkedin-role-direct] profile merges schema-independent raw-post roles into all counters and lists');
 }
