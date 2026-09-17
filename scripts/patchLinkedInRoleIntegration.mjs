@@ -30,7 +30,6 @@ function replaceOnce(source, before, after, label, path) {
     '    endpoint.searchParams.set("maxTotalChargeUsd", "2.50");',
   );
 
-  // Optional structured conference name used by the UI. Existing stored rows remain compatible.
   const typeAnchor = '  label: string;\n  role: string | null;';
   const typeAfter = '  label: string;\n  conferenceName?: string | null;\n  role: string | null;';
   if (!source.includes(typeAfter)) {
@@ -81,9 +80,20 @@ function replaceOnce(source, before, after, label, path) {
     [/\\b(?:oral|technical|session|invited)?\\s*presenter\\b|\\bpresenting\\b/i, "Presenter"],
     [/\\bspeaker\\b|\\bspeaking\\b/i, "Speaker"],
   ];
-  const found: string[] = [];
+  let found: string[] = [];
   for (const [re, label] of roles) {
     if (re.test(value) && !found.includes(label)) found.push(label);
+  }
+
+  // Do not create noisy generic duplicates when the same phrase already produced a specific role.
+  if (found.some((role) => /Core Presenter|Oral Presenter|Technical Presenter|Poster Presenter/.test(role))) {
+    found = found.filter((role) => role !== "Presenter");
+  }
+  if (found.some((role) => /Session (?:Co-)?Chair|Track (?:Co-)?Chair|Committee (?:Co-)?Chair|Program Committee|Technical Committee|Scientific Committee|Organizing Committee/.test(role))) {
+    found = found.filter((role) => role !== "Chair" && role !== "Co-Chair");
+  }
+  if (found.some((role) => /Keynote Speaker|Plenary Speaker|Invited Speaker/.test(role))) {
+    found = found.filter((role) => role !== "Speaker");
   }
   return found;
 }
@@ -94,8 +104,6 @@ function detectRole(value: string): string | null {
 `;
   source = source.slice(0, roleStart) + richerRoleDetector + source.slice(roleEnd + 1);
 
-  // Add a conservative conference-name extractor. It only runs on a sentence already identified
-  // as conference evidence; if it cannot confidently shorten it, the original evidence label wins.
   const classifyAnchor = 'function classifyPosts(posts: any[], requestedUrl: string) {';
   if (!source.includes('function extractConferenceName(value: string): string | null {')) {
     const helper = `function extractConferenceName(value: string): string | null {
@@ -143,8 +151,6 @@ function detectRole(value: string): string | null {
     );
   }
 
-  // DeepEvidenceRefinement already allows several evidence kinds from one post. Add the missing
-  // many-role behavior immediately after its final supplemental achievement line.
   const supplementalAnchor = '    addSupplemental("AWARD", hasAward && !hasCertificate, !repostOrQuote && selfClaim, !repostOrQuote && selfClaim ? 91 : repostOrQuote ? 52 : 74);';
   if (!source.includes('const strongRoleClaim = !repostOrQuote')) {
     const roleBlock = `
@@ -155,7 +161,7 @@ function detectRole(value: string): string | null {
     const strongRoleClaim = !repostOrQuote && roles.length > 0 && (selfClaim || explicitParticipationClaim(content));
     if (strongRoleClaim) {
       roles.forEach((detectedRole, roleIndex) => {
-        if (detectedRole === role) return; // the primary CONFERENCE_ROLE already carries this one
+        if (detectedRole === role) return;
         conferenceActivity.push({
           id: id + ":role:" + roleIndex,
           kind: "CONFERENCE_ROLE",
@@ -178,8 +184,6 @@ function detectRole(value: string): string | null {
     source = source.replace(supplementalAnchor, supplementalAnchor + roleBlock);
   }
 
-  // Attach a structured conference name to every signal, including signals produced by older
-  // classification branches and supplemental evidence.
   const dedupeAnchor = '  const dedupe = <T extends { id: string }>(items: T[]) => {';
   if (!source.includes('signal.conferenceName = signal.conferenceName ||')) {
     const enrichment = `  for (const signal of conferenceActivity) {
@@ -250,7 +254,6 @@ function detectRole(value: string): string | null {
     source = source.replace(committeeStateAnchor, stateBlock);
   }
 
-  // Replace the existing committeeEntries calculation with one that merges LinkedIn evidence.
   const committeeStart = source.indexOf('  const committeeEntries = [');
   const committeeEndNeedle = '\n\n  const conferenceGateIndex = Math.min(';
   const committeeEnd = source.indexOf(committeeEndNeedle, committeeStart);
@@ -410,40 +413,15 @@ function detectRole(value: string): string | null {
     source = source.slice(0, committeeStart) + mergedBlock + source.slice(committeeEnd);
   }
 
-  // Counters in Committee & Leadership Roles.
-  source = source.replace(
-    '{userProfile.contributions.technicalCommittees}</div>',
-    '{committeePositionCount}</div>',
-  );
-  source = source.replace(
-    '{userProfile.contributions.sessionsChaired}</div>',
-    '{sessionChairCount}</div>',
-  );
-  source = source.replace(
-    '{userProfile.contributions.panelsParticipated}</div>',
-    '{panelParticipationCount}</div>',
-  );
-  source = source.replace(
-    '{userProfile.contributions.workshopsDelivered}</div>',
-    '{workshopDeliveredCount}</div>',
-  );
+  source = source.split('{userProfile.contributions.technicalCommittees}</div>').join('{committeePositionCount}</div>');
+  source = source.split('{userProfile.contributions.sessionsChaired}</div>').join('{sessionChairCount}</div>');
+  source = source.split('{userProfile.contributions.panelsParticipated}</div>').join('{panelParticipationCount}</div>');
+  source = source.split('{userProfile.contributions.workshopsDelivered}</div>').join('{workshopDeliveredCount}</div>');
 
-  // Presented-paper counters: first-person LinkedIn presenter evidence can fill an otherwise empty
-  // account record, while ConferenceGate-native activity remains authoritative when larger.
-  source = source.replace(
-    '{userProfile.contributions.oralPresentations + userProfile.contributions.posterPresentations} Papers',
-    '{oralPresentationCount + posterPresentationCount} Papers',
-  );
-  source = source.replace(
-    '{userProfile.contributions.oralPresentations}</div>',
-    '{oralPresentationCount}</div>',
-  );
-  source = source.replace(
-    '{userProfile.contributions.posterPresentations}</div>',
-    '{posterPresentationCount}</div>',
-  );
+  source = source.split('{userProfile.contributions.oralPresentations + userProfile.contributions.posterPresentations} Papers').join('{oralPresentationCount + posterPresentationCount} Papers');
+  source = source.split('{userProfile.contributions.oralPresentations}</div>').join('{oralPresentationCount}</div>');
+  source = source.split('{userProfile.contributions.posterPresentations}</div>').join('{posterPresentationCount}</div>');
 
-  // Add evidence links to leadership-role rows when the role came from LinkedIn.
   const roleMetaBefore = `<p className="text-[11px] text-slate-500">{entry.conferenceName} • {entry.year}</p>`;
   const roleMetaAfter = `<p className="text-[11px] text-slate-500">{entry.conferenceName} • {entry.year}</p>
                         {entry.sourceUrl && (
@@ -456,8 +434,6 @@ function detectRole(value: string): string | null {
     source = source.replace(roleMetaBefore, roleMetaAfter);
   }
 
-  // Replace registration-only conference history with a merged registration + strong LinkedIn
-  // evidence list. LinkedIn entries retain an explicit provenance badge and evidence link.
   source = source.replace('            {ATTENDED_CONFERENCES.length > 0 ? (', '            {verifiedConferenceEntries.length > 0 ? (');
   source = source.replace('                {ATTENDED_CONFERENCES.map((conf) => (', '                {verifiedConferenceEntries.map((conf) => (');
 
@@ -522,7 +498,7 @@ function detectRole(value: string): string | null {
   }
 
   source = source.replace(
-    'No verified conference attendance on record yet. Once you register for a conference through Conference\n                Gate, it\'ll appear here.',
+    "No verified conference attendance on record yet. Once you register for a conference through Conference\n                Gate, it'll appear here.",
     'No verified conference attendance evidence on record yet. ConferenceGate registrations and strong first-person public LinkedIn conference claims appear here.',
   );
 
