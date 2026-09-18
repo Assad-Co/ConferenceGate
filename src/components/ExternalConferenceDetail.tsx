@@ -88,11 +88,11 @@ interface ExternalConferenceDetailProps {
   onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
 }
 
-const EmptyExtractState: React.FC<{ message: string; sourceUrl: string; note?: string | null }> = ({ message, sourceUrl, note }) => (
+const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message, sourceUrl }) => (
   <div className="py-8 text-center space-y-3">
     <p className="text-xs text-slate-500 max-w-md mx-auto">{message}</p>
-    {/* The page was accepting this URL and never showing it, so every empty tab was a dead end.
-        Whatever we could not read, the organiser's own site is where a reader goes next. */}
+    {/* Raw crawler/source excerpts remain internal. Users only get the clean state plus the
+        organiser's page when ConferenceGate has not yet structured the section. */}
     {sourceUrl && (
       <a
         href={sourceUrl}
@@ -103,11 +103,6 @@ const EmptyExtractState: React.FC<{ message: string; sourceUrl: string; note?: s
         <ExternalLink className="w-3 h-3" />
         Check the organiser's site
       </a>
-    )}
-    {note && (
-      <p className="text-[11px] text-slate-500 max-w-xl mx-auto text-left bg-slate-50 border border-slate-200 rounded-xl p-3 leading-relaxed">
-        <span className="font-semibold text-slate-600">From the source: </span>{note}
-      </p>
     )}
   </div>
 );
@@ -432,49 +427,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     }
   };
 
-  /**
-   * The source's own account of a section, where that is what it has instead of a list.
-   *
-   * Most conferences describe their sponsors and committee in a sentence rather than a roster —
-   * "Exhibit and sponsor program available", "Program committees and EDUCAUSE staff curate content"
-   * — and nothing structures out of those without inventing organisations that do not exist. The
-   * sentence is the content, so it is shown as content. Printing "the completed crawl found no
-   * sponsors" over the top of it was wrong twice: no crawl ran, and the source did say something.
-   */
-  const statedSectionText = (section: string): string | null => {
-    if (sectionState(section) !== 'stated') return null;
-    return data?.section_notes?.[section]?.trim() || null;
-  };
-
-  // For a section that has nothing, the sentence explaining WHY — but only when it says more than
-  // the tab already does. "Not yet announced as of 10 Sep 2026" under "the organiser has not
-  // announced sponsors yet" is the same fact twice; the sentence naming four companies that are
-  // explicitly NOT this event's sponsors is not.
-  const sectionNote = (section: string): string | null => {
-    if (sectionState(section) === 'stated') return null;
-    const note = data?.section_notes?.[section]?.trim();
-    if (!note || note.length < 45) return null;
-    return note;
-  };
-
-  /** A section whose content is a sentence rather than a list. */
-  const StatedSection: React.FC<{ text: string }> = ({ text }) => (
-    <div className="space-y-2">
-      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
-        {text}
-      </p>
-      <a
-        href={result.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 hover:underline"
-      >
-        <ExternalLink className="w-3 h-3" />
-        The organiser's page has the full detail
-      </a>
-    </div>
-  );
-
+  // Raw section notes are provenance/debug data only. They are never rendered verbatim to users.
 
   // The conference's own picture of itself, when its page published one.
   //
@@ -520,8 +473,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     });
   };
 
-  /** The programme as the source described it — the paragraph a schedule was read out of. */
-  const programOverview = data?.program_agenda?.overview?.trim() || null;
   /** What the conference is about, kept apart from when things happen. */
   const programThemes: string[] = Array.isArray(data?.program_agenda?.themes)
     ? data!.program_agenda!.themes!.filter((theme) => typeof theme === 'string' && theme.trim())
@@ -1457,13 +1408,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   </div>
                 )}
                 {!data?.agendaSessions.length ? (
-                  programOverview || programThemes.length > 0 ? null
-                    : statedSectionText("program_agenda") ? (
-                      <StatedSection text={statedSectionText("program_agenda")!} />
-                    ) : data?.crawlComplete === true ? (
+                  programThemes.length > 0 ? null
+                    : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("program_agenda", "a program", "The completed crawl found no session-by-session program.")}
-                      note={sectionNote("program_agenda")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1504,19 +1452,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         )}
                       </div>
                     ))}
-                  </div>
-                )}
-                {/* The sentence the schedule above was read out of. It stays because it carries
-                    what the rows cannot — what the conference is for, and where the rest of the
-                    programme lives when the organiser only published a brochure. */}
-                {programOverview && (
-                  <div className="space-y-2 pt-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      As the source described it
-                    </p>
-                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                      {programOverview}
-                    </p>
                   </div>
                 )}
               </div>
@@ -1791,9 +1726,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'community' && (
               <div className="space-y-4 text-xs text-slate-600">
                 <h3 className="text-lg font-bold text-slate-900">Conference Community & Networking</h3>
-                {statedSectionText('community') ? (
-                  <StatedSection text={statedSectionText('community')!} />
-                ) : (data?.socialLinks?.length ?? 0) > 0 ? (
+                {(data?.socialLinks?.length ?? 0) > 0 ? (
                   <div className="space-y-3">
                     <p className="text-sm text-slate-700">
                       Official community and social channels published for this conference:
@@ -1816,7 +1749,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 ) : (
                   <EmptyExtractState
                     message={emptySectionMessage('community', 'community information', 'The completed crawl found no published community or networking information.')}
-                    note={sectionNote('community')}
                     sourceUrl={result.link}
                   />
                 )}
