@@ -528,6 +528,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   );
 
   const submissionLink = data?.submissionUrl || result.link;
+  const cfpClosed =
+    /\b(closed|ended|expired)\b/i.test(data?.cfpStatus || '') ||
+    Boolean(data?.cfpDeadline && /^\d{4}-\d{2}-\d{2}$/.test(data.cfpDeadline) && data.cfpDeadline < new Date().toISOString().slice(0, 10));
   const upcomingImportantDates = (data?.importantDates || []).filter(
     (entry) => !isOlderThanUpcomingCutoff(entry.date)
   );
@@ -685,7 +688,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             site; every other detail (committee, sponsors, speakers, venue) has its own tab below
             so users aren't sent off-site just to see information we already show in-app. */}
         <div className="p-6 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-3">
-          {submissionChannel === 'email' && mailtoLink ? (
+          {cfpClosed ? (
+            <a
+              href={result.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Globe className="w-4 h-4" />
+              <span>Visit Official Site</span>
+            </a>
+          ) : submissionChannel === 'email' && mailtoLink ? (
             <a
               href={mailtoLink}
               className="px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -907,7 +920,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         </p>
                       )}
                     </div>
-                    {submissionChannel === 'email' && mailtoLink ? (
+                    {cfpClosed ? (
+                      <span className="px-6 py-3 bg-slate-700 text-white font-bold rounded-xl text-xs shadow-md shrink-0">
+                        Submission Closed
+                      </span>
+                    ) : submissionChannel === 'email' && mailtoLink ? (
                       <a
                         href={mailtoLink}
                         className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shrink-0 cursor-pointer"
