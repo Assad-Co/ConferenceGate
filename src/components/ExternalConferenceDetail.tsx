@@ -1568,14 +1568,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     {data.sponsors.map((sp, idx) => (
                       <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
                         {sp.logoUrl && (
-                          <img
-                            src={sp.logoUrl}
-                            alt=""
-                            className="w-12 h-12 rounded-xl object-cover mx-auto"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
+                          <div className="w-full h-20 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={sp.logoUrl}
+                              alt={`${sp.name} logo`}
+                              className="max-w-full max-h-full object-contain mx-auto"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
                         )}
                         <div className="font-bold text-xs text-slate-900">{sp.name}</div>
                         {sp.tier && (
