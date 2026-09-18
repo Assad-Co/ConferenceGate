@@ -443,35 +443,39 @@ async function main() {
         tabs_total:9
       };
 
+      const eventColumns = [
+        'id','title','normalized_title','description','start_date','end_date','start_year','start_month','date_precision','dates_text',
+        'venue','city','region','country','raw_location','format','event_type','organizer','official_url','canonical_url',
+        'registration_url','submission_url','image_url','topics','primary_category','status','confidence_score',
+        'relevance_classification','relevance_reason','quality_flags','extraction_method','source_url','source_domain',
+        'last_seen','last_checked','last_verified','published_at','publish_readiness','readiness_reasons',
+        'official_source_verified_at','title_verified_at'
+      ];
+      const eventArgs = [
+        id,e.title,normalized,e.description || null,e.start,e.end,year,month,e.start?'day':'month',datesText,
+        e.venue,e.city,e.region,e.country,locationText,e.format,'conference',e.organizer || AAPG_ORGANIZER,e.url,e.url,
+        e.fees?.registration_url || null,e.cfp?.submission_url || null,null,JSON.stringify(categories),categories[0],
+        'published',0.99,'conference','official_aapg_authoritative_manifest','[]','aapg_authoritative_manifest',
+        CALENDAR,hostOf(e.url),now,now,now,now,'publish_ready','[]',now,now
+      ];
       await db.execute({
-        sql:`INSERT INTO discovery_events(
-          id,title,normalized_title,description,start_date,end_date,start_year,start_month,date_precision,dates_text,
-          venue,city,region,country,raw_location,format,event_type,organizer,official_url,canonical_url,
-          registration_url,submission_url,image_url,topics,primary_category,status,confidence_score,
-          relevance_classification,relevance_reason,quality_flags,extraction_method,source_url,source_domain,
-          last_seen,last_checked,last_verified,published_at,publish_readiness,readiness_reasons,official_source_verified_at,title_verified_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'conference',?,?,?,?,?,?,?,'published',0.99,'conference',
-          'official_aapg_authoritative_manifest','[]','aapg_authoritative_manifest',?,?,?,?,?,'publish_ready','[]',?,?)
-        ON CONFLICT(id) DO UPDATE SET
-          title=excluded.title,normalized_title=excluded.normalized_title,description=excluded.description,
-          start_date=excluded.start_date,end_date=excluded.end_date,start_year=excluded.start_year,start_month=excluded.start_month,
-          date_precision=excluded.date_precision,dates_text=excluded.dates_text,venue=excluded.venue,city=excluded.city,region=excluded.region,country=excluded.country,
-          raw_location=excluded.raw_location,format=excluded.format,organizer=excluded.organizer,official_url=excluded.official_url,canonical_url=excluded.canonical_url,
-          registration_url=COALESCE(excluded.registration_url,discovery_events.registration_url),
-          submission_url=COALESCE(excluded.submission_url,discovery_events.submission_url),
-          topics=excluded.topics,primary_category=excluded.primary_category,status='published',confidence_score=0.99,
-          relevance_classification='conference',relevance_reason='official_aapg_authoritative_manifest',
-          extraction_method='aapg_authoritative_manifest',source_url=excluded.source_url,source_domain=excluded.source_domain,
-          last_seen=excluded.last_seen,last_checked=excluded.last_checked,last_verified=excluded.last_verified,
-          published_at=COALESCE(discovery_events.published_at,excluded.published_at),publish_readiness='publish_ready',
-          readiness_reasons='[]',official_source_verified_at=excluded.official_source_verified_at,title_verified_at=excluded.title_verified_at`,
-        args:[
-          id,e.title,normalized,e.description || null,e.start,e.end,year,month,e.start?'day':'month',datesText,
-          e.venue,e.city,e.region,e.country,locationText,e.format,e.organizer || AAPG_ORGANIZER,e.url,e.url,
-          e.fees?.registration_url || null,e.cfp?.submission_url || null,null,JSON.stringify(categories),categories[0],
-          CALENDAR,hostOf(e.url),now,now,now,now,now,now
-        ]
-      });
+        sql:`INSERT INTO discovery_events(${eventColumns.join(',')})
+             VALUES(${eventColumns.map(() => '?').join(',')})
+             ON CONFLICT(id) DO UPDATE SET
+               title=excluded.title,normalized_title=excluded.normalized_title,description=excluded.description,
+               start_date=excluded.start_date,end_date=excluded.end_date,start_year=excluded.start_year,start_month=excluded.start_month,
+               date_precision=excluded.date_precision,dates_text=excluded.dates_text,venue=excluded.venue,city=excluded.city,region=excluded.region,country=excluded.country,
+               raw_location=excluded.raw_location,format=excluded.format,organizer=excluded.organizer,official_url=excluded.official_url,canonical_url=excluded.canonical_url,
+               registration_url=COALESCE(excluded.registration_url,discovery_events.registration_url),
+               submission_url=COALESCE(excluded.submission_url,discovery_events.submission_url),
+               topics=excluded.topics,primary_category=excluded.primary_category,status='published',confidence_score=0.99,
+               relevance_classification='conference',relevance_reason='official_aapg_authoritative_manifest',
+               extraction_method='aapg_authoritative_manifest',source_url=excluded.source_url,source_domain=excluded.source_domain,
+               last_seen=excluded.last_seen,last_checked=excluded.last_checked,last_verified=excluded.last_verified,
+               published_at=COALESCE(discovery_events.published_at,excluded.published_at),publish_readiness='publish_ready',
+               readiness_reasons='[]',official_source_verified_at=excluded.official_source_verified_at,title_verified_at=excluded.title_verified_at`,
+        args:eventArgs
+      }););
 
       for (const cat of categories) {
         await db.execute({sql:`INSERT OR IGNORE INTO discovery_event_categories(id,event_id,category,confidence,evidence)
