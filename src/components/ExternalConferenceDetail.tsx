@@ -418,9 +418,10 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // 'stated' has something to show, 'not_announced' means the organiser has not published it, and
   // 'unread' means nobody managed to read it — the only one of the three that means look again.
   const sectionState = (section: string): 'stated' | 'not_announced' | 'unread' => {
-    const stated = data?.sectionAvailability?.[section];
+    if (!data) return 'unread';
+    const stated = data.sectionAvailability?.[section];
     if (stated) return stated;
-    return data?.fetchFailed || data?.sectionsNotRead ? 'unread' : 'stated';
+    return data.fetchFailed || data.sectionsNotRead ? 'unread' : 'stated';
   };
   useEffect(() => {
     if (!data || activeTab === 'overview') return;
