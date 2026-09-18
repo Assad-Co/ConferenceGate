@@ -363,6 +363,7 @@ const EVENTS = [
     url:'https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/',
     description:'AAPG workshop on process-based geological modeling, AI-assisted model calibration, petroleum-systems integration, field-scale applications and future subsurface resources.',
     categories:['Petroleum & Geoscience','Engineering','Data Science','Energy','Artificial Intelligence'],
+    replaceSections:true,
     agenda:{overview:'Five-session workshop program covering current modeling challenges, model calibration, petroleum-systems coupling, practical field applications and future resources.',themes:['Current status, challenges and emerging frontiers','Model calibration and validation','Forward stratigraphic modeling with petroleum systems','Basin-to-borehole applications','Storage, geothermal and critical minerals']},
     committee:[
       person('Dan Tetzlaff','WSC','Committee'),person('Peter Burgess','University of Liverpool','Committee'),
@@ -447,7 +448,7 @@ const EVENTS = [
 ];
 
 function canonicalSectionAvailability(event, existingMeta) {
-  const prior = existingMeta?.section_availability || {};
+  const prior = event.replaceSections ? {} : (existingMeta?.section_availability || {});
   const reviewedFallback = (canonical, legacy) =>
     prior[canonical] === 'stated' || prior[legacy] === 'stated' ? 'stated' : 'not_announced';
   return {
@@ -578,14 +579,19 @@ async function main() {
         keywords:['AAPG','energy geoscience','petroleum geoscience']
       };
 
-      const cfp=e.cfp ? {...oldCfp,...e.cfp} : oldCfp;
-      const program=e.agenda ? {...oldProgram,...e.agenda,sessions:Array.isArray(oldProgram.sessions)?oldProgram.sessions:[]} : oldProgram;
-      const speakers=Array.isArray(e.speakers) && e.speakers.length ? e.speakers : oldSpeakers;
-      const committee=Array.isArray(e.committee) && e.committee.length ? e.committee : oldCommittee;
-      const sponsors=Array.isArray(e.sponsors) && e.sponsors.length ? e.sponsors : oldSponsors;
-      const venue=e.venueInfo ? {...oldVenue,...e.venueInfo} : (e.venue ? {...oldVenue,venue_name:e.venue,address:oldVenue.address || locationText} : oldVenue);
-      const fees=e.fees ? {...oldFees,...e.fees} : oldFees;
-      const communityBase=e.community ? {...oldCommunity,...e.community} : {...oldCommunity};
+      const replaceSections=e.replaceSections === true;
+      const cfp=replaceSections ? (e.cfp || {}) : (e.cfp ? {...oldCfp,...e.cfp} : oldCfp);
+      const program=replaceSections
+        ? (e.agenda ? {...e.agenda,sessions:Array.isArray(e.agenda.sessions)?e.agenda.sessions:[]} : {sessions:[],themes:[],overview:null})
+        : (e.agenda ? {...oldProgram,...e.agenda,sessions:Array.isArray(oldProgram.sessions)?oldProgram.sessions:[]} : oldProgram);
+      const speakers=replaceSections ? (Array.isArray(e.speakers)?e.speakers:[]) : (Array.isArray(e.speakers) && e.speakers.length ? e.speakers : oldSpeakers);
+      const committee=replaceSections ? (Array.isArray(e.committee)?e.committee:[]) : (Array.isArray(e.committee) && e.committee.length ? e.committee : oldCommittee);
+      const sponsors=replaceSections ? (Array.isArray(e.sponsors)?e.sponsors:[]) : (Array.isArray(e.sponsors) && e.sponsors.length ? e.sponsors : oldSponsors);
+      const venue=replaceSections
+        ? (e.venueInfo ? {...e.venueInfo} : (e.venue ? {venue_name:e.venue,address:locationText} : {}))
+        : (e.venueInfo ? {...oldVenue,...e.venueInfo} : (e.venue ? {...oldVenue,venue_name:e.venue,address:oldVenue.address || locationText} : oldVenue));
+      const fees=replaceSections ? (e.fees || {}) : (e.fees ? {...oldFees,...e.fees} : oldFees);
+      const communityBase=replaceSections ? (e.community ? {...e.community} : {}) : (e.community ? {...oldCommunity,...e.community} : {...oldCommunity});
       const community={
         ...communityBase,
         ...(e.community?.overview ? {summary:e.community.overview} : {}),
