@@ -344,6 +344,18 @@ const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
   },
 };
 
+const PUBLIC_SPONSOR_NOISE = /^(?:free|no\s+spam|unsubscribe(?:\s+anytime)?|save\s+time(?:\s+never\s+miss\s+out)?|top\s+events(?:\s+handpicked\s+for\s+you)?|industry\s+insights(?:\s+trends\s+that\s+matter)?|newsletter|sign\s+up|sign\s+in|sign\s+out|toggle\s+navigation|show\s+submenu.*|view\s+full.*|read\s+more|learn\s+more)$/i;
+
+function publicSponsorEntry(value: any): boolean {
+  const name = String(value?.name ?? '').replace(/\s+/g, ' ').trim();
+  const logo = String(value?.logoUrl ?? value?.logo_url ?? '').trim();
+  if (!name || !logo) return false;
+  if (PUBLIC_SPONSOR_NOISE.test(name)) return false;
+  if (/\b(?:handpicked\s+for\s+you|never\s+miss\s+out|no\s+spam|unsubscribe\s+anytime|toggle\s+navigation|show\s+submenu|industry\s+insights|trends\s+that\s+matter)\b/i.test(name)) return false;
+  if (name.length > 120 || name.split(/\s+/).length > 10) return false;
+  return true;
+}
+
 // Normalizes the canonical tab-owned payload into the existing view model. Every legacy field is
 // sourced from its owning tab, so a component cannot accidentally render CFP data in Overview or
 // speaker-like committee members in Keynote Speakers.
@@ -436,11 +448,15 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
       imageUrl: x.imageUrl ?? x.photo_url,
     })),
     committee: (committee || []).map((x: any) => ({ ...x, org: x.org ?? x.organization })),
-    sponsors: (sponsors || []).map((x: any) => ({
-      ...x,
-      tier: x.tier ?? x.sponsorship_level,
-      logoUrl: x.logoUrl ?? x.logo_url,
-    })),
+    sponsors: (sponsors || [])
+      .map((x: any) => ({
+        ...x,
+        tier: x.tier ?? x.sponsorship_level,
+        logoUrl: x.logoUrl ?? x.logo_url,
+      }))
+      // Public sponsor cards require a real image and a plausible organisation name. Raw text-only
+      // extraction is kept in the stored record for audit/enrichment but is not customer-facing.
+      .filter(publicSponsorEntry),
     venueName: venue.venue_name ?? data?.venueName ?? null,
     venueAddress: venue.address ?? data?.venueAddress ?? null,
     hotels: venue.hotels ?? data?.hotels ?? [],
