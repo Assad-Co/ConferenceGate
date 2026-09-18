@@ -665,21 +665,80 @@ export function descriptionWorthShowing(record: LaunchConferenceRecord): string 
   return novel.length >= 3 ? text : null;
 }
 
+const CONFERENCE_CATEGORY_RULES: Array<[string, RegExp]> = [
+  ["Artificial Intelligence", /artificial intelligence|machine learning|deep learning|generative ai|large language model|\bllm\b|\bai\b/],
+  ["Data Science", /data science|data analytics|big data|data engineering|business intelligence/],
+  ["Cybersecurity", /cybersecurity|cyber security|information security|network security|zero trust|ethical hacking/],
+  ["Software & Cloud", /software|cloud computing|devops|platform engineering|saas|kubernetes|developer/],
+  ["Telecommunications", /telecommunications?|\btelecom\b|5g|6g|wireless|mobile network/],
+  ["Semiconductors & Electronics", /semiconductor|microelectronics|electronics|integrated circuits?|chips?\b|photonics/],
+  ["Robotics & Automation", /robotics?|automation|autonomous systems?|mechatronics/],
+  ["Engineering", /engineering|engineer\b/],
+  ["Civil & Construction", /civil engineering|construction|infrastructure|structural engineering|geotechnical/],
+  ["Mechanical Engineering", /mechanical engineering|thermodynamics|fluid mechanics|manufacturing systems/],
+  ["Electrical Engineering", /electrical engineering|power systems?|electronics|electrical grid/],
+  ["Chemical Engineering", /chemical engineering|process engineering|petrochemical|catalysis/],
+  ["Materials Science", /materials science|advanced materials|metallurgy|ceramics|polymers?|composites?/],
+  ["Energy", /energy|renewable|solar|wind power|hydrogen|petroleum|oil and gas|electricity|lng|natural gas/],
+  ["Petroleum & Geoscience", /petroleum|oil and gas|geoscience|geology|geological|geophysics|reservoir|hydrocarbon|sedimentology|stratigraph|seismic/],
+  ["Renewable Energy", /renewable|solar|wind power|geothermal|bioenergy|clean energy/],
+  ["Hydrogen & CCUS", /hydrogen|carbon capture|ccus|ccs\b|carbon storage|decarbonization|decarbonisation/],
+  ["Mining & Minerals", /mining|minerals?|ore deposit|mineral exploration|critical minerals|lithium/],
+  ["Environment", /environment|ecolog|conservation|pollution|biodiversity/],
+  ["Climate & Sustainability", /climate|sustainab|net zero|circular economy|decarbon/],
+  ["Healthcare", /healthcare|health care|medical|medicine|clinical|hospital|patient/],
+  ["Public Health", /public health|epidemiology|global health|population health/],
+  ["Pharmaceuticals & Biotechnology", /pharma|pharmaceutical|biotechnology|biotech|drug discovery|therapeutics/],
+  ["Nursing", /nursing|nurse\b/],
+  ["Dentistry", /dentistry|dental|oral health/],
+  ["Cardiology", /cardiology|cardiovascular|heart disease/],
+  ["Oncology", /oncology|cancer|tumou?r/],
+  ["Neuroscience", /neuroscience|neurology|brain|neurodegenerative/],
+  ["Life Sciences", /life sciences?|biology|genomics|genetics|microbiology|immunology|cell biology/],
+  ["Chemistry", /chemistry|chemical sciences?|analytical chemistry|organic chemistry/],
+  ["Physics", /physics|quantum|astrophysics|particle physics|optics/],
+  ["Mathematics & Statistics", /mathematics|statistics|statistical|applied math|operations research/],
+  ["Science", /science|scientific|research/],
+  ["Education", /education|teaching|learning|pedagog|academic|edtech|higher education/],
+  ["Business", /business|management|entrepreneur|commerce|strategy|leadership/],
+  ["Finance", /finance|banking|fintech|investment|treasury|accounting/],
+  ["Economics", /economics|economic policy|econometrics/],
+  ["Marketing", /marketing|advertising|brand strategy|customer experience/],
+  ["Supply Chain & Logistics", /supply chain|logistics|procurement|transportation|freight|warehousing/],
+  ["Manufacturing", /manufacturing|industrial production|factory|industry 4\.0/],
+  ["Aviation & Aerospace", /aviation|aerospace|aircraft|air transport|space technology/],
+  ["Maritime", /maritime|shipping|marine engineering|offshore vessel/],
+  ["Automotive & Mobility", /automotive|mobility|electric vehicle|ev\b|transport technology/],
+  ["Architecture & Urbanism", /architecture|urban design|urban planning|smart cities|built environment/],
+  ["Agriculture & Food", /agricultur|farming|agronom|crop|food science|food technology|agritech/],
+  ["Law & Regulation", /\blaw\b|legal|regulation|regulatory|jurisprudence|compliance/],
+  ["Government & Policy", /public policy|government|policy forum|public administration/],
+  ["Social Sciences", /social science|sociology|psychology|anthropology|political science/],
+  ["Arts & Culture", /arts?\b|culture|humanities|museum|creative industries/],
+  ["Tourism & Hospitality", /tourism|hospitality|travel industry|hotel industry/],
+  ["Blockchain & Web3", /blockchain|web3|cryptocurrency|digital assets|distributed ledger/],
+  ["Real Estate", /real estate|property|proptech|facilities management/],
+];
+
+export function derivedCategories(record: LaunchConferenceRecord): string[] {
+  const subject = [
+    record.title,
+    record.description,
+    record.organization,
+    record.category,
+    ...record.categories,
+    ...record.topics,
+    ...record.keywords,
+  ].filter(Boolean).join(" ").toLowerCase();
+  const matched = CONFERENCE_CATEGORY_RULES
+    .filter(([, pattern]) => pattern.test(subject))
+    .map(([name]) => name);
+  const existing = [record.category, ...record.categories].filter((value): value is string => Boolean(value?.trim()));
+  return [...new Set([...existing, ...matched])].slice(0, 8);
+}
+
 function derivedCategory(record: LaunchConferenceRecord): string | null {
-  const subject = [record.title, record.description, ...record.topics, ...record.keywords].filter(Boolean).join(" ").toLowerCase();
-  const patterns: Array<[string, RegExp]> = [
-    ["Artificial Intelligence", /artificial intelligence|machine learning|deep learning|\bai\b/],
-    ["Cybersecurity", /cybersecurity|cyber security|information security/],
-    ["Healthcare", /healthcare|medical|medicine|clinical|nursing|pharma/],
-    ["Energy", /energy|renewable|solar|wind power|hydrogen|petroleum|oil and gas|electricity/],
-    ["Environment", /environment|ecolog|climate|conservation/],
-    ["Finance", /finance|banking|fintech|investment/],
-    ["Education", /education|teaching|learning|pedagog|academic|edtech/],
-    ["Engineering", /engineering/],
-    ["Business", /business|management|entrepreneur|commerce|marketing|trade/],
-    ["Science", /science|scientific|physics|chemistry|biology/],
-  ];
-  return patterns.find(([, pattern]) => pattern.test(subject))?.[0] || record.category || null;
+  return derivedCategories(record)[0] || record.category || null;
 }
 
 function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
@@ -702,7 +761,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     organization: record.organization,
     // What it is about, which is what the drawn banner keys its palette on.
     category: derivedCategory(record),
-    categories: record.categories,
+    categories: derivedCategories(record),
     cfpStatus: (() => {
       const cfp = record.details?.callForPapers;
       return cfp && [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text, cfp.url]
@@ -889,7 +948,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       format: record.format,
       organizer: record.organization,
       topics: record.topics,
-      categories: record.categories,
+      categories: derivedCategories(record),
       keywords: record.keywords,
       important_dates: importantDates,
       official_url: record.officialUrl,
