@@ -85,6 +85,12 @@ async function cycle() {
   // vetted current-edition fields or its customer-ready tab count.
   await runScript('scripts/syncAapgOfficialUpcoming.mjs');
   await runScript('scripts/ensureAapgLogos.mjs');
+  // After the authoritative AAPG pass, fetch real event artwork separately from the organiser logo.
+  // This also repairs older AAPG records whose card/hero image was previously just the AAPG mark.
+  await runScript('scripts/enrichConferenceImages.mjs', {
+    IMAGE_ENRICH_LIMIT: process.env.AAPG_IMAGE_ENRICH_LIMIT || '150',
+    IMAGE_ENRICH_CONCURRENCY: process.env.IMAGE_ENRICH_CONCURRENCY || '5',
+  });
   await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
