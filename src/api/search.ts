@@ -268,7 +268,7 @@ export interface ExtractedConferenceDetails {
   contactPhone: string | null;
   socialLinks: Array<{ platform: string; url: string }>;
   /** Clean, curated networking/community summary. Raw crawler prose is never mapped here. */
-  communitySummary: string | null;
+  communitySummary?: string | null;
   awards: Array<{ name: string; description: string | null }>;
   provenance: Record<string, FieldProvenance>;
   conflicts: ExtractionConflict[];
