@@ -117,7 +117,7 @@ async function main() {
           extraction_method,source_url,source_domain,last_seen,last_checked,last_verified,published_at,
           publish_readiness,readiness_reasons,official_source_verified_at,title_verified_at
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'conference',?,?,?,?,?,'published',0.95,'conference',
-          'launch_catalogue_seed','[]','launch_catalogue_seed',?,?,?,?,?,?,?,'publish_ready','[]',?,?)
+          'launch_catalogue_seed','[]','launch_catalogue_seed',?,?,?,?,?,?,'publish_ready','[]',?,?)
         ON CONFLICT(id) DO UPDATE SET
           title=excluded.title,
           description=COALESCE(discovery_events.description, excluded.description),
