@@ -111,6 +111,21 @@ if (!fs.existsSync(FILE)) {
     if (text !== original) fs.writeFileSync(FILE, text, 'utf8');
     console.log(`[launch-dataset-repair] valid=true repairs=${repaired}`);
   } else {
-    console.warn(`[launch-dataset-repair] valid=false repairs=${repaired}`);
+    // The runtime loader already has an authoritative CSV fallback. Do not leave a known-broken
+    // JSON file in place where every browse request will parse it, throw, and then fall back again.
+    // Quarantine only in the ephemeral Render filesystem; the repository source remains untouched.
+    const csvFallback = path.join(process.cwd(), 'data', 'conferencegate-worldwide-2026-2028.csv');
+    if (fs.existsSync(csvFallback)) {
+      const quarantined = FILE + '.malformed';
+      try { if (fs.existsSync(quarantined)) fs.unlinkSync(quarantined); } catch {}
+      try {
+        fs.renameSync(FILE, quarantined);
+        console.warn(`[launch-dataset-repair] valid=false repairs=${repaired}; quarantined malformed JSON; CSV fallback active`);
+      } catch (error) {
+        console.warn(`[launch-dataset-repair] valid=false repairs=${repaired}; quarantine failed: ${error?.message || error}`);
+      }
+    } else {
+      console.warn(`[launch-dataset-repair] valid=false repairs=${repaired}; no CSV fallback available`);
+    }
   }
 }
