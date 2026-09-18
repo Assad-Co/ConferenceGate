@@ -340,9 +340,11 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   const filled: string[] = [];
   if (details.program.availability === "stated" || details.schedule.sessions.length) filled.push("agenda");
   if (launchCfpHasData(record)) filled.push("cfp");
-  if (details.keynotes.availability === "stated") filled.push("speakers");
-  if (details.committee.availability === "stated") filled.push("committee");
-  if (details.sponsors.availability === "stated") filled.push("sponsors");
+  // Roster tabs only count when we have actual named entries. A source paragraph or scraped
+  // navigation fragment is evidence that a page mentioned speakers/committee/sponsors, not a roster.
+  if (details.keynotes.items.length > 0) filled.push("speakers");
+  if (details.committee.items.length > 0) filled.push("committee");
+  if (details.sponsors.items.length > 0) filled.push("sponsors");
   if (details.fees.availability === "stated") filled.push("fees");
   if (details.community?.availability === "stated") filled.push("community");
   return filled;

@@ -474,7 +474,11 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       // URL-only placeholders do not count as filled tabs. A visitor needs actual information in
       // the section, not merely a button that sends them elsewhere. A cleaned source-backed note
       // does count because the detail page renders that note as the body of the tab.
-      if (sectionNoteHasContent(index)) return true;
+      // A raw source note can legitimately carry prose for CFP/program/venue/fees/community,
+      // but roster tabs are different: Speakers, Committee and Sponsors are only "filled" when
+      // named structured items were actually extracted. This prevents a whole agenda/navigation
+      // page from counting as a speaker list.
+      if (sectionNoteHasContent(index) && ![2, 3, 4].includes(index)) return true;
       if (index === 0) { // CFP
         return [
           value?.status, value?.abstract_submission_deadline, value?.notification_date,
@@ -626,7 +630,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
           .filter((sectionName, index) =>
             sectionName === "cfp"
               ? cfpHasSubstantiveData(sections[0], sectionNotes.cfp ?? sectionNotes.call_for_papers)
-              : sectionHasDisplayContent(index, sections[index]) || sectionAnswered(index)
+              : sectionHasDisplayContent(index, sections[index])
           ),
       },
     });

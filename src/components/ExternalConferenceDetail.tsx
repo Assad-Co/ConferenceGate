@@ -1526,12 +1526,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Keynote & Invited Speakers</h3>
                 {!data?.speakers.length ? (
-                  statedSectionText("keynote_speakers") ? (
-                    <StatedSection text={statedSectionText("keynote_speakers")!} />
-                  ) : data?.crawlComplete === true ? (
+                  data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("keynote_speakers", "speakers", "The completed crawl found no named keynote or invited speakers.")}
-                      note={sectionNote("keynote_speakers")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1551,12 +1548,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Technical Committee & Advisory Board</h3>
                 {!data?.committee.length ? (
-                  statedSectionText("technical_committee") ? (
-                    <StatedSection text={statedSectionText("technical_committee")!} />
-                  ) : data?.crawlComplete === true ? (
+                  data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("technical_committee", "a committee", "The completed crawl found no named technical committee roster.")}
-                      note={sectionNote("technical_committee")}
                       sourceUrl={result.link}
                     />
                   ) : (
@@ -1576,12 +1570,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Sponsors & Exhibitors</h3>
                 {!data?.sponsors.length ? (
-                  statedSectionText("sponsors_exhibitors") ? (
-                    <StatedSection text={statedSectionText("sponsors_exhibitors")!} />
-                  ) : data?.crawlComplete === true ? (
+                  data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("sponsors_exhibitors", "sponsors", "The completed crawl found no named sponsors or exhibitors.")}
-                      note={sectionNote("sponsors_exhibitors")}
                       sourceUrl={result.link}
                     />
                   ) : (
