@@ -458,24 +458,9 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       metadata.section_notes && typeof metadata.section_notes === "object"
         ? metadata.section_notes
         : {};
-    const noteAliases = [
-      ["cfp", "call_for_papers"],
-      ["agenda", "program_agenda"],
-      ["speakers", "keynote_speakers"],
-      ["committee", "technical_committee"],
-      ["sponsors", "sponsors_exhibitors"],
-      ["venue", "venue_accommodation"],
-      ["fees", "fees_pricing"],
-      ["community"],
-    ];
     const sectionHasDisplayContent = (index: number, value: any): boolean => {
-      // URL-only placeholders do not count as filled tabs. A visitor needs actual information in
-      // the section, not merely a button that sends them elsewhere. A cleaned source-backed note
-      // does count because the detail page renders that note as the body of the tab.
-      // A raw source note can legitimately carry prose for CFP/program/venue/fees/community,
-      // but roster tabs are different: Speakers, Committee and Sponsors are only "filled" when
-      // named structured items were actually extracted. This prevents a whole agenda/navigation
-      // page from counting as a speaker list.
+      // URL-only placeholders and internal crawler notes do not count as filled tabs. A visitor
+      // needs structured information that is actually rendered on the customer-facing page.
       if (index === 0) { // CFP
         return [
           value?.status, value?.abstract_submission_deadline, value?.notification_date,
@@ -531,33 +516,10 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       availability && typeof availability === "object"
         ? Object.values(availability).filter((state) => state !== "unread").length
         : populatedSections;
-    const authoritativeManifest =
-      metadata.import_origin === "aapg_authoritative_manifest" ||
-      metadata.import_origin === "verified_calendar_batch" ||
-      metadata.validation_status === "VALIDATED_OFFICIAL_AAPG_CALENDAR" ||
-      metadata.validation_status === "VALIDATED_OFFICIAL_AND_CORROBORATING_SOURCES";
     // A public rich listing must have six genuinely visible, structured tabs. Internal source
     // notes and "not announced" answers do not count because customers cannot use them as content.
     const detailsReady = hasVisualIdentity && filledTabs >= 6;
     if (answeredSections < 2) continue;
-    const availabilityAliases = [
-      ["call_for_papers","cfp"],
-      ["program_agenda","agenda"],
-      ["keynote_speakers","speakers"],
-      ["technical_committee","committee"],
-      ["sponsors_exhibitors","sponsors"],
-      ["venue_accommodation","venue"],
-      ["fees_pricing","fees"],
-      ["community"],
-    ];
-    const sectionAnswered = (index: number): boolean => {
-      if (!availability || typeof availability !== "object") return false;
-      return (availabilityAliases[index] || []).some((key) => {
-        const state = (availability as Record<string, unknown>)[key];
-        return state === "stated" || state === "not_announced";
-      });
-    };
-
     const score = scoreStoredConferenceRecord(query, {
       title,
       acronym: overview.acronym ?? overview.short_title,
