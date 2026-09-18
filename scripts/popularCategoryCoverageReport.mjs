@@ -32,33 +32,29 @@ function sectionFilled(kind,value){
   ].some(meaningful);
   if(kind==='fees') return meaningful(value?.pricing_text)||meaningful(value?.early_bird_deadline)||
     (Array.isArray(value?.registration_fees)&&value.registration_fees.some(meaningful));
-  if(kind==='program') return meaningful(value?.overview)||
+  if(kind==='program') return
     (Array.isArray(value?.sessions)&&value.sessions.some(meaningful))||
     (Array.isArray(value?.themes)&&value.themes.some(meaningful));
+  if(kind==='speakers') return Array.isArray(value)&&value.some((x)=>meaningful(x?.name||x?.full_name));
+  if(kind==='committee') return Array.isArray(value)&&value.some((x)=>meaningful(x?.name||x?.full_name));
+  if(kind==='sponsors') return Array.isArray(value)&&value.some((x)=>
+    meaningful(x?.name)&&meaningful(x?.logoUrl||x?.logo_url));
   if(kind==='venue') return [
     value?.venue_name,value?.address,value?.accommodation,value?.travel_information,
     ...(Array.isArray(value?.hotels)?value.hotels:[])
   ].some(meaningful);
-  if(kind==='community') return meaningful(value?.overview)||
+  if(kind==='community') return meaningful(value?.summary)||
     (Array.isArray(value?.social_media)&&value.social_media.some(meaningful));
-  return meaningful(value);
+  return false;
 }
 function sections(row){
-  const meta=safe(row.extraction_metadata,{});
-  const notes=meta?.section_notes && typeof meta.section_notes==='object' ? meta.section_notes : {};
-  const aliases={
-    cfp:['cfp','call_for_papers'],fees:['fees','fees_pricing'],program:['agenda','program_agenda'],
-    speakers:['speakers','keynote_speakers'],committee:['committee','technical_committee'],
-    sponsors:['sponsors','sponsors_exhibitors'],venue:['venue','venue_accommodation'],community:['community']
-  };
-  const noteFilled=(kind)=>kind!=='overview' && (aliases[kind]||[]).some((key)=>meaningful(notes[key]));
   const values=[
     ['overview',safe(row.overview,{})],['cfp',safe(row.call_for_papers,{})],['fees',safe(row.fees_pricing,{})],
     ['program',safe(row.program_agenda,{})],['speakers',safe(row.keynote_speakers,[])],
     ['committee',safe(row.technical_committee,[])],['sponsors',safe(row.sponsors_exhibitors,[])],
     ['venue',safe(row.venue_accommodation,{})],['community',safe(row.community,{})]
   ];
-  return values.filter(([kind,value])=>sectionFilled(kind,value)||noteFilled(kind)).length;
+  return values.filter(([kind,value])=>sectionFilled(kind,value)).length;
 }
 function logo(row){
   const overview=safe(row.overview,{});
@@ -78,7 +74,11 @@ async function main(){
       JOIN discovery_event_categories dec ON dec.event_id=de.id
       LEFT JOIN extracted_conferences ec
         ON ec.source_url=de.official_url OR ec.source_url=de.canonical_url
-      WHERE de.status='published' AND de.start_date IS NOT NULL AND date(de.start_date)>=date('now')`);
+      WHERE de.status='published'
+        AND (
+          (de.start_date IS NOT NULL AND date(de.start_date)>=date('now'))
+          OR (de.start_date IS NULL AND de.start_year>=CAST(strftime('%Y','now') AS INTEGER))
+        )`);
     const counts=new Map(CATEGORIES.map((c)=>[c,{rich:0,total:0,examples:[]}]));
     for(const row of rows.rows||[]){
       const category=String(row.category||'');
