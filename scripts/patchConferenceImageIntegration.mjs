@@ -71,6 +71,9 @@ function patchDiscoveryEngine() {
   // 3) official-site banner/representative image,
   // 4) Conference Gate initials.
   const candidates = [
+    isAapg
+      ? { url: '/aapg-organizer.svg', kind: 'organiser-logo' as const }
+      : null,
     result.favicon
       ? {
           url: result.favicon,
@@ -79,9 +82,6 @@ function patchDiscoveryEngine() {
       : null,
     derivedOrganiserIcon
       ? { url: derivedOrganiserIcon, kind: 'organiser-logo' as const }
-      : null,
-    isAapg
-      ? { url: '/aapg-organizer.svg', kind: 'organiser-logo' as const }
       : null,
     result.thumbnail
       ? { url: result.thumbnail, kind: 'official-image' as const }
