@@ -494,7 +494,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // allowed to fail back to the name.
   const logoUrl = data?.overview?.logo_url || result.favicon || null;
   const logoIsOwn = (data?.overview?.logo_source ?? result.logoSource) === 'stated';
-  const heroLogo = logoIsOwn ? logoUrl : null;
+  // If the event has no distinct mark, use the organiser's published logo rather than a synthetic
+  // acronym. It stays explicitly labelled as the organiser's logo so the page gains the real
+  // identity the organiser published without pretending it belongs to this edition.
+  const heroLogo = logoUrl;
+  const heroLogoLabel = logoIsOwn ? 'Conference logo' : 'Organiser logo';
 
   /** The programme as the source described it — the paragraph a schedule was read out of. */
   const programOverview = data?.program_agenda?.overview?.trim() || null;
@@ -623,13 +627,18 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent"></div>
           {heroLogo && !logoFailed && (
-            <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
-              <img
-                src={heroLogo}
-                alt={`${displayTitle} logo`}
-                onError={() => setLogoFailed(true)}
-                className="w-full h-full object-contain"
-              />
+            <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
+                <img
+                  src={heroLogo}
+                  alt={logoIsOwn ? `${displayTitle} logo` : `${result.displayLink} organiser logo`}
+                  onError={() => setLogoFailed(true)}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-slate-950/75 text-[9px] uppercase tracking-wide font-bold text-slate-200 border border-white/10">
+                {heroLogoLabel}
+              </span>
             </div>
           )}
 
