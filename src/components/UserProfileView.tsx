@@ -101,6 +101,17 @@ const ABSTRACT_STATUS_STYLE: Record<string, string> = {
 };
 const abstractStatusClass = (status: string) => ABSTRACT_STATUS_STYLE[status] || 'bg-blue-100 text-blue-700';
 
+const paperIdentityKey = (title: string): string =>
+  title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+
+const isRealExternalPublication = (paper: ExternalPaper): boolean => {
+  const title = paper.title.trim();
+  if (!title) return false;
+  if (/\b(?:research\s+profile|author\s+profile|researchgate\s+profile|google\s+scholar\s+profile|profile\s+page)\b/i.test(title)) return false;
+  if (paper.url && /researchgate\.net\/profile\//i.test(paper.url)) return false;
+  return true;
+};
+
 interface AttendedConference {
   id: string;
   title: string;
@@ -202,6 +213,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   // never treated as confirmed until the person explicitly says so, since names aren't unique.
   const [externalConfirmed, setExternalConfirmed] = useState<ExternalPaper[]>([]);
   const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
+  const [linkedInPaperTitles, setLinkedInPaperTitles] = useState<string[]>([]);
   const [externalLoading, setExternalLoading] = useState(false);
   const [externalRefreshing, setExternalRefreshing] = useState(false);
   const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
@@ -269,6 +281,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       setDecidingDoi(null);
     }
   };
+
+  const paperPublicationCount = useMemo(() => {
+    const titles = [
+      ...userProfile.publications.map((pub) => pub.title),
+      ...externalConfirmed.filter(isRealExternalPublication).map((paper) => paper.title),
+      ...linkedInPaperTitles,
+    ];
+    return new Set(
+      titles
+        .map((title) => paperIdentityKey(String(title || '')))
+        .filter(Boolean),
+    ).size;
+  }, [userProfile.publications, externalConfirmed, linkedInPaperTitles]);
 
   // Plain attendance (no presentation) has no real, name-searchable public source anywhere —
   // attendee lists are private to organizers. This is the account typing it in themselves,
@@ -529,9 +554,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Presented Papers</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Papers & Publications</div>
             <div className="text-xl font-extrabold text-slate-900">
-              {userProfile.contributions.oralPresentations + userProfile.contributions.posterPresentations} Papers
+              {paperPublicationCount} {paperPublicationCount === 1 ? 'Paper' : 'Papers'}
             </div>
           </div>
 
@@ -930,7 +955,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                       )}
                     </div>
                   ))}
-                  {externalConfirmed.map((paper) => (
+                  {externalConfirmed.filter(isRealExternalPublication).map((paper) => (
                     <div
                       key={paper.doi}
                       className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-start justify-between gap-3"
