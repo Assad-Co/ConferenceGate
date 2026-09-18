@@ -81,6 +81,10 @@ async function cycle() {
   await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
+  // Final authoritative protection pass: no generic normalizer after this point may reduce AAPG's
+  // vetted current-edition fields or its customer-ready tab count.
+  await runScript('scripts/syncAapgOfficialUpcoming.mjs');
+  await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
