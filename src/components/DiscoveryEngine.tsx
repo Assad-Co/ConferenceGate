@@ -1389,14 +1389,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
                   {/* What it is: subject, kind, and how it is held. Only the ones the record
                       actually states — a chip is a claim like any other field. */}
-                  {(result.category || formatChipLabel(result.format)) && (
+                  {(result.category || (result.categories?.length ?? 0) > 0 || formatChipLabel(result.format)) && (
                     <div className="flex flex-wrap items-center gap-2">
-                      {result.category && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700">
-                          <Leaf className="w-3.5 h-3.5 shrink-0" />
-                          {result.category}
-                        </span>
-                      )}
+                      {Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[]))
+                        .slice(0, 4)
+                        .map((category) => (
+                          <span key={category} className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700">
+                            <Leaf className="w-3.5 h-3.5 shrink-0" />
+                            {category}
+                          </span>
+                        ))}
                       <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
                         Conference
                       </span>
