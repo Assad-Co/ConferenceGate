@@ -959,7 +959,9 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       // something reaches the panel; the tab says the rest in its own words.
       pricing_text: details?.fees.availability === "stated" ? details.fees.text : null,
     },
-    community: {},
+    community: details?.community?.availability === "stated"
+      ? { overview: details.community.text }
+      : {},
     // The cell each section came from, verbatim, so a reader sees what the list actually said —
     // including the sentence that withdrew a value the parser therefore refused to store.
     section_notes: details
@@ -970,6 +972,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
           technical_committee: details.committee.text,
           sponsors_exhibitors: details.sponsors.text,
           fees_pricing: details.fees.text,
+          community: details.community?.text ?? null,
         }
       : {},
     provenance: record.provenance,
