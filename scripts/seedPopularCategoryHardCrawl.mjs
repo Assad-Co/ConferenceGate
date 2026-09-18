@@ -77,11 +77,12 @@ const SEEDS = [
   ['AGU26 Annual Meeting','https://www.agu.org/agu26','2026-12-07','2026-12-11','San Francisco','United States',['Science','Climate & Sustainability','Environment','Petroleum & Geoscience','Education','Open call for papers']],
   ['EGU General Assembly 2027','https://www.egu27.eu/','2027-04-04','2027-04-09','Vienna','Austria',['Science','Petroleum & Geoscience','Climate & Sustainability','Environment','Education','Open call for papers']],
   ['Offshore Technology Conference 2027','https://2027.otcnet.org/','2027-05-03','2027-05-05','Houston','United States',['Petroleum & Geoscience','Energy','Engineering','Hydrogen & CCUS','Renewable Energy','Business']],
+  ['OTC Brasil 2027','https://www.otcbrasil.org/','2027-10-26','2027-10-28','Rio de Janeiro','Brazil',['Petroleum & Geoscience','Energy','Engineering','Maritime','Business']],
   ['Gastech 2027','https://www.gastechevent.com/','2027-09-14','2027-09-17','Houston','United States',['Energy','Hydrogen & CCUS','Petroleum & Geoscience','Business','Engineering']],
   ['World Nuclear Exhibition 2027','https://www.world-nuclear-exhibition.com/','2027-12-07','2027-12-09','Paris','France',['Energy','Engineering','Manufacturing','Climate & Sustainability','Business']],
-  ['Farnborough International Airshow 2026','https://www.farnboroughairshow.com/','2026-07-20','2026-07-24','Farnborough','United Kingdom',['Aviation & Aerospace','Engineering','Manufacturing','Business']],
   ['Formnext 2026','https://formnext.mesago.com/frankfurt/en.html','2026-11-17','2026-11-20','Frankfurt','Germany',['Manufacturing','Engineering','Materials Science','Robotics & Automation','Artificial Intelligence']],
-  ['World Travel Market London 2026','https://www.wtm.com/london/en-gb.html','2026-11-03','2026-11-05','London','United Kingdom',['Tourism & Hospitality','Business','Marketing','Supply Chain & Logistics']]
+  ['World Travel Market London 2026','https://www.wtm.com/london/en-gb.html','2026-11-03','2026-11-05','London','United Kingdom',['Tourism & Hospitality','Business','Marketing','Supply Chain & Logistics']],
+  ['SMM 2028','https://www.smm-hamburg.com/','2028-09-05','2028-09-08','Hamburg','Germany',['Maritime','Engineering','Manufacturing','Energy','Supply Chain & Logistics']]
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }
