@@ -282,10 +282,22 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     }
   };
 
+  const uniqueExternalConfirmed = useMemo(
+    () => Array.from(
+      new Map(
+        externalConfirmed
+          .filter(isRealExternalPublication)
+          .map((paper) => [paperIdentityKey(paper.title), paper] as const)
+          .filter(([key]) => Boolean(key)),
+      ).values(),
+    ),
+    [externalConfirmed],
+  );
+
   const paperPublicationCount = useMemo(() => {
     const titles = [
       ...userProfile.publications.map((pub) => pub.title),
-      ...externalConfirmed.filter(isRealExternalPublication).map((paper) => paper.title),
+      ...uniqueExternalConfirmed.map((paper) => paper.title),
       ...linkedInPaperTitles,
     ];
     return new Set(
@@ -293,7 +305,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         .map((title) => paperIdentityKey(String(title || '')))
         .filter(Boolean),
     ).size;
-  }, [userProfile.publications, externalConfirmed, linkedInPaperTitles]);
+  }, [userProfile.publications, uniqueExternalConfirmed, linkedInPaperTitles]);
 
   // Plain attendance (no presentation) has no real, name-searchable public source anywhere —
   // attendee lists are private to organizers. This is the account typing it in themselves,
@@ -941,7 +953,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <BookOpen className="w-4 h-4 text-blue-600" />
                 Published Research
               </h3>
-              {userProfile.publications.length > 0 || externalConfirmed.length > 0 ? (
+              {userProfile.publications.length > 0 || uniqueExternalConfirmed.length > 0 ? (
                 <div className="space-y-2">
                   {userProfile.publications.map((pub) => (
                     <div key={pub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
@@ -955,7 +967,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                       )}
                     </div>
                   ))}
-                  {externalConfirmed.filter(isRealExternalPublication).map((paper) => (
+                  {uniqueExternalConfirmed.map((paper) => (
                     <div
                       key={paper.doi}
                       className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-start justify-between gap-3"
