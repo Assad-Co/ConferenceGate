@@ -59,7 +59,34 @@ function titleTokens(title) {
   return String(title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter((x) => x.length >= 4 && !stop.has(x)).slice(0, 8);
 }
 function extractBestLogo(html, base, title) {
-  const tokens = titleTokens(title); let best = null; let bestScore = 0; const re = /<img\b[^>]*>/gi; let m;
+  const tokens = titleTokens(title);
+  const candidates = [];
+
+  // Event/organisation logos declared in JSON-LD are substantially stronger than guessing from
+  // arbitrary <img> tags.
+  const jsonLd = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let jm;
+  while ((jm = jsonLd.exec(html))) {
+    try {
+      const parsed = JSON.parse(jm[1]);
+      const stack = Array.isArray(parsed) ? [...parsed] : [parsed];
+      while (stack.length) {
+        const node = stack.shift();
+        if (!node || typeof node !== 'object') continue;
+        if (Array.isArray(node['@graph'])) stack.push(...node['@graph']);
+        const type = String(node['@type'] || '').toLowerCase();
+        const name = String(node.name || '').toLowerCase();
+        const raw = typeof node.logo === 'string' ? node.logo : node.logo?.url;
+        const url = absoluteUrl(raw, base);
+        if (!url) continue;
+        const titleMatch = tokens.some((token) => name.includes(token));
+        candidates.push({ url, score: type.includes('event') || titleMatch ? 15 : 9 });
+      }
+    } catch {}
+  }
+
+  // Prefer a conference-specific visual when the page names it as a logo.
+  const re = /<img\b[^>]*>/gi; let m;
   while ((m = re.exec(html))) {
     const tag = m[0];
     const srcRaw = /(?:src|data-src|data-lazy-src)\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(tag)?.slice(1).find(Boolean);
@@ -67,12 +94,25 @@ function extractBestLogo(html, base, title) {
     const alt = /alt\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] || '';
     const cls = /class\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1] || '';
     const hay = `${alt} ${cls} ${src}`.toLowerCase();
-    let score = /\blogo\b|brand|event-mark|conference-logo/.test(hay) ? 5 : 0;
-    for (const token of tokens) if (hay.includes(token)) score += 2;
-    if (/header|footer|speaker|sponsor|exhibitor|avatar/.test(hay)) score -= 3;
-    if (score > bestScore) { bestScore = score; best = src; }
+    let score = /conference-logo|event-logo|event-mark/.test(hay) ? 14 : /\blogo\b|brand/.test(hay) ? 7 : 0;
+    for (const token of tokens) if (hay.includes(token)) score += 3;
+    if (/speaker|sponsor|exhibitor|avatar|footer/.test(hay)) score -= 8;
+    if (score > 0) candidates.push({ url: src, score });
   }
-  return bestScore >= 5 ? best : null;
+
+  // A declared touch icon/site icon is a better organiser fallback than a fabricated path.
+  const links = /<link\b[^>]*>/gi; let lm;
+  while ((lm = links.exec(html))) {
+    const tag = lm[0];
+    const rel = /rel\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1]?.toLowerCase() || '';
+    if (!/(?:icon|apple-touch-icon)/.test(rel)) continue;
+    const raw = /href\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+    const url = absoluteUrl(raw, base);
+    if (url) candidates.push({ url, score: /apple-touch-icon/.test(rel) ? 6 : 4 });
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.url || null;
 }
 function sectionExcerpt(lines, pattern, maxChars = 3200) {
   const hits = [];
@@ -84,7 +124,21 @@ function sectionExcerpt(lines, pattern, maxChars = 3200) {
   }
   return [...new Set(hits)].join('\n').slice(0, maxChars).trim() || null;
 }
-function countStated(meta) { return Object.values(meta?.section_availability || {}).filter((v) => v === 'stated').length; }
+function countStated(meta) {
+  const availability = meta?.section_availability || {};
+  const groups = [
+    ['overview'],
+    ['cfp','call_for_papers'],
+    ['fees','fees_pricing'],
+    ['agenda','program_agenda'],
+    ['speakers','keynote_speakers'],
+    ['committee','technical_committee'],
+    ['sponsors','sponsors_exhibitors'],
+    ['venue','venue_accommodation'],
+    ['community'],
+  ];
+  return groups.filter((aliases) => aliases.some((key) => availability[key] === 'stated')).length;
+}
 function attemptedRecently(meta) {
   const t = Date.parse(meta?.apify_tab_fill_at || '');
   return Number.isFinite(t) && Date.now() - t < REFRESH_DAYS * 86400000;
