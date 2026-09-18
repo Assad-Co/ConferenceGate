@@ -138,6 +138,7 @@ const EVENTS = [
       themes:['Rare earth elements','Coal-bearing strata','Phosphatic limestones','pXRF and ICP-MS','Predictive mineral exploration']
     },
     speakers:[person('Lauren P. Birgenheier','University of Utah','Distinguished Lecturer')],
+    fees:{registration_url:'https://www.aapg.org/event-details/critical-minerals-in-sedimentary-rocks/',registration_fees:[],pricing_text:'The official AAPG calendar provides a Register Now action for this lecture; a public fee amount is not stated on the event page.'},
     venueInfo:{venue_name:'Virtual',address:'Online AAPG Distinguished Lecture'},
     community:{overview:'Virtual AAPG Distinguished Lecture serving the geoscience and critical-minerals community.'},
     sourceUrls:['https://www.aapg.org/event-details/critical-minerals-in-sedimentary-rocks/']
