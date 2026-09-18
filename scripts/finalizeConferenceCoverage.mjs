@@ -72,13 +72,26 @@ function faviconFor(url) {
     return new URL('/favicon.ico', u.origin).href;
   } catch { return null; }
 }
-function inferCategories(event, overview) {
+function inferCategories(event, overview, cfp) {
   const topics = safeJson(event.topics, []);
   const existing = [
     event.primary_category,
     overview?.category,
     ...(Array.isArray(overview?.categories) ? overview.categories : []),
   ].filter(Boolean);
+
+  const format = String(overview?.format || event.format || '').toLowerCase();
+  if (/online|virtual|webinar/.test(format)) existing.push('Virtual conferences');
+
+  const cfpStatus = String(cfp?.status || '').toLowerCase();
+  const deadlineText = String(cfp?.abstract_submission_deadline || '').trim();
+  const deadlineMs = deadlineText ? Date.parse(deadlineText) : NaN;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const explicitlyClosed = /\b(?:closed|expired|deadline passed|submissions? closed|not accepting)\b/i.test(cfpStatus);
+  const explicitlyOpen = /\b(?:open|extended|accepting submissions?|call for (?:papers|abstracts).*(?:open|extended))\b/i.test(cfpStatus);
+  if (!explicitlyClosed && (explicitlyOpen || (Number.isFinite(deadlineMs) && deadlineMs >= today.getTime()))) {
+    existing.push('Open call for papers');
+  }
   const subject = [
     event.title, event.description, event.organizer, event.primary_category,
     ...(Array.isArray(topics) ? topics : []),
@@ -180,7 +193,7 @@ async function main() {
       const community = safeJson(existing?.community, {});
       const meta = safeJson(existing?.extraction_metadata, {});
 
-      const categories = inferCategories(event, overview);
+      const categories = inferCategories(event, overview, cfp);
       if (categories.length) categorized += 1;
       const logo = overview.logo_url || faviconFor(url);
       if (logo) logos += 1;
