@@ -41,7 +41,8 @@ const DEFAULT_PRIORITY_ORGS = [
   'world-nuclear-exhibition.com','formnext.com','farnboroughairshow.com','hannovermesse.de',
   'mwcbarcelona.com','blackhat.com','events.linuxfoundation.org','websummit.com',
   'pdac.ca','hlth.com','slas.org','worldagritechinnovation.com',
-  'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com'
+  'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com','smeannualconference.org',
+  'ephconference.eu','icn.ch','ids-cologne.de','aeaweb.org','token2049.com','exporeal.net'
 ];
 
 function priorityOrganizations() {
