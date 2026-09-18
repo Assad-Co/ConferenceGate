@@ -91,11 +91,24 @@ const EVENTS = [
     title:'2nd Edition: AAPG Libyan Sedimentary Basins Virtual Workshop',
     start:'2026-10-22', end:'2026-10-22', city:null, region:null, country:'Libya', venue:'Virtual', format:'online',
     url:'https://www.aapg.org/event-details/2nd-edition-aapg-libyan-sedimentary-basins-virtual-workshop/',
+    organizer:'AAPG / AAPG Africa / NOC Libya',
     description:'Virtual AAPG workshop focused on Libyan sedimentary basins and petroleum systems, including depositional cycles, structural configuration, exploration history, seismic/petrophysical analysis and regional petroleum evolution.',
     categories:['Petroleum & Geoscience','Energy','Science'],
     agenda:{overview:'Virtual workshop program includes opening remarks and technical presentations on Libyan basin stratigraphy, structural evolution, exploration history and integrated seismic/petrophysical analysis.',themes:['Libyan sedimentary basins','Petroleum systems','Stratigraphy','Structural geology','Seismic and petrophysical analysis']},
-    speakers:[person('Susan Nash','AAPG','Program Leadership'),person('Tom Wilker','AAPG','Program Leadership'),person('Salah El-Ekhfifi','NOC','Program Participant'),person('Abdelsalam Aziz','NOC','Program Participant')],
-    community:{overview:'Virtual workshop designed for technical exchange across the Libyan and international geoscience community.'}
+    speakers:[
+      person('Susan Nash','AAPG','Workshop Opening'),
+      person('Tom Wilker','AAPG','Workshop Opening'),
+      person('Salah El-Ekhfifi','NOC Libya','Workshop Opening'),
+      person('Abdelsalam Aziz','NOC Libya','Workshop Opening'),
+      person('Gamal Sultan','SLB','Technical Presenter'),
+      person('Aimen Saleh','AGOCO','Technical Presenter'),
+      person('John Turvill','AAPG','Technical Presenter'),
+      person('Khaled Albriki','PetroChina','Technical Presenter'),
+      person('Abdlsaid Ibrahem','Omar Almokhtar University','Technical Presenter')
+    ],
+    fees:{registration_fees:[fee('Virtual Workshop',0,'USD','AAPG Africa states the workshop is free to attend')],pricing_text:'AAPG Africa states that the 2nd Libyan Sedimentary Basins Virtual Workshop is free to attend.'},
+    venueInfo:{venue_name:'Virtual',address:'Online'},
+    community:{overview:'Free virtual workshop designed for technical exchange across the Libyan and international geoscience community.'}
   },
   {
     key:'rms-aapg-2026',
