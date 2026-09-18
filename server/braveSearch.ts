@@ -468,8 +468,6 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       ["fees", "fees_pricing"],
       ["community"],
     ];
-    const sectionNoteHasContent = (index: number): boolean =>
-      (noteAliases[index] || []).some((key) => hasContent(sectionNotes[key]));
     const sectionHasDisplayContent = (index: number, value: any): boolean => {
       // URL-only placeholders do not count as filled tabs. A visitor needs actual information in
       // the section, not merely a button that sends them elsewhere. A cleaned source-backed note
@@ -478,7 +476,6 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       // but roster tabs are different: Speakers, Committee and Sponsors are only "filled" when
       // named structured items were actually extracted. This prevents a whole agenda/navigation
       // page from counting as a speaker list.
-      if (sectionNoteHasContent(index) && ![2, 3, 4].includes(index)) return true;
       if (index === 0) { // CFP
         return [
           value?.status, value?.abstract_submission_deadline, value?.notification_date,
@@ -503,10 +500,20 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
           (Array.isArray(value?.registration_fees) && value.registration_fees.some(hasContent));
       }
       if (index === 7) { // Community
-        return hasContent(value?.overview) ||
-          (Array.isArray(value?.social_media) && value.social_media.some(hasContent));
+        return (Array.isArray(value?.social_media) && value.social_media.some(hasContent));
       }
-      return hasContent(value); // Speakers, committee, sponsors.
+      if (index === 4) { // Sponsors / exhibitors
+        return Array.isArray(value) && value.some((entry: any) => {
+          const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+          const logo = typeof (entry?.logoUrl ?? entry?.logo_url) === "string"
+            ? String(entry.logoUrl ?? entry.logo_url).trim()
+            : "";
+          if (!name || !logo) return false;
+          if (/^(?:free|no\s+spam|unsubscribe(?:\s+anytime)?|save\s+time|top\s+events|industry\s+insights|newsletter)$/i.test(name)) return false;
+          return !/\b(?:handpicked\s+for\s+you|never\s+miss\s+out|unsubscribe\s+anytime|no\s+spam|toggle\s+navigation|show\s+submenu|trends\s+that\s+matter)\b/i.test(name);
+        });
+      }
+      return hasContent(value); // Speakers and committee require structured arrays.
     };
     const populatedSections = sections.filter((section, index) => sectionHasDisplayContent(index, section)).length;
     const filledTabs = populatedSections + 1; // Overview + the eight detail sections above.
@@ -529,13 +536,9 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       metadata.import_origin === "verified_calendar_batch" ||
       metadata.validation_status === "VALIDATED_OFFICIAL_AAPG_CALENDAR" ||
       metadata.validation_status === "VALIDATED_OFFICIAL_AND_CORROBORATING_SOURCES";
-    // Normal events still need six genuinely populated tabs. A curated/authoritative event may
-    // also be ready when every tab has a current-edition answer, including an explicit
-    // "not announced yet" state. That lets ConferenceGate show the complete event instead of
-    // hiding it merely because the organiser has not named speakers or sponsors yet.
-    const detailsReady =
-      hasVisualIdentity &&
-      (filledTabs >= 6 || (authoritativeManifest && answeredSections >= 9));
+    // A public rich listing must have six genuinely visible, structured tabs. Internal source
+    // notes and "not announced" answers do not count because customers cannot use them as content.
+    const detailsReady = hasVisualIdentity && filledTabs >= 6;
     if (answeredSections < 2) continue;
     const availabilityAliases = [
       ["call_for_papers","cfp"],
