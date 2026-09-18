@@ -1727,25 +1727,34 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'community' && (
               <div className="space-y-4 text-xs text-slate-600">
                 <h3 className="text-lg font-bold text-slate-900">Conference Community & Networking</h3>
-                {(data?.socialLinks?.length ?? 0) > 0 ? (
+                {data?.communitySummary || (data?.socialLinks?.length ?? 0) > 0 ? (
                   <div className="space-y-3">
-                    <p className="text-sm text-slate-700">
-                      Official community and social channels published for this conference:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {data!.socialLinks.map((link, idx) => (
-                        <a
-                          key={idx}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          {link.platform || 'Community link'}
-                        </a>
-                      ))}
-                    </div>
+                    {data?.communitySummary && (
+                      <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                        {data.communitySummary}
+                      </p>
+                    )}
+                    {(data?.socialLinks?.length ?? 0) > 0 && (
+                      <>
+                        <p className="text-sm text-slate-700">
+                          Official community or organizer channels associated with this conference:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {data!.socialLinks.map((link, idx) => (
+                            <a
+                              key={idx}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              {link.platform || 'Community link'}
+                            </a>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <EmptyExtractState
