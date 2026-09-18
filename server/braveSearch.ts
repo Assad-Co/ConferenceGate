@@ -392,9 +392,27 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       parseSection(row.fees_pricing, {}),
       parseSection(row.community, {}),
     ];
+    const sectionNotes =
+      metadata.section_notes && typeof metadata.section_notes === "object"
+        ? metadata.section_notes
+        : {};
+    const noteAliases = [
+      ["cfp", "call_for_papers"],
+      ["agenda", "program_agenda"],
+      ["speakers", "keynote_speakers"],
+      ["committee", "technical_committee"],
+      ["sponsors", "sponsors_exhibitors"],
+      ["venue", "venue_accommodation"],
+      ["fees", "fees_pricing"],
+      ["community"],
+    ];
+    const sectionNoteHasContent = (index: number): boolean =>
+      (noteAliases[index] || []).some((key) => hasContent(sectionNotes[key]));
     const sectionHasDisplayContent = (index: number, value: any): boolean => {
       // URL-only placeholders do not count as filled tabs. A visitor needs actual information in
-      // the section, not merely a button that sends them elsewhere.
+      // the section, not merely a button that sends them elsewhere. A cleaned source-backed note
+      // does count because the detail page renders that note as the body of the tab.
+      if (sectionNoteHasContent(index)) return true;
       if (index === 0) { // CFP
         return [
           value?.status, value?.abstract_submission_deadline, value?.notification_date,
