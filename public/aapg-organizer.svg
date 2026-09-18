@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 180" role="img" aria-labelledby="title desc">
+  <title id="title">AAPG organiser mark</title>
+  <desc id="desc">Conference Gate fallback organiser mark for American Association of Petroleum Geologists events.</desc>
+  <rect width="560" height="180" rx="24" fill="#ffffff"/>
+  <text x="280" y="112" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="104" font-weight="700" fill="#022C50">AAPG</text>
+  <rect x="94" y="132" width="372" height="10" rx="5" fill="#f47920"/>
+</svg>
