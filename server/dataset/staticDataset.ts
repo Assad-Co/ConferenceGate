@@ -21,6 +21,160 @@ import type {
 export const LAUNCH_DATASET_FILE = "conferencegate-worldwide-2026-2028.json";
 export const LAUNCH_INDEX_FILE = "conferencegate-search-index.json";
 
+
+const LAUNCH_CSV_FILE = "conferencegate-worldwide-2026-2028.csv";
+
+/**
+ * Last-resort launch catalogue recovery.
+ *
+ * The JSON launch dataset is richer, but a previous large-file write left it malformed in some
+ * deployments. The CSV beside it is independently generated and valid, so Discover should recover
+ * the catalogue from that file instead of collapsing to the handful of Turso rows.
+ *
+ * This fallback intentionally restores only facts that are explicit CSV columns. Deep tabs remain
+ * unread until the normal enrichment workers fill them; nothing is invented.
+ */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') {
+        quoted = false;
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      quoted = true;
+    } else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell.replace(/\r$/, ""));
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell.length || row.length) {
+    row.push(cell.replace(/\r$/, ""));
+    rows.push(row);
+  }
+  return rows.filter((cells) => cells.some((value) => value.trim().length > 0));
+}
+
+function csvList(value: string | null | undefined): string[] {
+  return String(value || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function readLaunchCsvFallback(): LaunchConferenceRecord[] {
+  for (const directory of candidateDirectories()) {
+    const filePath = path.join(directory, LAUNCH_CSV_FILE);
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const rows = parseCsv(fs.readFileSync(filePath, "utf8"));
+      if (rows.length < 2) return [];
+      const headers = rows[0].map((value) => value.trim());
+      const index = new Map(headers.map((name, i) => [name, i]));
+      const value = (row: string[], name: string): string | null => {
+        const i = index.get(name);
+        if (i === undefined) return null;
+        const raw = String(row[i] || "").trim();
+        return raw ? raw : null;
+      };
+      const records: LaunchConferenceRecord[] = [];
+      for (const row of rows.slice(1)) {
+        const id = value(row, "id");
+        const title = value(row, "title");
+        const sourceUrl = value(row, "sourceUrl");
+        const year = Number(value(row, "year"));
+        const rawFormat = value(row, "format");
+        if (!id || !title || !sourceUrl || !Number.isFinite(year)) continue;
+        if (rawFormat !== "in-person" && rawFormat !== "hybrid" && rawFormat !== "online") continue;
+        let sourceHost = "";
+        try { sourceHost = new URL(sourceUrl).hostname.replace(/^www\./, ""); } catch { continue; }
+        const rawSourceType = value(row, "sourceType");
+        const sourceType =
+          rawSourceType === "official_site" ||
+          rawSourceType === "directory_listing" ||
+          rawSourceType === "reference" ||
+          rawSourceType === "third_party" ||
+          rawSourceType === "event_api"
+            ? rawSourceType
+            : "third_party";
+        const startDate = value(row, "startDate");
+        const endDate = value(row, "endDate");
+        const category = value(row, "category");
+        const description = value(row, "description");
+        const officialUrl = value(row, "officialUrl");
+        records.push({
+          id,
+          title,
+          acronym: value(row, "acronym"),
+          series: value(row, "series"),
+          edition: value(row, "edition"),
+          year,
+          startDate,
+          endDate,
+          datePrecision: value(row, "datePrecision") === "month" ? "month" : "day",
+          startMonth: startDate && /^\d{4}-\d{2}/.test(startDate) ? Number(startDate.slice(5, 7)) : null,
+          datesText: null,
+          city: value(row, "city"),
+          region: value(row, "region"),
+          country: value(row, "country"),
+          countryCode: value(row, "countryCode"),
+          worldRegion: value(row, "worldRegion"),
+          venue: value(row, "venue"),
+          format: rawFormat,
+          organization: value(row, "organization"),
+          category,
+          categories: category ? [category] : [],
+          topics: csvList(value(row, "topics")),
+          keywords: csvList(value(row, "keywords")),
+          description,
+          sourceUrl,
+          sourceHost,
+          sourceType,
+          officialUrl,
+          logoUrl: null,
+          imageUrl: null,
+          evidence: {
+            query: "ConferenceGate launch CSV fallback",
+            resultTitle: title,
+            statedText: description || [title, startDate, value(row, "city"), value(row, "country")].filter(Boolean).join(" · "),
+            retrievedAt: "2026-09-14T00:00:00.000Z",
+            method: "web_search",
+          },
+          provenance: {},
+          corroboratingSourceUrls: csvList(value(row, "corroboratingSourceUrls")),
+          origin: "launch_dataset",
+          supply: "web_harvest",
+          details: null,
+        });
+      }
+      console.log(\`[launch-dataset] CSV fallback recovered=\${records.length} records from \${filePath}\`);
+      return records;
+    } catch (error) {
+      console.warn(\`[launch-dataset] CSV fallback failed for \${filePath}:\`, (error as Error).message);
+      return [];
+    }
+  }
+  return [];
+}
+
 /** Where the dataset can be, in the order worth trying.
  *
  *  `npm start` runs `node dist/server.cjs` from the repository root, so the working directory finds
@@ -68,7 +222,8 @@ export function loadLaunchDataset(): LoadedDataset {
   const dataset = readJsonFile<LaunchDataset>(LAUNCH_DATASET_FILE);
   const index = readJsonFile<LaunchSearchIndex>(LAUNCH_INDEX_FILE);
   const imported = readJsonFile<{ records: LaunchConferenceRecord[] }>("energy-verified-2026-09-14.json");
-  const baseRecords = Array.isArray(dataset?.records) ? dataset!.records : [];
+  const jsonRecords = Array.isArray(dataset?.records) ? dataset!.records : [];
+  const baseRecords = jsonRecords.length > 0 ? jsonRecords : readLaunchCsvFallback();
   const importedRecords = Array.isArray(imported?.records) ? imported.records : [];
   const identity = (record: LaunchConferenceRecord) =>
     `${(record.officialUrl || record.sourceUrl).replace(/\/$/, "").toLowerCase()}|${record.startDate}`;
