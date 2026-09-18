@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36 ConferenceGate/1.0';
 const TIMEOUT_MS = Math.max(4000, Number(process.env.CONFERENCE_IDENTITY_TIMEOUT_MS || 9000));
-const MAX_FETCHES = Math.max(0, Number(process.env.CONFERENCE_IDENTITY_MAX_FETCHES || 120)); // 0 = all
+const MAX_FETCHES = Math.max(0, Number(process.env.CONFERENCE_IDENTITY_MAX_FETCHES || 220)); // 0 = all
 
 function safeJson(value, fallback) {
   try { return value ? JSON.parse(String(value)) : fallback; } catch { return fallback; }
@@ -204,10 +204,11 @@ async function main() {
       return;
     }
     const rows = await db.execute(`SELECT id,title,start_date,end_date,description,organizer,official_url,canonical_url,
-      venue,venue_address,city,region,country,format,image_url,status
+      venue,venue_address,city,region,country,format,image_url,status,relevance_reason
       FROM discovery_events
       WHERE status='published' AND COALESCE(official_url,canonical_url) IS NOT NULL
-      ORDER BY CASE WHEN start_date IS NULL THEN 1 ELSE 0 END,start_date,title`);
+      ORDER BY CASE WHEN relevance_reason='popular_category_priority' THEN 0 ELSE 1 END,
+               CASE WHEN start_date IS NULL THEN 1 ELSE 0 END,start_date,title`);
     let fetched=0, identities=0, updated=0, strong=0;
     for (const event of rows.rows || []) {
       const url = String(event.official_url || event.canonical_url || '').trim();
