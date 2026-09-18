@@ -3,15 +3,32 @@ import { spawn } from 'node:child_process';
 const INTERVAL_HOURS = Math.max(1, Number(process.env.CONFERENCE_ENRICH_INTERVAL_HOURS || 6));
 const INTERVAL_MS = INTERVAL_HOURS * 60 * 60 * 1000;
 
-function runScript(file) {
+function runScript(file, extraEnv = {}) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [file], { stdio: 'inherit', env: process.env });
+    const child = spawn(process.execPath, [file], { stdio: 'inherit', env: { ...process.env, ...extraEnv } });
     child.on('exit', (code, signal) => {
       if (code && code !== 0) console.warn(`[conference-enrich-loop] ${file} exited code=${code}${signal ? ` signal=${signal}` : ''}`);
       resolve();
     });
     child.on('error', (error) => {
       console.warn(`[conference-enrich-loop] could not start ${file}: ${error?.message || error}`);
+      resolve();
+    });
+  });
+}
+
+function runDiscoveryCli(args) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, ['--import', 'tsx', 'server/discovery/cli.ts', ...args], {
+      stdio: 'inherit',
+      env: process.env,
+    });
+    child.on('exit', (code, signal) => {
+      if (code && code !== 0) console.warn(`[conference-enrich-loop] discovery ${args[0]} exited code=${code}${signal ? ` signal=${signal}` : ''}`);
+      resolve();
+    });
+    child.on('error', (error) => {
+      console.warn(`[conference-enrich-loop] could not start discovery ${args[0]}: ${error?.message || error}`);
       resolve();
     });
   });
@@ -25,6 +42,18 @@ async function cycle() {
   // never fill, because the workers only iterate discovery_events.
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
+
+  // Grow the catalogue from authoritative society, institute, university and organiser calendars
+  // before enriching it. The source registry is global and trust-ranked, so each cycle rotates
+  // through due organisations instead of relying on a small hand-curated event seed list.
+  await runDiscoveryCli([
+    'harvest',
+    '--max-org-domains', String(process.env.POPULAR_ORG_DOMAINS_PER_CYCLE || 40),
+    '--max-pages', String(process.env.POPULAR_ORG_MAX_PAGES || 480),
+    '--org-pages', String(process.env.POPULAR_ORG_PAGES_PER_DOMAIN || 12),
+    '--years', '2026,2027,2028',
+    '--quiet',
+  ]);
   // Remove stale editions/navigation dumps before deciding what still needs enrichment.
   await runScript('scripts/sanitizeConferenceDetailData.mjs');
   // Curated current-edition corrections take precedence over generic crawling.
@@ -32,8 +61,15 @@ async function cycle() {
   // Immediately give every record a non-blank identity, honest tab-state map, and multi-category
   // classification before the slower network readers begin.
   await runScript('scripts/finalizeConferenceCoverage.mjs');
-  await runScript('scripts/enrichAllConferenceDetails.mjs');
-  await runScript('scripts/enrichConferenceApifyFallback.mjs');
+  await runScript('scripts/enrichAllConferenceDetails.mjs', {
+    DEEP_ENRICH_MAX_LINKS: process.env.DEEP_ENRICH_MAX_LINKS || '16',
+    DEEP_ENRICH_FIRECRAWL_MAX_PAGES: process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || '250',
+  });
+  await runScript('scripts/enrichConferenceApifyFallback.mjs', {
+    DEEP_ENRICH_APIFY_MAX_RUNS: process.env.DEEP_ENRICH_APIFY_MAX_RUNS || '120',
+    DEEP_ENRICH_APIFY_MAX_PAGES: process.env.DEEP_ENRICH_APIFY_MAX_PAGES || '20',
+    DEEP_ENRICH_MIN_TABS: process.env.DEEP_ENRICH_MIN_TABS || '6',
+  });
   // Readers can encounter generic historical pages, so sanitize again, then restore any vetted
   // current-edition overrides before the final customer-facing normalization.
   await runScript('scripts/sanitizeConferenceDetailData.mjs');

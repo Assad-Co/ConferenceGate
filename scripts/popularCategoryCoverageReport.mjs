@@ -14,7 +14,7 @@ const CATEGORIES=[
   'Architecture & Urbanism','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
   'Arts & Culture','Tourism & Hospitality','Blockchain & Web3','Real Estate','Virtual conferences','Open call for papers'
 ];
-const TARGET=Math.max(1,Number(process.env.POPULAR_CATEGORY_RICH_TARGET||2));
+const TARGET=Math.max(1,Number(process.env.POPULAR_CATEGORY_RICH_TARGET||25));
 
 function safe(value,fallback){try{return value?JSON.parse(String(value)):fallback;}catch{return fallback;}}
 function meaningful(v){
@@ -78,7 +78,7 @@ async function main(){
       JOIN discovery_event_categories dec ON dec.event_id=de.id
       LEFT JOIN extracted_conferences ec
         ON ec.source_url=de.official_url OR ec.source_url=de.canonical_url
-      WHERE de.status='published'`);
+      WHERE de.status='published' AND de.start_date IS NOT NULL AND date(de.start_date)>=date('now')`);
     const counts=new Map(CATEGORIES.map((c)=>[c,{rich:0,total:0,examples:[]}]));
     for(const row of rows.rows||[]){
       const category=String(row.category||'');
