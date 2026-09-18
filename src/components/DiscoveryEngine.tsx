@@ -197,6 +197,9 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
   // 3) official event image,
   // 4) generated Conference Gate mark.
   const candidates = [
+    isAapg
+      ? { url: '/aapg-organizer.svg', kind: 'organiser-logo' as const }
+      : null,
     result.favicon
       ? {
           url: result.favicon,
@@ -205,9 +208,6 @@ const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }>
       : null,
     derivedOfficialIcon
       ? { url: derivedOfficialIcon, kind: 'organiser-logo' as const }
-      : null,
-    isAapg
-      ? { url: '/aapg-organizer.svg', kind: 'organiser-logo' as const }
       : null,
     result.thumbnail
       ? { url: result.thumbnail, kind: 'official-image' as const }
