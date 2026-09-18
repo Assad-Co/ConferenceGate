@@ -27,6 +27,7 @@ const GEOSCIENCE_AND_ENERGY: Seed[] = [
   ["spe.org", "Society of Petroleum Engineers", "professional_society", "United States", "North America"],
   ["seg.org", "Society of Exploration Geophysicists", "professional_society", "United States", "North America"],
   ["eage.org", "European Association of Geoscientists and Engineers", "professional_society", "Netherlands", "Europe"],
+  ["imogconference.org", "International Meeting on Organic Geochemistry (IMOG)", "official_conference_site", "Netherlands", "Europe"],
   ["agu.org", "American Geophysical Union", "scientific_organization", "United States", "North America"],
   ["egu.eu", "European Geosciences Union", "scientific_organization", "Germany", "Europe"],
   ["geosociety.org", "Geological Society of America", "scientific_organization", "United States", "North America"],
