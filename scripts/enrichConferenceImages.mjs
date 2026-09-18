@@ -240,15 +240,17 @@ async function bestImageFor(row) {
 
   const pageUrl = publicHttpUrl(baseUrl);
   if (!pageUrl) {
-    return usableImage || usableLogo
-      ? { imageUrl: usableImage || usableLogo, logoUrl: usableLogo, source: "stored_logo_fallback" }
+    // Never substitute an organizer logo for an event image.
+    return usableImage && (!usableLogo || usableImage !== usableLogo)
+      ? { imageUrl: usableImage, logoUrl: usableLogo, source: "stored_official_image" }
       : null;
   }
 
   const page = await fetchHtml(pageUrl);
   if (!page) {
-    return usableImage || usableLogo
-      ? { imageUrl: usableImage || usableLogo, logoUrl: usableLogo, source: "stored_logo_fallback" }
+    // Keep the logo separate; if no event artwork can be verified, leave the conference image blank.
+    return usableImage && (!usableLogo || usableImage !== usableLogo)
+      ? { imageUrl: usableImage, logoUrl: usableLogo, source: "stored_official_image" }
       : null;
   }
 
@@ -277,9 +279,9 @@ async function bestImageFor(row) {
     };
   }
 
-  const fallbackImage = usableImage || bestLogo;
-  return fallbackImage
-    ? { imageUrl: fallbackImage, logoUrl: bestLogo, source: "official_site_logo_fallback" }
+  // If the official page exposes only a logo, do not pretend it is conference artwork.
+  return usableImage && (!bestLogo || usableImage !== bestLogo)
+    ? { imageUrl: usableImage, logoUrl: bestLogo, source: "stored_official_image" }
     : null;
 }
 
