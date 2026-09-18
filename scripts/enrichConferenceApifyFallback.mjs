@@ -12,7 +12,7 @@ const TIMEOUT_MS = Math.max(30000, Number(process.env.DEEP_ENRICH_APIFY_TIMEOUT_
 
 const SECTION_PATTERNS = {
   cfp: /\b(call for (?:papers|abstracts)|abstract submissions?|submit (?:an )?abstract|abstract deadline|poster submissions?|paper submissions?)\b/i,
-  fees: /\b(registration fees?|registration rates?|pricing|early[- ]bird|member rate|non[- ]member rate|register now)\b/i,
+  fees: /\b(registration fees?|registration rates?|registration cost|pricing|early[- ]bird|member rate|non[- ]member rate|student rate|fee schedule)\b|(?:[$€£]|USD|EUR|GBP|BHD|SAR|AED)\s?\d/i,
   agenda: /\b(program(?:me)?|agenda|schedule|technical program|technical sessions?|scientific program|conference program)\b/i,
   speakers: /\b(keynote(?: speakers?)?|plenary(?: speakers?)?|invited speakers?|featured speakers?|speakers?)\b/i,
   committee: /\b(technical committee|program(?:me)? committee|scientific committee|organizing committee|advisory committee|co[- ]?chairs?|session chairs?)\b/i,
@@ -138,13 +138,69 @@ async function apifyCrawl(event) {
   }).filter((p) => (p.markdown || p.html).trim().length >= 80);
 }
 
-function sectionFromPages(pages, section) {
+
+function eventYear(event) {
+  const fromDate = Number(String(event?.start_date || '').slice(0, 4));
+  if (Number.isFinite(fromDate) && fromDate >= 2000) return fromDate;
+  const fromTitle = /\b(20\d{2})\b/.exec(String(event?.title || ''))?.[1];
+  return fromTitle ? Number(fromTitle) : null;
+}
+function yearCounts(text) {
+  const counts = new Map();
+  for (const match of String(text || '').matchAll(/\b(20\d{2})\b/g)) {
+    const year = Number(match[1]);
+    counts.set(year, (counts.get(year) || 0) + 1);
+  }
+  return counts;
+}
+function pageMatchesEventEdition(page, event) {
+  const year = eventYear(event);
+  if (!year) return true;
+  const body = stripTags(page?.markdown || page?.html || '');
+  const counts = yearCounts(body);
+  if (!counts.size) return true;
+  const currentCount = counts.get(year) || 0;
+  const others = [...counts.entries()].filter(([candidate]) => candidate !== year);
+  if (!others.length) return true;
+  const [dominantOtherYear, dominantOtherCount] = others.sort((a, b) => b[1] - a[1])[0];
+  if (currentCount === 0) return false;
+  if (dominantOtherCount >= 2 && dominantOtherCount > currentCount && dominantOtherYear < year) return false;
+  return true;
+}
+function navNoise(line) {
+  const text = String(line || '').replace(/\s+/g, ' ').trim();
+  if (!text) return true;
+  const navHits = (text.match(/\b(home|join|login|calendar|albums?|register now|learn more|contact us|about us|meetings?|events?|schedule|venue|sponsor|exhibitor)\b/gi) || []).length;
+  return text.length > 260 && navHits >= 4;
+}
+function cleanExcerptLines(lines) {
+  const clean = [];
+  for (const raw of lines) {
+    const line = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (line.length < 3 || navNoise(line)) continue;
+    if (/^(home|about|events|news|resources|membership|join|login)$/i.test(line)) continue;
+    if (!clean.includes(line)) clean.push(line);
+    if (clean.join('\n').length >= 900) break;
+  }
+  return clean.join('\n').slice(0, 900).trim() || null;
+}
+
+function sectionFromPages(pages, section, event) {
   const pattern = SECTION_PATTERNS[section]; const parts = [];
   for (const page of pages) {
-    const excerpt = sectionExcerpt(textLines(page.markdown || page.html || ''), pattern);
+    if (!pageMatchesEventEdition(page, event)) continue;
+    const lines = textLines(page.markdown || page.html || '');
+    const hits = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!pattern.test(lines[i])) continue;
+      const excerpt = cleanExcerptLines(lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 5)));
+      if (excerpt) hits.push(excerpt);
+      if (hits.join('\n').length >= 900) break;
+    }
+    const excerpt = [...new Set(hits)].join('\n').slice(0, 900).trim() || null;
     if (excerpt) parts.push(excerpt);
   }
-  return [...new Set(parts)].join('\n\n').slice(0, 4000).trim() || null;
+  return [...new Set(parts)].join('\n\n').slice(0, 1200).trim() || null;
 }
 function findLinkByPattern(pages, pattern) {
   for (const page of pages) {
@@ -164,7 +220,7 @@ async function enrichOne(db, event) {
   if (countStated(oldMeta) >= MIN_TABS) return { skip: 'already-rich' };
   if (attemptedRecently(oldMeta)) return { skip: 'recent-attempt' };
 
-  const pages = await apifyCrawl(event);
+  const pages = (await apifyCrawl(event)).filter((page) => pageMatchesEventEdition(page, event));
   if (!pages.length) {
     const meta = { ...oldMeta, apify_tab_fill_at: new Date().toISOString(), apify_tab_fill_status: 'empty' };
     if (existing) await db.execute({ sql: `UPDATE extracted_conferences SET extraction_metadata=?, updated_at=datetime('now') WHERE source_url=?`, args: [JSON.stringify(meta), existing.source_url] });
@@ -184,9 +240,9 @@ async function enrichOne(db, event) {
   const notes = { ...(oldMeta?.section_notes || {}) };
   const availability = { ...(oldMeta?.section_availability || {}), overview: 'stated' };
   for (const section of Object.keys(SECTION_PATTERNS)) {
-    const note = sectionFromPages(pages, section);
-    if (note) { notes[section] = note; availability[section] = 'stated'; }
-    else if (availability[section] !== 'stated') availability[section] = 'not_announced';
+    const note = sectionFromPages(pages, section, event);
+    notes[section] = note || null;
+    availability[section] = note ? 'stated' : 'not_announced';
   }
 
   const main = pages[0];
@@ -208,15 +264,15 @@ async function enrichOne(db, event) {
     image_url: hero || oldOverview.image_url || null,
   });
   const cfp = mergeObject(oldCfp, submissionUrl ? { submission_url: submissionUrl } : {});
-  const program = mergeObject(oldProgram, notes.agenda ? { overview: oldProgram.overview || notes.agenda } : {});
+  const program = mergeObject(oldProgram, { overview: notes.agenda || null });
   if (!Array.isArray(program.sessions)) program.sessions = [];
   if (!Array.isArray(program.themes)) program.themes = [];
-  const venue = mergeObject(oldVenue, notes.venue ? { accommodation: oldVenue.accommodation || notes.venue } : {});
+  const venue = mergeObject(oldVenue, { accommodation: notes.venue || oldVenue.accommodation || null });
   const fees = mergeObject(oldFees, {
     ...(registrationUrl ? { registration_url: registrationUrl } : {}),
-    ...(notes.fees ? { pricing_text: oldFees.pricing_text || notes.fees } : {}),
+    pricing_text: notes.fees || null,
   });
-  const community = mergeObject(oldCommunity, notes.community ? { overview: oldCommunity.overview || notes.community } : {});
+  const community = mergeObject(oldCommunity, { overview: notes.community || null });
 
   const meta = {
     ...oldMeta,
