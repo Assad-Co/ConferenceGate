@@ -294,6 +294,7 @@ function storedFormat(value: unknown): "in-person" | "hybrid" | "online" | null 
 async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
   const rows = await dbAll<{
     source_url: string;
+    image_url: string | null;
     overview: string;
     call_for_papers: string;
     program_agenda: string;
@@ -306,7 +307,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     extraction_metadata: string;
     updated_at: string;
   }>(
-    `SELECT ec.source_url, ec.overview, ec.call_for_papers, ec.program_agenda,
+    `SELECT ec.source_url, de.image_url, ec.overview, ec.call_for_papers, ec.program_agenda,
               ec.keynote_speakers, ec.technical_committee, ec.sponsors_exhibitors,
               ec.venue_accommodation, ec.fees_pricing, ec.community,
               ec.extraction_metadata, ec.updated_at
@@ -432,7 +433,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
             ? overview.description
             : [overview.dates_text, overview.city, overview.country].filter(Boolean).join(" · "),
         displayLink: host,
-        thumbnail: text(overview.image_url),
+        thumbnail: text(row.image_url) ?? text(overview.image_url),
         // Prefer the logo actually stored by enrichment. Falling back to the site icon is useful
         // only when the official page did not publish a distinct event/organiser mark.
         favicon: text(overview.logo_url) ?? siteIconUrl(row.source_url),
