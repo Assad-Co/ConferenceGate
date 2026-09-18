@@ -62,7 +62,42 @@ const SEEDS = [
   ['ITB Berlin 2027','https://www.itb.com/en/','2027-03-16','2027-03-18','Berlin','Germany',['Tourism & Hospitality','Business','Marketing','Technology & Travel']],
   ['Consensus Hong Kong 2027','https://consensus-hongkong.coindesk.com/','2027-02-01','2027-02-03','Hong Kong','Hong Kong',['Blockchain & Web3','Finance','Artificial Intelligence','Business','Open call for papers']],
   ['MIPIM 2027','https://www.mipim.com/','2027-03-16','2027-03-19','Cannes','France',['Real Estate','Architecture & Urbanism','Finance','Business']],
-  ['AAPG Academy – Two Margins, One Cretaceous Play','https://aapg.zoom.us/webinar/register/WN_BbyQ2vCETqSFS_-k-kqWcw#/registration','2026-09-23','2026-09-23',null,null,['Virtual conferences','Petroleum & Geoscience','Energy','Business']]
+  ['AAPG Academy – Two Margins, One Cretaceous Play','https://aapg.zoom.us/webinar/register/WN_BbyQ2vCETqSFS_-k-kqWcw#/registration','2026-09-23','2026-09-23',null,null,['Virtual conferences','Petroleum & Geoscience','Energy','Business']],
+
+  // Flagship events: multiple globally important conferences per major category, not one demo seed.
+  ['NeurIPS 2026 – Main Conference','https://neurips.cc/Conferences/2026','2026-12-06','2026-12-12','Sydney','Australia',['Artificial Intelligence','Data Science','Science','Life Sciences','Robotics & Automation','Open call for papers']],
+  ['CVPR 2027','https://cvpr.thecvf.com/','2027-06-20','2027-06-25','Seattle','United States',['Artificial Intelligence','Data Science','Robotics & Automation','Engineering','Open call for papers']],
+  ['RSA Conference 2027','https://www.rsaconference.com/usa','2027-04-05','2027-04-08','San Francisco','United States',['Cybersecurity','Artificial Intelligence','Business','Law & Regulation','Open call for papers']],
+  ['CES 2027','https://www.ces.tech/','2027-01-06','2027-01-09','Las Vegas','United States',['Artificial Intelligence','Semiconductors & Electronics','Robotics & Automation','Automotive & Mobility','Healthcare','Business']],
+  ['IEEE ICRA 2027','https://www.ieee-ras.org/conferences-workshops/fully-sponsored/icra/','2027-05-24','2027-05-28','Seoul','South Korea',['Robotics & Automation','Artificial Intelligence','Engineering','Mechanical Engineering','Open call for papers']],
+  ['IEEE/RSJ IROS 2027','https://2027.ieee-iros.org/','2027-09-26','2027-10-01','Florence','Italy',['Robotics & Automation','Artificial Intelligence','Engineering','Climate & Sustainability']],
+  ['HIMSS27 Global Health Conference & Exhibition','https://www.himssconference.com/','2027-04-05','2027-04-08','Chicago','United States',['Healthcare','Artificial Intelligence','Cybersecurity','Data Science','Business']],
+  ['BIO International Convention 2027','https://convention.bio.org/','2027-06-07','2027-06-10','Philadelphia','United States',['Pharmaceuticals & Biotechnology','Life Sciences','Healthcare','Business','Open call for papers']],
+  ['RSNA 2026 Annual Meeting','https://www.rsna.org/Annual-Meeting','2026-11-29','2026-12-03','Chicago','United States',['Healthcare','Artificial Intelligence','Life Sciences','Science']],
+  ['AGU26 Annual Meeting','https://www.agu.org/agu26','2026-12-07','2026-12-11','San Francisco','United States',['Science','Climate & Sustainability','Environment','Petroleum & Geoscience','Education','Open call for papers']],
+  ['EGU General Assembly 2027','https://www.egu27.eu/','2027-04-04','2027-04-09','Vienna','Austria',['Science','Petroleum & Geoscience','Climate & Sustainability','Environment','Education','Open call for papers']],
+  ['Offshore Technology Conference 2027','https://2027.otcnet.org/','2027-05-03','2027-05-05','Houston','United States',['Petroleum & Geoscience','Energy','Engineering','Hydrogen & CCUS','Renewable Energy','Business']],
+  ['OTC Brasil 2027','https://www.otcbrasil.org/','2027-10-26','2027-10-28','Rio de Janeiro','Brazil',['Petroleum & Geoscience','Energy','Engineering','Maritime','Business']],
+  ['Gastech 2027','https://www.gastechevent.com/','2027-09-14','2027-09-17','Houston','United States',['Energy','Hydrogen & CCUS','Petroleum & Geoscience','Business','Engineering']],
+  ['World Nuclear Exhibition 2027','https://www.world-nuclear-exhibition.com/','2027-12-07','2027-12-09','Paris','France',['Energy','Engineering','Manufacturing','Climate & Sustainability','Business']],
+  ['Formnext 2026','https://formnext.mesago.com/frankfurt/en.html','2026-11-17','2026-11-20','Frankfurt','Germany',['Manufacturing','Engineering','Materials Science','Robotics & Automation','Artificial Intelligence']],
+  ['World Travel Market London 2026','https://www.wtm.com/london/en-gb.html','2026-11-03','2026-11-05','London','United Kingdom',['Tourism & Hospitality','Business','Marketing','Supply Chain & Logistics']],
+  ['SMM 2028','https://www.smm-hamburg.com/','2028-09-05','2028-09-08','Hamburg','Germany',['Maritime','Engineering','Manufacturing','Energy','Supply Chain & Logistics']],
+  ['2027 AIChE Spring Meeting & Global Congress on Process Safety','https://www.aiche.org/conferences/aiche-spring-meeting-and-global-congress-on-process-safety/2027','2027-03-21','2027-03-25','Oklahoma City','United States',['Chemical Engineering','Engineering','Energy','Science','Open call for papers']],
+  ['MINEXCHANGE 2027','https://smeannualconference.org/','2027-02-28','2027-03-03','Denver','United States',['Mining & Minerals','Engineering','Manufacturing','Business']],
+  ['20th European Public Health Conference 2027','https://ephconference.eu/belgrade-2027/','2027-11-16','2027-11-19','Belgrade','Serbia',['Public Health','Healthcare','Government & Policy','Social Sciences','Open call for papers']],
+  ['ICN Congress 2027','https://www.icn.ch/events/icn-congress-2027-worlds-largest-international-gathering-nurses','2027-07-08','2027-07-11','Taipei','Taiwan',['Nursing','Healthcare','Public Health','Education','Open call for papers']],
+  ['IDS 2027 International Dental Show','https://www.english.ids-cologne.de/trade-fair/ids/','2027-03-16','2027-03-20','Cologne','Germany',['Dentistry','Healthcare','Business','Manufacturing']],
+  ['ASCO Annual Meeting 2027','https://www.asco.org/annual-meeting/','2027-06-04','2027-06-08','Chicago','United States',['Oncology','Healthcare','Life Sciences','Pharmaceuticals & Biotechnology']],
+  ['ASSA 2027 Annual Meeting','https://www.aeaweb.org/conference','2027-01-03','2027-01-05','Washington, D.C.','United States',['Economics','Finance','Business','Education']],
+  ['AIAA SciTech Forum 2027','https://scitech.aiaa.org/','2027-01-11','2027-01-15','Orlando','United States',['Aviation & Aerospace','Engineering','Artificial Intelligence','Science']],
+  ['TOKEN2049 Singapore 2026','https://token2049.com/singapore','2026-10-07','2026-10-08','Singapore','Singapore',['Blockchain & Web3','Finance','Artificial Intelligence','Business']],
+  ['EXPO REAL 2026','https://exporeal.net/en/trade-fair/','2026-10-05','2026-10-07','Munich','Germany',['Real Estate','Business','Finance','Architecture & Urbanism']],
+  ['MWC Shanghai 2027','https://www.mwcshanghai.com/','2027-06-23','2027-06-25','Shanghai','China',['Telecommunications','Artificial Intelligence','Software & Cloud','Semiconductors & Electronics','Business']],
+  ['ESC Congress 2027','https://www.escardio.org/events/congresses/esc-congress/future-destinations/','2027-08-27','2027-08-30','Milan','Italy',['Cardiology','Healthcare','Life Sciences','Science']],
+  ['Alzheimer’s Association International Conference 2027','https://aaic.alz.org/','2027-07-18','2027-07-21','Chicago','United States',['Neuroscience','Healthcare','Life Sciences','Public Health','Open call for papers']],
+  ['International Congress for Industrial and Applied Mathematics 2027','https://www.siam.org/conferences-events/siam-conferences/iciam27/','2027-07-12','2027-07-16','The Hague','Netherlands',['Mathematics & Statistics','Science','Engineering','Data Science']],
+  ['AAIC Neuroscience Next 2027','https://www.alz.org/neurosciencenext','2027-02-15','2027-02-18',null,null,['Virtual conferences','Neuroscience','Healthcare','Life Sciences','Education']]
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }

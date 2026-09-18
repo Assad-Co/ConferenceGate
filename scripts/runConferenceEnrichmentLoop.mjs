@@ -34,6 +34,24 @@ function runDiscoveryCli(args) {
   });
 }
 
+const DEFAULT_PRIORITY_ORGS = [
+  'neurips.cc','cvpr.thecvf.com','rsaconference.com','ces.tech','ieee-ras.org','2027.ieee-iros.org',
+  'himssconference.com','convention.bio.org','rsna.org','agu.org','egu.eu','imogconference.org',
+  'otcnet.org','gastechevent.com','adipec.com','spe.org','aapg.org','eage.org',
+  'world-nuclear-exhibition.com','formnext.com','farnboroughairshow.com','hannovermesse.de',
+  'mwcbarcelona.com','blackhat.com','events.linuxfoundation.org','websummit.com',
+  'pdac.ca','hlth.com','slas.org','worldagritechinnovation.com',
+  'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com','smeannualconference.org',
+  'ephconference.eu','icn.ch','ids-cologne.de','aeaweb.org','token2049.com','exporeal.net',
+  'mwcshanghai.com','aaic.alz.org'
+];
+
+function priorityOrganizations() {
+  const configured = String(process.env.PRIORITY_CONFERENCE_ORGS || '')
+    .split(',').map((value) => value.trim()).filter(Boolean);
+  return configured.length ? configured : DEFAULT_PRIORITY_ORGS;
+}
+
 async function cycle() {
   const started = new Date().toISOString();
   console.log(`[conference-enrich-loop] cycle started ${started}`);
@@ -43,9 +61,19 @@ async function cycle() {
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
 
-  // Grow the catalogue from authoritative society, institute, university and organiser calendars
-  // before enriching it. The source registry is global and trust-ranked, so each cycle rotates
-  // through due organisations instead of relying on a small hand-curated event seed list.
+  // First sweep the globally important conference brands across many categories. This keeps
+  // flagship events from waiting behind hundreds of lower-priority domains in the weekly registry.
+  const priorityOrgs = priorityOrganizations();
+  await runDiscoveryCli([
+    'harvest',
+    '--orgs', priorityOrgs.join(','),
+    '--max-pages', String(process.env.PRIORITY_ORG_MAX_PAGES || 480),
+    '--org-pages', String(process.env.PRIORITY_ORG_PAGES_PER_DOMAIN || 14),
+    '--years', '2026,2027,2028',
+    '--quiet',
+  ]);
+
+  // Then grow the long-tail catalogue from the full authoritative registry.
   await runDiscoveryCli([
     'harvest',
     '--max-org-domains', String(process.env.POPULAR_ORG_DOMAINS_PER_CYCLE || 40),
