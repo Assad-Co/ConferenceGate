@@ -292,6 +292,59 @@ const EVENTS = [
     venueInfo:{venue_name:'Exhibition World Bahrain',address:'Sakhir, Kingdom of Bahrain'},
     community:{overview:'Conference and exhibition environment connects GCC operators, procurement teams, project engineers, technical specialists, scientists, academia, service companies and technology providers.'},
     sourceUrls:['https://www.meos-geo.com/','https://www.meos-geo.com/call-for-paper-proposals/','https://www.meos-geo.com/why-sponsor/','https://www.meos-geo.com/why-visit/']
+  },
+  {
+    key:'imog-2027',
+    title:'33rd International Meeting on Organic Geochemistry (IMOG 2027)',
+    start:'2027-09-12', end:'2027-09-16', city:'Rotterdam', region:'South Holland', country:'Netherlands',
+    venue:'Rotterdam, Netherlands', format:'in-person',
+    url:'https://imogconference.org/',
+    organizer:'European Association of Organic Geochemists (EAOG) / European Association of Geoscientists and Engineers (EAGE)',
+    logo:'https://imogconference.org/wp-content/uploads/sites/10/2026/08/IMOG27_Full-Logo3.svg',
+    logoSource:'stated',
+    image:'https://imogconference.org/wp-content/uploads/sites/10/2026/08/Rotterdam.jpg?w=800',
+    description:'The 33rd International Meeting on Organic Geochemistry brings together the global organic-geochemistry community across academia and industry, spanning biogeochemistry, palaeoenvironmental and climate studies, petroleum systems, environmental science, geochemical archaeology, data science and emerging energy applications.',
+    categories:['Petroleum & Geoscience','Chemistry','Climate & Sustainability','Environment','Science','Energy','Data Science'],
+    cfp:{
+      status:'Open',
+      abstract_submission_deadline:'2027-02-14',
+      submission_url:'https://imogconference.org/submission-instruction/',
+      submission_guidelines:'IMOG 2027 is accepting abstracts for the Rotterdam meeting. The official site lists 14 February 2027 as the call-for-abstracts submission deadline.',
+      topics_tracks:['Organic matter cycles and transformation','Biogeochemistry','Palaeoenvironments and palaeoclimates','Petroleum systems and organic geochemistry','Soil and environmental geochemistry','Geochemical archaeology','Data science and artificial intelligence','Emerging energy solutions']
+    },
+    program:{
+      overview:'IMOG 2027 will feature oral and poster presentations across the breadth of modern organic geochemistry, with the scientific programme designed around current academic and industry applications.',
+      themes:['Biogeochemistry','Palaeoenvironments and palaeoclimates','Petroleum systems and organic geochemistry','Soil and environmental geochemistry','Geochemical archaeology','Data science and artificial intelligence','Emerging energy solutions']
+    },
+    committee:[
+      person('Johan Weijers','Shell','Scientific Committee Chair'),
+      person('Arnoud Boom','University of Leicester','Scientific Committee'),
+      person('Caitlin Witkowski','University of Bristol','Scientific Committee'),
+      person('Daniel Xia','Apache Corporation','Scientific Committee'),
+      person('Gemma Spaak','Shell','Scientific Committee'),
+      person('Marcel van der Meer','Royal NIOZ','Scientific Committee'),
+      person('Marcus Elvert','MARUM – University of Bremen','Scientific Committee'),
+      person('Mohammed Al-Ghammari','Petroleum Development Oman','Scientific Committee'),
+      person('Norka Marcano Balliache','SLB','Scientific Committee'),
+      person('Sarah Coffinet','University of Rennes','Scientific Committee'),
+      person('Thorsten Bauersachs','RWTH Aachen','Scientific Committee')
+    ],
+    venueInfo:{
+      venue_name:'Rotterdam, Netherlands — venue to be announced',
+      address:'Rotterdam, South Holland, Netherlands',
+      travel_information:'The official IMOG 2027 site highlights Rotterdam rail access, proximity to Amsterdam Schiphol Airport, and event travel offers. The specific 2027 conference venue has not yet been announced.'
+    },
+    community:{
+      summary:'IMOG 2027 expects more than 500 attendees, around 300 poster presentations and more than 80 oral presentations, bringing together academic and industry organic geochemists for scientific exchange and networking.',
+      overview:'IMOG 2027 expects more than 500 attendees, around 300 poster presentations and more than 80 oral presentations, bringing together academic and industry organic geochemists for scientific exchange and networking.'
+    },
+    sourceUrls:[
+      'https://imogconference.org/',
+      'https://imogconference.org/overview/',
+      'https://imogconference.org/committees/',
+      'https://imogconference.org/location/',
+      'https://imogconference.org/topics/'
+    ]
   }
 ];
 
