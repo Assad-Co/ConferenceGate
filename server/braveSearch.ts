@@ -28,6 +28,10 @@ export interface LiveSearchResult {
   category?: string | null;
   categories?: string[];
   cfpStatus?: string | null;
+  /** CFP tab contains substantive information, not just a URL/TBD/not-announced marker. */
+  cfpHasData?: boolean;
+  /** CFP is currently open/extended, or has a future stated submission deadline. */
+  cfpOpen?: boolean;
   format?: "in-person" | "hybrid" | "online" | null;
   /** What the conference is, where the record holds a description of its own. */
   description?: string | null;
@@ -314,6 +318,57 @@ function isCustomerReadyConference(result: LiveSearchResult): boolean {
   );
 }
 
+function meaningfulCfpText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  if (/^(?:not[ _-]?announced|not yet announced|unread|unknown|tbd|tba|n\/a|not found|not retrieved)$/i.test(text)) return null;
+  return text;
+}
+
+function cfpHasSubstantiveData(cfp: any, note?: unknown): boolean {
+  if (!cfp || typeof cfp !== "object") return false;
+  const scalar = [
+    cfp.status,
+    cfp.abstract_submission_deadline,
+    cfp.notification_date,
+    cfp.submission_guidelines,
+    cfp.submission_format,
+    cfp.length_limit,
+    cfp.review_process,
+    cfp.publication_information,
+    cfp.submission_email,
+  ].some((value) => Boolean(meaningfulCfpText(value)));
+  const topics = Array.isArray(cfp.topics_tracks)
+    && cfp.topics_tracks.some((value: unknown) => Boolean(meaningfulCfpText(value)));
+  const noteText = meaningfulCfpText(note);
+  return scalar || topics || Boolean(noteText);
+}
+
+function cfpIsOpen(cfp: any, note?: unknown, now = new Date()): boolean {
+  if (!cfpHasSubstantiveData(cfp, note)) return false;
+  const statusText = [cfp?.status, note]
+    .map((value) => meaningfulCfpText(value))
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\b(?:closed|expired|deadline passed|submissions? closed|no longer accepting|not accepting)\b/i.test(statusText)) {
+    return false;
+  }
+  if (/\b(?:open|extended|accepting submissions?|submissions? (?:are )?open|call for (?:papers|abstracts) (?:is )?open)\b/i.test(statusText)) {
+    return true;
+  }
+
+  const deadline = meaningfulCfpText(cfp?.abstract_submission_deadline);
+  if (!deadline) return false;
+  const parsed = Date.parse(deadline);
+  if (!Number.isFinite(parsed)) return false;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return parsed >= today.getTime();
+}
+
 async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
   const rows = await dbAll<{
     source_url: string;
@@ -555,9 +610,24 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
           : (text(overview.category) ? [text(overview.category)!] : []),
         format: storedFormat(overview.format),
         description: text(overview.description) ?? text(overview.overview),
-        // Which tabs have something behind them, on the same test the readiness flag above uses.
+        cfpStatus: meaningfulCfpText(sections[0]?.status),
+        cfpHasData: cfpHasSubstantiveData(
+          sections[0],
+          sectionNotes.cfp ?? sectionNotes.call_for_papers
+        ),
+        cfpOpen: cfpIsOpen(
+          sections[0],
+          sectionNotes.cfp ?? sectionNotes.call_for_papers
+        ),
+        // Which tabs have something behind them. "not_announced" is an honest answer on the
+        // detail page, but it is not displayable CFP data and therefore cannot make the CFP tab
+        // qualify for the Open call for papers filter.
         sections: (["cfp", "agenda", "speakers", "committee", "sponsors", "venue", "fees", "community"] as const)
-          .filter((_, index) => sectionHasDisplayContent(index, sections[index]) || sectionAnswered(index)),
+          .filter((sectionName, index) =>
+            sectionName === "cfp"
+              ? cfpHasSubstantiveData(sections[0], sectionNotes.cfp ?? sectionNotes.call_for_papers)
+              : sectionHasDisplayContent(index, sections[index]) || sectionAnswered(index)
+          ),
       },
     });
   }

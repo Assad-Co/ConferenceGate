@@ -286,6 +286,46 @@ export function resetLaunchDatasetCache(): void {
   cached = null;
 }
 
+function meaningfulLaunchCfpText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  if (/^(?:not[ _-]?announced|not yet announced|unread|unknown|tbd|tba|n\/a|not found|not retrieved)$/i.test(text)) return null;
+  return text;
+}
+
+function launchCfpHasData(record: LaunchConferenceRecord): boolean {
+  const cfp = record.details?.callForPapers;
+  if (!cfp) return false;
+  return [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text]
+    .some((value) => Boolean(meaningfulLaunchCfpText(value)));
+}
+
+function launchCfpIsOpen(record: LaunchConferenceRecord, now = new Date()): boolean {
+  const cfp = record.details?.callForPapers;
+  if (!cfp || !launchCfpHasData(record)) return false;
+  const statusText = [cfp.status, cfp.text]
+    .map((value) => meaningfulLaunchCfpText(value))
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\b(?:closed|expired|deadline passed|submissions? closed|no longer accepting|not accepting)\b/i.test(statusText)) {
+    return false;
+  }
+  if (/\b(?:open|extended|accepting submissions?|submissions? (?:are )?open|call for (?:papers|abstracts) (?:is )?open)\b/i.test(statusText)) {
+    return true;
+  }
+
+  const deadline = meaningfulLaunchCfpText(cfp.abstractDeadline);
+  if (!deadline) return false;
+  const parsed = Date.parse(deadline);
+  if (!Number.isFinite(parsed)) return false;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return parsed >= today.getTime();
+}
+
 /**
  * The deep sections this record actually has something to show in.
  *
@@ -299,9 +339,7 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   if (!details) return [];
   const filled: string[] = [];
   if (details.program.availability === "stated" || details.schedule.sessions.length) filled.push("agenda");
-  const cfp = details.callForPapers;
-  if (cfp && [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text, cfp.url]
-    .some((value) => typeof value === "string" && value.trim().length > 0)) filled.push("cfp");
+  if (launchCfpHasData(record)) filled.push("cfp");
   if (details.keynotes.availability === "stated") filled.push("speakers");
   if (details.committee.availability === "stated") filled.push("committee");
   if (details.sponsors.availability === "stated") filled.push("sponsors");
@@ -561,6 +599,12 @@ export interface LaunchSearchResult {
   organization: string | null;
   /** Its subject, used to choose the banner's palette. */
   category: string | null;
+  /** Source-stated CFP status, where one exists. */
+  cfpStatus: string | null;
+  /** CFP tab contains substantive information, not a placeholder or bare link. */
+  cfpHasData: boolean;
+  /** CFP is still open/extended, or has a future stated submission deadline. */
+  cfpOpen: boolean;
   prepared: boolean;
   startDate: string | null;
   /** ISO end date, where the source gave one. Sent as data rather than folded into a sentence so
@@ -762,11 +806,11 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     // What it is about, which is what the drawn banner keys its palette on.
     category: derivedCategory(record),
     categories: derivedCategories(record),
-    cfpStatus: (() => {
-      const cfp = record.details?.callForPapers;
-      return cfp && [cfp.status, cfp.abstractDeadline, cfp.submissionEmail, cfp.lengthLimit, cfp.text, cfp.url]
-        .some((value) => typeof value === "string" && value.trim().length > 0) ? (cfp.status || "Published") : null;
-    })(),
+    cfpStatus: launchCfpHasData(record)
+      ? meaningfulLaunchCfpText(record.details?.callForPapers?.status)
+      : null,
+    cfpHasData: launchCfpHasData(record),
+    cfpOpen: launchCfpIsOpen(record),
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
