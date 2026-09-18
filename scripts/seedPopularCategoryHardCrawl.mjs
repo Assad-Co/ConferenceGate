@@ -82,7 +82,17 @@ const SEEDS = [
   ['World Nuclear Exhibition 2027','https://www.world-nuclear-exhibition.com/','2027-12-07','2027-12-09','Paris','France',['Energy','Engineering','Manufacturing','Climate & Sustainability','Business']],
   ['Formnext 2026','https://formnext.mesago.com/frankfurt/en.html','2026-11-17','2026-11-20','Frankfurt','Germany',['Manufacturing','Engineering','Materials Science','Robotics & Automation','Artificial Intelligence']],
   ['World Travel Market London 2026','https://www.wtm.com/london/en-gb.html','2026-11-03','2026-11-05','London','United Kingdom',['Tourism & Hospitality','Business','Marketing','Supply Chain & Logistics']],
-  ['SMM 2028','https://www.smm-hamburg.com/','2028-09-05','2028-09-08','Hamburg','Germany',['Maritime','Engineering','Manufacturing','Energy','Supply Chain & Logistics']]
+  ['SMM 2028','https://www.smm-hamburg.com/','2028-09-05','2028-09-08','Hamburg','Germany',['Maritime','Engineering','Manufacturing','Energy','Supply Chain & Logistics']],
+  ['2027 AIChE Spring Meeting & Global Congress on Process Safety','https://www.aiche.org/conferences/aiche-spring-meeting-and-global-congress-on-process-safety/2027','2027-03-21','2027-03-25','Oklahoma City','United States',['Chemical Engineering','Engineering','Energy','Science','Open call for papers']],
+  ['MINEXCHANGE 2027','https://smeannualconference.org/','2027-02-28','2027-03-03','Denver','United States',['Mining & Minerals','Engineering','Manufacturing','Business']],
+  ['20th European Public Health Conference 2027','https://ephconference.eu/belgrade-2027/','2027-11-16','2027-11-19','Belgrade','Serbia',['Public Health','Healthcare','Government & Policy','Social Sciences','Open call for papers']],
+  ['ICN Congress 2027','https://www.icn.ch/events/icn-congress-2027-worlds-largest-international-gathering-nurses','2027-07-08','2027-07-11','Taipei','Taiwan',['Nursing','Healthcare','Public Health','Education','Open call for papers']],
+  ['IDS 2027 International Dental Show','https://www.english.ids-cologne.de/trade-fair/ids/','2027-03-16','2027-03-20','Cologne','Germany',['Dentistry','Healthcare','Business','Manufacturing']],
+  ['ASCO Annual Meeting 2027','https://www.asco.org/annual-meeting/','2027-06-04','2027-06-08','Chicago','United States',['Oncology','Healthcare','Life Sciences','Pharmaceuticals & Biotechnology']],
+  ['ASSA 2027 Annual Meeting','https://www.aeaweb.org/conference','2027-01-03','2027-01-05','Washington, D.C.','United States',['Economics','Finance','Business','Education']],
+  ['AIAA SciTech Forum 2027','https://scitech.aiaa.org/','2027-01-11','2027-01-15','Orlando','United States',['Aviation & Aerospace','Engineering','Artificial Intelligence','Science']],
+  ['TOKEN2049 Singapore 2026','https://token2049.com/singapore','2026-10-07','2026-10-08','Singapore','Singapore',['Blockchain & Web3','Finance','Artificial Intelligence','Business']],
+  ['EXPO REAL 2026','https://exporeal.net/en/trade-fair/','2026-10-05','2026-10-07','Munich','Germany',['Real Estate','Business','Finance','Architecture & Urbanism']]
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }
