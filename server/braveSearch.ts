@@ -369,6 +369,16 @@ function cfpIsOpen(cfp: any, note?: unknown, now = new Date()): boolean {
   return parsed >= today.getTime();
 }
 
+const FLAGSHIP_CONFERENCE_HOSTS = new Set([
+  'neurips.cc','cvpr.thecvf.com','rsaconference.com','ces.tech','ieee-ras.org','2027.ieee-iros.org',
+  'himssconference.com','convention.bio.org','rsna.org','agu.org','egu.eu','imogconference.org',
+  'otcnet.org','2027.otcnet.org','gastechevent.com','adipec.com','aapg.org','spe.org','eage.org',
+  'world-nuclear-exhibition.com','formnext.com','farnboroughairshow.com','hannovermesse.de',
+  'mwcbarcelona.com','blackhat.com','events.linuxfoundation.org','websummit.com','pdac.ca',
+  'hlth.com','slas.org','worldagritechinnovation.com','nor-shipping.com','iaa-mobility.com',
+  'itb.com','mipim.com','goldschmidt.info'
+]);
+
 async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
   const rows = await dbAll<{
     source_url: string;
@@ -545,6 +555,12 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       community: sections[7],
     });
     if (score === null) continue;
+    // When relevance is otherwise comparable, surface globally significant/curated conference
+    // sources before generic directory-style records. Direct title/query matches still dominate.
+    const flagshipBoost =
+      (metadata.hard_crawl_priority === true ? 80 : 0) +
+      (FLAGSHIP_CONFERENCE_HOSTS.has(host) ? 45 : 0);
+    const rankedScore = score + flagshipBoost;
     const text = (value: unknown): string | null => {
       const cell = typeof value === "string" ? value.trim() : "";
       return cell && !/^(not found|not retrieved|unknown|n\/a|tbd|tba)$/i.test(cell) ? cell : null;
@@ -552,7 +568,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     const city = text(overview.city);
     const nation = text(overview.country);
     ranked.push({
-      score,
+      score: rankedScore,
       result: {
         title: conferenceNameFrom(title, host),
         link: row.source_url,
