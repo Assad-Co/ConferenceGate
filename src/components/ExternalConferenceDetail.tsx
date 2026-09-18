@@ -1516,7 +1516,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {data.sponsors.map((sp, idx) => (
-                      <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
+                      <div key={idx} data-sponsor-card className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
                         {sp.logoUrl && (
                           <div className="w-full h-20 flex items-center justify-center overflow-hidden">
                             <img
@@ -1524,7 +1524,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                               alt={`${sp.name} logo`}
                               className="max-w-full max-h-full object-contain mx-auto"
                               onError={(e) => {
-                                e.currentTarget.style.display = 'none';
+                                const card = e.currentTarget.closest('[data-sponsor-card]');
+                                if (card instanceof HTMLElement) card.style.display = 'none';
                               }}
                             />
                           </div>
