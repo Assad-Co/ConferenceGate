@@ -338,15 +338,15 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   const details = record.details;
   if (!details) return [];
   const filled: string[] = [];
-  if (details.program.availability === "stated" || details.schedule.sessions.length) filled.push("agenda");
+  if (details.schedule.sessions.length > 0 || details.schedule.themes.length > 0) filled.push("agenda");
   if (launchCfpHasData(record)) filled.push("cfp");
-  // Roster tabs only count when we have actual named entries. A source paragraph or scraped
-  // navigation fragment is evidence that a page mentioned speakers/committee/sponsors, not a roster.
+  // Roster tabs only count when we have actual named entries. Sponsor cards additionally require
+  // a real logo because text-only names are not customer-ready sponsor/exhibitor content.
   if (details.keynotes.items.length > 0) filled.push("speakers");
   if (details.committee.items.length > 0) filled.push("committee");
-  if (details.sponsors.items.length > 0) filled.push("sponsors");
+  if (details.sponsors.items.some((item) => Boolean(item.name?.trim() && item.logoUrl?.trim()))) filled.push("sponsors");
   if (details.fees.availability === "stated") filled.push("fees");
-  if (details.community?.availability === "stated") filled.push("community");
+  // Launch community prose is retained as evidence but is not a customer-facing section.
   return filled;
 }
 
@@ -816,7 +816,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     // True only where a section actually holds something. The flag drives the badge on the results
     // card, so claiming it for a record whose every section says "not announced yet" would promise
     // a detail page with speakers and a programme behind it and then not have them.
-    prepared: filledSections(record).length > 0,
+    prepared: Boolean(conferenceLogoUrl(record)) && (filledSections(record).length + 1) >= 6,
     sections: filledSections(record),
     startDate: record.startDate,
     endDate: record.endDate,
@@ -1036,9 +1036,9 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
       name: sponsor.name,
       tier: sponsor.tier,
       sponsorship_level: sponsor.tier,
-      logoUrl: null,
-      logo_url: null,
-      logo_source: null,
+      logoUrl: sponsor.logoUrl ?? null,
+      logo_url: sponsor.logoUrl ?? null,
+      logo_source: sponsor.logoUrl ? "stated" : null,
     })),
     venue_accommodation: {
       venue_name: details?.venueName || record.venue || null,

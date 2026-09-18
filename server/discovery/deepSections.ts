@@ -769,7 +769,10 @@ export function sponsorClassificationFromHeading(heading: string): "sponsor" | "
   return "sponsor";
 }
 
-const NON_SPONSOR_NAME = /^(?:home|about|contact|contact\s+us|register|registration|sponsors?|exhibitors?|partners?|sponsorship|become\s+an?\s+\w+|read\s+more|view\s+all|learn\s+more|more\s+info|download|logo|image|back|next|previous|click\s+here)$/i;
+const NON_SPONSOR_NAME = /^(?:home|about|contact|contact\s+us|register|registration|sponsors?|exhibitors?|partners?|sponsorship|become\s+an?\s+\w+|read\s+more|view\s+all|learn\s+more|more\s+info|download|logo|image|back|next|previous|click\s+here|free|no\s+spam|unsubscribe(?:\s+anytime)?|save\s+time(?:\s+never\s+miss\s+out)?|top\s+events(?:\s+handpicked\s+for\s+you)?|industry\s+insights(?:\s+trends\s+that\s+matter)?|newsletter|sign\s+up|sign\s+in|sign\s+out|toggle\s+navigation|show\s+submenu.*)$/i;
+
+/** Marketing/navigation copy that can sit inside a sponsor-shaped page region but is not an organisation. */
+const SPONSOR_MARKETING_COPY = /\b(?:handpicked\s+for\s+you|never\s+miss\s+out|unsubscribe\s+anytime|no\s+spam|industry\s+insights|trends\s+that\s+matter|sign\s+up|sign\s+out|toggle\s+navigation|show\s+submenu|view\s+full|read\s+more|learn\s+more|free\s+newsletter)\b/i;
 
 /** A call to action, not a company: "Contact Us Today", "Become a Sponsor", "Download the pack". */
 const SPONSOR_CTA = /^(?:contact|learn|become|download|join|register|sponsor|view|get|request|see|find|explore|discover|apply|submit|enquire|inquire|buy|start|read|click|subscribe|watch|reserve|order|call|email|visit|check|browse|show|add|try|support)\b/i;
@@ -788,6 +791,7 @@ export function looksLikeSponsorName(value: string | null | undefined): boolean 
   if (/^\d+$/.test(name)) return false;
   if (NON_SPONSOR_NAME.test(name)) return false;
   if (SPONSOR_CTA.test(name)) return false;
+  if (SPONSOR_MARKETING_COPY.test(name)) return false;
   if (name.split(/\s+/).length > 8) return false;
   // No trailing-period rule: "Iberia Robotics S.L." and "Acme Inc." end in one, and a sentence is
   // already excluded by the word cap and the vocabulary below.
@@ -814,6 +818,9 @@ function sponsorsFromNodes(
   const push = (name: string | null, logoUrl: string | null) => {
     const cleaned = clean(name, 120);
     if (!cleaned || !looksLikeSponsorName(cleaned)) return;
+    const pageBrand = pageHost.split(".")[0]?.replace(/[-_]+/g, " ").toLowerCase() || "";
+    const normalizedName = cleaned.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    if (pageBrand && normalizedName.replace(/\s+/g, "") === pageBrand.replace(/\s+/g, "")) return;
     found.push({ name: cleaned, tier, classification, logoUrl, source_url: pageUrl });
   };
 
@@ -844,14 +851,15 @@ function sponsorsFromNodes(
       continue;
     }
   }
-  // Sites that list sponsors as plain text. Kept, because plenty do — but only from a genuine list
-  // or table item, and only when nothing above recognised it as furniture or a programme entry.
+  // Plain text is much too ambiguous for public sponsor cards. Keep it only when the text itself
+  // carries a strong organisation marker (Inc., Ltd., University, Association, etc.). Otherwise
+  // require a logo or a real outbound organisation link above.
   for (const node of nodes) {
     if (node.type !== "element" || seenNodes.has(node) || insideChrome(node)) continue;
     if (!["li", "td", "figcaption"].includes(node.tag)) continue;
     if (byTag(node, "a", "img").length > 0) continue;
     const text = clean(textOf(node), 120);
-    if (!text || text.split(/\s+/).length > 8) continue;
+    if (!text || text.split(/\s+/).length > 8 || !ORG_MARKER.test(text)) continue;
     push(text, null);
     for (const inner of walk(node)) seenNodes.add(inner);
   }
