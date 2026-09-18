@@ -40,7 +40,7 @@ const DEFAULT_PRIORITY_ORGS = [
   'otcnet.org','gastechevent.com','adipec.com','spe.org','aapg.org','eage.org',
   'world-nuclear-exhibition.com','formnext.com','farnboroughairshow.com','hannovermesse.de',
   'mwcbarcelona.com','blackhat.com','events.linuxfoundation.org','websummit.com',
-  'pdac.ca','hlth.com','slas.org','worldagrit​​echinnovation.com'.replace('​​',''),
+  'pdac.ca','hlth.com','slas.org','worldagritechinnovation.com',
   'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com'
 ];
 
