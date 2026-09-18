@@ -142,6 +142,8 @@ export interface LaunchConferenceDetails {
   committee: LaunchDetailSection<LaunchDetailPerson>;
   fees: LaunchDetailSection<LaunchDetailFee>;
   sponsors: LaunchDetailSection<LaunchDetailSponsor>;
+  /** Networking/community information explicitly stated by an official source. */
+  community?: LaunchDetailProse;
   /** A travel advisory the list's compiler wrote. Not the organiser speaking, and shown as such. */
   safetyNote: string | null;
   /** Where to register, where the source named a page of its own for it. */
@@ -215,6 +217,13 @@ export interface LaunchConferenceRecord {
    * through a third party. Only the first is kept here.
    */
   logoUrl?: string | null;
+  /**
+   * The organiser/society logo when the event itself has no distinct published mark.
+   *
+   * Kept separate from `logoUrl` so the UI can show it without falsely calling it the
+   * conference's own logo.
+   */
+  organizerLogoUrl?: string | null;
 
   /**
    * The wide artwork a conference runs across the top of its own site.
