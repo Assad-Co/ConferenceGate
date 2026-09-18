@@ -4,9 +4,9 @@ import path from 'node:path';
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36 ConferenceGate/1.0';
 const MAX_EVENTS = Math.max(0, Number(process.env.DEEP_ENRICH_MAX_EVENTS || 0)); // 0 = all
-const MAX_DEEP_LINKS = Math.max(3, Number(process.env.DEEP_ENRICH_MAX_LINKS || 12));
+const MAX_DEEP_LINKS = Math.max(3, Number(process.env.DEEP_ENRICH_MAX_LINKS || 16));
 const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_REFRESH_DAYS || 3));
-const FIRECRAWL_MAX_PAGES = Math.max(0, Number(process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || 120));
+const FIRECRAWL_MAX_PAGES = Math.max(0, Number(process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || 250));
 const DIRECT_TIMEOUT_MS = Math.max(4000, Number(process.env.DEEP_ENRICH_DIRECT_TIMEOUT_MS || 10000));
 const FIRECRAWL_TIMEOUT_MS = Math.max(10000, Number(process.env.DEEP_ENRICH_FIRECRAWL_TIMEOUT_MS || 45000));
 let firecrawlPagesUsed = 0;
@@ -415,7 +415,7 @@ async function main() {
       return;
     }
 
-    const result = await db.execute(`SELECT id,title,organizer,official_url,canonical_url,start_date,end_date,status FROM discovery_events WHERE status='published' AND COALESCE(official_url,canonical_url) IS NOT NULL ORDER BY CASE WHEN start_date IS NULL THEN 1 ELSE 0 END, start_date ASC, title ASC`);
+    const result = await db.execute(`SELECT id,title,organizer,official_url,canonical_url,start_date,end_date,status,relevance_reason FROM discovery_events WHERE status='published' AND COALESCE(official_url,canonical_url) IS NOT NULL ORDER BY CASE WHEN relevance_reason='popular_category_priority' THEN 0 ELSE 1 END, CASE WHEN start_date IS NULL THEN 1 ELSE 0 END, start_date ASC, title ASC`);
     let events = result.rows || [];
     if (MAX_EVENTS > 0) events = events.slice(0, MAX_EVENTS);
     console.log(`[deep-enrich] starting universal detail sweep events=${events.length} max_links=${MAX_DEEP_LINKS} firecrawl_budget=${FIRECRAWL_MAX_PAGES}`);
