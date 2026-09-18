@@ -38,6 +38,9 @@ async function cycle() {
   // current-edition overrides before the final customer-facing normalization.
   await runScript('scripts/sanitizeConferenceDetailData.mjs');
   await runScript('scripts/applyCuratedConferenceOverrides.mjs');
+  // AAPG has a verified calendar manifest because its live site blocks some Render/Apify paths.
+  // Re-apply it after generic readers so blocked pages cannot erase official program/pricing data.
+  await runScript('scripts/syncAapgOfficialUpcoming.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
