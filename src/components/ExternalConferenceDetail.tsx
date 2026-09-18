@@ -494,7 +494,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // it were the conference's logo. The file may also simply not be there, so the load has to be
   // allowed to fail back to the name.
   const isAapgResult = /\baapg\b|american association of petroleum geologists/i.test(
-    [displayTitle, data?.overview?.organizer, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
+    [data?.conferenceTitle || result.title, data?.overview?.organizer, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
   );
   const logoCandidates = Array.from(new Set([
     data?.overview?.logo_url || null,
