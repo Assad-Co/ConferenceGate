@@ -199,7 +199,25 @@ function sectionExcerpt(lines, pattern, maxChars = 900) {
 function mergeObject(oldValue, newValue) {
   return { ...(oldValue && typeof oldValue === 'object' && !Array.isArray(oldValue) ? oldValue : {}), ...(newValue && typeof newValue === 'object' ? newValue : {}) };
 }
+function uniqueStatedTabs(meta) {
+  const availability = meta?.section_availability || {};
+  const groups = [
+    ['overview'],
+    ['cfp','call_for_papers'],
+    ['fees','fees_pricing'],
+    ['agenda','program_agenda'],
+    ['speakers','keynote_speakers'],
+    ['committee','technical_committee'],
+    ['sponsors','sponsors_exhibitors'],
+    ['venue','venue_accommodation'],
+    ['community'],
+  ];
+  return groups.filter((aliases) => aliases.some((key) => availability[key] === 'stated')).length;
+}
 function recentEnough(meta) {
+  // Thin records stay eligible even when a previous pass touched them; otherwise a two-tab result
+  // could sit unchanged for three days while the section-specific pages were available.
+  if (uniqueStatedTabs(meta) < 6) return false;
   const raw = meta?.deep_enriched_at;
   if (!raw) return false;
   const t = Date.parse(raw);
