@@ -62,7 +62,26 @@ const SEEDS = [
   ['ITB Berlin 2027','https://www.itb.com/en/','2027-03-16','2027-03-18','Berlin','Germany',['Tourism & Hospitality','Business','Marketing','Technology & Travel']],
   ['Consensus Hong Kong 2027','https://consensus-hongkong.coindesk.com/','2027-02-01','2027-02-03','Hong Kong','Hong Kong',['Blockchain & Web3','Finance','Artificial Intelligence','Business','Open call for papers']],
   ['MIPIM 2027','https://www.mipim.com/','2027-03-16','2027-03-19','Cannes','France',['Real Estate','Architecture & Urbanism','Finance','Business']],
-  ['AAPG Academy – Two Margins, One Cretaceous Play','https://aapg.zoom.us/webinar/register/WN_BbyQ2vCETqSFS_-k-kqWcw#/registration','2026-09-23','2026-09-23',null,null,['Virtual conferences','Petroleum & Geoscience','Energy','Business']]
+  ['AAPG Academy – Two Margins, One Cretaceous Play','https://aapg.zoom.us/webinar/register/WN_BbyQ2vCETqSFS_-k-kqWcw#/registration','2026-09-23','2026-09-23',null,null,['Virtual conferences','Petroleum & Geoscience','Energy','Business']],
+
+  // Flagship events: multiple globally important conferences per major category, not one demo seed.
+  ['NeurIPS 2026 – Main Conference','https://neurips.cc/Conferences/2026','2026-12-06','2026-12-12','Sydney','Australia',['Artificial Intelligence','Data Science','Science','Life Sciences','Robotics & Automation','Open call for papers']],
+  ['CVPR 2027','https://cvpr.thecvf.com/','2027-06-20','2027-06-25','Seattle','United States',['Artificial Intelligence','Data Science','Robotics & Automation','Engineering','Open call for papers']],
+  ['RSA Conference 2027','https://www.rsaconference.com/usa','2027-04-05','2027-04-08','San Francisco','United States',['Cybersecurity','Artificial Intelligence','Business','Law & Regulation','Open call for papers']],
+  ['CES 2027','https://www.ces.tech/','2027-01-06','2027-01-09','Las Vegas','United States',['Artificial Intelligence','Semiconductors & Electronics','Robotics & Automation','Automotive & Mobility','Healthcare','Business']],
+  ['IEEE ICRA 2027','https://www.ieee-ras.org/conferences-workshops/fully-sponsored/icra/','2027-05-24','2027-05-28','Seoul','South Korea',['Robotics & Automation','Artificial Intelligence','Engineering','Mechanical Engineering','Open call for papers']],
+  ['IEEE/RSJ IROS 2027','https://2027.ieee-iros.org/','2027-09-26','2027-10-01','Florence','Italy',['Robotics & Automation','Artificial Intelligence','Engineering','Climate & Sustainability']],
+  ['HIMSS27 Global Health Conference & Exhibition','https://www.himssconference.com/','2027-04-05','2027-04-08','Chicago','United States',['Healthcare','Artificial Intelligence','Cybersecurity','Data Science','Business']],
+  ['BIO International Convention 2027','https://convention.bio.org/','2027-06-07','2027-06-10','Philadelphia','United States',['Pharmaceuticals & Biotechnology','Life Sciences','Healthcare','Business','Open call for papers']],
+  ['RSNA 2026 Annual Meeting','https://www.rsna.org/Annual-Meeting','2026-11-29','2026-12-03','Chicago','United States',['Healthcare','Artificial Intelligence','Life Sciences','Science']],
+  ['AGU26 Annual Meeting','https://www.agu.org/agu26','2026-12-07','2026-12-11','San Francisco','United States',['Science','Climate & Sustainability','Environment','Petroleum & Geoscience','Education','Open call for papers']],
+  ['EGU General Assembly 2027','https://www.egu27.eu/','2027-04-04','2027-04-09','Vienna','Austria',['Science','Petroleum & Geoscience','Climate & Sustainability','Environment','Education','Open call for papers']],
+  ['Offshore Technology Conference 2027','https://2027.otcnet.org/','2027-05-03','2027-05-05','Houston','United States',['Petroleum & Geoscience','Energy','Engineering','Hydrogen & CCUS','Renewable Energy','Business']],
+  ['Gastech 2027','https://www.gastechevent.com/','2027-09-14','2027-09-17','Houston','United States',['Energy','Hydrogen & CCUS','Petroleum & Geoscience','Business','Engineering']],
+  ['World Nuclear Exhibition 2027','https://www.world-nuclear-exhibition.com/','2027-12-07','2027-12-09','Paris','France',['Energy','Engineering','Manufacturing','Climate & Sustainability','Business']],
+  ['Farnborough International Airshow 2026','https://www.farnboroughairshow.com/','2026-07-20','2026-07-24','Farnborough','United Kingdom',['Aviation & Aerospace','Engineering','Manufacturing','Business']],
+  ['Formnext 2026','https://formnext.mesago.com/frankfurt/en.html','2026-11-17','2026-11-20','Frankfurt','Germany',['Manufacturing','Engineering','Materials Science','Robotics & Automation','Artificial Intelligence']],
+  ['World Travel Market London 2026','https://www.wtm.com/london/en-gb.html','2026-11-03','2026-11-05','London','United Kingdom',['Tourism & Hospitality','Business','Marketing','Supply Chain & Logistics']]
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }
