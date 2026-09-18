@@ -54,6 +54,10 @@ function patchDiscoveryEngine() {
   const abbreviation = fallbackConferenceAbbreviation(result);
   const derivedOrganiserIcon = (() => {
     if (result.favicon) return null;
+    const isAapg = /\\baapg\\b|american association of petroleum geologists/i.test(
+      [result.title, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
+    );
+    if (isAapg) return '/aapg-organizer.svg';
     try {
       const page = new URL(result.link);
       return page.hostname ? new URL('/favicon.ico', page.origin).href : null;
