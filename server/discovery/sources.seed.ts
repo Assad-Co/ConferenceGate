@@ -296,9 +296,59 @@ const UNIVERSITIES: Seed[] = [
   ["unal.edu.co", "Universidad Nacional de Colombia", "university", "Colombia", "Latin America"],
 ];
 
+/** Flagship conference sites that should be harvested as first-class event sources, not merely
+ *  discovered indirectly through their parent society. This list deliberately spans ConferenceGate's
+ *  popular-search categories so one subject area cannot dominate the catalogue. */
+const FLAGSHIP_EVENT_SOURCES: Seed[] = [
+  ["worldsummit.ai", "World Summit AI", "official_conference_site", "Netherlands", "Europe"],
+  ["events.linuxfoundation.org", "Linux Foundation Events", "official_conference_site", "United States", "North America"],
+  ["blackhat.com", "Black Hat", "official_conference_site", "United States", "North America"],
+  ["mwcbarcelona.com", "MWC Barcelona", "official_conference_site", "Spain", "Europe"],
+  ["semiconeuropa.org", "SEMICON Europa", "official_conference_site", "Germany", "Europe"],
+  ["automatica-munich.com", "automatica", "official_conference_site", "Germany", "Europe"],
+  ["ieee-ecce.org", "IEEE ECCE", "official_conference_site", "United States", "North America"],
+  ["adipec.com", "ADIPEC", "official_conference_site", "United Arab Emirates", "Middle East"],
+  ["re-plus.com", "RE+", "official_conference_site", "United States", "North America"],
+  ["ghgt.info", "GHGT", "official_conference_site", "International", "Global"],
+  ["pdac.ca", "PDAC Convention", "official_conference_site", "Canada", "North America"],
+  ["hlth.com", "HLTH", "official_conference_site", "United States", "North America"],
+  ["himssconference.com", "HIMSS Global Health Conference", "official_conference_site", "United States", "North America"],
+  ["slas.org", "SLAS", "professional_society", "United States", "North America"],
+  ["sigmanursing.org", "Sigma Nursing", "professional_society", "United States", "North America"],
+  ["gnydm.com", "Greater New York Dental Meeting", "official_conference_site", "United States", "North America"],
+  ["jointmathematicsmeetings.org", "Joint Mathematics Meetings", "official_conference_site", "United States", "North America"],
+  ["websummit.com", "Web Summit", "official_conference_site", "Ireland", "Europe"],
+  ["us.money2020.com", "Money20/20 USA", "official_conference_site", "United States", "North America"],
+  ["contentmarketingworld.com", "Content Marketing World", "official_conference_site", "United States", "North America"],
+  ["cscmpedge.org", "CSCMP EDGE", "official_conference_site", "United States", "North America"],
+  ["hannovermesse.de", "HANNOVER MESSE", "official_conference_site", "Germany", "Europe"],
+  ["farnboroughairshow.com", "Farnborough International Airshow", "official_conference_site", "United Kingdom", "Europe"],
+  ["nor-shipping.com", "Nor-Shipping", "official_conference_site", "Norway", "Europe"],
+  ["iaa-mobility.com", "IAA MOBILITY", "official_conference_site", "Germany", "Europe"],
+  ["worldagritechinnovation.com", "World Agri-Tech Innovation Summit", "official_conference_site", "United Kingdom", "Europe"],
+  ["iapp.org", "IAPP Conferences", "professional_association", "United States", "North America"],
+  ["aspanet.org", "ASPA Annual Conference", "professional_association", "United States", "North America"],
+  ["sxsw.com", "SXSW", "official_conference_site", "United States", "North America"],
+  ["itb.com", "ITB Berlin", "official_conference_site", "Germany", "Europe"],
+  ["consensus.coindesk.com", "Consensus", "official_conference_site", "United States", "North America"],
+  ["mipim.com", "MIPIM", "official_conference_site", "France", "Europe"],
+  ["cvpr.thecvf.com", "CVPR", "official_conference_site", "United States", "North America"],
+  ["rsaconference.com", "RSA Conference", "official_conference_site", "United States", "North America"],
+  ["convention.bio.org", "BIO International Convention", "official_conference_site", "United States", "North America"],
+  ["formnext.com", "Formnext", "official_conference_site", "Germany", "Europe"],
+  ["smm-hamburg.com", "SMM Hamburg", "official_conference_site", "Germany", "Europe"],
+  ["ces.tech", "CES", "official_conference_site", "United States", "North America"],
+  ["world-nuclear-exhibition.com", "World Nuclear Exhibition", "official_conference_site", "France", "Europe"],
+  ["otcnet.org", "Offshore Technology Conference", "professional_association", "United States", "North America"],
+  ["gastechevent.com", "Gastech", "official_conference_site", "United Kingdom", "Europe"],
+  ["goldschmidt.info", "Goldschmidt Conference", "official_conference_site", "International", "Global"],
+  ["2027.ieee-iros.org", "IEEE/RSJ IROS 2027", "official_conference_site", "Italy", "Europe"],
+  ["ieee-ras.org", "IEEE Robotics and Automation Society", "engineering_society", "United States", "North America"],
+];
+
 const ALL: Seed[] = [
   ...GEOSCIENCE_AND_ENERGY, ...ENGINEERING, ...COMPUTING, ...PHYSICAL_SCIENCES,
-  ...MEDICAL_AND_LIFE_SCIENCES, ...RESEARCH_INSTITUTES, ...UNIVERSITIES,
+  ...MEDICAL_AND_LIFE_SCIENCES, ...RESEARCH_INSTITUTES, ...UNIVERSITIES, ...FLAGSHIP_EVENT_SOURCES,
 ];
 
 export const SEED_DOMAINS: DomainInput[] = ALL.map(([domain, sourceName, sourceType, country, region]) => ({
