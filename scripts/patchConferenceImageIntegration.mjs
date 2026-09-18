@@ -55,8 +55,8 @@ function patchDiscoveryEngine() {
   const derivedOrganiserIcon = (() => {
     if (result.favicon) return null;
     try {
-      const host = new URL(result.link).hostname;
-      return host ? \`https://www.google.com/s2/favicons?domain=\${encodeURIComponent(host)}&sz=128\` : null;
+      const page = new URL(result.link);
+      return page.hostname ? new URL('/favicon.ico', page.origin).href : null;
     } catch {
       return null;
     }
