@@ -306,6 +306,13 @@ const POPULAR_QUALITY_SEARCHES = new Set([
 function isPopularQualitySearch(query: string): boolean {
   return POPULAR_QUALITY_SEARCHES.has(query.trim().toLowerCase());
 }
+function isCustomerReadyConference(result: LiveSearchResult): boolean {
+  return (
+    result.prepared === true &&
+    ((result.sections?.length || 0) + 1) >= 6 &&
+    Boolean(result.favicon || result.thumbnail)
+  );
+}
 
 async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
   const rows = await dbAll<{
@@ -801,13 +808,10 @@ export async function searchConferences(
   // Popular Search chips are a curated discovery surface. Never mix a thin static-catalogue row
   // into those results just because its title matches the category. It becomes eligible only after
   // the hard-crawl pipeline has prepared at least six tabs and a visual identity.
-  const results = isPopularQualitySearch(query)
-    ? merged.filter((result) =>
-        result.prepared === true &&
-        ((result.sections?.length || 0) + 1) >= 6 &&
-        Boolean(result.favicon || result.thumbnail)
-      )
-    : merged;
+  // External Conference Results are customer-ready only after the hard crawler has produced at
+  // least six displayable tabs plus a visual identity. Thin records stay in Turso as enrichment
+  // inventory, but are never exposed as half-empty conference pages.
+  const results = merged.filter(isCustomerReadyConference);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -877,7 +881,8 @@ export async function browseStoredConferences(limit = 10000): Promise<LiveSearch
   // Both stored sources are ordered together, not one after the other: appending the static
   // catalogue to an already-sorted list of database rows produced a page that restarted at January
   // halfway down.
-  const rows = [...(await storedConferencesOrEmpty("")), ...browseLaunchDataset(limit)];
+  const rows = [...(await storedConferencesOrEmpty("")), ...browseLaunchDataset(limit)]
+    .filter(isCustomerReadyConference);
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const withDates = rows.map((result) => {
