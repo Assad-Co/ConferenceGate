@@ -470,8 +470,9 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         ].some(hasContent);
       }
       if (index === 1) { // Program
-        return hasContent(value?.overview) ||
-          (Array.isArray(value?.sessions) && value.sessions.some(hasContent)) ||
+        // Raw program prose is internal evidence only. Count what the detail page actually renders:
+        // structured sessions and themes.
+        return (Array.isArray(value?.sessions) && value.sessions.some(hasContent)) ||
           (Array.isArray(value?.themes) && value.themes.some(hasContent));
       }
       if (index === 5) { // Venue
@@ -485,7 +486,10 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
           (Array.isArray(value?.registration_fees) && value.registration_fees.some(hasContent));
       }
       if (index === 7) { // Community
-        return (Array.isArray(value?.social_media) && value.social_media.some(hasContent));
+        // `summary` is curated, customer-facing prose. Raw crawler `overview` is deliberately
+        // excluded so hidden source dumps never help a record pass the public quality gate.
+        return hasContent(value?.summary) ||
+          (Array.isArray(value?.social_media) && value.social_media.some(hasContent));
       }
       if (index === 4) { // Sponsors / exhibitors
         return Array.isArray(value) && value.some((entry: any) => {
