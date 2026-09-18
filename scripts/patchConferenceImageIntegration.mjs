@@ -27,12 +27,14 @@ function patchBraveSearch() {
     "prepared result SELECT image_url",
   );
 
-  source = replaceOnce(
-    source,
-    `        displayLink: host,\n        thumbnail: null,\n        // A published record's source is the conference's own site — publication refuses a listing\n        // — so the icon that site serves is the conference's own mark rather than a directory's.\n        favicon: siteIconUrl(row.source_url),\n        // Still the host's mark rather than an edition's, so the card labels it as the organiser's.\n        logoSource: siteIconUrl(row.source_url) ? ("organiser" as const) : null,`,
-    `        displayLink: host,\n        // Representative artwork comes only from the verified official site. It is secondary to a\n        // stated event logo, but available to the UI as the last visual fallback before initials.\n        thumbnail: text(row.image_url) ?? text(overview.image_url),\n        // Priority is deliberate: a logo explicitly published by the event wins; otherwise the\n        // organiser/site mark is used. The client may fall through to the official banner/image if\n        // that mark is tiny or fails to load.\n        favicon: text(overview.logo_url) ?? siteIconUrl(row.source_url),\n        logoSource: text(overview.logo_url)\n          ? ("stated" as const)\n          : siteIconUrl(row.source_url)\n            ? ("organiser" as const)\n            : null,`,
-    "prepared result visual mapping",
-  );
+  if (!source.includes("Prefer the logo actually stored by enrichment")) {
+    source = replaceOnce(
+      source,
+      `        displayLink: host,\n        thumbnail: null,\n        // A published record's source is the conference's own site — publication refuses a listing\n        // — so the icon that site serves is the conference's own mark rather than a directory's.\n        favicon: siteIconUrl(row.source_url),\n        // Still the host's mark rather than an edition's, so the card labels it as the organiser's.\n        logoSource: siteIconUrl(row.source_url) ? ("organiser" as const) : null,`,
+      `        displayLink: host,\n        // Representative artwork comes only from the verified official site. It is secondary to a\n        // stated event logo, but available to the UI as the last visual fallback before initials.\n        thumbnail: text(row.image_url) ?? text(overview.image_url),\n        // Prefer the logo actually stored by enrichment. When it is an organiser mark, preserve\n        // that provenance rather than upgrading it to an event logo.\n        favicon: text(overview.logo_url) ?? siteIconUrl(row.source_url),\n        logoSource:\n          overview.logo_source === "stated" || overview.logo_source === "organiser"\n            ? overview.logo_source\n            : ((text(overview.logo_url) ?? siteIconUrl(row.source_url)) ? ("organiser" as const) : null),`,
+      "prepared result visual mapping",
+    );
+  }
 
   fs.writeFileSync(path, source);
   console.log("[conference-images-patch] patched server/braveSearch.ts");
