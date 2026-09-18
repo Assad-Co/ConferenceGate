@@ -22,7 +22,7 @@ if (!source.includes(importLine)) {
 // The previous implementation matched the entire LinkedIn tab block, which was brittle because
 // patchLinkedInProfileUI inserts the keynote section immediately after it. Anchor instead on the
 // first stable Conferences History content block.
-const renderLine = '        <LinkedInImportedTabSections tab={activeTab} />';
+const renderLine = '        <LinkedInImportedTabSections tab={activeTab} onPaperTitlesChange={setLinkedInPaperTitles} />';
 if (!source.includes(renderLine)) {
   const anchors = [
     "        {activeTab === 'conferences' && keynoteSpeakerMatches.length > 0 && (",
