@@ -644,7 +644,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (countryTerm && !confCountry.includes(countryTerm)) return false;
     if (categoryFilter && !categories.includes(categoryFilter.toLowerCase())) return false;
     if (formatTerm && confFormat !== formatTerm) return false;
-    if (cfpOnly && !conf.cfpStatus) return false;
+    // "Open call for papers" is literal: organizer-created conferences qualify only while their
+    // CFP state is Open or Extended. Closed calls never appear under this chip.
+    if (cfpOnly && conf.cfpStatus !== 'Open' && conf.cfpStatus !== 'Extended') return false;
     if (timingFilter === 'one-day' && duration !== 1) return false;
     if (timingFilter === 'multi-day' && duration < 2) return false;
     if (timingFilter === 'weekend' && !touchesWeekend) return false;
@@ -692,11 +694,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         .filter(Boolean).join(' ').toLowerCase();
       if (!categoryText.includes(categoryFilter.toLowerCase())) return false;
     }
-    // Category matches are evaluated against the complete stored record on the server.
-    if (cfpOnly) {
-      const evidence = [result.title, result.snippet].join(' ').toLowerCase();
-      if (!result.cfpStatus && !evidence.includes('call for paper')) return false;
-    }
+    // Never infer an open CFP from a title/snippet keyword. The server computes this flag from
+    // the actual CFP tab: it must contain substantive data and be open/extended (or have a future
+    // stated submission deadline). This prevents empty CFP tabs from leaking into the filter.
+    if (cfpOnly && result.cfpOpen !== true) return false;
     return true;
   });
 
@@ -1115,7 +1116,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 type="button"
                 onClick={() => submitDiscoverySearch(suggestion)}
                 className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold transition-colors cursor-pointer ${
-                  searchTerm === suggestion
+                  (
+                    suggestion === 'Open call for papers' ? cfpOnly :
+                    suggestion === 'Virtual conferences' ? formatFilter.toLowerCase() === 'virtual' :
+                    categoryFilter === suggestion || searchTerm === suggestion
+                  )
                     ? 'bg-blue-600 border-blue-600 text-white'
                     : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700'
                 }`}
