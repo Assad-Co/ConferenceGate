@@ -796,7 +796,7 @@ export function searchLaunchDataset(query: string, limit = 20): LaunchSearchResu
       title: record.title,
       acronym: record.acronym,
       topics: record.topics,
-      categories: [record.category, ...record.categories],
+      categories: derivedCategories(record),
       keywords: record.keywords,
       description: record.description,
       organizer: [record.organization, record.sourceHost],
