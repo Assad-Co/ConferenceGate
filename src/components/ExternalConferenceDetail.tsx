@@ -633,6 +633,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                   src={heroLogo}
                   alt={logoIsOwn ? `${displayTitle} logo` : `${result.displayLink} organiser logo`}
                   onError={() => setLogoFailed(true)}
+                  referrerPolicy="no-referrer"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -643,7 +644,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
           )}
 
           <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
-            {logoUrl && !logoFailed && <img src={logoUrl} alt="" className="w-5 h-5 rounded shrink-0" />}
+            {logoUrl && !logoFailed && <img src={logoUrl} alt="" referrerPolicy="no-referrer" className="w-5 h-5 rounded shrink-0" />}
             <div>
               {/* Where the mark came from, named. An organiser's icon beside the word "Organiser"
                   is a fact; the same icon blown up in the hero would have been a claim. */}
