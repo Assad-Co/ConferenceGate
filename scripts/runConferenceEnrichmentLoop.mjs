@@ -61,6 +61,11 @@ async function cycle() {
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
 
+  // Coverage-driven pass: every Popular Search category has the same minimum target. Categories
+  // below target receive extra official-source harvesting until they catch up; strong categories
+  // no longer consume all discovery capacity while weak categories stay nearly empty.
+  await runScript('scripts/coverageDrivenCategoryHarvest.mjs');
+
   // First sweep the globally important conference brands across many categories. This keeps
   // flagship events from waiting behind hundreds of lower-priority domains in the weekly registry.
   const priorityOrgs = priorityOrganizations();
