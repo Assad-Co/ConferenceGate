@@ -24,12 +24,19 @@ async function cycle() {
   // records. Without this step the static CSV catalogue could be browsed but its detail tabs could
   // never fill, because the workers only iterate discovery_events.
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
-  // Immediately give every record a non-blank identity, complete tab-state map, and multi-category
+  // Remove stale editions/navigation dumps before deciding what still needs enrichment.
+  await runScript('scripts/sanitizeConferenceDetailData.mjs');
+  // Curated current-edition corrections take precedence over generic crawling.
+  await runScript('scripts/applyCuratedConferenceOverrides.mjs');
+  // Immediately give every record a non-blank identity, honest tab-state map, and multi-category
   // classification before the slower network readers begin.
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/enrichAllConferenceDetails.mjs');
   await runScript('scripts/enrichConferenceApifyFallback.mjs');
-  // Re-normalize after readers add richer logos, section content and category evidence.
+  // Readers can encounter generic historical pages, so sanitize again, then restore any vetted
+  // current-edition overrides before the final customer-facing normalization.
+  await runScript('scripts/sanitizeConferenceDetailData.mjs');
+  await runScript('scripts/applyCuratedConferenceOverrides.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
