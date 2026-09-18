@@ -4,10 +4,10 @@ import path from 'node:path';
 
 const TOKEN = process.env.APIFY_TOKEN?.trim() || '';
 const ACTOR = process.env.CONFERENCE_APIFY_ACTOR?.trim() || 'apify~website-content-crawler';
-const MAX_RUNS = Math.max(0, Number(process.env.DEEP_ENRICH_APIFY_MAX_RUNS || 20));
-const MAX_PAGES = Math.max(3, Number(process.env.DEEP_ENRICH_APIFY_MAX_PAGES || 8));
-const MIN_TABS = Math.max(3, Math.min(9, Number(process.env.DEEP_ENRICH_MIN_TABS || 6)));
-const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_APIFY_REFRESH_DAYS || 7));
+const MAX_RUNS = Math.max(0, Number(process.env.DEEP_ENRICH_APIFY_MAX_RUNS || 60));
+const MAX_PAGES = Math.max(3, Number(process.env.DEEP_ENRICH_APIFY_MAX_PAGES || 12));
+const MIN_TABS = Math.max(3, Math.min(9, Number(process.env.DEEP_ENRICH_MIN_TABS || 8)));
+const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_APIFY_REFRESH_DAYS || 2));
 const TIMEOUT_MS = Math.max(30000, Number(process.env.DEEP_ENRICH_APIFY_TIMEOUT_MS || 120000));
 
 const SECTION_PATTERNS = {
