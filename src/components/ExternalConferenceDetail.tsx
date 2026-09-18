@@ -1775,15 +1775,36 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
 
             {activeTab === 'community' && (
               <div className="space-y-4 text-xs text-slate-600">
-                <h3 className="text-lg font-bold text-slate-900">Conference Community & Discussions</h3>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="font-bold text-slate-900">Not Available</span>
-                  <p className="pt-1 text-slate-500">
-                    This conference isn't in our verified catalog, so there's no Conference Gate community discussion
-                    tied to it. Head to the <CheckCircle2 className="w-3 h-3 inline text-blue-600" /> Feed tab to
-                    connect with attendees, authors, and reviewers on the platform generally.
-                  </p>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900">Conference Community & Networking</h3>
+                {statedSectionText('community') ? (
+                  <StatedSection text={statedSectionText('community')!} />
+                ) : (data?.socialLinks?.length ?? 0) > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-700">
+                      Official community and social channels published for this conference:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {data!.socialLinks.map((link, idx) => (
+                        <a
+                          key={idx}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          {link.platform || 'Community link'}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyExtractState
+                    message={emptySectionMessage('community', 'community information', 'The completed crawl found no published community or networking information.')}
+                    note={sectionNote('community')}
+                    sourceUrl={result.link}
+                  />
+                )}
               </div>
             )}
           </>
