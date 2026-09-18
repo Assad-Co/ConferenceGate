@@ -23,13 +23,34 @@ function meaningful(v){
   if(typeof v==='string') return v.trim().length>2&&!/^(not found|not retrieved|not yet announced|unknown|n\/a|tbd|tba)$/i.test(v.trim());
   return typeof v==='number'||v===true;
 }
+function sectionFilled(kind,value){
+  if(kind==='overview') return meaningful(value);
+  if(kind==='cfp') return [
+    value?.status,value?.abstract_submission_deadline,value?.notification_date,value?.submission_guidelines,
+    value?.submission_format,value?.length_limit,value?.review_process,value?.publication_information,
+    ...(Array.isArray(value?.topics_tracks)?value.topics_tracks:[])
+  ].some(meaningful);
+  if(kind==='fees') return meaningful(value?.pricing_text)||meaningful(value?.early_bird_deadline)||
+    (Array.isArray(value?.registration_fees)&&value.registration_fees.some(meaningful));
+  if(kind==='program') return meaningful(value?.overview)||
+    (Array.isArray(value?.sessions)&&value.sessions.some(meaningful))||
+    (Array.isArray(value?.themes)&&value.themes.some(meaningful));
+  if(kind==='venue') return [
+    value?.venue_name,value?.address,value?.accommodation,value?.travel_information,
+    ...(Array.isArray(value?.hotels)?value.hotels:[])
+  ].some(meaningful);
+  if(kind==='community') return meaningful(value?.overview)||
+    (Array.isArray(value?.social_media)&&value.social_media.some(meaningful));
+  return meaningful(value);
+}
 function sections(row){
   const values=[
-    safe(row.overview,{}),safe(row.call_for_papers,{}),safe(row.fees_pricing,{}),safe(row.program_agenda,{}),
-    safe(row.keynote_speakers,[]),safe(row.technical_committee,[]),safe(row.sponsors_exhibitors,[]),
-    safe(row.venue_accommodation,{}),safe(row.community,{})
+    ['overview',safe(row.overview,{})],['cfp',safe(row.call_for_papers,{})],['fees',safe(row.fees_pricing,{})],
+    ['program',safe(row.program_agenda,{})],['speakers',safe(row.keynote_speakers,[])],
+    ['committee',safe(row.technical_committee,[])],['sponsors',safe(row.sponsors_exhibitors,[])],
+    ['venue',safe(row.venue_accommodation,{})],['community',safe(row.community,{})]
   ];
-  return values.filter(meaningful).length;
+  return values.filter(([kind,value])=>sectionFilled(kind,value)).length;
 }
 function logo(row){
   const overview=safe(row.overview,{});
