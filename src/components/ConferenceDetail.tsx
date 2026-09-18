@@ -557,7 +557,9 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {(conference.sponsors || []).map((sp) => (
                   <div key={sp.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-2">
-                    <img src={sp.logo} alt={sp.name} className="w-12 h-12 rounded-xl object-cover mx-auto" />
+                    <div className="w-full h-20 flex items-center justify-center overflow-hidden">
+                      <img src={sp.logo} alt={sp.name} className="max-w-full max-h-full object-contain mx-auto" />
+                    </div>
                     <div className="font-bold text-xs text-slate-900">{sp.name}</div>
                     <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-md">
                       {sp.tier} Sponsor
