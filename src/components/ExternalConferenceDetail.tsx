@@ -426,7 +426,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   useEffect(() => {
     if (!data || activeTab === 'overview') return;
     const section = SECTION_OF[activeTab] || activeTab;
-    if (sectionState(section) !== 'stated') setActiveTab('overview');
+    if (sectionState(section) === 'unread') setActiveTab('overview');
   }, [data, activeTab]);
 
 
@@ -504,9 +504,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     [data?.conferenceTitle || result.title, data?.overview?.organizer, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
   );
   const logoCandidates = Array.from(new Set([
+    isAapgResult ? '/aapg-organizer.svg' : null,
     data?.overview?.logo_url || null,
     result.favicon || null,
-    isAapgResult ? '/aapg-organizer.svg' : null,
     result.thumbnail || null,
   ].filter((value): value is string => Boolean(value))));
   const logoUrl = logoCandidates[logoCandidateIndex] || null;
@@ -764,13 +764,11 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'community', label: 'Community' },
             ] as Array<{ id: ExternalDetailTab; label: string }>
           )
-            // Only render tabs that contain real stored information. ConferenceGate's Popular
-            // Search quality gate requires at least six such tabs before a conference is surfaced,
-            // so the detail page never advertises an empty "Not yet announced" room just to keep a
-            // fixed nine-tab shell.
+            // Keep every answered tab. "Not yet announced" is a real current-edition answer;
+            // only sections nobody managed to read are hidden.
             .filter((tab) =>
               tab.id === 'overview' ||
-              sectionState(SECTION_OF[tab.id] || tab.id) === 'stated'
+              sectionState(SECTION_OF[tab.id] || tab.id) !== 'unread'
             )
             .map((tab) => (
             <button
