@@ -189,7 +189,6 @@ const EVENTS = [
     committee:[person('Sharista Kisoensingh','Staatsolie'),person('Harris Saifi Hakimi','Petronas'),person('Muhammad Ridzal Ridhuwan','Petronas'),person('Shiladitya Sengupta','TotalEnergies & Americas LLC'),person('Dirk Erickson','Chevron'),person('Eddie McAllister','Shell'),person('David Haddox','ExxonMobil'),person('Vanisha Chedi','Staatsolie')],
     fees:{registration_fees:[fee('Professional Non-Member',995),fee('Professional Member',895),fee('Presenters / Session Chairs',695),fee('Professional one-day only',595),fee('Academic / AAPG Emeritus',545),fee('Student Non-Member',195),fee('Student Member',165)],early_bird_deadline:'2026-10-18',pricing_text:'Official AAPG page lists lower early-bird rates for payment by 18 October 2026.'},
     venueInfo:{venue_name:'Torarica Resort',address:'Rietbergplein 1, Paramaribo, Suriname',accommodation:'Torarica Resort offers special attendee room rates for 15–22 November, including listed rates for Torarica Hotel and Casino.'},
-    sponsors:[sponsor('Sponsorship opportunities published by AAPG','Principal through Patron levels')],
     community:{overview:'Program includes panels, posters, networking and technical exchange among regional and international exploration professionals.'}
   },
   {
@@ -320,18 +319,19 @@ const EVENTS = [
 
 function canonicalSectionAvailability(event, existingMeta) {
   const prior = existingMeta?.section_availability || {};
-  const map = {
+  const reviewedFallback = (canonical, legacy) =>
+    prior[canonical] === 'stated' || prior[legacy] === 'stated' ? 'stated' : 'not_announced';
+  return {
     overview:'stated',
-    call_for_papers: sectionState(event.cfp, prior.call_for_papers || prior.cfp || 'unread'),
-    fees_pricing: sectionState(event.fees, prior.fees_pricing || prior.fees || 'unread'),
-    program_agenda: sectionState(event.agenda, prior.program_agenda || prior.agenda || 'unread'),
-    keynote_speakers: sectionState(event.speakers, prior.keynote_speakers || prior.speakers || 'unread'),
-    technical_committee: sectionState(event.committee, prior.technical_committee || prior.committee || 'unread'),
-    sponsors_exhibitors: sectionState(event.sponsors, prior.sponsors_exhibitors || prior.sponsors || 'unread'),
-    venue_accommodation: sectionState(event.venueInfo || (event.venue ? {venue_name:event.venue} : null), prior.venue_accommodation || prior.venue || 'unread'),
-    community: sectionState(event.community, prior.community || 'unread'),
+    call_for_papers: sectionState(event.cfp, reviewedFallback('call_for_papers','cfp')),
+    fees_pricing: sectionState(event.fees, reviewedFallback('fees_pricing','fees')),
+    program_agenda: sectionState(event.agenda, reviewedFallback('program_agenda','agenda')),
+    keynote_speakers: sectionState(event.speakers, reviewedFallback('keynote_speakers','speakers')),
+    technical_committee: sectionState(event.committee, reviewedFallback('technical_committee','committee')),
+    sponsors_exhibitors: sectionState(event.sponsors, reviewedFallback('sponsors_exhibitors','sponsors')),
+    venue_accommodation: sectionState(event.venueInfo || (event.venue ? {venue_name:event.venue} : null), reviewedFallback('venue_accommodation','venue')),
+    community: sectionState(event.community, reviewedFallback('community','community')),
   };
-  return map;
 }
 function eventYear(e) { return e.year || (e.start ? Number(e.start.slice(0,4)) : null); }
 function eventMonth(e) { return e.month || (e.start ? Number(e.start.slice(5,7)) : null); }
