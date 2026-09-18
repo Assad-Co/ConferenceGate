@@ -14,6 +14,7 @@ type CrossTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges';
 
 interface Props {
   tab: string;
+  onPaperTitlesChange?: (titles: string[]) => void;
 }
 
 function textFrom(record: any, keys: string[]): string {
@@ -73,7 +74,7 @@ function SignalCard({ signal }: { signal: LinkedInConferenceSignal }) {
   );
 }
 
-export const LinkedInImportedTabSections: React.FC<Props> = ({ tab }) => {
+export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitlesChange }) => {
   const [profile, setProfile] = useState<LinkedInProfileEnrichment | null>(null);
   const [activity, setActivity] = useState<LinkedInConferenceActivity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +102,26 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab }) => {
     [allSignals],
   );
   const paperSignals = useMemo(() => allSignals.filter((s) => s.kind === 'PAPER_ABSTRACT'), [allSignals]);
+  const importedPublicationTitles = useMemo(
+    () => (profile?.publications || [])
+      .map((pub: any) => textFrom(pub, ['title', 'name', 'publicationTitle']))
+      .map((title) => title.trim())
+      .filter(Boolean),
+    [profile],
+  );
+
+  useEffect(() => {
+    if (!onPaperTitlesChange) return;
+    const unique = Array.from(
+      new Map(
+        importedPublicationTitles.map((title) => [
+          title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+          title,
+        ]),
+      ).values(),
+    );
+    onPaperTitlesChange(unique);
+  }, [importedPublicationTitles, onPaperTitlesChange]);
   const committeeSignals = useMemo(
     () => allSignals.filter((s) => s.kind === 'CONFERENCE_ROLE' && /chair|committee/i.test(s.role || '')),
     [allSignals],
