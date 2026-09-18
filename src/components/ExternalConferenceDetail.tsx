@@ -222,6 +222,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // A logo derived from a site rather than read off one may 404, and a banner a page published can
   // be taken down; either leaves a broken image where the conference's identity should be.
   const [logoFailed, setLogoFailed] = useState(false);
+  const [logoCandidateIndex, setLogoCandidateIndex] = useState(0);
   const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [fastCheckedTabs, setFastCheckedTabs] = useState<Partial<Record<ExternalDetailTab, boolean>>>({});
   const requestedFastTabsRef = useRef(new Set<ExternalDetailTab>());
@@ -492,13 +493,35 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // organiser and says nothing about this edition, so it is never enlarged into the hero as though
   // it were the conference's logo. The file may also simply not be there, so the load has to be
   // allowed to fail back to the name.
-  const logoUrl = data?.overview?.logo_url || result.favicon || null;
-  const logoIsOwn = (data?.overview?.logo_source ?? result.logoSource) === 'stated';
-  // If the event has no distinct mark, use the organiser's published logo rather than a synthetic
-  // acronym. It stays explicitly labelled as the organiser's logo so the page gains the real
-  // identity the organiser published without pretending it belongs to this edition.
+  const isAapgResult = /\baapg\b|american association of petroleum geologists/i.test(
+    [displayTitle, data?.overview?.organizer, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
+  );
+  const logoCandidates = Array.from(new Set([
+    data?.overview?.logo_url || null,
+    result.favicon || null,
+    isAapgResult ? '/aapg-organizer.svg' : null,
+    result.thumbnail || null,
+  ].filter((value): value is string => Boolean(value))));
+  const logoUrl = logoCandidates[logoCandidateIndex] || null;
+  const logoIsOwn =
+    logoCandidateIndex === 0 &&
+    Boolean(data?.overview?.logo_url) &&
+    (data?.overview?.logo_source ?? result.logoSource) === 'stated';
   const heroLogo = logoUrl;
   const heroLogoLabel = logoIsOwn ? 'Conference logo' : 'Organiser logo';
+
+  useEffect(() => {
+    setLogoCandidateIndex(0);
+    setLogoFailed(false);
+  }, [data?.overview?.logo_url, result.favicon, result.thumbnail, result.link]);
+
+  const handleLogoError = () => {
+    setLogoCandidateIndex((index) => {
+      if (index + 1 < logoCandidates.length) return index + 1;
+      setLogoFailed(true);
+      return index;
+    });
+  };
 
   /** The programme as the source described it — the paragraph a schedule was read out of. */
   const programOverview = data?.program_agenda?.overview?.trim() || null;
@@ -635,7 +658,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                 <img
                   src={heroLogo}
                   alt={logoIsOwn ? `${displayTitle} logo` : `${result.displayLink} organiser logo`}
-                  onError={() => setLogoFailed(true)}
+                  onError={handleLogoError}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-contain"
                 />
