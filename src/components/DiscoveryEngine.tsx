@@ -664,6 +664,22 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   // otherwise a fixed default query so Discover is never empty.
   const [webResults, setWebResults] = useState<LiveSearchResult[] | null>(null);
   const visibleWebResults = (webResults || []).filter((result) => {
+    // Every Popular Search chip is a quality-curated surface. Category chips, the Virtual chip and
+    // the Open-CFP chip must not reveal thin catalogue rows while the hard crawler is still filling
+    // them. Six real tabs + a visible identity is the publication threshold for these views.
+    const popularQualityMode =
+      Boolean(categoryFilter) ||
+      cfpOnly ||
+      (formatFilter.toLowerCase() === 'virtual' && !submittedSearchTerm.trim());
+    if (
+      popularQualityMode &&
+      (
+        result.prepared !== true ||
+        ((result.sections?.length ?? 0) + 1) < 6 ||
+        !Boolean(result.favicon || result.thumbnail)
+      )
+    ) return false;
+
     if (formatFilter) {
       const wanted = formatFilter.toLowerCase().replace(/[-\s]+/g, '');
       const actual = (result.format || '').toLowerCase().replace(/[-\s]+/g, '');
