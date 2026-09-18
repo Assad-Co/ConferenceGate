@@ -32,7 +32,6 @@ async function cycle() {
   // Immediately give every record a non-blank identity, honest tab-state map, and multi-category
   // classification before the slower network readers begin.
   await runScript('scripts/finalizeConferenceCoverage.mjs');
-  await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
   await runScript('scripts/enrichAllConferenceDetails.mjs');
   await runScript('scripts/enrichConferenceApifyFallback.mjs');
   // Readers can encounter generic historical pages, so sanitize again, then restore any vetted
