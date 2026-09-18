@@ -405,9 +405,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     speakers: 'keynote_speakers', committee: 'technical_committee',
     sponsors: 'sponsors_exhibitors', venue: 'venue_accommodation', community: 'community',
   };
-  /** Tabs that are dropped when nobody has read them. Overview always has the record to show. */
-  const UNREAD_ONLY_TABS = new Set(['cfp', 'fees', 'agenda', 'speakers', 'committee', 'sponsors', 'community']);
-
   // Why a section is empty, one section at a time.
   //
   // A record can be part-filled: a curated list gave AAPG's ICE 2026 twelve keynote speakers and a
@@ -423,20 +420,13 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     if (stated) return stated;
     return data.fetchFailed || data.sectionsNotRead ? 'unread' : 'stated';
   };
-  useEffect(() => {
-    if (!data || activeTab === 'overview') return;
-    const section = SECTION_OF[activeTab] || activeTab;
-    if (sectionState(section) === 'unread') setActiveTab('overview');
-  }, [data, activeTab]);
-
-
   /** What to tell the reader about a section holding nothing, given why it holds nothing. */
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
     switch (sectionState(section)) {
       case 'not_announced':
         return 'Not yet announced.';
       case 'unread':
-        return 'Not yet announced.';
+        return 'This section has not been retrieved yet.';
       default:
         return crawled;
     }
@@ -538,6 +528,34 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     : [];
   /** Registration wording that says more than the fee rows do — refund terms, what a fee covers. */
   const pricingText = data?.fees_pricing?.pricing_text?.trim() || null;
+
+  // Source pages often concatenate navigation, marketing copy, pass names and prices into one
+  // enormous text node. Showing that verbatim makes a valid pricing section look broken. Keep the
+  // source wording, but remove obvious controls and split it into readable source-backed fragments.
+  const pricingTextItems = (() => {
+    if (!pricingText) return [] as string[];
+    const normalized = pricingText
+      .replace(/\s+/g, ' ')
+      .replace(/\b(?:Book now|Select|Quick links?)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const fragments = normalized
+      .split(/(?=\b(?:Standard price|Early[- ]bird|Member price|Non[- ]member price|Student price|Delegate Pass|Technical Pass|Visitor Pass|Conference Pass|Exhibition Pass|Pass includes:)\b)/i)
+      .map((part) => part.trim().replace(/^[-–—:;,.\s]+|[-–—:;,.\s]+$/g, ''))
+      .filter((part) => part.length >= 12)
+      .filter((part, index, all) => all.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === index);
+
+    // If the source did not contain recognisable pricing labels, present a few bounded chunks rather
+    // than one unbroken wall of text. No words are invented; this is display-only segmentation.
+    if (fragments.length <= 1 && normalized.length > 320) {
+      const sentences = normalized
+        .split(/(?<=[.!?])\s+|\s+(?=[A-Z][A-Za-z &/-]{2,40}(?:price|pass)\b)/)
+        .map((part) => part.trim())
+        .filter((part) => part.length >= 12);
+      return sentences.slice(0, 8);
+    }
+    return fragments.slice(0, 10);
+  })();
 
   // A count is a claim, so it appears only when there is something to count. "(0)" beside a
   // section nobody could read asserts the conference has none, and a bare label says only what is
@@ -764,12 +782,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'community', label: 'Community' },
             ] as Array<{ id: ExternalDetailTab; label: string }>
           )
-            // Keep every answered tab. "Not yet announced" is a real current-edition answer;
-            // only sections nobody managed to read are hidden.
-            .filter((tab) =>
-              tab.id === 'overview' ||
-              sectionState(SECTION_OF[tab.id] || tab.id) !== 'unread'
-            )
+            // Keep the full ConferenceGate structure visible on every conference. Missing data is
+            // explained inside the tab instead of making the navigation itself disappear.
             .map((tab) => (
             <button
               key={tab.id}
@@ -1348,10 +1362,20 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
 
                 {/* Refund terms, what a fee covers, which portal sells it: the sentence the prices
                     were read from routinely carries more than the price rows can hold. */}
-                {pricingText && (
-                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                    {pricingText}
-                  </p>
+                {pricingTextItems.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Official pricing details
+                    </p>
+                    <div className="space-y-2">
+                      {pricingTextItems.map((item, index) => (
+                        <div key={index} className="flex items-start gap-2 text-xs text-slate-700 leading-relaxed">
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {upcomingRegistrationFees.length > 0 || data?.registrationUrl || pricingText ? (
