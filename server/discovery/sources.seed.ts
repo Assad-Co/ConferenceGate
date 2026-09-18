@@ -349,6 +349,8 @@ const FLAGSHIP_EVENT_SOURCES: Seed[] = [
   ["aeaweb.org", "American Economic Association", "professional_society", "United States", "North America"],
   ["token2049.com", "TOKEN2049", "official_conference_site", "Singapore", "Asia"],
   ["exporeal.net", "EXPO REAL", "official_conference_site", "Germany", "Europe"],
+  ["mwcshanghai.com", "MWC Shanghai", "official_conference_site", "China", "Asia"],
+  ["aaic.alz.org", "Alzheimer's Association International Conference", "official_conference_site", "United States", "North America"],
   ["2027.ieee-iros.org", "IEEE/RSJ IROS 2027", "official_conference_site", "Italy", "Europe"],
   ["ieee-ras.org", "IEEE Robotics and Automation Society", "engineering_society", "United States", "North America"],
 ];
