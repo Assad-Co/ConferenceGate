@@ -165,10 +165,10 @@ function readLaunchCsvFallback(): LaunchConferenceRecord[] {
           details: null,
         });
       }
-      console.log(\`[launch-dataset] CSV fallback recovered=\${records.length} records from \${filePath}\`);
+      console.log('[launch-dataset] CSV fallback recovered=' + records.length + ' records from ' + filePath);
       return records;
     } catch (error) {
-      console.warn(\`[launch-dataset] CSV fallback failed for \${filePath}:\`, (error as Error).message);
+      console.warn('[launch-dataset] CSV fallback failed for ' + filePath + ':', (error as Error).message);
       return [];
     }
   }
