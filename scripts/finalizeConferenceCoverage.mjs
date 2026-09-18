@@ -98,6 +98,49 @@ function hasContent(value) {
   return typeof value === 'number' || value === true;
 }
 
+function sectionHasContent(key, value) {
+  if (key === 'fees') {
+    if (!value || typeof value !== 'object') return false;
+    const rows = Array.isArray(value.registration_fees) ? value.registration_fees : [];
+    return rows.some(hasContent)
+      || hasContent(value.pricing_text)
+      || hasContent(value.early_bird_deadline);
+  }
+  if (key === 'cfp') {
+    if (!value || typeof value !== 'object') return false;
+    return [
+      value.status,
+      value.abstract_submission_deadline,
+      value.notification_date,
+      value.submission_guidelines,
+      value.submission_format,
+      value.length_limit,
+      value.review_process,
+      value.publication_information,
+      ...(Array.isArray(value.topics_tracks) ? value.topics_tracks : []),
+    ].some(hasContent);
+  }
+  if (key === 'agenda') {
+    if (!value || typeof value !== 'object') return false;
+    return (Array.isArray(value.sessions) && value.sessions.some(hasContent))
+      || (Array.isArray(value.themes) && value.themes.some(hasContent))
+      || hasContent(value.overview);
+  }
+  if (key === 'venue') {
+    if (!value || typeof value !== 'object') return false;
+    return [
+      value.venue_name, value.address, value.accommodation, value.travel_information,
+      ...(Array.isArray(value.hotels) ? value.hotels : []),
+    ].some(hasContent);
+  }
+  if (key === 'community') {
+    if (!value || typeof value !== 'object') return false;
+    return hasContent(value.overview)
+      || (Array.isArray(value.social_media) && value.social_media.some(hasContent));
+  }
+  return hasContent(value);
+}
+
 async function main() {
   const localPath = path.join(process.cwd(), 'data', 'app.db');
   fs.mkdirSync(path.dirname(localPath), { recursive: true });
@@ -170,8 +213,8 @@ async function main() {
       const values = { cfp, fees, agenda: program, speakers, committee, sponsors, venue, community };
       const availability = { ...currentAvailability, overview: 'stated' };
       for (const key of SECTION_KEYS) {
-        if (hasContent(values[key])) availability[key] = 'stated';
-        else if (!availability[key]) availability[key] = 'unread';
+        if (sectionHasContent(key, values[key])) availability[key] = 'stated';
+        else if (availability[key] === 'stated' || !availability[key]) availability[key] = 'unread';
       }
       const nextMeta = {
         ...meta,
