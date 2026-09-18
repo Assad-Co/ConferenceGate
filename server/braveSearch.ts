@@ -48,7 +48,7 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — keeps us well within Brave's free 2,000 queries/month quota
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes — stored enrichment/logos must become visible promptly after background sync
 const cache = new Map<string, CacheEntry>();
 
 export function isBraveConfigured() {
