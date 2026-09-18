@@ -30,6 +30,14 @@ async function main() {
   console.log(`[background-bootstrap] server-first startup; maintenance begins in ${START_DELAY_MS}ms`);
   await sleep(START_DELAY_MS);
 
+  // Fast DB-only reconciliation first: make the complete AAPG set and its reliable local
+  // logo visible within seconds of a deploy, before slower imports and network image work.
+  await runScript('scripts/syncAapgOfficialUpcoming.mjs');
+  await runScript('scripts/syncVerifiedCalendarBatch.mjs');
+  await runScript('scripts/ensureAapgLogos.mjs');
+  await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
+  await runScript('scripts/finalizeConferenceCoverage.mjs');
+
   await runScript('scripts/repairLaunchDatasetJson.mjs');
   await runScript('scripts/repairApifyDiscoveryEvidence.mjs');
   await runScript('scripts/importApifyValidated.mjs');
