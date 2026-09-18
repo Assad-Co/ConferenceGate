@@ -396,7 +396,10 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
     const filledTabs = populatedSections + 1; // Overview + the eight detail sections above.
     const pagesCrawled = Number(metadata.pages_crawled) || 0;
     const hasVisualIdentity = Boolean(
-      text(overview.logo_url) || text(row.image_url) || text(overview.image_url) || siteIconUrl(row.source_url)
+      (typeof overview.logo_url === "string" && overview.logo_url.trim()) ||
+      (typeof row.image_url === "string" && row.image_url.trim()) ||
+      (typeof overview.image_url === "string" && overview.image_url.trim()) ||
+      siteIconUrl(row.source_url)
     );
     // ConferenceGate's quality bar is now six genuinely populated tabs plus a visible identity.
     // This is deliberately stricter than "a crawl touched the page": a visitor should not open a
