@@ -20,6 +20,10 @@ function runScript(file) {
 async function cycle() {
   const started = new Date().toISOString();
   console.log(`[conference-enrich-loop] cycle started ${started}`);
+  // Make every launch-catalogue conference visible to the same enrichment workers as Turso-native
+  // records. Without this step the static CSV catalogue could be browsed but its detail tabs could
+  // never fill, because the workers only iterate discovery_events.
+  await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/enrichAllConferenceDetails.mjs');
   await runScript('scripts/enrichConferenceApifyFallback.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
