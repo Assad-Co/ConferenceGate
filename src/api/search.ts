@@ -347,9 +347,40 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
   const speakers = Array.isArray(data?.keynote_speakers) ? data.keynote_speakers : data?.speakers;
   const committee = Array.isArray(data?.technical_committee) ? data.technical_committee : data?.committee;
   const sponsors = Array.isArray(data?.sponsors_exhibitors) ? data.sponsors_exhibitors : data?.sponsors;
+
+  // Background workers historically used short section keys (agenda, speakers, venue...), while
+  // the detail UI uses the canonical tab-owned keys. Normalize both generations here so every
+  // conference gets the same nine-tab behaviour without rewriting old rows in place.
+  const rawAvailability = data?.sectionAvailability || data?.extraction_metadata?.section_availability || {};
+  const rawNotes = data?.section_notes || data?.extraction_metadata?.section_notes || {};
+  const sectionAliases: Record<string, string> = {
+    cfp: 'call_for_papers',
+    fees: 'fees_pricing',
+    agenda: 'program_agenda',
+    speakers: 'keynote_speakers',
+    committee: 'technical_committee',
+    sponsors: 'sponsors_exhibitors',
+    venue: 'venue_accommodation',
+    community: 'community',
+    overview: 'overview',
+  };
+  const sectionAvailability: Record<string, 'stated' | 'not_announced' | 'unread'> = {};
+  const sectionNotes: Record<string, string | null> = {};
+  for (const [key, value] of Object.entries(rawAvailability || {})) {
+    const canonical = sectionAliases[key] || key;
+    if (value === 'stated' || value === 'not_announced' || value === 'unread') {
+      sectionAvailability[canonical] = value;
+    }
+  }
+  for (const [key, value] of Object.entries(rawNotes || {})) {
+    sectionNotes[sectionAliases[key] || key] = typeof value === 'string' ? value : null;
+  }
+
   return {
     ...EMPTY_EXTRACTION,
     ...data,
+    sectionAvailability,
+    section_notes: sectionNotes,
     conferenceTitle: overview.conference_name ?? data?.conferenceTitle ?? null,
     acronym: overview.acronym ?? data?.acronym ?? null,
     edition: overview.edition ?? data?.edition ?? null,
