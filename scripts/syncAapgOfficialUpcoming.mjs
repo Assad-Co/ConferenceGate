@@ -91,11 +91,24 @@ const EVENTS = [
     title:'2nd Edition: AAPG Libyan Sedimentary Basins Virtual Workshop',
     start:'2026-10-22', end:'2026-10-22', city:null, region:null, country:'Libya', venue:'Virtual', format:'online',
     url:'https://www.aapg.org/event-details/2nd-edition-aapg-libyan-sedimentary-basins-virtual-workshop/',
+    organizer:'AAPG / AAPG Africa / NOC Libya',
     description:'Virtual AAPG workshop focused on Libyan sedimentary basins and petroleum systems, including depositional cycles, structural configuration, exploration history, seismic/petrophysical analysis and regional petroleum evolution.',
     categories:['Petroleum & Geoscience','Energy','Science'],
     agenda:{overview:'Virtual workshop program includes opening remarks and technical presentations on Libyan basin stratigraphy, structural evolution, exploration history and integrated seismic/petrophysical analysis.',themes:['Libyan sedimentary basins','Petroleum systems','Stratigraphy','Structural geology','Seismic and petrophysical analysis']},
-    speakers:[person('Susan Nash','AAPG','Program Leadership'),person('Tom Wilker','AAPG','Program Leadership'),person('Salah El-Ekhfifi','NOC','Program Participant'),person('Abdelsalam Aziz','NOC','Program Participant')],
-    community:{overview:'Virtual workshop designed for technical exchange across the Libyan and international geoscience community.'}
+    speakers:[
+      person('Susan Nash','AAPG','Workshop Opening'),
+      person('Tom Wilker','AAPG','Workshop Opening'),
+      person('Salah El-Ekhfifi','NOC Libya','Workshop Opening'),
+      person('Abdelsalam Aziz','NOC Libya','Workshop Opening'),
+      person('Gamal Sultan','SLB','Technical Presenter'),
+      person('Aimen Saleh','AGOCO','Technical Presenter'),
+      person('John Turvill','AAPG','Technical Presenter'),
+      person('Khaled Albriki','PetroChina','Technical Presenter'),
+      person('Abdlsaid Ibrahem','Omar Almokhtar University','Technical Presenter')
+    ],
+    fees:{registration_fees:[fee('Virtual Workshop',0,'USD','AAPG Africa states the workshop is free to attend')],pricing_text:'AAPG Africa states that the 2nd Libyan Sedimentary Basins Virtual Workshop is free to attend.'},
+    venueInfo:{venue_name:'Virtual',address:'Online'},
+    community:{overview:'Free virtual workshop designed for technical exchange across the Libyan and international geoscience community.'}
   },
   {
     key:'rms-aapg-2026',
@@ -225,14 +238,28 @@ const EVENTS = [
   {
     key:'urtec-latam-2026',
     title:'URTeC Latin America Unconventional Resources Summit 2026',
-    start:'2026-12-01', end:'2026-12-02', city:'Buenos Aires', region:null, country:'Argentina', venue:'Buenos Aires, Argentina', format:'in-person',
+    start:'2026-12-01', end:'2026-12-02', city:'Buenos Aires', region:'Buenos Aires', country:'Argentina', venue:'Marriott Buenos Aires Downtown', format:'in-person',
     url:'https://urtec.org/latinamerica/',
-    organizer:'URTeC / AAPG / SPE / SEG',
-    description:'Executive-level unconventional resources summit focused on the business and technology of unconventional development in Argentina and Latin America, hosted by YPF.',
+    organizer:'URTeC / AAPG / SPE / SEG / YPF',
+    description:'Executive-level unconventional resources summit focused on the technical, commercial and policy dimensions of unconventional development in Argentina and Latin America, hosted by YPF.',
     categories:['Petroleum & Geoscience','Energy','Engineering','Business'],
-    agenda:{overview:'Two-day executive and technical summit focused on unconventional resources in Argentina and Latin America.'},
-    venueInfo:{venue_name:'Buenos Aires, Argentina',address:'Buenos Aires, Argentina'},
-    community:{overview:'Joint AAPG/SPE/SEG event designed for cross-disciplinary networking among geoscientists, engineers, executives and operators.'}
+    agenda:{overview:'Two-day executive and technical summit with keynote talks, executive panels, technical presentations, networking and student/young-professional programming.',themes:['Vaca Muerta strategy, execution and growth','International unconventional play development','Latin America unconventional projects','LNG and gas markets','Investment and infrastructure','Technology and operational performance']},
+    speakers:[
+      person('Horacio Marin','YPF','Keynote Speaker'),
+      person('Fausto Caretta','Pan American Energy','Featured Speaker'),
+      person('Fernanda Raggio','YPF','Featured Speaker'),
+      person('Ricardo Ferreiro','Tecpetrol','Featured Speaker'),
+      person('Matias Weissel','Vista Energy','Featured Speaker'),
+      person('Carlos Macellari','AAPG','Program Chair')
+    ],
+    fees:{registration_url:'https://urtec.org/latinamerica/Registration/',early_bird_deadline:'2026-11-02',registration_fees:[
+      fee('Professional Nonmember — Early Bird',1095),fee('Professional Nonmember — Standard',1195),
+      fee('Professional Member — Early Bird',995),fee('Professional Member — Standard',1095),
+      fee('Professional One-Day — Early Bird',595),fee('Professional One-Day — Standard',695),
+      fee('Academic — Early Bird',395),fee('Academic — Standard',495),fee('Exhibition Only',195)
+    ],pricing_text:'Official URTeC Latin America pricing lists early-bird rates through 2 November 2026 and standard rates afterward. Member rates apply to current AAPG, SPE and SEG members.'},
+    venueInfo:{venue_name:'Marriott Buenos Aires Downtown',address:'Buenos Aires, Argentina',accommodation:'Official summit accommodations list a Classic Room event rate of US$215 per night for 30 November through 2 December 2026, subject to hotel terms and availability.'},
+    community:{overview:'The summit includes networking breaks, a 1 December networking reception, luncheons and a dedicated Student–Young Professionals session.'}
   },
   {
     key:'identity-culture-2026',
@@ -310,44 +337,118 @@ const EVENTS = [
   {
     key:'geogulf-2027',
     title:'GeoGulf 2027',
-    start:'2027-04-18', end:'2027-04-20', city:'Houston', region:'Texas', country:'United States', venue:'Houston, Texas', format:'in-person',
-    url:'https://gcags.org/',
-    organizer:'GeoGulf / AAPG-affiliated societies',
-    description:'AAPG calendar-listed GeoGulf 2027 event in Houston, Texas.',
-    categories:['Petroleum & Geoscience','Energy','Science'],
-    venueInfo:{venue_name:'Houston, Texas',address:'Houston, Texas, United States'}
+    start:'2027-04-18', end:'2027-04-20', city:'Houston', region:'Texas', country:'United States', venue:'Norris Conference Center Houston CityCentre', format:'in-person',
+    url:'https://geogulf.org/',
+    organizer:'Houston Geological Society / GCAGS / GCSSEPM / AAPG Gulf Coast Section',
+    description:'The 76th GCAGS/GCSSEPM Convention and Exposition, hosted by the Houston Geological Society, covering Gulf Coast geoscience, energy resources, new technology and applied subsurface studies.',
+    categories:['Petroleum & Geoscience','Energy','Science','Engineering'],
+    cfp:{status:'Open',abstract_submission_deadline:'2026-12-01',submission_url:'https://forms.gle/KQbeDpXsX6v1FU4g9',submission_guidelines:'GeoGulf 2027 is accepting abstracts through 1 December 2026; longer full papers or extended abstracts are welcome after abstract acceptance.'},
+    agenda:{overview:'Three-day convention and exposition with technical sessions, poster sessions, exhibition, short courses, field trips and networking activities.',themes:['Gulf of Mexico onshore, offshore, Mexico and Caribbean','Cretaceous and Jurassic plays','Gulf Coast stratigraphy and depositional trends','Source rocks, basin history and geochemistry','Structural geology and salt tectonics','Seismic technology, modeling and inversion','Data analytics and computer applications','Carbon capture, minerals and geothermal','Resource assessment and energy economics']},
+    committee:[
+      person('Charles Sternbach','Houston Geological Society','General Chair'),
+      person('Ted Godo','GeoGulf 2027','Program Chair'),
+      person('James Willis','GeoGulf 2027','Program Chair')
+    ],
+    fees:{registration_url:'https://www.zeffy.com/en-US/ticketing/geogulf--2027',early_bird_deadline:'2027-03-01',registration_fees:[
+      fee('Full Conference — Early Bird',395),fee('Full Conference — Standard',425),fee('Full Conference — Walk-in',475),
+      fee('Speaker',250),fee('One-Day Pass',250),fee('Student',150),fee('Student Poster Presenter',100),fee('Exhibitor Pass',150)
+    ],pricing_text:'Official GeoGulf ticketing lists full-conference early-bird registration at $395 through 1 March 2027, standard registration at $425 and on-site registration at $475.'},
+    venueInfo:{venue_name:'Norris Conference Center Houston CityCentre',address:'816 Town and Country Blvd #210, Houston, TX 77024, United States',accommodation:'The official ticketing page states that a conference hotel list will be provided.'},
+    community:{overview:'GeoGulf 2027 includes poster sessions, an exhibition, short courses, field trips, a golf tournament, convention luncheons and an opening icebreaker.'}
   },
   {
     key:'process-forward-modeling-2027',
     title:'3rd Edition: Geological Process-Based Forward Modeling',
     start:null, end:null, year:2027, month:5, datesText:'May 2027', city:null, region:null, country:null, venue:null, format:'in-person',
     url:'https://www.aapg.org/event-details/3rd-edition-geological-process-based-forward-modeling/',
-    description:'AAPG workshop on geological process-based forward modeling and integration of stratigraphy, geomechanics, diagenesis and asset-team workflows.',
-    categories:['Petroleum & Geoscience','Engineering','Data Science','Energy'],
-    agenda:{overview:'Workshop focuses on moving process-based geological modeling from specialist R&D groups toward broader asset-team workflows, including links among stratigraphy, geomechanics and diagenesis.'}
+    description:'AAPG workshop on process-based geological modeling, AI-assisted model calibration, petroleum-systems integration, field-scale applications and future subsurface resources.',
+    categories:['Petroleum & Geoscience','Engineering','Data Science','Energy','Artificial Intelligence'],
+    replaceSections:true,
+    agenda:{overview:'Five-session workshop program covering current modeling challenges, model calibration, petroleum-systems coupling, practical field applications and future resources.',themes:['Current status, challenges and emerging frontiers','Model calibration and validation','Forward stratigraphic modeling with petroleum systems','Basin-to-borehole applications','Storage, geothermal and critical minerals']},
+    committee:[
+      person('Dan Tetzlaff','WSC','Committee'),person('Peter Burgess','University of Liverpool','Committee'),
+      person('Rader Abdul Fattah','TNO','Committee'),person('Barbara Claussmann','SLB','Committee'),
+      person('Shahad Al-Enezi','KOC','Committee'),person('Cédric M. John','Queen Mary University of London','Committee'),
+      person('Didier Granjeon','IFP Energies nouvelles','Committee'),person('Nicolas Hawie','Halliburton','Committee'),
+      person('Andy Davies','Halliburton','Committee'),person('Rainer Zulkhe','Aramco','Committee'),
+      person('Yaser AlZayer','Aramco','Committee'),person('Salem Al-Ali','KOC','Committee')
+    ],
+    fees:{registration_fees:[fee('Non-Member',1850),fee('AAPG Member',1650),fee('Committee / Presenter',1550),fee('Young Professional',850),fee('Academia',500),fee('Student',350)],pricing_text:'The current AAPG event page publishes workshop registration rates while registration is listed as opening soon.'},
+    community:{overview:'The workshop is designed for technical exchange across process-based modeling, petroleum systems, AI-assisted workflows and subsurface applications.'}
   },
   {
     key:'energy-opportunities-2027',
     title:'Energy Opportunities Conference 2027',
-    start:'2027-05-18', end:'2027-05-20', city:'Cartagena', region:null, country:'Colombia', venue:'Cartagena, Colombia', format:'in-person',
-    url:'https://www.aapg.org/about/latin-america-caribbean-region/',
-    description:'AAPG Latin America and Caribbean Region calendar-listed Energy Opportunities Conference 2027 in Cartagena, Colombia.',
+    start:'2027-05-18', end:'2027-05-20', city:'Cartagena', region:'Bolívar', country:'Colombia', venue:'Hilton Cartagena', format:'in-person',
+    url:'https://www.aapg.org/news-and-media/events/energy-opportunities-returns-to-cartagena-in-2027/',
+    organizer:'AAPG Latin America & Caribbean Region',
+    description:'AAPG Energy Opportunities returns to Cartagena in 2027, connecting decision-makers across oil and gas, renewable energy, technology and investment in Latin America.',
     categories:['Energy','Petroleum & Geoscience','Business','Engineering'],
-    venueInfo:{venue_name:'Cartagena, Colombia',address:'Cartagena, Colombia'}
+    agenda:{overview:'The announced format includes an executive program, business-to-business sessions and an exhibition focused on technology and investment opportunities.',themes:['Exploration and production opportunities','Energy investment','Technology and innovation','Business-to-business engagement','Latin America energy markets']},
+    venueInfo:{venue_name:'Hilton Cartagena',address:'Laguito Peninsula, Cartagena, Bolívar, Colombia'},
+    community:{overview:'The conference is designed around executive exchange, B2B meetings and an exhibition connecting energy-sector decision-makers and technology providers.'}
   },
   {
     key:'venecon-2027',
     title:'Venecon 2027',
     start:null, end:null, year:2027, month:6, datesText:'June 2027', city:'Caracas', region:null, country:'Venezuela', venue:'Caracas, Venezuela', format:'in-person',
-    url:'https://www.aapg.org/about/latin-america-caribbean-region/',
-    description:'AAPG Latin America and Caribbean Region calendar-listed Venecon 2027 event in Caracas, Venezuela.',
-    categories:['Energy','Petroleum & Geoscience','Business','Science'],
-    venueInfo:{venue_name:'Caracas, Venezuela',address:'Caracas, Venezuela'}
+    url:'https://www.aapg.org/news-and-media/events/announcing-venecon-2026/',
+    organizer:'AAPG / SPE / SEG',
+    description:'The inaugural Venezuela Energy Conference combines business and commercial sessions with a technical geoscience and engineering program in Caracas.',
+    categories:['Energy','Petroleum & Geoscience','Business','Engineering'],
+    cfp:{status:'Coming soon',submission_guidelines:'AAPG has announced that a call for abstracts is coming soon; no submission deadline is yet published.'},
+    agenda:{overview:'Venecon will combine business sessions, commercial opportunities and a multidisciplinary technical program.',themes:['Geoscience','Petroleum engineering','Exploration and production opportunities','Commercial and investment opportunities']},
+    venueInfo:{venue_name:'Caracas, Venezuela',address:'Caracas, Venezuela'},
+    community:{overview:'Organized by AAPG, SPE and SEG, hosted by the Venezuelan Ministry of Hydrocarbons and PDVSA, with institutional and local technical-society participation.'}
+  },
+  {
+    key:'meos-geo-2027',
+    title:'MEOS GEO 2027',
+    start:'2027-09-14', end:'2027-09-16', city:'Sakhir', region:'Southern Governorate', country:'Bahrain', venue:'Exhibition World Bahrain', format:'in-person',
+    url:'https://www.meos-geo.com/',
+    organizer:'MEOS GEO / SPE / AAPG / EAGE / SEG / Informa Markets',
+    description:'Middle East Oil, Gas & Geosciences Show conference and exhibition bringing together upstream energy leaders, geoscientists, engineers, researchers and technology providers.',
+    categories:['Petroleum & Geoscience','Energy','Engineering','Artificial Intelligence','Hydrogen & CCUS'],
+    cfp:{status:'Open',submission_url:'https://www.meos-geo.com/call-for-paper-proposals/',submission_guidelines:'The MEOS GEO 2027 Call for Proposals is open. Proposals must be in English and use the published structured technical-proposal format; accepted authors may later submit a manuscript, extended abstract or presentation-only contribution.'},
+    agenda:{overview:'The technical conference is organized by SPE and co-organized by AAPG, EAGE and SEG across the upstream energy value chain.',themes:['Exploration and basin analysis','Geophysics, seismic interpretation and imaging','Reservoir characterisation, modelling and simulation','Drilling, completions and well integrity','Production, field development and optimisation','Carbon capture, utilisation and storage','Emerging technologies and digital applications']},
+    committee:[
+      person('Sultan S. Al-Shamrani','Aramco','Conference Chairman'),
+      person('Alexander van Veldhoven','Bapco Energies','Conference Co-Chair'),
+      person('Ibrahim Moussa','SLB','Conference Co-Chair'),
+      person('Ghaithan A. Al-Muntasheri','Aramco','Technical Programme Chairman'),
+      person('Hamad M. Al-Ghenaim','Aramco','Technical Programme Co-Chair'),
+      person('Abdulaziz S. Al-Mansour','Aramco','Technical Programme Co-Chair')
+    ],
+    venueInfo:{venue_name:'Exhibition World Bahrain',address:'Sakhir, Southern Governorate, Bahrain'},
+    community:{overview:'MEOS GEO combines peer-reviewed technical content, strategic sessions, exhibition access and cross-disciplinary networking across NOCs, IOCs, academia and technology providers.'}
+  },
+  {
+    key:'geo4-symposium-2027',
+    title:'GEO4.0 Symposium 2027',
+    start:'2027-12-07', end:'2027-12-09', city:'Al Khobar', region:'Eastern Province', country:'Saudi Arabia', venue:'Al Khobar, Saudi Arabia', format:'in-person',
+    url:'https://geo4event.com/',
+    organizer:'GEO4.0 / AAPG / EAGE / SEG',
+    description:'GEO4.0 Symposium 2027 focuses on the digital future of geoscience, connecting data, artificial intelligence, computational innovation and emerging subsurface energy applications.',
+    categories:['Petroleum & Geoscience','Artificial Intelligence','Data Science','Energy','Hydrogen & CCUS'],
+    cfp:{status:'Open',abstract_submission_deadline:'2027-03-19',submission_url:'https://geo4event.com/call-for-abstracts',submission_guidelines:'GEO4.0 2027 is accepting abstracts across its published technical themes through 19 March 2027.'},
+    agenda:{overview:'Three-day symposium on digital and computational geoscience spanning exploration, subsurface modeling, AI, digital workflows and climate/energy applications.',themes:['Exploration & Production','Subsurface Modeling & Simulation','Data & Decision Intelligence','AI & Emerging Computation','Digital Geoscience Workflows','Climate & Energy Solutions','New Frontiers & Unconventionals','From Innovation to Implementation']},
+    committee:[
+      person("Sa'id Al Hajri",'Saudi Aramco','Chair'),
+      person('Hamad Al Shuaili','Petroleum Development Oman','Co-Chair'),
+      person('Khalid Obaid','ADNOC','Co-Chair'),
+      person('Maitham Ebrahim','Kuwait Oil Company','Co-Chair'),
+      person('Olfa Zened','SLB','Co-Chair'),
+      person('Abdulaziz Mansour','Saudi Aramco','AAPG Representative'),
+      person('Mohammed Hussain','Saudi Aramco','EAGE Representative'),
+      person('Abdulaziz Saad','Saudi Aramco','SEG Representative')
+    ],
+    venueInfo:{venue_name:'Al Khobar, Saudi Arabia',address:'Al Khobar, Eastern Province, Saudi Arabia'},
+    community:{overview:'GEO4.0 brings together international experts, researchers, industry leaders and emerging talent to connect geoscience with digital technologies and sustainable subsurface applications.'}
   }
 ];
 
 function canonicalSectionAvailability(event, existingMeta) {
-  const prior = existingMeta?.section_availability || {};
+  const prior = event.replaceSections ? {} : (existingMeta?.section_availability || {});
   const reviewedFallback = (canonical, legacy) =>
     prior[canonical] === 'stated' || prior[legacy] === 'stated' ? 'stated' : 'not_announced';
   return {
@@ -478,14 +579,19 @@ async function main() {
         keywords:['AAPG','energy geoscience','petroleum geoscience']
       };
 
-      const cfp=e.cfp ? {...oldCfp,...e.cfp} : oldCfp;
-      const program=e.agenda ? {...oldProgram,...e.agenda,sessions:Array.isArray(oldProgram.sessions)?oldProgram.sessions:[]} : oldProgram;
-      const speakers=Array.isArray(e.speakers) && e.speakers.length ? e.speakers : oldSpeakers;
-      const committee=Array.isArray(e.committee) && e.committee.length ? e.committee : oldCommittee;
-      const sponsors=Array.isArray(e.sponsors) && e.sponsors.length ? e.sponsors : oldSponsors;
-      const venue=e.venueInfo ? {...oldVenue,...e.venueInfo} : (e.venue ? {...oldVenue,venue_name:e.venue,address:oldVenue.address || locationText} : oldVenue);
-      const fees=e.fees ? {...oldFees,...e.fees} : oldFees;
-      const communityBase=e.community ? {...oldCommunity,...e.community} : {...oldCommunity};
+      const replaceSections=e.replaceSections === true;
+      const cfp=replaceSections ? (e.cfp || {}) : (e.cfp ? {...oldCfp,...e.cfp} : oldCfp);
+      const program=replaceSections
+        ? (e.agenda ? {...e.agenda,sessions:Array.isArray(e.agenda.sessions)?e.agenda.sessions:[]} : {sessions:[],themes:[],overview:null})
+        : (e.agenda ? {...oldProgram,...e.agenda,sessions:Array.isArray(oldProgram.sessions)?oldProgram.sessions:[]} : oldProgram);
+      const speakers=replaceSections ? (Array.isArray(e.speakers)?e.speakers:[]) : (Array.isArray(e.speakers) && e.speakers.length ? e.speakers : oldSpeakers);
+      const committee=replaceSections ? (Array.isArray(e.committee)?e.committee:[]) : (Array.isArray(e.committee) && e.committee.length ? e.committee : oldCommittee);
+      const sponsors=replaceSections ? (Array.isArray(e.sponsors)?e.sponsors:[]) : (Array.isArray(e.sponsors) && e.sponsors.length ? e.sponsors : oldSponsors);
+      const venue=replaceSections
+        ? (e.venueInfo ? {...e.venueInfo} : (e.venue ? {venue_name:e.venue,address:locationText} : {}))
+        : (e.venueInfo ? {...oldVenue,...e.venueInfo} : (e.venue ? {...oldVenue,venue_name:e.venue,address:oldVenue.address || locationText} : oldVenue));
+      const fees=replaceSections ? (e.fees || {}) : (e.fees ? {...oldFees,...e.fees} : oldFees);
+      const communityBase=replaceSections ? (e.community ? {...e.community} : {}) : (e.community ? {...oldCommunity,...e.community} : {...oldCommunity});
       const community={
         ...communityBase,
         ...(e.community?.overview ? {summary:e.community.overview} : {}),
