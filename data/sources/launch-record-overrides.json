@@ -1,0 +1,94 @@
+{
+  "records": [
+    {
+      "id": "aapg-eastern-section-annual-meeting-2026-canonsburg",
+      "title": "AAPG Eastern Section Annual Meeting 2026",
+      "acronym": "ESAAPG 2026",
+      "sourceUrl": "https://www.esaapg.org/event/eastern-section-aapg-annual-meeting-2026/",
+      "officialUrl": "https://www.esaapg.org/event/eastern-section-aapg-annual-meeting-2026/",
+      "sourceHost": "esaapg.org",
+      "sourceType": "official_site",
+      "organization": "Eastern Section of the American Association of Petroleum Geologists (ESAAPG)",
+      "organizerLogoUrl": "https://www.esaapg.org/wp-content/uploads/2026/06/ESAAPG.png",
+      "venue": "Hilton Garden Inn Pittsburgh/Southpointe",
+      "description": "The Eastern Section of AAPG holds its annual meeting for geoscientists across the eastern United States, covering conventional hydrocarbon exploration and production, unconventional resources, carbon sequestration and environmental solutions.",
+      "topics": [
+        "Petroleum geoscience",
+        "Conventional hydrocarbon exploration and production",
+        "Unconventional resources",
+        "Carbon sequestration",
+        "Environmental solutions"
+      ],
+      "keywords": [
+        "AAPG",
+        "ESAAPG",
+        "petroleum geology",
+        "geoscience",
+        "carbon sequestration",
+        "unconventional resources"
+      ],
+      "corroboratingSourceUrls": [
+        "https://www.esaapg.org/meetings/",
+        "https://www.esaapg.org/",
+        "https://www.aapg.org/about/eastern-section/"
+      ],
+      "details": {
+        "source": "https://www.esaapg.org/meetings/",
+        "venueName": "Hilton Garden Inn Pittsburgh/Southpointe",
+        "venueAddress": "1000 Corporate Drive, Canonsburg, PA 15317, United States",
+        "program": {
+          "availability": "stated",
+          "text": "The official meeting page says registration includes an icebreaker, drink tickets, entertainment, dinner, exhibitors, breakfast and lunch for two conference days, and workshops."
+        },
+        "callForPapers": {
+          "status": null,
+          "abstractDeadline": "2026-09-15",
+          "submissionEmail": null,
+          "lengthLimit": null,
+          "text": "The official ESAAPG site states that abstracts for the 2026 Eastern Section meeting were accepted through September 15, 2026, with guidelines on the submission page.",
+          "url": "https://www.esaapg.org/"
+        },
+        "schedule": {
+          "sessions": [],
+          "themes": [
+            "Conventional hydrocarbon exploration and production",
+            "Unconventional resources",
+            "Carbon sequestration",
+            "Environmental solutions"
+          ]
+        },
+        "keynotes": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Keynote speakers have not yet been announced on the official event pages.",
+          "unstructuredReason": null
+        },
+        "committee": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "A conference-specific technical committee has not yet been announced on the official event pages.",
+          "unstructuredReason": null
+        },
+        "fees": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Current 2026 registration pricing has not yet been published on the official event pages.",
+          "unstructuredReason": null
+        },
+        "sponsors": {
+          "availability": "not_announced",
+          "items": [],
+          "text": "Named 2026 sponsors and exhibitors have not yet been announced on the official event pages.",
+          "unstructuredReason": null
+        },
+        "community": {
+          "availability": "stated",
+          "text": "The official meeting page lists an icebreaker, entertainment, dinner, exhibitors, shared breakfasts and lunches, and workshops as part of the attendee experience."
+        },
+        "safetyNote": null,
+        "registrationUrl": null,
+        "accommodation": "The meeting venue is Hilton Garden Inn Pittsburgh/Southpointe."
+      }
+    }
+  ]
+}
