@@ -23,6 +23,7 @@ export const LAUNCH_INDEX_FILE = "conferencegate-search-index.json";
 
 
 const LAUNCH_CSV_FILE = "conferencegate-worldwide-2026-2028.csv";
+const LAUNCH_OVERRIDE_FILE = "sources/launch-record-overrides.json";
 
 /**
  * Last-resort launch catalogue recovery.
@@ -206,6 +207,32 @@ function readJsonFile<T>(fileName: string): T | null {
   return null;
 }
 
+
+function applyLaunchOverrides(records: LaunchConferenceRecord[]): LaunchConferenceRecord[] {
+  const overrideDoc = readJsonFile<{ records?: Array<Partial<LaunchConferenceRecord> & { id: string }> }>(LAUNCH_OVERRIDE_FILE);
+  const overrides = Array.isArray(overrideDoc?.records) ? overrideDoc!.records! : [];
+  if (!overrides.length) return records;
+
+  const byId = new Map(records.map((record) => [record.id, record]));
+  for (const override of overrides) {
+    if (!override?.id) continue;
+    const existing = byId.get(override.id);
+    if (!existing) continue;
+    byId.set(override.id, {
+      ...existing,
+      ...override,
+      details: override.details === undefined ? existing.details : override.details,
+      categories: override.categories ?? existing.categories,
+      topics: override.topics ?? existing.topics,
+      keywords: override.keywords ?? existing.keywords,
+      corroboratingSourceUrls: override.corroboratingSourceUrls ?? existing.corroboratingSourceUrls,
+      provenance: { ...(existing.provenance || {}), ...(override.provenance || {}) },
+    });
+  }
+  console.log('[launch-dataset] applied record overrides=' + overrides.length);
+  return [...byId.values()];
+}
+
 interface LoadedDataset {
   records: LaunchConferenceRecord[];
   /** Every record a URL belongs to. A society's events calendar belongs to all of the conferences
@@ -235,7 +262,7 @@ export function loadLaunchDataset(): LoadedDataset {
       ? { ...existing, ...record, id: existing.id, logoUrl: existing.logoUrl || record.logoUrl, imageUrl: existing.imageUrl || record.imageUrl }
       : record);
   }
-  const records = [...recordsByIdentity.values()];
+  const records = applyLaunchOverrides([...recordsByIdentity.values()]);
   const byUrl = new Map<string, LaunchConferenceRecord[]>();
   const fileUnder = (url: string | null | undefined, record: LaunchConferenceRecord) => {
     if (!url) return;
@@ -279,6 +306,7 @@ export function filledSections(record: LaunchConferenceRecord): string[] {
   if (details.committee.availability === "stated") filled.push("committee");
   if (details.sponsors.availability === "stated") filled.push("sponsors");
   if (details.fees.availability === "stated") filled.push("fees");
+  if (details.community?.availability === "stated") filled.push("community");
   return filled;
 }
 
@@ -349,6 +377,7 @@ export type ConferenceLogoSource = "stated" | "organiser";
 
 export function conferenceLogoSource(record: LaunchConferenceRecord): ConferenceLogoSource | null {
   if (record.logoUrl) return "stated";
+  if (record.organizerLogoUrl) return "organiser";
   return conferenceLogoUrl(record) ? "organiser" : null;
 }
 
@@ -356,6 +385,7 @@ export function conferenceLogoUrl(record: LaunchConferenceRecord): string | null
   // An image the source actually named beats one derived from a domain, and is the only case where
   // this is a fact rather than a derivation.
   if (record.logoUrl) return record.logoUrl;
+  if (record.organizerLogoUrl) return record.organizerLogoUrl;
 
   // The path test above is a proxy for a question — is this host the conference's? — asked where
   // nothing else has answered it. On a launch record it has been: `sourceType` is `official_site`
@@ -419,6 +449,7 @@ function pagesWereRead(record: LaunchConferenceRecord): boolean {
       ? "stated"
       : "unread",
     details.fees.availability,
+    details.community?.availability ?? "unread",
   ].filter((state) => state !== "unread");
   return answered.length >= 5;
 }
@@ -801,7 +832,7 @@ export function launchRecordToTabbedExtraction(record: LaunchConferenceRecord): 
     venue_accommodation:
       details?.venueName || details?.venueAddress || details?.accommodation || record.venue ? "stated" : "unread",
     fees_pricing: details?.fees.availability ?? "unread",
-    community: "unread",
+    community: details?.community?.availability ?? "unread",
   };
   const sectionsNotRead = Object.entries(availability)
     .filter(([, state]) => state === "unread")
