@@ -280,7 +280,11 @@ async function main() {
         community: sectionState('community',community),
       };
       for (const [k,v] of Object.entries(states)) {
-        availability[k] = v || (pageVerified ? 'not_announced' : 'unread');
+        // A main page that does not mention a section is not proof that the organiser has not
+        // announced it. Preserve an explicit not_announced result from a completed deep crawl;
+        // otherwise keep it unread until the section-specific readers finish.
+        const prior = availability[k];
+        availability[k] = v || (prior === 'not_announced' ? 'not_announced' : 'unread');
       }
       const filled = Object.values(states).filter(Boolean).length + 1;
       if (filled >= 6) strong += 1;
