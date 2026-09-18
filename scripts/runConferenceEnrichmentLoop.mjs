@@ -24,6 +24,7 @@ async function cycle() {
   // records. Without this step the static CSV catalogue could be browsed but its detail tabs could
   // never fill, because the workers only iterate discovery_events.
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
+  await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   // Remove stale editions/navigation dumps before deciding what still needs enrichment.
   await runScript('scripts/sanitizeConferenceDetailData.mjs');
   // Curated current-edition corrections take precedence over generic crawling.
@@ -45,6 +46,7 @@ async function cycle() {
   await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
+  await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
 
