@@ -432,12 +432,14 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
             ? overview.description
             : [overview.dates_text, overview.city, overview.country].filter(Boolean).join(" · "),
         displayLink: host,
-        thumbnail: null,
-        // A published record's source is the conference's own site — publication refuses a listing
-        // — so the icon that site serves is the conference's own mark rather than a directory's.
-        favicon: siteIconUrl(row.source_url),
-        // Still the host's mark rather than an edition's, so the card labels it as the organiser's.
-        logoSource: siteIconUrl(row.source_url) ? ("organiser" as const) : null,
+        thumbnail: text(overview.image_url),
+        // Prefer the logo actually stored by enrichment. Falling back to the site icon is useful
+        // only when the official page did not publish a distinct event/organiser mark.
+        favicon: text(overview.logo_url) ?? siteIconUrl(row.source_url),
+        logoSource:
+          overview.logo_source === "stated" || overview.logo_source === "organiser"
+            ? overview.logo_source
+            : ((text(overview.logo_url) ?? siteIconUrl(row.source_url)) ? ("organiser" as const) : null),
         prepared: detailsReady,
         startDate: text(overview.start_date),
         // The card reads these as data — a date range, a place, what it is and how it is held. They
@@ -447,6 +449,9 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         endDate: text(overview.end_date),
         location: city || nation ? { city, country: nation } : null,
         category: text(overview.category) ?? text((overview.categories ?? [])[0]),
+        categories: Array.isArray(overview.categories)
+          ? overview.categories.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+          : (text(overview.category) ? [text(overview.category)!] : []),
         format: storedFormat(overview.format),
         description: text(overview.description) ?? text(overview.overview),
         // Which tabs have something behind them, on the same test the readiness flag above uses.
