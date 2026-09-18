@@ -37,6 +37,10 @@ async function main() {
   await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
+  // Restore the authoritative AAPG manifest after the generic fast normalization too, so the
+  // first customer search after deploy sees the full customer-ready AAPG set.
+  await runScript('scripts/syncAapgOfficialUpcoming.mjs');
+  await runScript('scripts/ensureAapgLogos.mjs');
 
   await runScript('scripts/repairLaunchDatasetJson.mjs');
   await runScript('scripts/repairApifyDiscoveryEvidence.mjs');
