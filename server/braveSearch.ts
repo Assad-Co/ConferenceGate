@@ -392,7 +392,39 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       parseSection(row.fees_pricing, {}),
       parseSection(row.community, {}),
     ];
-    const populatedSections = sections.filter(hasContent).length;
+    const sectionHasDisplayContent = (index: number, value: any): boolean => {
+      // URL-only placeholders do not count as filled tabs. A visitor needs actual information in
+      // the section, not merely a button that sends them elsewhere.
+      if (index === 0) { // CFP
+        return [
+          value?.status, value?.abstract_submission_deadline, value?.notification_date,
+          value?.submission_guidelines, value?.submission_format, value?.length_limit,
+          value?.review_process, value?.publication_information,
+          ...(Array.isArray(value?.topics_tracks) ? value.topics_tracks : []),
+        ].some(hasContent);
+      }
+      if (index === 1) { // Program
+        return hasContent(value?.overview) ||
+          (Array.isArray(value?.sessions) && value.sessions.some(hasContent)) ||
+          (Array.isArray(value?.themes) && value.themes.some(hasContent));
+      }
+      if (index === 5) { // Venue
+        return [
+          value?.venue_name, value?.address, value?.accommodation, value?.travel_information,
+          ...(Array.isArray(value?.hotels) ? value.hotels : []),
+        ].some(hasContent);
+      }
+      if (index === 6) { // Fees
+        return hasContent(value?.pricing_text) || hasContent(value?.early_bird_deadline) ||
+          (Array.isArray(value?.registration_fees) && value.registration_fees.some(hasContent));
+      }
+      if (index === 7) { // Community
+        return hasContent(value?.overview) ||
+          (Array.isArray(value?.social_media) && value.social_media.some(hasContent));
+      }
+      return hasContent(value); // Speakers, committee, sponsors.
+    };
+    const populatedSections = sections.filter((section, index) => sectionHasDisplayContent(index, section)).length;
     const filledTabs = populatedSections + 1; // Overview + the eight detail sections above.
     const pagesCrawled = Number(metadata.pages_crawled) || 0;
     const hasVisualIdentity = Boolean(
@@ -483,7 +515,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         description: text(overview.description) ?? text(overview.overview),
         // Which tabs have something behind them, on the same test the readiness flag above uses.
         sections: (["cfp", "agenda", "speakers", "committee", "sponsors", "venue", "fees", "community"] as const)
-          .filter((_, index) => hasContent(sections[index])),
+          .filter((_, index) => sectionHasDisplayContent(index, sections[index])),
       },
     });
   }
