@@ -349,6 +349,17 @@ async function main() {
       console.log('[aapg-authoritative] schema unavailable; skipping');
       return;
     }
+    const today = new Date().toISOString().slice(0,10);
+    const archived = await db.execute({
+      sql:`UPDATE discovery_events SET status='archived'
+           WHERE status='published' AND end_date IS NOT NULL AND end_date < ?
+             AND (
+               LOWER(COALESCE(organizer,'')) LIKE '%aapg%'
+               OR LOWER(COALESCE(extraction_method,'')) LIKE 'aapg%'
+               OR LOWER(COALESCE(relevance_reason,'')) LIKE '%aapg%'
+             )`,
+      args:[today]
+    });
     let synced=0, deduped=0, rich6=0;
     for (const e of EVENTS) {
       const normalized=normalizeTitle(e.title);
@@ -498,7 +509,7 @@ async function main() {
       });
       synced += 1;
     }
-    console.log('[aapg-authoritative] synced='+synced+' deduped='+deduped+' rich_6plus_tabs='+rich6+' total_manifest='+EVENTS.length);
+    console.log('[aapg-authoritative] synced='+synced+' deduped='+deduped+' archived_past='+(archived.rowsAffected || 0)+' rich_6plus_tabs='+rich6+' total_manifest='+EVENTS.length);
   } catch (error) {
     console.warn('[aapg-authoritative] failed:',error?.message || error);
   } finally {
