@@ -14,6 +14,7 @@ function normalizeTitle(value) {
     .toLowerCase().replace(/\b20\d{2}\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 function hostOf(url) { try { return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; } }
+function safeJson(value, fallback) { try { return value ? JSON.parse(String(value)) : fallback; } catch { return fallback; } }
 function person(name, organization, role = null) {
   return { name, full_name:name, organization:organization || null, org:organization || null, role, title:null, email:null, photo_url:null };
 }
@@ -356,6 +357,19 @@ async function main() {
       });
       const id=found.rows?.[0]?.id ? String(found.rows[0].id) : stableId('calendar_batch',e.key);
 
+      // Remove duplicate search rows for the same edition even when an older importer used a
+      // different official URL. The extracted row can remain as provenance, but only one
+      // discovery event should represent the conference.
+      const dups=await db.execute({
+        sql:'SELECT id FROM discovery_events WHERE id<>? AND normalized_title=? AND COALESCE(start_year,?)=?',
+        args:[id,normalized,year,year]
+      });
+      for (const row of dups.rows || []) {
+        const dupId=String(row.id);
+        await db.execute({sql:'DELETE FROM discovery_event_categories WHERE event_id=?',args:[dupId]});
+        await db.execute({sql:'DELETE FROM discovery_events WHERE id=?',args:[dupId]});
+      }
+
       const eventColumns=[
         'id','title','normalized_title','description','start_date','end_date','start_year','start_month','date_precision','dates_text',
         'venue','city','region','country','raw_location','format','event_type','organizer','official_url','canonical_url',
@@ -400,7 +414,7 @@ async function main() {
 
       const oldRows=await db.execute({sql:'SELECT * FROM extracted_conferences WHERE source_url=? LIMIT 1',args:[e.url]});
       const old=oldRows.rows?.[0] || null;
-      const oldOverview=old?.overview ? JSON.parse(String(old.overview)) : {};
+      const oldOverview=safeJson(old?.overview,{});
       const overview={
         ...oldOverview,
         conference_name:e.title,
