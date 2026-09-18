@@ -13,7 +13,7 @@ let firecrawlPagesUsed = 0;
 
 const SECTION_PATTERNS = {
   cfp: /\b(call for (?:papers|abstracts)|abstract submissions?|submit (?:an )?abstract|abstract deadline|poster submissions?|paper submissions?)\b/i,
-  fees: /\b(registration fees?|registration rates?|pricing|early[- ]bird|member rate|non[- ]member rate|register now)\b/i,
+  fees: /\b(registration fees?|registration rates?|registration cost|pricing|early[- ]bird|member rate|non[- ]member rate|student rate|fee schedule)\b|(?:[$€£]|USD|EUR|GBP|BHD|SAR|AED)\s?\d/i,
   agenda: /\b(program(?:me)?|agenda|schedule|technical program|technical sessions?|scientific program|conference program)\b/i,
   speakers: /\b(keynote(?: speakers?)?|plenary(?: speakers?)?|invited speakers?|featured speakers?|speakers?)\b/i,
   committee: /\b(technical committee|program(?:me)? committee|scientific committee|organizing committee|advisory committee|co[- ]?chairs?|session chairs?)\b/i,
@@ -128,14 +128,70 @@ function chooseDeepLinks(html, eventUrl) {
     })
     .slice(0, MAX_DEEP_LINKS);
 }
-function sectionExcerpt(lines, pattern, maxChars = 2600) {
+
+function eventYear(event) {
+  const fromDate = Number(String(event?.start_date || '').slice(0, 4));
+  if (Number.isFinite(fromDate) && fromDate >= 2000) return fromDate;
+  const fromTitle = /\b(20\d{2})\b/.exec(String(event?.title || ''))?.[1];
+  return fromTitle ? Number(fromTitle) : null;
+}
+function yearCounts(text) {
+  const counts = new Map();
+  for (const match of String(text || '').matchAll(/\b(20\d{2})\b/g)) {
+    const year = Number(match[1]);
+    counts.set(year, (counts.get(year) || 0) + 1);
+  }
+  return counts;
+}
+/**
+ * Reject an old-edition page even when its footer says © current-year.
+ *
+ * A generic "Register Now" page can stay live for years. ESAAPG's current site is a real example:
+ * the page footer is 2026 while the registration body repeatedly says 2021. The old implementation
+ * saw the link label, copied that whole page into Fees, and presented 2021 prices as 2026 data.
+ */
+function pageMatchesEventEdition(page, event) {
+  const year = eventYear(event);
+  if (!year) return true;
+  const body = stripTags(page?.markdown || page?.html || '');
+  const counts = yearCounts(body);
+  if (!counts.size) return true;
+  const currentCount = counts.get(year) || 0;
+  const others = [...counts.entries()].filter(([candidate]) => candidate !== year);
+  if (!others.length) return true;
+  const [dominantOtherYear, dominantOtherCount] = others.sort((a, b) => b[1] - a[1])[0];
+  // No mention of this edition but a different edition is named: do not borrow it.
+  if (currentCount === 0) return false;
+  // One copyright/footer mention cannot rescue a page whose body repeatedly names an older edition.
+  if (dominantOtherCount >= 2 && dominantOtherCount > currentCount && dominantOtherYear < year) return false;
+  return true;
+}
+function navNoise(line) {
+  const text = String(line || '').replace(/\s+/g, ' ').trim();
+  if (!text) return true;
+  const navHits = (text.match(/\b(home|join|login|calendar|albums?|register now|learn more|contact us|about us|meetings?|events?|schedule|venue|sponsor|exhibitor)\b/gi) || []).length;
+  return text.length > 260 && navHits >= 4;
+}
+function cleanExcerptLines(lines) {
+  const clean = [];
+  for (const raw of lines) {
+    const line = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (line.length < 3 || navNoise(line)) continue;
+    if (/^(home|about|events|news|resources|membership|join|login)$/i.test(line)) continue;
+    if (!clean.includes(line)) clean.push(line);
+    if (clean.join('\n').length >= 900) break;
+  }
+  return clean.join('\n').slice(0, 900).trim() || null;
+}
+
+function sectionExcerpt(lines, pattern, maxChars = 900) {
   const hits = [];
   for (let i = 0; i < lines.length; i++) {
     if (!pattern.test(lines[i])) continue;
     const from = Math.max(0, i - 1);
-    const to = Math.min(lines.length, i + 9);
-    const text = lines.slice(from, to).join('\n').trim();
-    if (text.length >= 30) hits.push(text);
+    const to = Math.min(lines.length, i + 5);
+    const text = cleanExcerptLines(lines.slice(from, to));
+    if (text && text.length >= 20) hits.push(text);
     if (hits.join('\n').length >= maxChars) break;
   }
   return [...new Set(hits)].join('\n').slice(0, maxChars).trim() || null;
@@ -197,16 +253,17 @@ async function readPage(url) {
   return fallback || direct;
 }
 
-function sectionFromPages(pages, section) {
+function sectionFromPages(pages, section, event) {
   const pattern = SECTION_PATTERNS[section];
   const parts = [];
   for (const page of pages) {
+    if (!pageMatchesEventEdition(page, event)) continue;
     const body = page.markdown || page.html || '';
     const lines = textLines(body);
     const excerpt = sectionExcerpt(lines, pattern);
     if (excerpt) parts.push(excerpt);
   }
-  return [...new Set(parts)].join('\n\n').slice(0, 3500).trim() || null;
+  return [...new Set(parts)].join('\n\n').slice(0, 1200).trim() || null;
 }
 
 function findLinkByPattern(pages, pattern) {
@@ -241,7 +298,7 @@ async function enrichEvent(db, event) {
   for (const link of deepLinks) {
     await sleep(250);
     const page = await readPage(link.href);
-    if (page.ok) pages.push(page);
+    if (page.ok && pageMatchesEventEdition(page, event)) pages.push(page);
   }
 
   const mainHtml = main.html || '';
@@ -252,9 +309,9 @@ async function enrichEvent(db, event) {
   const notes = {};
   const availability = { ...(oldMeta?.section_availability || {}) };
   for (const section of Object.keys(SECTION_PATTERNS)) {
-    const note = sectionFromPages(pages, section);
-    notes[section] = note || oldMeta?.section_notes?.[section] || null;
-    availability[section] = note ? 'stated' : (availability[section] === 'stated' ? 'stated' : 'not_announced');
+    const note = sectionFromPages(pages, section, event);
+    notes[section] = note || null;
+    availability[section] = note ? 'stated' : 'not_announced';
   }
   availability.overview = 'stated';
 
@@ -281,15 +338,15 @@ async function enrichEvent(db, event) {
     image_url: hero || oldOverview.image_url || null,
   });
   const cfp = mergeObject(oldCfp, submissionUrl ? { submission_url: submissionUrl } : {});
-  const program = mergeObject(oldProgram, notes.agenda ? { overview: notes.agenda } : {});
+  const program = mergeObject(oldProgram, { overview: notes.agenda || null });
   if (!Array.isArray(program.sessions)) program.sessions = [];
   if (!Array.isArray(program.themes)) program.themes = [];
-  const venue = mergeObject(oldVenue, notes.venue ? { accommodation: oldVenue.accommodation || notes.venue } : {});
+  const venue = mergeObject(oldVenue, { accommodation: notes.venue || oldVenue.accommodation || null });
   const fees = mergeObject(oldFees, {
     ...(registrationUrl ? { registration_url: registrationUrl } : {}),
-    ...(notes.fees ? { pricing_text: oldFees.pricing_text || notes.fees } : {}),
+    pricing_text: notes.fees || null,
   });
-  const community = mergeObject(oldCommunity, notes.community ? { overview: oldCommunity.overview || notes.community } : {});
+  const community = mergeObject(oldCommunity, { overview: notes.community || null });
 
   const meta = {
     ...oldMeta,
