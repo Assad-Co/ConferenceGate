@@ -4,9 +4,9 @@ import path from 'node:path';
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36 ConferenceGate/1.0';
 const MAX_EVENTS = Math.max(0, Number(process.env.DEEP_ENRICH_MAX_EVENTS || 0)); // 0 = all
-const MAX_DEEP_LINKS = Math.max(3, Number(process.env.DEEP_ENRICH_MAX_LINKS || 10));
-const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_REFRESH_DAYS || 14));
-const FIRECRAWL_MAX_PAGES = Math.max(0, Number(process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || 60));
+const MAX_DEEP_LINKS = Math.max(3, Number(process.env.DEEP_ENRICH_MAX_LINKS || 12));
+const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_REFRESH_DAYS || 3));
+const FIRECRAWL_MAX_PAGES = Math.max(0, Number(process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || 120));
 const DIRECT_TIMEOUT_MS = Math.max(4000, Number(process.env.DEEP_ENRICH_DIRECT_TIMEOUT_MS || 10000));
 const FIRECRAWL_TIMEOUT_MS = Math.max(10000, Number(process.env.DEEP_ENRICH_FIRECRAWL_TIMEOUT_MS || 45000));
 let firecrawlPagesUsed = 0;
