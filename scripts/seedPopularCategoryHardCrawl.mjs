@@ -158,7 +158,8 @@ async function main() {
           args:[JSON.stringify(mergedOverview),JSON.stringify(mergedMeta),url]});
       }
     }
-    const covered=new Set(SEEDS.flatMap((seed)=>seed[6]));
+    const coveredAll=new Set(SEEDS.flatMap((seed)=>seed[6]));
+    const covered=new Set(POPULAR.filter((category)=>coveredAll.has(category)));
     const missing=POPULAR.filter((category)=>!covered.has(category));
     console.log('[popular-hard-seed] targets='+SEEDS.length+' inserted='+inserted+' matched='+matched+' categories_added='+categoriesAdded+' covered='+covered.size+'/'+POPULAR.length+' missing='+missing.join('|'));
   } catch(error) {
