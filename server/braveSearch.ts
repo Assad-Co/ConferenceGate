@@ -458,26 +458,43 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       (typeof overview.image_url === "string" && overview.image_url.trim()) ||
       siteIconUrl(row.source_url)
     );
-    // ConferenceGate's quality bar is now six genuinely populated tabs plus a visible identity.
-    // This is deliberately stricter than "a crawl touched the page": a visitor should not open a
-    // Popular Search result and find mostly empty rooms.
-    const detailsReady = filledTabs >= 6 && hasVisualIdentity;
-    // A detail page has to be able to answer more than one of its tabs, the same bar the catalogue
-    // applies in `pagesWereRead`. A stored record that answers one and admits "could not be
-    // retrieved" to the other seven is a promise of a page rather than a page, and the reader only
-    // finds that out after clicking through.
-    //
-    // The availability map is preferred where the row carries one, because it separates the two
-    // reasons a section is empty: an organiser who has not announced their speakers yet answered
-    // the question, and hiding that record loses a real conference. Rows written before the map
-    // existed have only the sections themselves to go on, and there a populated section is the
-    // only evidence anybody read anything.
+    // The availability map distinguishes real content, explicitly not-yet-announced
+    // sections, and sections nobody managed to read.
     const availability = metadata.section_availability;
     const answeredSections =
       availability && typeof availability === "object"
         ? Object.values(availability).filter((state) => state !== "unread").length
         : populatedSections;
+    const authoritativeManifest =
+      metadata.import_origin === "aapg_authoritative_manifest" ||
+      metadata.import_origin === "verified_calendar_batch" ||
+      metadata.validation_status === "VALIDATED_OFFICIAL_AAPG_CALENDAR" ||
+      metadata.validation_status === "VALIDATED_OFFICIAL_AND_CORROBORATING_SOURCES";
+    // Normal events still need six genuinely populated tabs. A curated/authoritative event may
+    // also be ready when every tab has a current-edition answer, including an explicit
+    // "not announced yet" state. That lets ConferenceGate show the complete event instead of
+    // hiding it merely because the organiser has not named speakers or sponsors yet.
+    const detailsReady =
+      hasVisualIdentity &&
+      (filledTabs >= 6 || (authoritativeManifest && answeredSections >= 9));
     if (answeredSections < 2) continue;
+    const availabilityAliases = [
+      ["call_for_papers","cfp"],
+      ["program_agenda","agenda"],
+      ["keynote_speakers","speakers"],
+      ["technical_committee","committee"],
+      ["sponsors_exhibitors","sponsors"],
+      ["venue_accommodation","venue"],
+      ["fees_pricing","fees"],
+      ["community"],
+    ];
+    const sectionAnswered = (index: number): boolean => {
+      if (!availability || typeof availability !== "object") return false;
+      return (availabilityAliases[index] || []).some((key) => {
+        const state = (availability as Record<string, unknown>)[key];
+        return state === "stated" || state === "not_announced";
+      });
+    };
 
     const score = scoreStoredConferenceRecord(query, {
       title,
@@ -540,7 +557,7 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         description: text(overview.description) ?? text(overview.overview),
         // Which tabs have something behind them, on the same test the readiness flag above uses.
         sections: (["cfp", "agenda", "speakers", "committee", "sponsors", "venue", "fees", "community"] as const)
-          .filter((_, index) => sectionHasDisplayContent(index, sections[index])),
+          .filter((_, index) => sectionHasDisplayContent(index, sections[index]) || sectionAnswered(index)),
       },
     });
   }
