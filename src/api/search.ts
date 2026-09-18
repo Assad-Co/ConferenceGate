@@ -32,6 +32,16 @@ export interface LiveSearchResult {
   /** What the conference is, where the catalogue holds a description of its own. Separate from
    *  `snippet`, which for those records is the date and place the card already shows as data. */
   description?: string | null;
+  /** Source-stated CFP status, where one exists. */
+  cfpStatus?: string | null;
+  /** True only when the CFP tab contains substantive, displayable information rather than
+   *  an empty/TBD/not-announced placeholder or a bare link. */
+  cfpHasData?: boolean;
+  /** True only when that substantive CFP is still open/extended, or its stated submission
+   *  deadline is still in the future. This is the flag used by the Open call for papers chip. */
+  cfpOpen?: boolean;
+  /** Additional subject labels attached to the stored conference. */
+  categories?: string[];
 }
 
 export async function searchConferencesOnTheWeb(
