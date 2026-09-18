@@ -52,12 +52,11 @@ function patchDiscoveryEngine() {
 
   const replacement = `const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
   const abbreviation = fallbackConferenceAbbreviation(result);
+  const isAapg = /\\baapg\\b|american association of petroleum geologists|rms-aapg|esaapg|swsaapg|iceevent\\.org/i.test(
+    [result.title, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
+  );
   const derivedOrganiserIcon = (() => {
     if (result.favicon) return null;
-    const isAapg = /\\baapg\\b|american association of petroleum geologists/i.test(
-      [result.title, result.organization, result.link, result.displayLink].filter(Boolean).join(' ')
-    );
-    if (isAapg) return '/aapg-organizer.svg';
     try {
       const page = new URL(result.link);
       return page.hostname ? new URL('/favicon.ico', page.origin).href : null;
@@ -80,6 +79,9 @@ function patchDiscoveryEngine() {
       : null,
     derivedOrganiserIcon
       ? { url: derivedOrganiserIcon, kind: 'organiser-logo' as const }
+      : null,
+    isAapg
+      ? { url: '/aapg-organizer.svg', kind: 'organiser-logo' as const }
       : null,
     result.thumbnail
       ? { url: result.thumbnail, kind: 'official-image' as const }
