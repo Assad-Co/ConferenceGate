@@ -120,10 +120,18 @@ const EVENTS = [
     organizer:'Eastern Section of AAPG (ESAAPG)',
     description:'Eastern Section AAPG annual meeting for geoscientists across the eastern United States, covering conventional exploration and production, unconventional resources, carbon sequestration and environmental solutions.',
     categories:['Petroleum & Geoscience','Energy','Hydrogen & CCUS','Environment'],
-    cfp:{status:'Closed',abstract_submission_deadline:'2026-09-15',submission_guidelines:'Official ESAAPG information states abstracts for the 2026 meeting were accepted through 15 September 2026.'},
-    agenda:{overview:'Official meeting information includes an icebreaker, entertainment, dinner, exhibitors, breakfast and lunch for two conference days, and workshops.',themes:['Conventional hydrocarbon exploration and production','Unconventional resources','Carbon sequestration','Environmental solutions']},
-    venueInfo:{venue_name:'Hilton Garden Inn Pittsburgh/Southpointe',address:'1000 Corporate Drive, Canonsburg, PA 15317, United States',accommodation:'Meeting venue is Hilton Garden Inn Pittsburgh/Southpointe.'},
-    community:{overview:'Attendee activities include an icebreaker, entertainment, dinner, exhibitors, shared breakfasts/lunches and workshops.'}
+    cfp:{status:'Closed',abstract_submission_deadline:'2026-09-15',submission_guidelines:'The current ESAAPG homepage states abstracts for the 2026 Eastern Section Meeting were accepted through 15 September 2026. The older Meetings page still shows an August 31 deadline, so ConferenceGate uses the newer homepage update.'},
+    fees:{registration_fees:[],pricing_text:'ESAAPG has published what 2026 meeting registration includes — icebreaker, drink tickets, entertainment, dinner, exhibitors, breakfast/lunch for both conference days, and workshops — but no current 2026 dollar amounts are published on the meeting page.'},
+    agenda:{overview:'The current 2026 meeting information lists an icebreaker, entertainment, dinner, exhibitors, breakfast and lunch for both conference days, and workshops. A detailed technical-session timetable has not yet been published.',themes:['Conventional hydrocarbon exploration and production','Unconventional resources','Carbon sequestration','Environmental solutions']},
+    committee:[
+      person('Pete Sullivan','ESAAPG','Committee on Section Meetings Co-Chair'),
+      person('Chris Willan','ESAAPG','Committee on Section Meetings Co-Chair'),
+      person('Steve Zody','ESAAPG','Committee on Section Meetings Co-Chair')
+    ],
+    speakerNote:'ESAAPG has not yet published a 2026 keynote-speaker roster on the current meeting pages.',
+    sponsorNote:'ESAAPG states that exhibitors are included in the 2026 meeting registration package, but it has not yet published a named 2026 sponsor/exhibitor roster.',
+    venueInfo:{venue_name:'Hilton Garden Inn Pittsburgh/Southpointe',address:'1000 Corporate Drive, Canonsburg, PA 15317, United States',accommodation:'The 2026 meeting venue is Hilton Garden Inn Pittsburgh/Southpointe. ESAAPG has not yet published a separate 2026 hotel-room block or lodging rate.'},
+    community:{overview:'Attendee activities published for 2026 include an icebreaker, drink tickets, entertainment, dinner, exhibitors, breakfast/lunch for both conference days, and workshops.'}
   },
   {
     key:'lac-leadership-2026',
@@ -439,6 +447,17 @@ async function main() {
       const availability=canonicalSectionAvailability(e,oldMeta);
       const stated=Object.values(availability).filter((v)=>v==='stated').length;
       if (stated>=6) rich6 += 1;
+      const sectionNotes={
+        ...(oldMeta?.section_notes || {}),
+        call_for_papers:e.cfp?.submission_guidelines || null,
+        fees_pricing:e.fees?.pricing_text || null,
+        program_agenda:e.agenda?.overview || null,
+        keynote_speakers:e.speakerNote || null,
+        technical_committee:e.committeeNote || null,
+        sponsors_exhibitors:e.sponsorNote || null,
+        venue_accommodation:e.venueInfo?.accommodation || e.venueInfo?.address || null,
+        community:e.community?.overview || null
+      };
       const meta={
         ...oldMeta,
         origin:'discovery_engine',
@@ -449,6 +468,7 @@ async function main() {
         discovery_event_id:id,
         calendar_url:CALENDAR,
         section_availability:availability,
+        section_notes:sectionNotes,
         authoritative_aapg_sync_at:now,
         tabs_filled:stated,
         tabs_total:9
