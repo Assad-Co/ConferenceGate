@@ -72,6 +72,9 @@ export interface LaunchDetailPerson {
 export interface LaunchDetailSponsor {
   name: string;
   tier: string | null;
+  /** Real logo URL when the source supplied one. Text-only sponsor names are kept as evidence but
+   *  are not rendered as public sponsor cards until a logo is available. */
+  logoUrl?: string | null;
 }
 
 export interface LaunchDetailFee {
