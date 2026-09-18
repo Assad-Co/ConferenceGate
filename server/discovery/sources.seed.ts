@@ -342,6 +342,13 @@ const FLAGSHIP_EVENT_SOURCES: Seed[] = [
   ["otcnet.org", "Offshore Technology Conference", "professional_association", "United States", "North America"],
   ["gastechevent.com", "Gastech", "official_conference_site", "United Kingdom", "Europe"],
   ["goldschmidt.info", "Goldschmidt Conference", "official_conference_site", "International", "Global"],
+  ["smeannualconference.org", "MINEXCHANGE", "official_conference_site", "United States", "North America"],
+  ["ephconference.eu", "European Public Health Conference", "official_conference_site", "Netherlands", "Europe"],
+  ["icn.ch", "International Council of Nurses", "professional_association", "Switzerland", "Europe"],
+  ["ids-cologne.de", "International Dental Show", "official_conference_site", "Germany", "Europe"],
+  ["aeaweb.org", "American Economic Association", "professional_society", "United States", "North America"],
+  ["token2049.com", "TOKEN2049", "official_conference_site", "Singapore", "Asia"],
+  ["exporeal.net", "EXPO REAL", "official_conference_site", "Germany", "Europe"],
   ["2027.ieee-iros.org", "IEEE/RSJ IROS 2027", "official_conference_site", "Italy", "Europe"],
   ["ieee-ras.org", "IEEE Robotics and Automation Society", "engineering_society", "United States", "North America"],
 ];
