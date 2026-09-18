@@ -291,6 +291,22 @@ function storedFormat(value: unknown): "in-person" | "hybrid" | "online" | null 
  * quota. These results are especially valuable because their tab data is already prepared, so a
  * visitor can open the conference immediately even when Brave/Serper has reached its plan limit.
  */
+const POPULAR_QUALITY_SEARCHES = new Set([
+  "artificial intelligence","data science","cybersecurity","software & cloud","telecommunications",
+  "semiconductors & electronics","robotics & automation","engineering","civil & construction",
+  "mechanical engineering","electrical engineering","chemical engineering","materials science","energy",
+  "petroleum & geoscience","renewable energy","hydrogen & ccus","mining & minerals","environment",
+  "climate & sustainability","healthcare","public health","pharmaceuticals & biotechnology","nursing",
+  "dentistry","cardiology","oncology","neuroscience","life sciences","chemistry","physics",
+  "mathematics & statistics","science","education","business","finance","economics","marketing",
+  "supply chain & logistics","manufacturing","aviation & aerospace","maritime","automotive & mobility",
+  "architecture & urbanism","agriculture & food","law & regulation","government & policy","social sciences",
+  "arts & culture","tourism & hospitality","blockchain & web3","real estate"
+]);
+function isPopularQualitySearch(query: string): boolean {
+  return POPULAR_QUALITY_SEARCHES.has(query.trim().toLowerCase());
+}
+
 async function searchPreparedConferences(query: string): Promise<LiveSearchResult[]> {
   const rows = await dbAll<{
     source_url: string;
@@ -377,8 +393,15 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
       parseSection(row.community, {}),
     ];
     const populatedSections = sections.filter(hasContent).length;
+    const filledTabs = populatedSections + 1; // Overview + the eight detail sections above.
     const pagesCrawled = Number(metadata.pages_crawled) || 0;
-    const detailsReady = populatedSections >= 3 && (pagesCrawled >= 3 || populatedSections >= 5);
+    const hasVisualIdentity = Boolean(
+      text(overview.logo_url) || text(row.image_url) || text(overview.image_url) || siteIconUrl(row.source_url)
+    );
+    // ConferenceGate's quality bar is now six genuinely populated tabs plus a visible identity.
+    // This is deliberately stricter than "a crawl touched the page": a visitor should not open a
+    // Popular Search result and find mostly empty rooms.
+    const detailsReady = filledTabs >= 6 && hasVisualIdentity;
     // A detail page has to be able to answer more than one of its tabs, the same bar the catalogue
     // applies in `pagesWereRead`. A stored record that answers one and admits "could not be
     // retrieved" to the other seven is a promise of a page rather than a page, and the reader only
@@ -718,10 +741,20 @@ export async function searchConferences(
   // prepared and always rank first; the launch dataset that ships in the repository fills the space
   // underneath them, and answers on its own when there are no credentials for a database at all.
   // Neither path fetches anything.
-  const results = deduplicateStoredConferences([
+  const merged = deduplicateStoredConferences([
     ...(await storedConferencesOrEmpty(query)),
     ...searchLaunchDataset(query, Number.MAX_SAFE_INTEGER),
   ]);
+  // Popular Search chips are a curated discovery surface. Never mix a thin static-catalogue row
+  // into those results just because its title matches the category. It becomes eligible only after
+  // the hard-crawl pipeline has prepared at least six tabs and a visual identity.
+  const results = isPopularQualitySearch(query)
+    ? merged.filter((result) =>
+        result.prepared === true &&
+        ((result.sections?.length || 0) + 1) >= 6 &&
+        Boolean(result.favicon || result.thumbnail)
+      )
+    : merged;
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
