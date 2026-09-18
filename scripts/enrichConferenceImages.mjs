@@ -225,38 +225,63 @@ function parseOverview(value) {
 
 async function bestImageFor(row) {
   const overview = parseOverview(row.overview);
-  const existingLogo = publicHttpUrl(overview.logo_url, row.official_url || row.canonical_url || row.source_url);
-  const existingImage = publicHttpUrl(overview.image_url, row.official_url || row.canonical_url || row.source_url);
-  if (existingLogo && await imageLooksUsable(existingLogo)) {
-    return { imageUrl: existingImage || existingLogo, logoUrl: existingLogo, source: "stored_official_logo" };
-  }
-  if (existingImage && await imageLooksUsable(existingImage)) {
-    return { imageUrl: existingImage, logoUrl: null, source: "stored_official_image" };
+  const baseUrl = row.official_url || row.canonical_url || row.source_url;
+  const existingLogo = publicHttpUrl(overview.logo_url, baseUrl);
+  const existingImage = publicHttpUrl(overview.image_url, baseUrl);
+
+  const usableLogo = existingLogo && await imageLooksUsable(existingLogo) ? existingLogo : null;
+  const usableImage = existingImage && await imageLooksUsable(existingImage) ? existingImage : null;
+
+  // A real event image already stored is better than any new guess. But when the stored
+  // "image" is just the same file as the logo, keep crawling for event artwork.
+  if (usableImage && (!usableLogo || usableImage !== usableLogo)) {
+    return { imageUrl: usableImage, logoUrl: usableLogo, source: "stored_official_image" };
   }
 
-  const pageUrl = publicHttpUrl(row.official_url || row.canonical_url || row.source_url);
-  if (!pageUrl) return null;
+  const pageUrl = publicHttpUrl(baseUrl);
+  if (!pageUrl) {
+    // Never substitute an organizer logo for an event image.
+    return usableImage && (!usableLogo || usableImage !== usableLogo)
+      ? { imageUrl: usableImage, logoUrl: usableLogo, source: "stored_official_image" }
+      : null;
+  }
 
   const page = await fetchHtml(pageUrl);
-  if (!page) return null;
+  if (!page) {
+    // Keep the logo separate; if no event artwork can be verified, leave the conference image blank.
+    return usableImage && (!usableLogo || usableImage !== usableLogo)
+      ? { imageUrl: usableImage, logoUrl: usableLogo, source: "stored_official_image" }
+      : null;
+  }
 
   const candidates = extractCandidates(page.html, page.finalUrl);
   let bestBanner = null;
+  let bestLogo = usableLogo;
 
-  for (const candidate of candidates.slice(0, 8)) {
+  for (const candidate of candidates.slice(0, 12)) {
     if (!await imageLooksUsable(candidate.url)) continue;
-    if (candidate.kind === "logo") {
-      return {
-        imageUrl: candidate.url,
-        logoUrl: candidate.url,
-        source: "official_site_logo",
-      };
+    if (candidate.kind === "banner" && !bestBanner) {
+      bestBanner = candidate.url;
+      continue;
     }
-    if (!bestBanner) bestBanner = candidate.url;
+    if (candidate.kind === "logo" && !bestLogo) {
+      bestLogo = candidate.url;
+    }
   }
 
-  return bestBanner
-    ? { imageUrl: bestBanner, logoUrl: null, source: "official_site_banner" }
+  // Keep logo and banner separate. AAPG's organiser mark may be the correct logo,
+  // but it should never stop ConferenceGate from using the event's own hero image.
+  if (bestBanner) {
+    return {
+      imageUrl: bestBanner,
+      logoUrl: bestLogo,
+      source: "official_site_banner",
+    };
+  }
+
+  // If the official page exposes only a logo, do not pretend it is conference artwork.
+  return usableImage && (!bestLogo || usableImage !== bestLogo)
+    ? { imageUrl: usableImage, logoUrl: bestLogo, source: "stored_official_image" }
     : null;
 }
 
@@ -306,7 +331,11 @@ async function main() {
                 ON json_extract(ec.extraction_metadata, '$.discovery_event_id') = de.id
              WHERE de.status = 'published'
                AND de.publish_readiness = 'publish_ready'
-               AND COALESCE(TRIM(de.image_url), '') = ''
+               AND (
+                 COALESCE(TRIM(de.image_url), '') = ''
+                 OR de.image_url = json_extract(ec.overview, '$.logo_url')
+                 OR de.image_url LIKE '%aapg-organizer.svg'
+               )
                AND COALESCE(de.official_url, de.canonical_url, de.source_url) IS NOT NULL
              ORDER BY de.last_verified DESC, de.last_seen DESC
              LIMIT ?`,
@@ -334,7 +363,7 @@ async function main() {
       await db.execute({
         sql: `UPDATE discovery_events
                  SET image_url = ?
-               WHERE id = ? AND COALESCE(TRIM(image_url), '') = ''`,
+               WHERE id = ?`,
         args: [found.imageUrl, row.id],
       });
 
