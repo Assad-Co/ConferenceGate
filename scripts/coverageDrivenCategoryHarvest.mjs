@@ -153,7 +153,10 @@ async function main() {
           ON de.id=json_extract(ec.extraction_metadata,'$.discovery_event_id')
         LEFT JOIN discovery_event_categories dec ON dec.event_id=de.id
        WHERE de.status='published'
-         AND (de.start_date IS NULL OR date(de.start_date)>=date('now'))
+         AND (
+           (de.start_date IS NOT NULL AND date(de.start_date)>=date('now'))
+           OR (de.start_date IS NULL AND de.start_year>=CAST(strftime('%Y','now') AS INTEGER))
+         )
        GROUP BY de.id
     `);
 
