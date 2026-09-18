@@ -27,7 +27,7 @@
     "conference-sanitize": "node scripts/sanitizeConferenceDetailData.mjs",
     "conference-curated": "node scripts/applyCuratedConferenceOverrides.mjs",
     "conference-power": "node scripts/upgradeConferenceIdentityAndTabs.mjs",
-    "aapg:authoritative": "node scripts/syncAapgOfficialUpcoming.mjs",
+    "aapg:authoritative": "node scripts/syncAapgOfficialUpcoming.mjs && node scripts/syncVerifiedCalendarBatch.mjs && node scripts/ensureAapgLogos.mjs",
     "aapg:logos": "node scripts/ensureAapgLogos.mjs",
     "calendar:verified-batch": "node scripts/syncVerifiedCalendarBatch.mjs"
   },
