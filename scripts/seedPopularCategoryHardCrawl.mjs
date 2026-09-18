@@ -55,7 +55,7 @@ const SEEDS = [
   ['Nor-Shipping 2027','https://nor-shipping.com/','2027-06-07','2027-06-11','Oslo / Lillestrøm','Norway',['Maritime','Business','Hydrogen & CCUS','Artificial Intelligence','Energy']],
   ['IAA MOBILITY 2027','https://www.iaa-mobility.com/en','2027-09-07','2027-09-12','Munich','Germany',['Automotive & Mobility','Manufacturing','Engineering','Renewable Energy']],
   ['World Agri-Tech Innovation Summit London 2026','https://worldagritechinnovation.com/','2026-09-22','2026-09-23','London','United Kingdom',['Agriculture & Food','Artificial Intelligence','Business','Climate & Sustainability']],
-  ['IAPP Global Privacy Summit 2027','https://iapp.org/conference/iapp-global-privacy-summit','2027-03-21','2027-03-24','Washington, D.C.','United States',['Law & Regulation','Cybersecurity','Government & Policy','Artificial Intelligence']],
+  ['IAPP Global Privacy Summit 2027','https://iapp.org/conference/iapp-global-summit','2027-03-21','2027-03-24','Washington, D.C.','United States',['Law & Regulation','Cybersecurity','Government & Policy','Artificial Intelligence']],
   ['ASPA Annual Conference 2027','https://www.aspanet.org/annualconference','2027-04-09','2027-04-13','New Orleans','United States',['Government & Policy','Social Sciences','Education','Business','Open call for papers']],
   ['ISA World Congress of Sociology 2027','https://www.isa-sociology.org/en/conferences/world-congress/gwangju-2027','2027-07-04','2027-07-10','Gwangju','South Korea',['Social Sciences','Education','Government & Policy','Open call for papers']],
   ['SXSW 2027','https://sxsw.com/','2027-03-15','2027-03-21','Austin','United States',['Arts & Culture','Business','Marketing','Artificial Intelligence']],
