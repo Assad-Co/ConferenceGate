@@ -177,53 +177,86 @@ function rankLiveSearchResults(results: LiveSearchResult[], query: string): Live
  * conference with no site of its own gets.
  */
 const ConferenceLogo: React.FC<{ result: LiveSearchResult; className?: string }> = ({ result, className }) => {
-  const [failed, setFailed] = React.useState(false);
   const abbreviation = fallbackConferenceAbbreviation(result);
-  let siteIcon: string | null = result.favicon;
-  if (!siteIcon) {
+  const derivedOfficialIcon = (() => {
+    if (result.favicon) return null;
     try {
-      const host = new URL(result.link).hostname;
-      if (host) siteIcon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+      const page = new URL(result.link);
+      return page.hostname ? new URL('/favicon.ico', page.origin).href : null;
     } catch {
-      siteIcon = null;
+      return null;
     }
-  }
-  const icon = failed ? null : siteIcon;
-  const isOwnLogo = result.logoSource === 'stated';
+  })();
 
-  if (icon) {
-    // `object-contain` is what makes it the whole logo: a wordmark is far wider than it is tall, and
-    // cropping it to a square would cut the conference's name off its own mark.
+  // Strong visual identity priority for every conference:
+  // 1) event logo published by the conference,
+  // 2) organiser/site logo,
+  // 3) official event image,
+  // 4) generated Conference Gate mark.
+  const candidates = [
+    result.favicon
+      ? {
+          url: result.favicon,
+          kind: result.logoSource === 'stated' ? ('event-logo' as const) : ('organiser-logo' as const),
+        }
+      : null,
+    derivedOfficialIcon
+      ? { url: derivedOfficialIcon, kind: 'organiser-logo' as const }
+      : null,
+    result.thumbnail
+      ? { url: result.thumbnail, kind: 'official-image' as const }
+      : null,
+  ].filter(Boolean) as Array<{
+    url: string;
+    kind: 'event-logo' | 'organiser-logo' | 'official-image';
+  }>;
+
+  const [candidateIndex, setCandidateIndex] = React.useState(0);
+  React.useEffect(() => setCandidateIndex(0), [result.favicon, result.thumbnail, result.link]);
+  const candidate = candidates[candidateIndex] ?? null;
+
+  if (candidate) {
+    const isEventLogo = candidate.kind === 'event-logo';
+    const isOfficialImage = candidate.kind === 'official-image';
     return (
       <img
-        src={icon}
-        alt={isOwnLogo ? `${abbreviation} logo` : `${organiserHost(result)} logo`}
-        // An organiser's mark is still not the edition's, and the tooltip is where that is said now
-        // that both fill the tile. See the note on the component.
-        title={isOwnLogo ? undefined : `Organiser: ${organiserHost(result)}`}
-        onError={() => setFailed(true)}
-        // A /favicon.ico is a browser-tab icon, not a logo: 16 or 32 pixels, and often white on
-        // transparent because a tab strip is dark. Filling a 112px tile with one left cards that
-        // looked simply empty — the image had loaded and there was nothing to see. Anything that
-        // small is treated as no logo at all, and the conference's initials take the tile.
+        src={candidate.url}
+        alt={
+          isEventLogo
+            ? `${abbreviation} logo`
+            : isOfficialImage
+              ? `${abbreviation} official conference image`
+              : `${organiserHost(result)} organiser logo`
+        }
+        title={
+          isEventLogo
+            ? undefined
+            : isOfficialImage
+              ? 'Image published on the official conference website'
+              : `Organiser: ${organiserHost(result)}`
+        }
+        onError={() => setCandidateIndex((index) => index + 1)}
         onLoad={(event) => {
           const img = event.currentTarget;
-          if (Math.max(img.naturalWidth, img.naturalHeight) <= 32) setFailed(true);
+          // Tiny browser-tab icons do not make a usable conference mark. Try the official image,
+          // then the generated conference mark, rather than displaying an almost invisible square.
+          if (candidate.kind !== 'official-image' && Math.max(img.naturalWidth, img.naturalHeight) <= 32) {
+            setCandidateIndex((index) => index + 1);
+          }
         }}
-        // A conference's logo is served by the conference's own host, and a good number of them
-        // refuse a request whose Referer is somebody else's site — which arrives here as a load
-        // error and silently demotes a real logo to initials. Sending no referrer at all is what
-        // stops a hotlink rule turning a fact the source stated into a fallback.
         referrerPolicy="no-referrer"
         loading="lazy"
         decoding="async"
-        className={className ?? 'max-w-full max-h-full object-contain'}
+        className={
+          className ??
+          (isOfficialImage
+            ? 'w-full h-full object-cover rounded-xl'
+            : 'max-w-full max-h-full object-contain')
+        }
       />
     );
   }
 
-  // No image at all, or one that would not load. "GASTECH" does not fit where "G2" did, so the mark
-  // is sized to its length rather than overflowing the tile it sits in.
   return (
     <span className={`${markSizeClass(abbreviation)} max-w-full break-words font-black tracking-wide text-black text-center leading-tight`}>
       {abbreviation}
