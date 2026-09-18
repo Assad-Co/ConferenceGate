@@ -475,7 +475,7 @@ async function main() {
                published_at=COALESCE(discovery_events.published_at,excluded.published_at),publish_readiness='publish_ready',
                readiness_reasons='[]',official_source_verified_at=excluded.official_source_verified_at,title_verified_at=excluded.title_verified_at`,
         args:eventArgs
-      }););
+      });
 
       for (const cat of categories) {
         await db.execute({sql:`INSERT OR IGNORE INTO discovery_event_categories(id,event_id,category,confidence,evidence)
