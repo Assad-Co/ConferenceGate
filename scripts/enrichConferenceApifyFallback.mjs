@@ -4,8 +4,8 @@ import path from 'node:path';
 
 const TOKEN = process.env.APIFY_TOKEN?.trim() || '';
 const ACTOR = process.env.CONFERENCE_APIFY_ACTOR?.trim() || 'apify~website-content-crawler';
-const MAX_RUNS = Math.max(0, Number(process.env.DEEP_ENRICH_APIFY_MAX_RUNS || 60));
-const MAX_PAGES = Math.max(3, Number(process.env.DEEP_ENRICH_APIFY_MAX_PAGES || 12));
+const MAX_RUNS = Math.max(0, Number(process.env.DEEP_ENRICH_APIFY_MAX_RUNS || 120));
+const MAX_PAGES = Math.max(3, Number(process.env.DEEP_ENRICH_APIFY_MAX_PAGES || 20));
 const MIN_TABS = Math.max(3, Math.min(9, Number(process.env.DEEP_ENRICH_MIN_TABS || 8)));
 const REFRESH_DAYS = Math.max(1, Number(process.env.DEEP_ENRICH_APIFY_REFRESH_DAYS || 2));
 const TIMEOUT_MS = Math.max(30000, Number(process.env.DEEP_ENRICH_APIFY_TIMEOUT_MS || 120000));
@@ -170,8 +170,8 @@ async function apifyCrawl(event) {
     startUrls: starts,
     crawlerType: 'playwright:adaptive',
     includeUrlGlobs: relevantGlobs(url),
-    maxCrawlDepth: 1,
-    maxCrawlPages: MAX_PAGES,
+    maxCrawlDepth: event.relevance_reason === 'popular_category_priority' ? 2 : 1,
+    maxCrawlPages: event.relevance_reason === 'popular_category_priority' ? Math.max(MAX_PAGES, 20) : MAX_PAGES,
     useSitemaps: false,
     respectRobotsTxtFile: true,
     proxyConfiguration: { useApifyProxy: true },
@@ -271,8 +271,11 @@ async function enrichOne(db, event) {
   const rows = await db.execute({ sql: `SELECT * FROM extracted_conferences WHERE source_url IN (?,?) LIMIT 1`, args: [url, String(event.canonical_url || url)] });
   const existing = rows.rows?.[0] || null;
   const oldMeta = safeJson(existing?.extraction_metadata, {});
+  const priority = event.relevance_reason === 'popular_category_priority' || oldMeta?.hard_crawl_priority === true;
   if (countStated(oldMeta) >= MIN_TABS) return { skip: 'already-rich' };
-  if (attemptedRecently(oldMeta)) return { skip: 'recent-attempt' };
+  // Priority Popular Search targets are retried until they reach the quality bar instead of
+  // sitting thin for two days after one timeout/partial crawl.
+  if (attemptedRecently(oldMeta) && !priority) return { skip: 'recent-attempt' };
 
   const pages = (await apifyCrawl(event)).filter((page) => pageMatchesEventEdition(page, event));
   if (!pages.length) {
@@ -360,7 +363,7 @@ async function main() {
   try {
     const tables = await db.execute(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('discovery_events','extracted_conferences')`);
     if ((tables.rows || []).length < 2) { console.log('[apify-tab-fill] schema unavailable; skipping'); return; }
-    const result = await db.execute(`SELECT id,title,organizer,official_url,canonical_url,registration_url,submission_url,start_date,status FROM discovery_events WHERE status='published' AND COALESCE(official_url,canonical_url) IS NOT NULL ORDER BY CASE WHEN start_date IS NULL THEN 1 ELSE 0 END,start_date ASC,title ASC`);
+    const result = await db.execute(`SELECT id,title,organizer,official_url,canonical_url,registration_url,submission_url,start_date,status,relevance_reason FROM discovery_events WHERE status='published' AND COALESCE(official_url,canonical_url) IS NOT NULL ORDER BY CASE WHEN relevance_reason='popular_category_priority' THEN 0 ELSE 1 END, CASE WHEN start_date IS NULL THEN 1 ELSE 0 END,start_date ASC,title ASC`);
     let runs = 0, enriched = 0, skipped = 0, empty = 0, failed = 0;
     console.log(`[apify-tab-fill] starting candidates=${result.rows?.length || 0} max_runs=${MAX_RUNS} max_pages=${MAX_PAGES} min_tabs=${MIN_TABS} actor=${ACTOR.replace('~','/')}`);
     for (const event of result.rows || []) {
