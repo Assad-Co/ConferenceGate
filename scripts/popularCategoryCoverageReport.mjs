@@ -32,8 +32,7 @@ function sectionFilled(kind,value){
   ].some(meaningful);
   if(kind==='fees') return meaningful(value?.pricing_text)||meaningful(value?.early_bird_deadline)||
     (Array.isArray(value?.registration_fees)&&value.registration_fees.some(meaningful));
-  if(kind==='program') return
-    (Array.isArray(value?.sessions)&&value.sessions.some(meaningful))||
+  if(kind==='program') return (Array.isArray(value?.sessions)&&value.sessions.some(meaningful))||
     (Array.isArray(value?.themes)&&value.themes.some(meaningful));
   if(kind==='speakers') return Array.isArray(value)&&value.some((x)=>meaningful(x?.name||x?.full_name));
   if(kind==='committee') return Array.isArray(value)&&value.some((x)=>meaningful(x?.name||x?.full_name));
