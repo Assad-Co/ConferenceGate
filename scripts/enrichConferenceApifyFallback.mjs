@@ -298,8 +298,10 @@ async function enrichOne(db, event) {
   const availability = { ...(oldMeta?.section_availability || {}), overview: 'stated' };
   for (const section of Object.keys(SECTION_PATTERNS)) {
     const note = sectionFromPages(pages, section, event);
-    notes[section] = note || null;
-    availability[section] = note ? 'stated' : 'not_announced';
+    // A generic reader may add evidence, but a timeout/missing excerpt must never downgrade
+    // structured authoritative content that is already stored for this section.
+    notes[section] = note || notes[section] || oldMeta?.section_notes?.[section] || null;
+    availability[section] = note ? 'stated' : (availability[section] || 'not_announced');
   }
 
   const main = pages[0];
@@ -321,15 +323,15 @@ async function enrichOne(db, event) {
     image_url: hero || oldOverview.image_url || null,
   });
   const cfp = mergeObject(oldCfp, submissionUrl ? { submission_url: submissionUrl } : {});
-  const program = mergeObject(oldProgram, { overview: notes.agenda || null });
+  const program = mergeObject(oldProgram, { overview: oldProgram.overview || notes.agenda || null });
   if (!Array.isArray(program.sessions)) program.sessions = [];
   if (!Array.isArray(program.themes)) program.themes = [];
-  const venue = mergeObject(oldVenue, { accommodation: notes.venue || oldVenue.accommodation || null });
+  const venue = mergeObject(oldVenue, { accommodation: oldVenue.accommodation || notes.venue || null });
   const fees = mergeObject(oldFees, {
     ...(registrationUrl ? { registration_url: registrationUrl } : {}),
-    pricing_text: notes.fees || null,
+    pricing_text: oldFees.pricing_text || notes.fees || null,
   });
-  const community = mergeObject(oldCommunity, { overview: notes.community || null });
+  const community = mergeObject(oldCommunity, { overview: oldCommunity.overview || notes.community || null });
 
   const meta = {
     ...oldMeta,

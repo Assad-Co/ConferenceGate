@@ -267,6 +267,8 @@ export interface ExtractedConferenceDetails {
   contactEmail: string | null;
   contactPhone: string | null;
   socialLinks: Array<{ platform: string; url: string }>;
+  /** Clean, curated networking/community summary. Raw crawler prose is never mapped here. */
+  communitySummary?: string | null;
   awards: Array<{ name: string; description: string | null }>;
   provenance: Record<string, FieldProvenance>;
   conflicts: ExtractionConflict[];
@@ -331,6 +333,7 @@ const EMPTY_EXTRACTION: ExtractedConferenceDetails = {
   contactEmail: null,
   contactPhone: null,
   socialLinks: [],
+  communitySummary: null,
   awards: [],
   provenance: {},
   conflicts: [],
@@ -465,6 +468,10 @@ function normalizeTabbedExtraction(data: any): ExtractedConferenceDetails {
     travelAdvisory: venue.travel_advisory ?? data?.travelAdvisory ?? null,
     travelAdvisorySource: venue.travel_advisory_source ?? data?.travelAdvisorySource ?? null,
     socialLinks: community.social_media ?? data?.socialLinks ?? [],
+    communitySummary:
+      typeof community.summary === 'string' && community.summary.trim()
+        ? community.summary.trim()
+        : null,
   };
 }
 

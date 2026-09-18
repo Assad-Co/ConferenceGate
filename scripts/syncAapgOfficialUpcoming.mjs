@@ -6,6 +6,7 @@ import path from 'node:path';
 const CALENDAR = 'https://www.aapg.org/events/calendar/';
 const AAPG_ORGANIZER = 'American Association of Petroleum Geologists (AAPG)';
 const AAPG_MARK = '/aapg-organizer.svg';
+const AAPG_LINKEDIN = 'https://www.linkedin.com/company/aapg-corporate';
 
 function stableId(prefix, value) {
   return prefix + '_' + createHash('sha1').update(String(value || '')).digest('hex').slice(0, 24);
@@ -104,12 +105,13 @@ const EVENTS = [
     organizer:'AAPG Rocky Mountain Section',
     description:'2026 Rocky Mountain Section AAPG Annual Meeting covering hydrocarbons, unconventional resources, structural geology, stratigraphy, geophysics, rock mechanics and related regional geoscience topics.',
     categories:['Petroleum & Geoscience','Energy','Engineering','Science'],
-    cfp:{status:'Open / official call available',submission_url:'https://www.rms-aapg2026.com/'},
+    cfp:{status:'Closed — abstract deadline was 1 September 2026',abstract_submission_deadline:'2026-09-01',submission_url:'https://www.rms-aapg2026.com/conference-program',submission_guidelines:'The official technical program states that abstracts were accepted through 1 September 2026 with no deadline extension.'},
     speakers:[person('Carlotta B. Chernoff','ConocoPhillips','All Convention Luncheon Keynote'),person('Johnny MacLean','Montana Tech','Opening Night Keynote')],
     sponsors:[sponsor('Neset Consulting'),sponsor('RevoChem Fingerprinting')],
-    agenda:{overview:'Annual meeting program includes technical sessions, poster/core sessions, keynote events and dedicated student and early-career activities.'},
-    venueInfo:{venue_name:'Butte, Montana',address:'Butte, Montana, United States'},
-    community:{overview:'Official conference page highlights student and young professional events and expanded support for early-career professionals.'}
+    agenda:{overview:'Annual meeting program includes technical sessions, poster/core sessions, keynote events and dedicated student and early-career activities.',themes:['Energy geosciences','Critical minerals','Rocky Mountain geology','Tight reservoirs','Structural geology and stratigraphy']},
+    fees:{registration_url:'https://www.rms-aapg2026.com/conference-registration',registration_fees:[fee('Professional Early Bird',300,'USD',null,'2026-09-24'),fee('Professional Regular',400),fee('Student Early Bird',50,'USD',null,'2026-09-24'),fee('Student Regular',90)],pricing_text:'The official RMS-AAPG registration page lists professional early-bird registration at $300 through 24 September 2026 and $400 afterward; student rates are $50 early bird and $90 regular. Full conference packages include break refreshments, exhibit-floor access and networking events.'},
+    venueInfo:{venue_name:'Montana Tech / Butte',address:'Butte, Montana, United States'},
+    community:{overview:'Official conference information highlights networking events plus dedicated student and young-professional activities.'}
   },
   {
     key:'esaapg-2026',
@@ -264,9 +266,28 @@ const EVENTS = [
     organizer:'AAPG / Indonesian Petroleum Association (IPA)',
     description:'AAPG International Conference & Exhibition 2026 in Jakarta, bringing together a global geoscience and energy audience for technical exchange, regional exploration and an exhibition.',
     categories:['Petroleum & Geoscience','Energy','Engineering','Science'],
-    agenda:{overview:'AAPG flagship international conference and exhibition with a multidisciplinary technical program, regional exploration focus, exhibition and networking.'},
-    venueInfo:{venue_name:'Jakarta, Indonesia',address:'Jakarta, Indonesia'},
-    community:{overview:'Global conference and exhibition connecting technical professionals, companies and geoscience leaders from many countries.'}
+    agenda:{overview:'AAPG flagship international conference and exhibition with a multidisciplinary technical program, regional exploration focus, exhibition and networking.',themes:['Exploration and development','Petroleum technologies','CCUS','Digitalization','Offshore energy','Unconventional resources']},
+    committee:[
+      person('Herman Darman','Pertamina','Program Committee'),person('Leonardus Tjahjadi','Independent','Program Committee'),
+      person('Redo Waworuntu','Medco','Program Committee'),person('Keyu Liu','China University of Petroleum','Program Committee'),
+      person('Minarwan','Conrad','Program Committee'),person('Enry Horas Sihombing','ExxonMobil','Program Committee'),
+      person('Sarawute Chantraprasert','PTTEP','Program Committee'),person('Dwandari Ralanarko','Pertamina','Program Committee'),
+      person('Sandip Kumar Roy','Independent','Program Committee'),person('Mellinda Arisandy','Petronas','Program Committee'),
+      person('Prashant Chaturvedi','PDO','Program Committee'),person("Albertus 'Angga' Pradipta",'BP','Program Committee'),
+      person('Hade Maulin','Pertamina','Program Committee'),person('Meor Hakif','GSM','Program Committee'),
+      person('Karthikeyan','Shell','Program Committee'),person('Rosanele Romero','Wood Mackenzie','Program Committee'),
+      person('Clare Barker-White','S&P','Program Committee'),person('Reny Samsu','Independent','Program Committee'),
+      person('Grandika Primadani','S&P','Program Committee'),person('Sau Hooi Yee','Petronas','Program Committee'),
+      person('K.L. Chong','TGS-Malaysia','Program Committee'),person('Irnisha Gheamarsa','PT Geoservices','Program Committee')
+    ],
+    fees:{registration_url:'https://iceevent.org/2026/registration-information/',early_bird_deadline:'2026-10-08',registration_fees:[
+      fee('Member — Early',745),fee('Member — Mid',845),fee('Member — Onsite',945),
+      fee('Nonmember — Early',845),fee('Nonmember — Mid',945),fee('Nonmember — Onsite',1045),
+      fee('Domestic Indonesian Resident',505),fee('Young Professional Member — Early',135),
+      fee('Student Member — Early',95),fee('Student Nonmember — Early',115),fee('Exhibition Only — Three Days',295)
+    ],pricing_text:'ICE 2026 publishes early, mid and onsite rates. Early registration runs through 8 October 2026; mid rates run 9 October–19 November; onsite rates begin 20 November.'},
+    venueInfo:{venue_name:'Nusantara International Convention Exhibition (NICE)',address:'Jakarta, Indonesia'},
+    community:{overview:'ICE 2026 is a global conference and exhibition designed for technical exchange and networking across operators, investors, governments, academia and technology organizations.'}
   },
   {
     key:'groundwater-ml-lecture-2026',
@@ -341,6 +362,27 @@ function canonicalSectionAvailability(event, existingMeta) {
     community: sectionState(event.community, reviewedFallback('community','community')),
   };
 }
+function publicVisibleTabCount({cfp,program,speakers,committee,sponsors,venue,fees,community}) {
+  let count = 1; // Overview
+  const cfpFields = [
+    cfp?.status, cfp?.abstract_submission_deadline, cfp?.notification_date,
+    cfp?.submission_guidelines, cfp?.submission_format, cfp?.length_limit,
+    cfp?.review_process, cfp?.publication_information,
+    ...(Array.isArray(cfp?.topics_tracks) ? cfp.topics_tracks : []),
+  ];
+  if (cfpFields.some(hasValue)) count += 1;
+  if ((Array.isArray(program?.sessions) && program.sessions.some(hasValue)) ||
+      (Array.isArray(program?.themes) && program.themes.some(hasValue))) count += 1;
+  if (Array.isArray(speakers) && speakers.some((entry)=>hasValue(entry?.name || entry?.full_name))) count += 1;
+  if (Array.isArray(committee) && committee.some((entry)=>hasValue(entry?.name || entry?.full_name))) count += 1;
+  if (Array.isArray(sponsors) && sponsors.some((entry)=>hasValue(entry?.name) && hasValue(entry?.logo_url || entry?.logoUrl))) count += 1;
+  if ([venue?.venue_name,venue?.address,venue?.accommodation,venue?.travel_information,...(Array.isArray(venue?.hotels)?venue.hotels:[])].some(hasValue)) count += 1;
+  if (hasValue(fees?.pricing_text) || hasValue(fees?.early_bird_deadline) ||
+      (Array.isArray(fees?.registration_fees) && fees.registration_fees.some(hasValue))) count += 1;
+  if (hasValue(community?.summary) ||
+      (Array.isArray(community?.social_media) && community.social_media.some(hasValue))) count += 1;
+  return count;
+}
 function eventYear(e) { return e.year || (e.start ? Number(e.start.slice(0,4)) : null); }
 function eventMonth(e) { return e.month || (e.start ? Number(e.start.slice(5,7)) : null); }
 
@@ -368,7 +410,7 @@ async function main() {
              )`,
       args:[today]
     });
-    let synced=0, deduped=0, rich6=0;
+    let synced=0, deduped=0, publicReady6=0;
     for (const e of EVENTS) {
       const normalized=normalizeTitle(e.title);
       const year=eventYear(e);
@@ -443,10 +485,19 @@ async function main() {
       const sponsors=Array.isArray(e.sponsors) && e.sponsors.length ? e.sponsors : oldSponsors;
       const venue=e.venueInfo ? {...oldVenue,...e.venueInfo} : (e.venue ? {...oldVenue,venue_name:e.venue,address:oldVenue.address || locationText} : oldVenue);
       const fees=e.fees ? {...oldFees,...e.fees} : oldFees;
-      const community=e.community ? {...oldCommunity,...e.community} : oldCommunity;
+      const communityBase=e.community ? {...oldCommunity,...e.community} : {...oldCommunity};
+      const community={
+        ...communityBase,
+        ...(e.community?.overview ? {summary:e.community.overview} : {}),
+        social_media:Array.isArray(communityBase.social_media) && communityBase.social_media.length
+          ? communityBase.social_media
+          : [{platform:'LinkedIn',url:AAPG_LINKEDIN}]
+      };
       const availability=canonicalSectionAvailability(e,oldMeta);
+      availability.community='stated';
       const stated=Object.values(availability).filter((v)=>v==='stated').length;
-      if (stated>=6) rich6 += 1;
+      const publicTabs=publicVisibleTabCount({cfp,program,speakers,committee,sponsors,venue,fees,community});
+      if (publicTabs>=6) publicReady6 += 1;
       const sectionNotes={
         ...(oldMeta?.section_notes || {}),
         call_for_papers:e.cfp?.submission_guidelines || null,
@@ -470,7 +521,7 @@ async function main() {
         section_availability:availability,
         section_notes:sectionNotes,
         authoritative_aapg_sync_at:now,
-        tabs_filled:stated,
+        tabs_filled:publicTabs,
         tabs_total:9
       };
 
@@ -529,7 +580,7 @@ async function main() {
       });
       synced += 1;
     }
-    console.log('[aapg-authoritative] synced='+synced+' deduped='+deduped+' archived_past='+(archived.rowsAffected || 0)+' rich_6plus_tabs='+rich6+' total_manifest='+EVENTS.length);
+    console.log('[aapg-authoritative] synced='+synced+' deduped='+deduped+' archived_past='+(archived.rowsAffected || 0)+' public_ready_6plus='+publicReady6+' total_manifest='+EVENTS.length);
   } catch (error) {
     console.warn('[aapg-authoritative] failed:',error?.message || error);
   } finally {
