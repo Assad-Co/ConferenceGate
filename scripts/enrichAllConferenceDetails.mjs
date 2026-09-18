@@ -328,8 +328,10 @@ async function enrichEvent(db, event) {
   const availability = { ...(oldMeta?.section_availability || {}) };
   for (const section of Object.keys(SECTION_PATTERNS)) {
     const note = sectionFromPages(pages, section, event);
-    notes[section] = note || null;
-    availability[section] = note ? 'stated' : 'not_announced';
+    // A generic reader may add evidence, but a timeout/missing excerpt must never downgrade
+    // structured authoritative content that is already stored for this section.
+    notes[section] = note || notes[section] || oldMeta?.section_notes?.[section] || null;
+    availability[section] = note ? 'stated' : (availability[section] || 'not_announced');
   }
   availability.overview = 'stated';
 
@@ -350,21 +352,21 @@ async function enrichEvent(db, event) {
     conference_name: oldOverview.conference_name || event.title,
     organizer: oldOverview.organizer || event.organizer || null,
     official_url: url,
-    description: description || oldOverview.description || null,
+    description: oldOverview.description || description || null,
     logo_url: logo || oldOverview.logo_url || null,
     logo_source: logo ? 'stated' : (oldOverview.logo_source || null),
     image_url: hero || oldOverview.image_url || null,
   });
   const cfp = mergeObject(oldCfp, submissionUrl ? { submission_url: submissionUrl } : {});
-  const program = mergeObject(oldProgram, { overview: notes.agenda || null });
+  const program = mergeObject(oldProgram, { overview: oldProgram.overview || notes.agenda || null });
   if (!Array.isArray(program.sessions)) program.sessions = [];
   if (!Array.isArray(program.themes)) program.themes = [];
-  const venue = mergeObject(oldVenue, { accommodation: notes.venue || oldVenue.accommodation || null });
+  const venue = mergeObject(oldVenue, { accommodation: oldVenue.accommodation || notes.venue || null });
   const fees = mergeObject(oldFees, {
     ...(registrationUrl ? { registration_url: registrationUrl } : {}),
-    pricing_text: notes.fees || null,
+    pricing_text: oldFees.pricing_text || notes.fees || null,
   });
-  const community = mergeObject(oldCommunity, { overview: notes.community || null });
+  const community = mergeObject(oldCommunity, { overview: oldCommunity.overview || notes.community || null });
 
   const meta = {
     ...oldMeta,
