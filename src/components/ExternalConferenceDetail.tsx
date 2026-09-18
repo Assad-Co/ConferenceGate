@@ -422,6 +422,12 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     if (stated) return stated;
     return data?.fetchFailed || data?.sectionsNotRead ? 'unread' : 'stated';
   };
+  useEffect(() => {
+    if (!data || activeTab === 'overview') return;
+    const section = SECTION_OF[activeTab] || activeTab;
+    if (sectionState(section) !== 'stated') setActiveTab('overview');
+  }, [data, activeTab]);
+
 
   /** What to tell the reader about a section holding nothing, given why it holds nothing. */
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
@@ -757,21 +763,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               { id: 'community', label: 'Community' },
             ] as Array<{ id: ExternalDetailTab; label: string }>
           )
-            // A tab is offered when it can answer.
-            //
-            // Four versions of this were wrong in four different ways. "(0)" asserted the
-            // conference had none. "(not retrieved)" was honest but told a visitor about our
-            // pipeline. Removing every empty tab left the page looking like the conference has no
-            // programme and no speakers at all, which is the first lie again in a worse form —
-            // and it took away the one place that could explain itself. Keeping all of them, the
-            // version this replaces, sold the reader eight rooms and left six of them apologising.
-            //
-            // What separates them is why a section is empty, which the record already knows.
-            // "stated" has something. "not_announced" is the organiser saying it is not out yet,
-            // which is an answer worth a tab and worth reading. "unread" is nobody having managed
-            // to read it — nothing to show, nothing known, and a tab that can only say so. Those
-            // are not offered; one line under the strip names them instead, so the page still
-            // never implies the conference has no speakers, and says it once rather than six times.
+            // Only render tabs that contain real stored information. ConferenceGate's Popular
+            // Search quality gate requires at least six such tabs before a conference is surfaced,
+            // so the detail page never advertises an empty "Not yet announced" room just to keep a
+            // fixed nine-tab shell.
+            .filter((tab) =>
+              tab.id === 'overview' ||
+              sectionState(SECTION_OF[tab.id] || tab.id) === 'stated'
+            )
             .map((tab) => (
             <button
               key={tab.id}
