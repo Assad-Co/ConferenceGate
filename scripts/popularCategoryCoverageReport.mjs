@@ -44,13 +44,21 @@ function sectionFilled(kind,value){
   return meaningful(value);
 }
 function sections(row){
+  const meta=safe(row.extraction_metadata,{});
+  const notes=meta?.section_notes && typeof meta.section_notes==='object' ? meta.section_notes : {};
+  const aliases={
+    cfp:['cfp','call_for_papers'],fees:['fees','fees_pricing'],program:['agenda','program_agenda'],
+    speakers:['speakers','keynote_speakers'],committee:['committee','technical_committee'],
+    sponsors:['sponsors','sponsors_exhibitors'],venue:['venue','venue_accommodation'],community:['community']
+  };
+  const noteFilled=(kind)=>kind!=='overview' && (aliases[kind]||[]).some((key)=>meaningful(notes[key]));
   const values=[
     ['overview',safe(row.overview,{})],['cfp',safe(row.call_for_papers,{})],['fees',safe(row.fees_pricing,{})],
     ['program',safe(row.program_agenda,{})],['speakers',safe(row.keynote_speakers,[])],
     ['committee',safe(row.technical_committee,[])],['sponsors',safe(row.sponsors_exhibitors,[])],
     ['venue',safe(row.venue_accommodation,{})],['community',safe(row.community,{})]
   ];
-  return values.filter(([kind,value])=>sectionFilled(kind,value)).length;
+  return values.filter(([kind,value])=>sectionFilled(kind,value)||noteFilled(kind)).length;
 }
 function logo(row){
   const overview=safe(row.overview,{});
@@ -65,7 +73,7 @@ async function main(){
   try{
     const rows=await db.execute(`SELECT de.id,de.title,de.image_url,dec.category,
       ec.overview,ec.call_for_papers,ec.fees_pricing,ec.program_agenda,ec.keynote_speakers,
-      ec.technical_committee,ec.sponsors_exhibitors,ec.venue_accommodation,ec.community
+      ec.technical_committee,ec.sponsors_exhibitors,ec.venue_accommodation,ec.community,ec.extraction_metadata
       FROM discovery_events de
       JOIN discovery_event_categories dec ON dec.event_id=de.id
       LEFT JOIN extracted_conferences ec
