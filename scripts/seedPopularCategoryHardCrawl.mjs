@@ -92,7 +92,12 @@ const SEEDS = [
   ['ASSA 2027 Annual Meeting','https://www.aeaweb.org/conference','2027-01-03','2027-01-05','Washington, D.C.','United States',['Economics','Finance','Business','Education']],
   ['AIAA SciTech Forum 2027','https://scitech.aiaa.org/','2027-01-11','2027-01-15','Orlando','United States',['Aviation & Aerospace','Engineering','Artificial Intelligence','Science']],
   ['TOKEN2049 Singapore 2026','https://token2049.com/singapore','2026-10-07','2026-10-08','Singapore','Singapore',['Blockchain & Web3','Finance','Artificial Intelligence','Business']],
-  ['EXPO REAL 2026','https://exporeal.net/en/trade-fair/','2026-10-05','2026-10-07','Munich','Germany',['Real Estate','Business','Finance','Architecture & Urbanism']]
+  ['EXPO REAL 2026','https://exporeal.net/en/trade-fair/','2026-10-05','2026-10-07','Munich','Germany',['Real Estate','Business','Finance','Architecture & Urbanism']],
+  ['MWC Shanghai 2027','https://www.mwcshanghai.com/','2027-06-23','2027-06-25','Shanghai','China',['Telecommunications','Artificial Intelligence','Software & Cloud','Semiconductors & Electronics','Business']],
+  ['ESC Congress 2027','https://www.escardio.org/events/congresses/esc-congress/future-destinations/','2027-08-27','2027-08-30','Milan','Italy',['Cardiology','Healthcare','Life Sciences','Science']],
+  ['Alzheimer’s Association International Conference 2027','https://aaic.alz.org/','2027-07-18','2027-07-21','Chicago','United States',['Neuroscience','Healthcare','Life Sciences','Public Health','Open call for papers']],
+  ['International Congress for Industrial and Applied Mathematics 2027','https://www.siam.org/conferences-events/siam-conferences/iciam27/','2027-07-12','2027-07-16','The Hague','Netherlands',['Mathematics & Statistics','Science','Engineering','Data Science']],
+  ['AAIC Neuroscience Next 2027','https://www.alz.org/neurosciencenext','2027-02-15','2027-02-18',null,null,['Virtual conferences','Neuroscience','Healthcare','Life Sciences','Education']]
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }
