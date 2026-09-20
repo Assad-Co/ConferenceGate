@@ -1237,7 +1237,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       }));
   };
 
-  const handleWizardSubmit = (e: React.FormEvent) => {
+  const handleWizardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const locationParts = newConfLocation.split(',').map((s) => s.trim());
     const city = locationParts[0] || 'TBD';
@@ -1245,7 +1245,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     const venueMatch = countryRaw.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
     const country = venueMatch ? venueMatch[1].trim() : countryRaw;
     const venue = venueMatch ? venueMatch[2].trim() : 'Venue TBD';
-    onCreateConference({
+    try {
+      const createdConference = await onCreateConference({
       title: newConfTitle || 'International Energy & Subsurface Congress 2026',
       organizerName,
       organizerLogo,
@@ -1293,13 +1294,22 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       accommodation: 'Partner Hotel Paris ($150/night).',
       travelInfo: 'Charles de Gaulle Airport (CDG).',
       communityPosts: 0,
-    });
+      });
 
-    setWizardPublished(true);
-    setTimeout(() => {
+      setWizardPublished(true);
+      setSponsorshipNeedForm((prev) => ({
+        ...prev,
+        conferenceId: createdConference.id,
+        categories: [createdConference.industry, ...(createdConference.topics || [])].filter(Boolean).join(', '),
+        regions: createdConference.location?.country || '',
+      }));
+      setTimeout(() => {
+        setWizardPublished(false);
+        setActiveTab('sponsors');
+      }, 1200);
+    } catch {
       setWizardPublished(false);
-      setActiveTab('overview');
-    }, 2000);
+    }
   };
 
   const handleBroadcast = async (e: React.FormEvent) => {
@@ -1900,7 +1910,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             {wizardPublished && (
               <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>Conference Published Successfully to Conference Gate Repository!</span>
+                <span>Conference published. Opening Sponsorship Needs next…</span>
               </div>
             )}
 
@@ -1909,7 +1919,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 type="submit"
                 className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
               >
-                Publish Conference & Open Call for Papers
+                Publish Conference & Continue to Sponsorship
               </button>
             </div>
           </form>
