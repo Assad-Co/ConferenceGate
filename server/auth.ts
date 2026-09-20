@@ -196,6 +196,14 @@ async function toPublicUser(row: UserRow) {
     avatar: row.avatar,
     identityVerified: Boolean(row.linkedin_id || row.google_id),
     identityVerificationMethod: row.linkedin_id ? "LinkedIn" : row.google_id ? "Google" : null,
+    subscriptionStatus: row.role === "professional" ? "free" : (row.subscription_status || "required"),
+    subscriptionPlan: row.subscription_plan || (row.role === "professional" ? "professional_free" : null),
+    subscriptionProvider: row.subscription_provider || null,
+    subscriptionPeriodEnd: row.subscription_period_end || null,
+    hasPaidAccess:
+      row.role === "professional" ||
+      row.subscription_status === "active" ||
+      row.subscription_status === "trialing",
     reviewerAvailable: !!row.reviewer_available,
     professionalExpertise: parseJsonArray(row.professional_expertise).filter((v) => typeof v === "string"),
     technicalSpecialization: parseJsonArray(row.technical_specialization).filter((v) => typeof v === "string"),
