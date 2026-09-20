@@ -58,6 +58,11 @@ export interface UserProfile {
   technicalSpecialization: string[];
   researchInterests: string[];
   keywords: string[];
+  /** Free professional matching preferences — persisted on the account and later searchable by organizers. */
+  preferredRegions?: string[];
+  committeeAvailable?: boolean;
+  sessionChairAvailable?: boolean;
+  speakerAvailable?: boolean;
   publications: Array<{ id: string; title: string; journal: string; year: number; doi?: string; url?: string }>;
   societies: string[];
   languages: string[];
