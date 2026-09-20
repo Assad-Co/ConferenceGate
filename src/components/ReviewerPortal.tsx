@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Award,
   CheckCircle2,
@@ -12,6 +12,9 @@ import {
   Zap,
   Filter,
   Users,
+  Search,
+  Presentation,
+  Mic2,
 } from 'lucide-react';
 import { UserProfile, ReviewOpportunity, AbstractSubmission, Conference } from '../types';
 import { ConferenceLink } from './ConferenceLink';
@@ -28,6 +31,52 @@ interface ReviewerPortalProps {
   onToggleAvailability?: () => void;
 }
 
+type OpportunityRoleFilter = 'recommended' | 'reviewer' | 'committee' | 'chair' | 'speaker';
+
+function normalizeMatchTokens(values: string[]): Set<string> {
+  const stop = new Set(['and','the','for','with','from','into','using','conference','general','track','science','engineering']);
+  const tokens = values
+    .flatMap((value) => String(value || '').toLowerCase().split(/[^a-z0-9+#.-]+/g))
+    .map((value) => value.trim())
+    .filter((value) => value.length >= 3 && !stop.has(value));
+  return new Set(tokens);
+}
+
+function opportunityMatchScore(userProfile: UserProfile, opportunity: ReviewOpportunity): number | null {
+  const profileValues = [
+    ...(userProfile.expertise || []),
+    ...(userProfile.technicalSpecialization || []),
+    ...(userProfile.researchInterests || []),
+    ...(userProfile.keywords || []),
+    ...(userProfile.reviewerInfo?.expertiseKeywords || []),
+  ];
+  const profileTokens = normalizeMatchTokens(profileValues);
+  if (profileTokens.size === 0) return null;
+
+  const required = [
+    ...(opportunity.expertiseRequired || []),
+    opportunity.topic,
+    opportunity.track,
+    opportunity.conferenceTitle,
+  ].filter(Boolean);
+  const opportunityTokens = normalizeMatchTokens(required);
+  if (opportunityTokens.size === 0) return null;
+
+  let matches = 0;
+  for (const token of opportunityTokens) {
+    if (profileTokens.has(token)) matches += 1;
+  }
+  const requiredTokens = normalizeMatchTokens(opportunity.expertiseRequired || []);
+  let requiredMatches = 0;
+  for (const token of requiredTokens) {
+    if (profileTokens.has(token)) requiredMatches += 1;
+  }
+
+  const generalRatio = matches / opportunityTokens.size;
+  const requiredRatio = requiredTokens.size ? requiredMatches / requiredTokens.size : generalRatio;
+  return Math.max(0, Math.min(100, Math.round((requiredRatio * 0.7 + generalRatio * 0.3) * 100)));
+}
+
 export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   userProfile,
   opportunities,
@@ -40,7 +89,47 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   onToggleAvailability,
 }) => {
   const [activeTab, setActiveTab] = useState<'opportunities' | 'my-reviews' | 'evaluate' | 'history'>('opportunities');
+  const [roleFilter, setRoleFilter] = useState<OpportunityRoleFilter>('recommended');
+  const [opportunitySearch, setOpportunitySearch] = useState('');
   const availableToReview = userProfile.reviewerInfo.available;
+  const atReviewCapacity =
+    (userProfile.reviewerInfo.currentLoad || 0) >= Math.max(1, userProfile.reviewerInfo.maxLoad || 5);
+
+  const rankedReviewerOpportunities = useMemo(() => {
+    const query = opportunitySearch.trim().toLowerCase();
+    return (opportunities || [])
+      .map((opportunity) => ({
+        opportunity,
+        matchScore: opportunityMatchScore(userProfile, opportunity),
+      }))
+      .filter(({ opportunity }) => {
+        if (!query) return true;
+        return [
+          opportunity.conferenceTitle,
+          opportunity.topic,
+          opportunity.track,
+          opportunity.organizerName,
+          ...(opportunity.expertiseRequired || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => {
+        if (a.matchScore === null && b.matchScore === null) return a.opportunity.conferenceTitle.localeCompare(b.opportunity.conferenceTitle);
+        if (a.matchScore === null) return 1;
+        if (b.matchScore === null) return -1;
+        return b.matchScore - a.matchScore;
+      });
+  }, [opportunities, opportunitySearch, userProfile]);
+
+  const visibleReviewerOpportunities =
+    roleFilter === 'recommended'
+      ? rankedReviewerOpportunities.filter((item) => item.matchScore === null || item.matchScore >= 35)
+      : roleFilter === 'reviewer'
+        ? rankedReviewerOpportunities
+        : [];
 
   // Every submission on the platform is fetched for other views (e.g. a reviewer's own
   // abstracts), but a paper only belongs in this reviewer's queue if an organizer actually
@@ -126,19 +215,19 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 bg-white text-blue-700 border border-blue-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <Award className="w-3.5 h-3.5 text-blue-600" />
-                Accredited Peer Reviewer Workspace
+                Professional Opportunity Network
               </span>
               <span className="px-2.5 py-1 bg-white text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Verified Reviewer
+                Professional Profile
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-              Reviewer Portal & Recognition Engine
+              Professional Opportunity Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Every verified review increases your Reviewer Kudos (+20 Kudos per completed review) and unlocks official Reviewer Badges on your profile.
+              Discover real organizer-published opportunities matched to your expertise. Reviewer opportunities are live now; committee, chair, and speaker openings will appear here when organizers publish them.
             </p>
           </div>
 
@@ -204,7 +293,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          Review Opportunities Marketplace ({opportunities.length})
+          Opportunity Center ({opportunities.length})
         </button>
         <button
           onClick={() => setActiveTab('evaluate')}
@@ -238,76 +327,212 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         </button>
       </div>
 
-      {/* Tab 1: Opportunities Marketplace */}
+      {/* Tab 1: Unified Professional Opportunity Center */}
       {activeTab === 'opportunities' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">Review Opportunity Marketplace</h2>
-            <p className="text-xs text-slate-500">
-              Browse published call for reviewers from international conference organizers. Volunteer to review abstracts in your domain of expertise.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(opportunities || []).map((opp) => (
-              <div
-                key={opp.id}
-                className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xs hover:border-blue-300 transition-all"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">
-                      {opp.track}
-                    </span>
-                    <h3 className="font-bold text-base text-slate-900 mt-1">{opp.topic}</h3>
-                    <ConferenceLink
-                      conferences={conferences}
-                      conferenceId={opp.conferenceId}
-                      conferenceTitle={opp.conferenceTitle}
-                      onSelectConference={onSelectConference}
-                      className="text-xs text-slate-500 font-medium"
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                    {opp.abstractsCount} Papers
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div>Review Period: <strong className="text-slate-800">{opp.reviewPeriod}</strong></div>
-                  <div>Organizer: <strong className="text-slate-800">{opp.organizerName}</strong></div>
-                  <div>Expected Workload: <strong className="text-slate-800">{opp.expectedWorkload}</strong></div>
-                </div>
-
-                <div className="flex flex-wrap gap-1 text-[10px] font-semibold text-slate-600">
-                  {(opp.expertiseRequired || []).map((exp, idx) => (
-                    <span key={idx} className="px-2 py-0.5 bg-slate-100 rounded-md">
-                      #{exp}
-                    </span>
-                  ))}
-                </div>
-
-                {volunteeredOpportunityIds.includes(opp.id) ? (
-                  <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>
-                      {volunteerSuccess === opp.id
-                        ? `Volunteered! Added to the Reviewer Pool for ${opp.organizerName}.`
-                        : 'You volunteered for this opportunity.'}
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleVolunteer(opp)}
-                    className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Volunteer as Reviewer</span>
-                  </button>
-                )}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Professional Opportunity Center</h2>
+                <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+                  ConferenceGate only shows opportunities that an organizer actually publishes. Your stored expertise
+                  is used to rank reviewer opportunities; no committee, chair, or speaker vacancy is inferred from a conference page.
+                </p>
               </div>
-            ))}
+              <div className="relative w-full lg:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  value={opportunitySearch}
+                  onChange={(event) => setOpportunitySearch(event.target.value)}
+                  placeholder="Search topic, expertise, conference..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'recommended', label: 'Recommended for You', icon: Sparkles },
+                { id: 'reviewer', label: 'Reviewer', icon: Award },
+                { id: 'committee', label: 'Technical Committee', icon: Users },
+                { id: 'chair', label: 'Session Chair', icon: Presentation },
+                { id: 'speaker', label: 'Speaker / Keynote', icon: Mic2 },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setRoleFilter(item.id as OpportunityRoleFilter)}
+                    className={`px-3 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      roleFilter === item.id
+                        ? 'bg-blue-900 text-white border-blue-900'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Reviewer Status</div>
+                <div className={`text-xs font-extrabold mt-1 ${availableToReview ? 'text-emerald-700' : 'text-slate-600'}`}>
+                  {availableToReview ? 'Available' : 'Not available'}
+                </div>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Review Capacity</div>
+                <div className={`text-xs font-extrabold mt-1 ${atReviewCapacity ? 'text-amber-700' : 'text-slate-900'}`}>
+                  {userProfile.reviewerInfo.currentLoad || 0} / {userProfile.reviewerInfo.maxLoad || 5} active
+                </div>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Committee</div>
+                <div className={`text-xs font-extrabold mt-1 ${userProfile.committeeAvailable ? 'text-emerald-700' : 'text-slate-600'}`}>
+                  {userProfile.committeeAvailable ? 'Available' : 'Not available'}
+                </div>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Chair / Speaker</div>
+                <div className="text-xs font-extrabold mt-1 text-slate-900">
+                  {userProfile.sessionChairAvailable ? 'Chair ✓' : 'Chair —'} · {userProfile.speakerAvailable ? 'Speaker ✓' : 'Speaker —'}
+                </div>
+              </div>
+            </div>
           </div>
+
+          {(roleFilter === 'recommended' || roleFilter === 'reviewer') && (
+            visibleReviewerOpportunities.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visibleReviewerOpportunities.map(({ opportunity: opp, matchScore }) => (
+                  <div
+                    key={opp.id}
+                    className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xs hover:border-blue-300 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">
+                            Reviewer
+                          </span>
+                          {matchScore !== null ? (
+                            <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md ${
+                              matchScore >= 70
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : matchScore >= 35
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {matchScore}% profile match
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                              Add expertise to calculate match
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-base text-slate-900 mt-2">{opp.topic}</h3>
+                        <ConferenceLink
+                          conferences={conferences}
+                          conferenceId={opp.conferenceId}
+                          conferenceTitle={opp.conferenceTitle}
+                          onSelectConference={onSelectConference}
+                          className="text-xs text-slate-500 font-medium"
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                        {opp.abstractsCount} Papers
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div>Review Period: <strong className="text-slate-800">{opp.reviewPeriod}</strong></div>
+                      <div>Organizer: <strong className="text-slate-800">{opp.organizerName}</strong></div>
+                      <div>Expected Workload: <strong className="text-slate-800">{opp.expectedWorkload}</strong></div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 text-[10px] font-semibold text-slate-600">
+                      {(opp.expertiseRequired || []).map((exp, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-slate-100 rounded-md">#{exp}</span>
+                      ))}
+                    </div>
+
+                    {volunteeredOpportunityIds.includes(opp.id) ? (
+                      <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>
+                          {volunteerSuccess === opp.id
+                            ? `Volunteered! Added to the Reviewer Pool for ${opp.organizerName}.`
+                            : 'You volunteered for this opportunity.'}
+                        </span>
+                      </div>
+                    ) : !availableToReview ? (
+                      <div className="p-2.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+                        Turn on <strong>Available to Review</strong> above before volunteering.
+                      </div>
+                    ) : atReviewCapacity ? (
+                      <div className="p-2.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+                        You are at your selected maximum active review load.
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleVolunteer(opp)}
+                        className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Volunteer as Reviewer</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+                <Filter className="w-7 h-7 text-slate-300 mx-auto mb-2" />
+                <h3 className="font-bold text-sm text-slate-800">
+                  {roleFilter === 'recommended' ? 'No matching reviewer opportunities yet' : 'No reviewer opportunities found'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {roleFilter === 'recommended'
+                    ? 'Add more expertise to your Professional Matching Profile or check all Reviewer opportunities.'
+                    : 'Try a different search term or check again when organizers publish new calls for reviewers.'}
+                </p>
+              </div>
+            )
+          )}
+
+          {roleFilter === 'committee' && (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Users className="w-8 h-8 text-indigo-300 mx-auto mb-3" />
+              <h3 className="font-bold text-sm text-slate-900">No organizer-published Technical Committee openings yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                Your committee availability is {userProfile.committeeAvailable ? 'ON' : 'OFF'}. ConferenceGate will list a role here only after an organizer explicitly publishes that committee need.
+              </p>
+            </div>
+          )}
+
+          {roleFilter === 'chair' && (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Presentation className="w-8 h-8 text-violet-300 mx-auto mb-3" />
+              <h3 className="font-bold text-sm text-slate-900">No organizer-published Session Chair openings yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                Your Session Chair availability is {userProfile.sessionChairAvailable ? 'ON' : 'OFF'}. Openings will appear only when the organizer publishes them.
+              </p>
+            </div>
+          )}
+
+          {roleFilter === 'speaker' && (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Mic2 className="w-8 h-8 text-rose-300 mx-auto mb-3" />
+              <h3 className="font-bold text-sm text-slate-900">No organizer-published Speaker / Keynote openings yet</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                Your Speaker / Keynote availability is {userProfile.speakerAvailable ? 'ON' : 'OFF'}. ConferenceGate does not infer speaking vacancies from ordinary conference pages.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
