@@ -1,4 +1,4 @@
-import { AbstractSubmission, Conference, NotificationItem, ReviewOpportunity } from '../types';
+import { AbstractSubmission, Conference, NotificationItem, ReviewOpportunity, ProfessionalOpportunity } from '../types';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
@@ -121,6 +121,58 @@ export async function fetchReviewOpportunities(): Promise<ReviewOpportunity[]> {
   const res = await fetch('/api/activity/review-opportunities', { credentials: 'include' });
   const data = await parseResponse(res);
   return data.opportunities;
+}
+
+export async function fetchProfessionalOpportunities(): Promise<ProfessionalOpportunity[]> {
+  const res = await fetch('/api/activity/professional-opportunities', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.opportunities;
+}
+
+export async function fetchMyProfessionalOpportunityInterestIds(): Promise<string[]> {
+  const res = await fetch('/api/activity/professional-opportunities/interests/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.opportunityIds;
+}
+
+export async function setProfessionalOpportunityInterest(opportunityId: string, interested: boolean): Promise<boolean> {
+  const res = await fetch(`/api/activity/professional-opportunities/${opportunityId}/interest`, {
+    method: interested ? 'POST' : 'DELETE',
+    credentials: 'include',
+  });
+  const data = await parseResponse(res);
+  return Boolean(data.interested);
+}
+
+export interface PublishProfessionalOpportunityPayload {
+  conferenceId: string;
+  roleType: 'committee' | 'chair' | 'speaker';
+  title: string;
+  description?: string;
+  expertiseRequired?: string[];
+  preferredRegions?: string[];
+  deadline?: string;
+}
+
+export async function publishProfessionalOpportunity(
+  payload: PublishProfessionalOpportunityPayload
+): Promise<ProfessionalOpportunity> {
+  const res = await fetch('/api/activity/professional-opportunities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.opportunity;
+}
+
+export async function closeProfessionalOpportunity(id: string): Promise<void> {
+  const res = await fetch(`/api/activity/professional-opportunities/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  await parseResponse(res);
 }
 
 export interface PublishReviewOpportunityPayload {
