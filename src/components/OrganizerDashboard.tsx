@@ -2675,7 +2675,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                               {pkg.priceText ? (
                                 <>
                                   <div className={`font-extrabold text-sm ${c.price}`}>{pkg.priceText}</div>
-                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Published</div>
+                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Published price</div>
                                 </>
                               ) : (
                                 <>
