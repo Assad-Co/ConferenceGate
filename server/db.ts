@@ -131,6 +131,36 @@ export async function initDb(): Promise<void> {
     existingColumns = await tableColumns("users");
   }
 
+  // Phase 1 professional matching profile. These are persisted now so Phase 2 organizer search
+  // can match real professionals without relying on client-only profile fields.
+  const PROFESSIONAL_TEXT_COLUMNS = [
+    ["professional_expertise", "TEXT NOT NULL DEFAULT '[]'"],
+    ["technical_specialization", "TEXT NOT NULL DEFAULT '[]'"],
+    ["research_interests", "TEXT NOT NULL DEFAULT '[]'"],
+    ["preferred_regions", "TEXT NOT NULL DEFAULT '[]'"],
+  ] as const;
+  for (const [col, definition] of PROFESSIONAL_TEXT_COLUMNS) {
+    if (!existingColumns.some((c) => c.name === col)) {
+      await db.executeMultiple(`ALTER TABLE users ADD COLUMN ${col} ${definition};`);
+      existingColumns = await tableColumns("users");
+    }
+  }
+  const PROFESSIONAL_BOOLEAN_COLUMNS = [
+    "committee_available",
+    "session_chair_available",
+    "speaker_available",
+  ] as const;
+  for (const col of PROFESSIONAL_BOOLEAN_COLUMNS) {
+    if (!existingColumns.some((c) => c.name === col)) {
+      await db.executeMultiple(`ALTER TABLE users ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0;`);
+      existingColumns = await tableColumns("users");
+    }
+  }
+  if (!existingColumns.some((c) => c.name === "reviewer_max_load")) {
+    await db.executeMultiple("ALTER TABLE users ADD COLUMN reviewer_max_load INTEGER NOT NULL DEFAULT 5;");
+    existingColumns = await tableColumns("users");
+  }
+
   // Real tracked activity: submissions, peer reviews, reviewer volunteering, and
   // conference registrations — replaces the earlier client-only mock/placeholder data.
   await db.executeMultiple(`
@@ -487,6 +517,14 @@ export interface UserRow {
   linkedin_id: string | null;
   avatar: string | null;
   reviewer_available: number;
+  professional_expertise: string;
+  technical_specialization: string;
+  research_interests: string;
+  preferred_regions: string;
+  committee_available: number;
+  session_chair_available: number;
+  speaker_available: number;
+  reviewer_max_load: number;
   created_at: string;
 }
 
