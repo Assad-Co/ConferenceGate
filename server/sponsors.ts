@@ -12,6 +12,8 @@ import {
   SponsorshipNeedInquiryRow,
   SponsorshipDealRow,
   SponsorshipDealUpdateRow,
+  SponsorRequestRow,
+  SponsorRequestResponseRow,
   CreatedConferenceRow,
   UserRow,
 } from "./db";
@@ -739,6 +741,207 @@ sponsorsRouter.post(
         createdAt: row.created_at,
       },
     });
+  })
+);
+
+function toSponsorRequestDTO(row: SponsorRequestRow, sponsorName = "", responseCount = 0) {
+  return {
+    id: row.id,
+    sponsorId: row.sponsor_id,
+    sponsorName,
+    title: row.title,
+    description: row.description || "",
+    categories: safeJson(row.categories, []),
+    regions: safeJson(row.regions, []),
+    opportunityTypes: safeJson(row.opportunity_types, []),
+    budgetMin: row.budget_min,
+    budgetMax: row.budget_max,
+    targetAudience: row.target_audience || "",
+    startDate: row.start_date,
+    endDate: row.end_date,
+    status: row.status,
+    responseCount,
+    createdAt: row.created_at,
+  };
+}
+
+// Reverse marketplace: paid sponsors publish the types of conferences they want to support.
+sponsorsRouter.post(
+  "/requests",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    if (!["active","trialing"].includes(sponsor.subscription_status || "")) {
+      return res.status(402).json({ error: "Sponsor Pro subscription required." });
+    }
+    const body = req.body || {};
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return res.status(400).json({ error: "Request title is required." });
+    }
+    const budgetMin = body.budgetMin === null || body.budgetMin === "" || body.budgetMin === undefined ? null : Number(body.budgetMin);
+    const budgetMax = body.budgetMax === null || body.budgetMax === "" || body.budgetMax === undefined ? null : Number(body.budgetMax);
+    if (budgetMin !== null && (!Number.isFinite(budgetMin) || budgetMin < 0)) return res.status(400).json({ error: "Invalid minimum budget." });
+    if (budgetMax !== null && (!Number.isFinite(budgetMax) || budgetMax < 0)) return res.status(400).json({ error: "Invalid maximum budget." });
+    if (budgetMin !== null && budgetMax !== null && budgetMin > budgetMax) return res.status(400).json({ error: "Minimum budget cannot exceed maximum budget." });
+
+    const id = `sreq_${crypto.randomUUID()}`;
+    await dbRun(
+      `INSERT INTO sponsor_requests(
+        id,sponsor_id,title,description,categories,regions,opportunity_types,budget_min,budget_max,
+        target_audience,start_date,end_date,status
+      ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'active')`,
+      [
+        id,
+        req.userId!,
+        body.title.trim(),
+        typeof body.description === "string" ? body.description.trim() || null : null,
+        JSON.stringify(cleanStringList(body.categories)),
+        JSON.stringify(cleanStringList(body.regions,20)),
+        JSON.stringify(cleanStringList(body.opportunityTypes,20)),
+        budgetMin,
+        budgetMax,
+        typeof body.targetAudience === "string" ? body.targetAudience.trim() || null : null,
+        typeof body.startDate === "string" ? body.startDate.trim() || null : null,
+        typeof body.endDate === "string" ? body.endDate.trim() || null : null,
+      ]
+    );
+    const row = (await dbGet<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE id=?", [id]))!;
+    res.status(201).json({ request: toSponsorRequestDTO(row, sponsor.organization || sponsor.name) });
+  })
+);
+
+sponsorsRouter.get(
+  "/requests/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const rows = await dbAll<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE sponsor_id=? ORDER BY created_at DESC", [req.userId!]);
+    const result = [];
+    for (const row of rows) {
+      const count = await dbGet<{ count: number }>("SELECT COUNT(*) as count FROM sponsor_request_responses WHERE request_id=?", [row.id]);
+      result.push(toSponsorRequestDTO(row, sponsor.organization || sponsor.name, count?.count || 0));
+    }
+    res.json({ requests: result });
+  })
+);
+
+sponsorsRouter.get(
+  "/requests/board",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
+      return res.status(402).json({ error: "Organizer Pro subscription required." });
+    }
+    const rows = await dbAll<any>(
+      `SELECT r.*,u.name as sponsor_name,u.organization as sponsor_organization
+         FROM sponsor_requests r JOIN users u ON u.id=r.sponsor_id
+        WHERE r.status='active'
+          AND (r.end_date IS NULL OR r.end_date='' OR date(r.end_date)>=date('now'))
+        ORDER BY r.created_at DESC`
+    );
+    res.json({
+      requests: rows.map((row: any) => toSponsorRequestDTO(row, row.sponsor_organization || row.sponsor_name)),
+    });
+  })
+);
+
+sponsorsRouter.post(
+  "/requests/:id/respond",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
+      return res.status(402).json({ error: "Organizer Pro subscription required." });
+    }
+    const request = await dbGet<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE id=? AND status='active'", [req.params.id]);
+    if (!request) return res.status(404).json({ error: "Sponsor request not found." });
+    const conferenceId = typeof req.body?.conferenceId === "string" ? req.body.conferenceId : "";
+    if (!conferenceId) return res.status(400).json({ error: "conferenceId is required." });
+    const conference = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id=? AND organizer_id=?", [conferenceId, req.userId!]);
+    if (!conference) return res.status(404).json({ error: "Conference not found." });
+    const conf = safeJson(conference.data, {});
+    const existing = await dbGet<SponsorRequestResponseRow>(
+      "SELECT * FROM sponsor_request_responses WHERE request_id=? AND organizer_id=? AND conference_id=?",
+      [request.id, req.userId!, conferenceId]
+    );
+    if (existing) return res.json({ response: existing, alreadyExists: true });
+
+    const id = `srsp_${crypto.randomUUID()}`;
+    await dbRun(
+      "INSERT INTO sponsor_request_responses(id,request_id,organizer_id,conference_id,conference_title,message,status) VALUES(?,?,?,?,?,?,'new')",
+      [
+        id,
+        request.id,
+        req.userId!,
+        conferenceId,
+        conf.title || conference.id,
+        typeof req.body?.message === "string" ? req.body.message.trim() || null : null,
+      ]
+    );
+    await createNotification(
+      request.sponsor_id,
+      "sponsorship",
+      "Organizer responded to your Sponsor Request",
+      `${organizer.organization || organizer.name} proposed ${conf.title || conference.id} for "${request.title}".`
+    );
+    const row = (await dbGet<SponsorRequestResponseRow>("SELECT * FROM sponsor_request_responses WHERE id=?", [id]))!;
+    res.status(201).json({ response: row, alreadyExists: false });
+  })
+);
+
+sponsorsRouter.get(
+  "/requests/responses/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const rows = await dbAll<any>(
+      `SELECT rr.*,r.title as request_title,u.name as organizer_name,u.organization as organizer_organization
+         FROM sponsor_request_responses rr
+         JOIN sponsor_requests r ON r.id=rr.request_id
+         JOIN users u ON u.id=rr.organizer_id
+        WHERE r.sponsor_id=?
+        ORDER BY rr.created_at DESC`,
+      [req.userId!]
+    );
+    res.json({
+      responses: rows.map((row: any) => ({
+        id: row.id,
+        requestId: row.request_id,
+        requestTitle: row.request_title,
+        organizerId: row.organizer_id,
+        organizerName: row.organizer_organization || row.organizer_name,
+        conferenceId: row.conference_id,
+        conferenceTitle: row.conference_title,
+        message: row.message || "",
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+    });
+  })
+);
+
+sponsorsRouter.patch(
+  "/requests/responses/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const status = req.body?.status === "accepted" || req.body?.status === "declined" ? req.body.status : null;
+    if (!status) return res.status(400).json({ error: "status must be accepted or declined." });
+    const row = await dbGet<any>(
+      `SELECT rr.*,r.sponsor_id FROM sponsor_request_responses rr
+         JOIN sponsor_requests r ON r.id=rr.request_id WHERE rr.id=?`,
+      [req.params.id]
+    );
+    if (!row || row.sponsor_id !== req.userId) return res.status(404).json({ error: "Response not found." });
+    await dbRun("UPDATE sponsor_request_responses SET status=?,updated_at=datetime('now') WHERE id=?", [status, req.params.id]);
+    await createNotification(
+      row.organizer_id,
+      "sponsorship",
+      status === "accepted" ? "Sponsor Request response accepted" : "Sponsor Request response declined",
+      `The sponsor ${status} your conference proposal for their Sponsor Request.`
+    );
+    res.json({ ok: true, status });
   })
 );
 
