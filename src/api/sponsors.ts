@@ -131,3 +131,36 @@ export async function fetchMySponsorProfile(): Promise<Omit<SponsorProfile, 'id'
   const res = await fetch('/api/sponsors/profile/mine', { credentials: 'include' });
   return parseResponse(res);
 }
+
+
+export interface ExternalSponsorshipPackage {
+  name: string;
+  priceText: string | null;
+  priceAmount: number | null;
+  currency: string | null;
+  benefits: string[];
+  sourceUrl: string;
+}
+
+export interface ExternalSponsorshipOpportunity {
+  conferenceId: string;
+  conferenceTitle: string;
+  startDate: string | null;
+  endDate: string | null;
+  city: string | null;
+  country: string | null;
+  officialUrl: string;
+  sponsorUrl: string;
+  actionUrl: string;
+  actionLabel: 'View Sponsorship' | 'Inquire Now';
+  hasPublishedPricing: boolean;
+  categories: string[];
+  packages: ExternalSponsorshipPackage[];
+  checkedAt: string | null;
+}
+
+export async function fetchExternalSponsorshipOpportunities(): Promise<ExternalSponsorshipOpportunity[]> {
+  const res = await fetch('/api/sponsors/external-opportunities', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return Array.isArray(data.opportunities) ? data.opportunities : [];
+}
