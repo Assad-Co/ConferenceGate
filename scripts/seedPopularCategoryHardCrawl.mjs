@@ -19,6 +19,7 @@ const POPULAR = [
 const SEEDS = [
   ['33rd International Meeting on Organic Geochemistry (IMOG 2027)','https://imogconference.org/','2027-09-12','2027-09-16','Rotterdam','Netherlands',['Organic Geochemistry','Geoscience','Geology','Petroleum & Geoscience','Science','Open call for papers']],
   ['EAGE Annual 2027','https://eageannual.org/','2027-05-31','2027-06-03','Amsterdam','Netherlands',['Geoscience','Geology','Petroleum & Geoscience','Energy','Engineering','Open call for papers']],
+  ['MEOS GEO 2027','https://www.meos-geo.com/','2027-09-14','2027-09-16','Sakhir','Bahrain',['Petroleum & Geoscience','Energy','Engineering','Mechanical Engineering','Electrical Engineering','Civil & Construction','Environment','Climate & Sustainability','Business']],
   ['123rd APSA Annual Meeting & Exhibition','https://apsanet.org/events/annual-meeting-exhibition/','2027-09-02','2027-09-05','Washington, DC','United States',['Politics','Government & Policy','Social Sciences','Education','Open call for papers']],
   ['HIMSS27 Global Health Conference & Exhibition','https://www.himssconference.com/','2027-04-05','2027-04-08','Chicago','United States',['Health','Healthcare','Public Health','Artificial Intelligence','Cybersecurity','Business']],
   ['IDS 2027 International Dental Show','https://www.english.ids-cologne.de/trade-fair/ids/','2027-03-16','2027-03-20','Cologne','Germany',['Dentistry','Health','Healthcare','Business','Science']],
