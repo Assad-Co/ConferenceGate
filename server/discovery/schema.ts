@@ -35,6 +35,7 @@ export const DISCOVERY_TABLES = [
   "discovery_daily_reports",
   "discovery_review_queue",
   "discovery_deep_section_verifications",
+  "discovery_sponsorship_opportunities",
 ] as const;
 
 let initialized = false;
@@ -353,6 +354,33 @@ export async function initDiscoverySchema(): Promise<void> {
       verified_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (event_id, section)
     );
+
+    -- Stored sponsorship/exhibitor catalogue. The customer-facing Organizer page reads only
+    -- this table; network crawling happens in background enrichment jobs and never on page load.
+    CREATE TABLE IF NOT EXISTS discovery_sponsorship_opportunities (
+      event_id TEXT PRIMARY KEY,
+      conference_title TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
+      city TEXT,
+      country TEXT,
+      official_url TEXT NOT NULL,
+      sponsor_url TEXT NOT NULL,
+      action_url TEXT NOT NULL,
+      action_label TEXT NOT NULL DEFAULT 'Inquire Now',
+      has_published_pricing INTEGER NOT NULL DEFAULT 0,
+      categories TEXT NOT NULL DEFAULT '[]',
+      packages TEXT NOT NULL DEFAULT '[]',
+      source_urls TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'available',
+      checked_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_discovery_sponsorship_status
+      ON discovery_sponsorship_opportunities(status);
+    CREATE INDEX IF NOT EXISTS idx_discovery_sponsorship_start
+      ON discovery_sponsorship_opportunities(start_date);
 
     CREATE TABLE IF NOT EXISTS discovery_url_remediation_runs (
       id TEXT PRIMARY KEY,
