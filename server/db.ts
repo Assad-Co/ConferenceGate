@@ -255,6 +255,33 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Non-review professional roles are stored independently from abstract-review calls.
+    -- Phase 1 professionals can discover/respond to these; Phase 2 will give paid organizers
+    -- the publishing/management UI.
+    CREATE TABLE IF NOT EXISTS professional_opportunities (
+      id TEXT PRIMARY KEY,
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      organizer_name TEXT NOT NULL,
+      role_type TEXT NOT NULL CHECK(role_type IN ('committee', 'chair', 'speaker')),
+      title TEXT NOT NULL,
+      description TEXT,
+      expertise_required TEXT NOT NULL DEFAULT '[]',
+      preferred_regions TEXT NOT NULL DEFAULT '[]',
+      deadline TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'closed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS professional_opportunity_interests (
+      id TEXT PRIMARY KEY,
+      opportunity_id TEXT NOT NULL REFERENCES professional_opportunities(id),
+      professional_id TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(opportunity_id, professional_id)
+    );
+
     CREATE TABLE IF NOT EXISTS conference_registrations (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
@@ -614,6 +641,29 @@ export interface ReviewOpportunityRow {
   review_period: string | null;
   deadline: string | null;
   expected_workload: string | null;
+  created_at: string;
+}
+
+export interface ProfessionalOpportunityRow {
+  id: string;
+  conference_id: string;
+  conference_title: string;
+  organizer_id: string;
+  organizer_name: string;
+  role_type: "committee" | "chair" | "speaker";
+  title: string;
+  description: string | null;
+  expertise_required: string;
+  preferred_regions: string;
+  deadline: string | null;
+  status: "active" | "closed";
+  created_at: string;
+}
+
+export interface ProfessionalOpportunityInterestRow {
+  id: string;
+  opportunity_id: string;
+  professional_id: string;
   created_at: string;
 }
 
