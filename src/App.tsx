@@ -436,9 +436,6 @@ export function App() {
     if (['reviewer', 'organizer'].includes(activeTab)) {
       fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
     }
-    if (activeTab === 'organizer' && authUser.role === 'organizer') {
-      fetchExternalSponsorshipOpportunities().then(setExternalSponsorshipOpportunities).catch(() => {});
-    }
     if (['home', 'community'].includes(activeTab)) {
       fetchFeed().then(setPosts).catch(() => {});
     }
