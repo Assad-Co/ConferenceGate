@@ -35,7 +35,8 @@
     "conference:hard-crawl": "node scripts/seedPopularCategoryHardCrawl.mjs && DEEP_ENRICH_MAX_LINKS=16 DEEP_ENRICH_FIRECRAWL_MAX_PAGES=250 node scripts/enrichAllConferenceDetails.mjs && DEEP_ENRICH_APIFY_MAX_RUNS=120 DEEP_ENRICH_APIFY_MAX_PAGES=20 DEEP_ENRICH_MIN_TABS=6 node scripts/enrichConferenceApifyFallback.mjs && node scripts/sanitizeConferenceDetailData.mjs && node scripts/finalizeConferenceCoverage.mjs && node scripts/upgradeConferenceIdentityAndTabs.mjs && node scripts/enrichExternalSponsorships.mjs && node scripts/popularCategoryCoverageReport.mjs",
     "startup:maintenance": "node scripts/runBackgroundBootstrap.mjs",
     "conference:requested-expansion": "node scripts/syncRequestedCategoryExpansion.mjs",
-    "conference:sponsorship-enrich": "node scripts/enrichExternalSponsorships.mjs"
+    "conference:sponsorship-enrich": "node scripts/backfillStoredSponsorshipCatalog.mjs && node scripts/enrichExternalSponsorships.mjs",
+    "conference:sponsorship-backfill": "node scripts/backfillStoredSponsorshipCatalog.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
