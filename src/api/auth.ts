@@ -26,6 +26,14 @@ export interface AuthUser {
   linkedinUrl: string | null;
   avatar: string | null;
   reviewerAvailable: boolean;
+  professionalExpertise: string[];
+  technicalSpecialization: string[];
+  researchInterests: string[];
+  preferredRegions: string[];
+  committeeAvailable: boolean;
+  sessionChairAvailable: boolean;
+  speakerAvailable: boolean;
+  reviewerMaxLoad: number;
   keynoteSpeakerMatches: KeynoteSpeakerMatch[];
 }
 
@@ -131,6 +139,28 @@ export async function updateReviewerAvailability(available: boolean): Promise<Au
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ available }),
+  });
+  const data = await parseResponse(res);
+  return data.user;
+}
+
+export interface ProfessionalPreferencesPayload {
+  professionalExpertise: string[];
+  technicalSpecialization: string[];
+  researchInterests: string[];
+  preferredRegions: string[];
+  committeeAvailable: boolean;
+  sessionChairAvailable: boolean;
+  speakerAvailable: boolean;
+  reviewerMaxLoad: number;
+}
+
+export async function updateProfessionalPreferences(payload: ProfessionalPreferencesPayload): Promise<AuthUser> {
+  const res = await fetch('/api/auth/me/professional-preferences', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
   });
   const data = await parseResponse(res);
   return data.user;
