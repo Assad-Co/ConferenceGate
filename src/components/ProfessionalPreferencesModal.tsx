@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Loader2, Briefcase, Users, Presentation, Mic2, MapPin } from 'lucide-react';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 
@@ -33,6 +33,19 @@ export const ProfessionalPreferencesModal: React.FC<ProfessionalPreferencesModal
   const [reviewerMaxLoad, setReviewerMaxLoad] = useState(initial.reviewerMaxLoad || 5);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setExpertise(initial.professionalExpertise.join(', '));
+    setSpecialization(initial.technicalSpecialization.join(', '));
+    setInterests(initial.researchInterests.join(', '));
+    setRegions(initial.preferredRegions.join(', '));
+    setCommitteeAvailable(initial.committeeAvailable);
+    setSessionChairAvailable(initial.sessionChairAvailable);
+    setSpeakerAvailable(initial.speakerAvailable);
+    setReviewerMaxLoad(initial.reviewerMaxLoad || 5);
+    setError(null);
+  }, [isOpen, initial]);
 
   if (!isOpen) return null;
 
