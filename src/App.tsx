@@ -436,6 +436,11 @@ export function App() {
     if (['reviewer', 'organizer'].includes(activeTab)) {
       fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
     }
+    // Database-only refresh: no website search runs here. This simply reloads the already-stored
+    // sponsorship catalog when the Organizer workspace is opened.
+    if (activeTab === 'organizer' && authUser.role === 'organizer') {
+      fetchExternalSponsorshipOpportunities().then(setExternalSponsorshipOpportunities).catch(() => {});
+    }
     if (['home', 'community'].includes(activeTab)) {
       fetchFeed().then(setPosts).catch(() => {});
     }
