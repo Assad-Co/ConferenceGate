@@ -35,6 +35,7 @@ import { EditProfileModal } from './components/EditProfileModal';
 import { CertificatesView } from './components/CertificatesView';
 import { PersonProfileModal } from './components/PersonProfileModal';
 import { MessagesPanel } from './components/MessagesPanel';
+import { PaidWorkspaceGate } from './components/PaidWorkspaceGate';
 import {
   fetchSubmissions,
   createSubmission,
@@ -1021,6 +1022,11 @@ export function App() {
     setActiveTab('home');
   };
 
+  const handleRefreshAccount = async () => {
+    const refreshed = await fetchCurrentUser();
+    if (refreshed) applyAuthUser(refreshed);
+  };
+
   const postCelebration = (
     kind: CelebrationKind,
     headline: string,
@@ -1542,6 +1548,7 @@ export function App() {
         )}
 
         {activeTab === 'organizer' && authUser.role === 'organizer' && (
+          authUser.hasPaidAccess ? (
           <OrganizerDashboard
             conferences={myConferences}
             submissions={submissions}
@@ -1568,9 +1575,18 @@ export function App() {
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
           />
+          ) : (
+            <PaidWorkspaceGate
+              role="organizer"
+              status={authUser.subscriptionStatus}
+              plan={authUser.subscriptionPlan}
+              onRefreshAccount={handleRefreshAccount}
+            />
+          )
         )}
 
         {activeTab === 'sponsor' && authUser.role === 'sponsor' && (
+          authUser.hasPaidAccess ? (
           <SponsorPortal
             sponsorshipPackages={sponsorshipPackagesReal}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
@@ -1581,6 +1597,14 @@ export function App() {
             onMarkAllAlertsRead={handleMarkAllSponsorNotificationsRead}
             onApplyForSponsorship={handleApplyForSponsorship}
           />
+          ) : (
+            <PaidWorkspaceGate
+              role="sponsor"
+              status={authUser.subscriptionStatus}
+              plan={authUser.subscriptionPlan}
+              onRefreshAccount={handleRefreshAccount}
+            />
+          )
         )}
 
         {activeTab === 'community' && (
