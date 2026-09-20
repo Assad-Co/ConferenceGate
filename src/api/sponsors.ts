@@ -164,3 +164,134 @@ export async function fetchExternalSponsorshipOpportunities(): Promise<ExternalS
   const data = await parseResponse(res);
   return Array.isArray(data.opportunities) ? data.opportunities : [];
 }
+
+
+export interface SponsorPreferences {
+  sectors: string[];
+  categories: string[];
+  regions: string[];
+  opportunityTypes: string[];
+  budgetMin: number | null;
+  budgetMax: number | null;
+  alertFrequency: 'instant' | 'daily' | 'weekly';
+}
+
+export async function fetchMySponsorPreferences(): Promise<SponsorPreferences> {
+  const res = await fetch('/api/sponsors/preferences/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.preferences;
+}
+
+export async function updateMySponsorPreferences(payload: SponsorPreferences): Promise<SponsorPreferences> {
+  const res = await fetch('/api/sponsors/preferences/mine', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.preferences;
+}
+
+export interface SponsorshipNeed {
+  id: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  organizerId: string;
+  title: string;
+  description: string;
+  categories: string[];
+  targetSectors: string[];
+  regions: string[];
+  opportunityTypes: string[];
+  priceAmount: number | null;
+  priceOnRequest: boolean;
+  totalSlots: number;
+  benefits: string[];
+  deadline: string | null;
+  status: 'active' | 'closed';
+  createdAt: string;
+  matchScore: number | null;
+}
+
+export interface CreateSponsorshipNeedPayload {
+  conferenceId: string;
+  title: string;
+  description?: string;
+  categories?: string[];
+  targetSectors?: string[];
+  regions?: string[];
+  opportunityTypes?: string[];
+  priceAmount?: number | null;
+  priceOnRequest?: boolean;
+  totalSlots?: number;
+  benefits?: string[];
+  deadline?: string;
+}
+
+export async function createSponsorshipNeed(payload: CreateSponsorshipNeedPayload): Promise<{ need: SponsorshipNeed; notifiedSponsors: number }> {
+  const res = await fetch('/api/sponsors/needs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(res);
+}
+
+export async function fetchMySponsorshipNeeds(): Promise<SponsorshipNeed[]> {
+  const res = await fetch('/api/sponsors/needs/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.needs;
+}
+
+export async function fetchMatchedSponsorshipNeeds(): Promise<SponsorshipNeed[]> {
+  const res = await fetch('/api/sponsors/needs/matched', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.needs;
+}
+
+export interface SponsorshipNeedInquiry {
+  id: string;
+  needId: string;
+  needTitle: string;
+  conferenceTitle: string;
+  sponsorId: string;
+  sponsorName: string;
+  message: string;
+  budget: number | null;
+  status: 'new' | 'contacted' | 'negotiating' | 'won' | 'lost' | 'withdrawn';
+  createdAt: string;
+}
+
+export async function inquireAboutSponsorshipNeed(
+  needId: string,
+  payload: { message?: string; budget?: number | null }
+): Promise<void> {
+  const res = await fetch(`/api/sponsors/needs/${needId}/inquiries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  await parseResponse(res);
+}
+
+export async function fetchMySponsorshipNeedInquiries(): Promise<SponsorshipNeedInquiry[]> {
+  const res = await fetch('/api/sponsors/needs/inquiries/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.inquiries;
+}
+
+export async function updateSponsorshipNeedInquiryStatus(
+  inquiryId: string,
+  status: 'new' | 'contacted' | 'negotiating' | 'won' | 'lost'
+): Promise<void> {
+  const res = await fetch(`/api/sponsors/needs/inquiries/${inquiryId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ status }),
+  });
+  await parseResponse(res);
+}
