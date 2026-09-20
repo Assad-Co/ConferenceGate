@@ -1182,7 +1182,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'wizard', label: 'Conference Wizard' },
           { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
           { id: 'committee', label: 'Technical Committee' },
-          { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
+          { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length + externalSponsorshipOpportunities.length})` },
           { id: 'communications', label: 'Communications Hub' },
           { id: 'analytics', label: 'Event Analytics' },
         ].map((tab) => (
