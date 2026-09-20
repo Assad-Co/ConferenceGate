@@ -354,7 +354,7 @@ const FLAGSHIP_EVENT_SOURCES: Seed[] = [
   ["event.asme.org", "ASME Events", "engineering_society", "United States", "North America"],
   ["informaconnect.com", "Informa Connect Conferences", "official_conference_site", "International", "Global"],
   ["smartcityexpo.com", "Smart City Expo World Congress", "official_conference_site", "Spain", "Europe"],
-  ["segweb.org", "Society of Economic Geologists", "geoscience_society", "United States", "North America"],
+  ["segweb.org", "Society of Economic Geologists", "professional_society", "United States", "North America"],
   ["ada.org", "American Dental Association", "medical_society", "United States", "North America"],
   ["professional.heart.org", "American Heart Association Professional Meetings", "medical_society", "United States", "North America"],
   ["alz.org", "Alzheimer's Association Events", "medical_society", "United States", "North America"],
