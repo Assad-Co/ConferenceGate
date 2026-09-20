@@ -44,7 +44,7 @@ const DEFAULT_PRIORITY_ORGS = [
   'eageannual.org','apsanet.org','conferenceonarchitecture.com','conference.iste.org','mrs.org',
   'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com','smeannualconference.org',
   'ephconference.eu','icn.ch','ids-cologne.de','aeaweb.org','token2049.com','exporeal.net',
-  'mwcshanghai.com','aaic.alz.org'
+  'mwcshanghai.com','aaic.alz.org','meos-geo.com'
 ];
 
 function priorityOrganizations() {
@@ -105,6 +105,9 @@ async function cycle() {
     DEEP_ENRICH_APIFY_MAX_PAGES: process.env.DEEP_ENRICH_APIFY_MAX_PAGES || '20',
     DEEP_ENRICH_MIN_TABS: process.env.DEEP_ENRICH_MIN_TABS || '6',
   });
+  // Sponsorship intelligence is a separate official-site pass so every published conference can
+  // surface sponsor/exhibitor pages even when the general detail extractor found no public price.
+  await runScript('scripts/enrichExternalSponsorships.mjs');
   // Readers can encounter generic historical pages, so sanitize again, then restore any vetted
   // current-edition overrides before the final customer-facing normalization.
   await runScript('scripts/sanitizeConferenceDetailData.mjs');
