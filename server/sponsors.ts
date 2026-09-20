@@ -650,6 +650,19 @@ sponsorsRouter.patch(
     const body = req.body || {};
     const updates: string[] = [];
     const args: any[] = [];
+    const isOrganizerParty = deal.organizer_id === req.userId;
+    const hasOrganizerOnlyFields =
+      body.agreedAmount !== undefined ||
+      body.currency !== undefined ||
+      body.proposalNotes !== undefined ||
+      body.deliverables !== undefined ||
+      body.contractUrl !== undefined ||
+      body.invoiceUrl !== undefined;
+    if (hasOrganizerOnlyFields && !isOrganizerParty) {
+      return res.status(403).json({
+        error: "Canonical commercial terms, deliverables, contract, and invoice are controlled by the organizer. Use a Deal Room update for counter-proposals."
+      });
+    }
     if (body.agreedAmount !== undefined) {
       const amount = body.agreedAmount === null || body.agreedAmount === "" ? null : Number(body.agreedAmount);
       if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
@@ -683,16 +696,23 @@ sponsorsRouter.patch(
 
     // Commercial status progression is constrained. "paid" is intentionally excluded: only the
     // payment-provider sync route can mark money as received.
-    const allowedUserStatuses = new Set([
-      "negotiating","agreement_reached","contract_pending","payment_pending","delivering","completed","canceled"
-    ]);
+    const allowedTransitions: Record<string, string[]> = {
+      negotiating: ["agreement_reached", "canceled"],
+      agreement_reached: ["negotiating", "contract_pending", "canceled"],
+      contract_pending: ["agreement_reached", "payment_pending", "canceled"],
+      payment_pending: ["contract_pending", "canceled"],
+      paid: ["delivering"],
+      delivering: ["completed"],
+      completed: [],
+      canceled: [],
+    };
     if (typeof body.status === "string") {
-      if (!allowedUserStatuses.has(body.status)) return res.status(400).json({ error: "Invalid deal status." });
-      if (body.status === "completed" && deal.status !== "paid" && deal.status !== "delivering") {
-        return res.status(409).json({ error: "A deal cannot be completed before payment/delivery status." });
+      const nextStatus = body.status;
+      if (!allowedTransitions[deal.status]?.includes(nextStatus)) {
+        return res.status(409).json({ error: `Invalid deal transition from ${deal.status} to ${nextStatus}.` });
       }
       updates.push("status=?");
-      args.push(body.status);
+      args.push(nextStatus);
     }
 
     if (!updates.length) return res.status(400).json({ error: "No supported deal fields supplied." });
