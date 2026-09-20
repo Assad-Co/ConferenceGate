@@ -62,7 +62,18 @@ import {
   type ProfessionalDirectoryProfile,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
-import { SponsorApplicant, ReviewableSponsor, ExternalSponsorshipOpportunity, notifyVerifiedSponsors } from '../api/sponsors';
+import {
+  SponsorApplicant,
+  ReviewableSponsor,
+  ExternalSponsorshipOpportunity,
+  notifyVerifiedSponsors,
+  createSponsorshipNeed,
+  fetchMySponsorshipNeeds,
+  fetchMySponsorshipNeedInquiries,
+  updateSponsorshipNeedInquiryStatus,
+  type SponsorshipNeed,
+  type SponsorshipNeedInquiry,
+} from '../api/sponsors';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
@@ -86,7 +97,7 @@ interface OrganizerDashboardProps {
   reviewOpportunities?: ReviewOpportunity[];
   onPublishReviewOpportunity?: (payload: PublishReviewOpportunityPayload) => void;
   onWithdrawReviewOpportunity?: (id: string) => void;
-  onCreateConference: (newConf: Partial<Conference>) => void;
+  onCreateConference: (newConf: Partial<Conference>) => Conference | Promise<Conference>;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
 }
@@ -305,6 +316,101 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       setProfessionalSearchError(error?.message || 'Could not send invitation.');
     } finally {
       setProfessionalInvitingId(null);
+    }
+  };
+
+  const [sponsorshipNeeds, setSponsorshipNeeds] = useState<SponsorshipNeed[]>([]);
+  const [sponsorshipNeedInquiries, setSponsorshipNeedInquiries] = useState<SponsorshipNeedInquiry[]>([]);
+  const [sponsorshipNeedLoading, setSponsorshipNeedLoading] = useState(false);
+  const [sponsorshipNeedMessage, setSponsorshipNeedMessage] = useState<string | null>(null);
+  const [sponsorshipNeedForm, setSponsorshipNeedForm] = useState({
+    conferenceId: '',
+    title: '',
+    description: '',
+    categories: '',
+    targetSectors: '',
+    regions: '',
+    opportunityTypes: '',
+    priceOnRequest: true,
+    priceAmount: '',
+    totalSlots: '1',
+    benefits: '',
+    deadline: '',
+  });
+
+  const refreshInternalSponsorship = async () => {
+    try {
+      const [needs, inquiries] = await Promise.all([
+        fetchMySponsorshipNeeds(),
+        fetchMySponsorshipNeedInquiries(),
+      ]);
+      setSponsorshipNeeds(needs);
+      setSponsorshipNeedInquiries(inquiries);
+    } catch {
+      setSponsorshipNeeds([]);
+      setSponsorshipNeedInquiries([]);
+    }
+  };
+
+  useEffect(() => {
+    refreshInternalSponsorship();
+  }, []);
+
+  const handlePublishSponsorshipNeed = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!sponsorshipNeedForm.conferenceId || !sponsorshipNeedForm.title.trim()) return;
+    setSponsorshipNeedLoading(true);
+    setSponsorshipNeedMessage(null);
+    try {
+      const result = await createSponsorshipNeed({
+        conferenceId: sponsorshipNeedForm.conferenceId,
+        title: sponsorshipNeedForm.title.trim(),
+        description: sponsorshipNeedForm.description.trim() || undefined,
+        categories: sponsorshipNeedForm.categories.split(',').map((v) => v.trim()).filter(Boolean),
+        targetSectors: sponsorshipNeedForm.targetSectors.split(',').map((v) => v.trim()).filter(Boolean),
+        regions: sponsorshipNeedForm.regions.split(',').map((v) => v.trim()).filter(Boolean),
+        opportunityTypes: sponsorshipNeedForm.opportunityTypes.split(',').map((v) => v.trim()).filter(Boolean),
+        priceOnRequest: sponsorshipNeedForm.priceOnRequest,
+        priceAmount: sponsorshipNeedForm.priceOnRequest || !sponsorshipNeedForm.priceAmount
+          ? null
+          : Number(sponsorshipNeedForm.priceAmount),
+        totalSlots: Math.max(1, Number(sponsorshipNeedForm.totalSlots || 1)),
+        benefits: sponsorshipNeedForm.benefits.split(',').map((v) => v.trim()).filter(Boolean),
+        deadline: sponsorshipNeedForm.deadline || undefined,
+      });
+      setSponsorshipNeeds((prev) => [result.need, ...prev]);
+      setSponsorshipNeedMessage(
+        result.notifiedSponsors > 0
+          ? `Published · ${result.notifiedSponsors} matched Sponsor Pro account${result.notifiedSponsors === 1 ? '' : 's'} notified.`
+          : 'Published · no signed-up Sponsor Pro account currently meets the instant-alert threshold.'
+      );
+      setSponsorshipNeedForm((prev) => ({
+        ...prev,
+        title: '',
+        description: '',
+        priceAmount: '',
+        totalSlots: '1',
+        benefits: '',
+        deadline: '',
+      }));
+    } catch (error: any) {
+      setSponsorshipNeedMessage(error?.message || 'Could not publish sponsorship need.');
+    } finally {
+      setSponsorshipNeedLoading(false);
+    }
+  };
+
+  const handleSponsorshipInquiryStatus = async (
+    inquiryId: string,
+    status: 'new' | 'contacted' | 'negotiating' | 'won' | 'lost'
+  ) => {
+    try {
+      await updateSponsorshipNeedInquiryStatus(inquiryId, status);
+      setSponsorshipNeedInquiries((prev) =>
+        prev.map((item) => item.id === inquiryId ? { ...item, status } : item)
+      );
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not update sponsor inquiry', message: error?.message || 'Please try again.' });
     }
   };
 
