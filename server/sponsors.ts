@@ -782,10 +782,13 @@ sponsorsRouter.get(
               COUNT(DISTINCT CASE WHEN e.event_type='won' THEN e.sponsor_id END) as won,
               COUNT(DISTINCT CASE WHEN e.event_type='contract' THEN e.sponsor_id END) as contracts,
               COUNT(DISTINCT CASE WHEN e.event_type='payment' THEN e.sponsor_id END) as payments,
-              COALESCE(SUM(DISTINCT CASE WHEN d.status IN ('paid','delivering','completed') THEN d.agreed_amount ELSE NULL END),0) as realized_revenue
+              (
+                SELECT COALESCE(SUM(COALESCE(d.agreed_amount,0)),0)
+                  FROM sponsorship_deals d
+                 WHERE d.need_id=n.id AND d.status IN ('paid','delivering','completed')
+              ) as realized_revenue
          FROM sponsorship_needs n
          LEFT JOIN sponsorship_engagement_events e ON e.need_id=n.id
-         LEFT JOIN sponsorship_deals d ON d.need_id=n.id
         WHERE n.organizer_id=?
         GROUP BY n.id
         ORDER BY n.created_at DESC`,
