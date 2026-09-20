@@ -339,8 +339,10 @@ function looksLikePackageName(value='') {
   const s=String(value).trim();
   if (s.length < 3 || s.length > 120) return false;
   if (/^(home|about|contact|sponsors?|sponsorship|exhibitors?|exhibition|partners?|why sponsor|opportunities|packages|pricing|register|enquire|inquire|download|learn more|read more)$/i.test(s)) return false;
-  if (/privacy|cookie|terms|newsletter|copyright|follow us/i.test(s)) return false;
-  return /sponsor|partner|exhibit|booth|stand|table|dinner|lunch|reception|lanyard|badge|app|digital|conference|workshop|session|network|gala|golf|branding|advertis|package|platinum|gold|silver|bronze|diamond|premium|title|exclusive/i.test(s);
+  if (/privacy|cookie|terms|newsletter|copyright|follow us|abstract|paper|research|results|patient|study|conference we track|scored/i.test(s)) return false;
+  // Strong commercial-package vocabulary only. Generic words such as "conference", "session",
+  // "network" or "workshop" by themselves are not evidence of a sponsorship package.
+  return /sponsor|sponsorship|partner package|exhibit|exhibitor|booth|stand package|table sponsor|dinner sponsor|lunch sponsor|reception sponsor|lanyard|badge sponsor|app sponsor|digital sponsor|gala|golf sponsor|branding|advertis|package|platinum|gold sponsor|silver sponsor|bronze sponsor|diamond|premium sponsor|title sponsor|exclusive sponsor|networking sponsor|hospitality sponsor|workshop sponsor|session sponsor|delegate gift/i.test(s);
 }
 function extractPricedPackages(page) {
   const lines = textLines(page.html);
@@ -353,10 +355,10 @@ function extractPricedPackages(page) {
     for (const m of matches) {
       const amount=parseAmount(m[3]);
       const hasCurrency=Boolean(m[1] || m[2] || m[4]);
-      const hasPriceCue=/\b(price|pricing|rate|cost|investment|fee|from|starting at)\b/i.test(line);
-      if (!amount || amount < 100 || (!hasCurrency && !hasPriceCue)) continue;
-      // A bare conference year or attendance statistic is not a sponsorship price.
-      if (!hasCurrency && amount >= 1900 && amount <= 2100) continue;
+      // Sponsorship pages contain many unrelated numbers: years, attendee counts, scores,
+      // abstract IDs and dimensions. A public price is accepted only when the source prints
+      // an actual currency marker/code. If currency is absent, the UI correctly shows Inquire.
+      if (!amount || amount < 100 || !hasCurrency) continue;
       let name=cleanPackageName(line.slice(0,m.index));
       if (!looksLikePackageName(name)) {
         for (let back=1;back<=3;back++) {
@@ -380,10 +382,9 @@ function extractPricedPackages(page) {
   }).slice(0,20);
 }
 function extractNamedPackages(page) {
-  // Sponsorship pages vary wildly: some use proper h2/h3 package headings (MEOS GEO does this),
-  // while others render package names as cards, bold text, or short CMS blocks. Read headings first
-  // and then short page lines so named opportunities still surface even when no public price exists.
-  const candidates=[...extractHeadings(page.html), ...textLines(page.html).filter((line)=>line.length<=120)];
+  // Only structural headings can create unpriced package names. Reading arbitrary body lines caused
+  // abstracts, research results and attendee statistics to appear as sponsorship products.
+  const candidates=extractHeadings(page.html);
   const seen=new Set();
   const out=[];
   for (const candidate of candidates) {
