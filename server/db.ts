@@ -282,6 +282,27 @@ export async function initDb(): Promise<void> {
       UNIQUE(opportunity_id, professional_id)
     );
 
+    CREATE TABLE IF NOT EXISTS professional_invitations (
+      id TEXT PRIMARY KEY,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      professional_id TEXT NOT NULL REFERENCES users(id),
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      opportunity_id TEXT,
+      role_type TEXT NOT NULL CHECK(role_type IN ('committee', 'chair', 'speaker')),
+      title TEXT NOT NULL,
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'declined', 'completed', 'withdrawn')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      responded_at TEXT,
+      completed_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_professional_invitations_professional
+      ON professional_invitations(professional_id, status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_professional_invitations_organizer
+      ON professional_invitations(organizer_id, status, created_at);
+
     CREATE TABLE IF NOT EXISTS conference_registrations (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
@@ -665,6 +686,22 @@ export interface ProfessionalOpportunityInterestRow {
   opportunity_id: string;
   professional_id: string;
   created_at: string;
+}
+
+export interface ProfessionalInvitationRow {
+  id: string;
+  organizer_id: string;
+  professional_id: string;
+  conference_id: string;
+  conference_title: string;
+  opportunity_id: string | null;
+  role_type: "committee" | "chair" | "speaker";
+  title: string;
+  message: string | null;
+  status: "pending" | "accepted" | "declined" | "completed" | "withdrawn";
+  created_at: string;
+  responded_at: string | null;
+  completed_at: string | null;
 }
 
 export interface ConferenceRegistrationRow {
