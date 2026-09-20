@@ -74,9 +74,12 @@ import {
   fetchMySponsorshipDeals,
   updateSponsorshipDeal,
   addSponsorshipDealUpdate,
+  fetchSponsorRequestBoard,
+  respondToSponsorRequest,
   type SponsorshipNeed,
   type SponsorshipNeedInquiry,
   type SponsorshipDeal,
+  type SponsorRequest,
 } from '../api/sponsors';
 
 interface OrganizerDashboardProps {
@@ -328,6 +331,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
   const [dealDrafts, setDealDrafts] = useState<Record<string, { amount: string; deliverables: string; proposalNotes: string; contractUrl: string; invoiceUrl: string; updateText: string }>>({});
   const [savingDealId, setSavingDealId] = useState<string | null>(null);
+  const [sponsorRequestBoard, setSponsorRequestBoard] = useState<SponsorRequest[]>([]);
+  const [sponsorRequestResponseDrafts, setSponsorRequestResponseDrafts] = useState<Record<string, { conferenceId: string; message: string }>>({});
+  const [respondingSponsorRequestId, setRespondingSponsorRequestId] = useState<string | null>(null);
+  const [respondedSponsorRequestIds, setRespondedSponsorRequestIds] = useState<Record<string, boolean>>({});
   const [sponsorshipNeedLoading, setSponsorshipNeedLoading] = useState(false);
   const [sponsorshipNeedMessage, setSponsorshipNeedMessage] = useState<string | null>(null);
   const [sponsorshipNeedForm, setSponsorshipNeedForm] = useState({
@@ -347,14 +354,16 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const refreshInternalSponsorship = async () => {
     try {
-      const [needs, inquiries, deals] = await Promise.all([
+      const [needs, inquiries, deals, sponsorRequests] = await Promise.all([
         fetchMySponsorshipNeeds(),
         fetchMySponsorshipNeedInquiries(),
         fetchMySponsorshipDeals(),
+        fetchSponsorRequestBoard(),
       ]);
       setSponsorshipNeeds(needs);
       setSponsorshipNeedInquiries(inquiries);
       setSponsorshipDeals(deals);
+      setSponsorRequestBoard(sponsorRequests);
     } catch {
       setSponsorshipNeeds([]);
       setSponsorshipNeedInquiries([]);
@@ -494,6 +503,30 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       showToast({ type: 'info', title: 'Could not post Deal Room update', message: error?.message || 'Please try again.' });
     } finally {
       setSavingDealId(null);
+    }
+  };
+
+  const sponsorRequestDraft = (requestId: string) =>
+    sponsorRequestResponseDrafts[requestId] || { conferenceId: '', message: '' };
+
+  const handleRespondToSponsorRequest = async (request: SponsorRequest) => {
+    const draft = sponsorRequestDraft(request.id);
+    if (!draft.conferenceId) {
+      showToast({ type: 'info', title: 'Select a conference', message: 'Choose one of your conferences before responding.' });
+      return;
+    }
+    setRespondingSponsorRequestId(request.id);
+    try {
+      await respondToSponsorRequest(request.id, {
+        conferenceId: draft.conferenceId,
+        message: draft.message.trim() || undefined,
+      });
+      setRespondedSponsorRequestIds((prev) => ({ ...prev, [request.id]: true }));
+      showToast({ type: 'success', title: 'Conference proposed to sponsor', message: 'The Sponsor Pro account has been notified inside ConferenceGate.' });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not respond to Sponsor Request', message: error?.message || 'Please try again.' });
+    } finally {
+      setRespondingSponsorRequestId(null);
     }
   };
 
