@@ -14,6 +14,129 @@ const ACTION_LINK_RE = /\b(sponsor(?:ship)? enquiry|sponsor enquiries|exhibitor 
 const BAD_LINK_RE = /\b(privacy|terms|cookie|login|sign in|news|press|media|speaker|call for papers|abstract|agenda|programme|program|venue|hotel|travel|visitor registration)\b/i;
 const PRICE_RE = /(?:(USD|EUR|GBP|BHD|SAR|AED|QAR|KWD|OMR|CAD|AUD|SGD|CHF|JPY|CNY)\s*)?([$€£]|BD\s*)?\s*([0-9]{1,3}(?:[,\s][0-9]{3})+(?:\.\d{1,2})?|[0-9]{3,7}(?:\.\d{1,2})?)\s*(USD|EUR|GBP|BHD|SAR|AED|QAR|KWD|OMR|CAD|AUD|SGD|CHF|JPY|CNY)?/gi;
 
+// The sponsorship catalogue uses exactly the original customer-facing ConferenceGate taxonomy.
+// Internal discovery labels may be richer, but they are normalized before anything is stored.
+const ORIGINAL_CATEGORIES = [
+  'Artificial Intelligence','Data Science','Cybersecurity','Software & Cloud','Telecommunications',
+  'Semiconductors & Electronics','Robotics & Automation','Engineering','Civil & Construction',
+  'Mechanical Engineering','Electrical Engineering','Chemical Engineering','Materials Science','Energy',
+  'Petroleum & Geoscience','Renewable Energy','Hydrogen & CCUS','Mining & Minerals','Environment',
+  'Climate & Sustainability','Healthcare','Public Health','Pharmaceuticals & Biotechnology','Nursing',
+  'Dentistry','Cardiology','Oncology','Neuroscience','Life Sciences','Chemistry','Physics',
+  'Mathematics & Statistics','Science','Education','Business','Finance','Economics','Marketing',
+  'Supply Chain & Logistics','Manufacturing','Aviation & Aerospace','Maritime','Automotive & Mobility',
+  'Architecture & Urbanism','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
+  'Arts & Culture','Tourism & Hospitality','Blockchain & Web3','Real Estate','Virtual conferences',
+  'Open call for papers'
+];
+const ORIGINAL_CATEGORY_SET = new Set(ORIGINAL_CATEGORIES);
+const CATEGORY_ALIASES = {
+  'Materials':'Materials Science',
+  'Health':'Healthcare',
+  'Geoscience':'Petroleum & Geoscience',
+  'Geology':'Petroleum & Geoscience',
+  'Organic Geochemistry':'Petroleum & Geoscience',
+  'Automotive':'Automotive & Mobility',
+  'Architecture':'Architecture & Urbanism',
+  'Politics':'Government & Policy',
+  'AI & Machine Learning':'Artificial Intelligence',
+  'Data Science & Analytics':'Data Science',
+  'Cybersecurity & Privacy':'Cybersecurity',
+  'Computer Science & Software':'Software & Cloud',
+  'Telecommunications & Networking':'Telecommunications',
+  'Manufacturing & Industry':'Manufacturing',
+  'Aerospace & Aviation':'Aviation & Aerospace',
+  'Petroleum & Energy':'Petroleum & Geoscience',
+  'Geosciences & Earth Systems':'Petroleum & Geoscience',
+  'Mining & Metallurgy':'Mining & Minerals',
+  'Marine & Ocean Sciences':'Maritime',
+  'Environment & Sustainability':'Climate & Sustainability',
+  'Healthcare & Health IT':'Healthcare',
+  'Medicine & Oncology':'Healthcare',
+  'Pharmaceutical & Biotechnology':'Pharmaceuticals & Biotechnology',
+  'Chemistry & Materials':'Chemistry',
+  'Business & Finance':'Business',
+  'Blockchain & Fintech':'Blockchain & Web3',
+  'Logistics & Transportation':'Supply Chain & Logistics',
+  'Architecture & Construction':'Architecture & Urbanism',
+  'Education & EdTech':'Education',
+  'Law & Policy':'Law & Regulation',
+  'Arts & Humanities':'Arts & Culture'
+};
+
+function normalizeStoredCategories(event) {
+  const raw = [
+    ...String(event?.categories || '').split('|'),
+    ...safeJson(event?.topics, []),
+    event?.primary_category,
+  ].filter(Boolean).map((x)=>String(x).trim());
+
+  const out=[];
+  const add=(value)=>{ if(value && ORIGINAL_CATEGORY_SET.has(value) && !out.includes(value)) out.push(value); };
+  for(const value of raw){
+    if(ORIGINAL_CATEGORY_SET.has(value)) add(value);
+    else if(CATEGORY_ALIASES[value]) add(CATEGORY_ALIASES[value]);
+  }
+
+  const hay=[event?.title,...raw].filter(Boolean).join(' ').toLowerCase();
+  const keywordRules=[
+    ['Artificial Intelligence',/\bartificial intelligence\b|\bmachine learning\b|\bai\b/],
+    ['Data Science',/data science|data analytics|big data/],
+    ['Cybersecurity',/cybersecurity|cyber security|information security/],
+    ['Software & Cloud',/software|cloud|kubernetes|devops/],
+    ['Telecommunications',/telecom|\b5g\b|\b6g\b|wireless/],
+    ['Semiconductors & Electronics',/semiconductor|microelectron|electronics|chip design/],
+    ['Robotics & Automation',/robot|automation|autonomous systems/],
+    ['Civil & Construction',/civil engineering|construction|concrete|infrastructure/],
+    ['Mechanical Engineering',/mechanical engineering|turbomachinery|applied mechanics/],
+    ['Electrical Engineering',/electrical engineering|power electronics|power system/],
+    ['Chemical Engineering',/chemical engineering|process engineering|process safety/],
+    ['Materials Science',/materials science|advanced materials|composite|metallurgy/],
+    ['Petroleum & Geoscience',/petroleum|oil and gas|geoscience|geology|geophys|geochem|upstream|reservoir|drilling/],
+    ['Renewable Energy',/renewable|solar|wind energy|photovoltaic/],
+    ['Hydrogen & CCUS',/hydrogen|carbon capture|ccus|ccs\b/],
+    ['Mining & Minerals',/mining|mineral|ore processing/],
+    ['Climate & Sustainability',/climate|sustainab|net zero|decarbon/],
+    ['Environment',/environment|pollution|waste|ecology/],
+    ['Healthcare',/healthcare|health care|medical|medicine|clinical/],
+    ['Public Health',/public health|epidemiology/],
+    ['Pharmaceuticals & Biotechnology',/pharma|biotech|drug discovery|biopharma/],
+    ['Nursing',/nursing|nurses/],
+    ['Dentistry',/dental|dentistry/],
+    ['Cardiology',/cardiology|cardiovascular|heart/],
+    ['Oncology',/oncology|cancer/],
+    ['Neuroscience',/neuroscience|neurology|alzheimer/],
+    ['Life Sciences',/life sciences|genomics|molecular biology|biology/],
+    ['Chemistry',/chemistry|chemical sciences|catalysis/],
+    ['Physics',/physics|photonics|quantum|astronomy/],
+    ['Mathematics & Statistics',/mathematics|statistics|statistical/],
+    ['Education',/education|edtech|teaching|learning/],
+    ['Finance',/finance|banking|investment|fintech/],
+    ['Economics',/economics|econometric/],
+    ['Marketing',/marketing|advertising|brand/],
+    ['Supply Chain & Logistics',/supply chain|logistics|freight|warehous/],
+    ['Manufacturing',/manufactur|industry 4\.0|production engineering/],
+    ['Aviation & Aerospace',/aviation|aerospace|aeronaut|air show|airshow/],
+    ['Maritime',/maritime|shipping|marine|port|naval/],
+    ['Automotive & Mobility',/automotive|mobility|vehicle|autonomous driving/],
+    ['Architecture & Urbanism',/architecture|urban planning|built environment|smart city|real estate/],
+    ['Agriculture & Food',/agriculture|agri-|food|crop|farming/],
+    ['Law & Regulation',/legal|\blaw\b|regulation|compliance/],
+    ['Government & Policy',/government|public policy|governance/],
+    ['Social Sciences',/social science|sociology|psychology|political science|anthropology/],
+    ['Arts & Culture',/arts|culture|humanities|music|museum/],
+    ['Tourism & Hospitality',/tourism|hospitality|hotel|travel industry/],
+    ['Blockchain & Web3',/blockchain|web3|crypto|digital asset/],
+    ['Real Estate',/real estate|property|proptech/],
+    ['Energy',/energy|power|oil|gas|renewable|hydrogen/],
+    ['Engineering',/engineering|technology|industrial/],
+    ['Science',/science|scientific|research/],
+    ['Business',/business|commerce|management|industry|trade/],
+  ];
+  for(const [category,re] of keywordRules) if(re.test(hay)) add(category);
+  return out.slice(0,8);
+}
+
 function safeJson(value, fallback) {
   try { return value ? JSON.parse(String(value)) : fallback; } catch { return fallback; }
 }
@@ -297,18 +420,71 @@ function recentEnough(meta) {
   return Number.isFinite(age) && age < REFRESH_DAYS*86400000;
 }
 
+async function ensureStoredCatalog(db) {
+  await db.execute(`CREATE TABLE IF NOT EXISTS discovery_sponsorship_opportunities (
+    event_id TEXT PRIMARY KEY,
+    conference_title TEXT NOT NULL,
+    start_date TEXT,
+    end_date TEXT,
+    city TEXT,
+    country TEXT,
+    official_url TEXT NOT NULL,
+    sponsor_url TEXT NOT NULL,
+    action_url TEXT NOT NULL,
+    action_label TEXT NOT NULL DEFAULT 'Inquire Now',
+    has_published_pricing INTEGER NOT NULL DEFAULT 0,
+    categories TEXT NOT NULL DEFAULT '[]',
+    packages TEXT NOT NULL DEFAULT '[]',
+    source_urls TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'available',
+    checked_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+}
+
+async function storeOpportunity(db,event,external) {
+  const official=String(event.official_url || event.canonical_url || '').trim();
+  const categories=normalizeStoredCategories(event);
+  await db.execute({
+    sql:`INSERT INTO discovery_sponsorship_opportunities(
+      event_id,conference_title,start_date,end_date,city,country,official_url,sponsor_url,action_url,
+      action_label,has_published_pricing,categories,packages,source_urls,status,checked_at,updated_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
+    ON CONFLICT(event_id) DO UPDATE SET
+      conference_title=excluded.conference_title,start_date=excluded.start_date,end_date=excluded.end_date,
+      city=excluded.city,country=excluded.country,official_url=excluded.official_url,
+      sponsor_url=excluded.sponsor_url,action_url=excluded.action_url,action_label=excluded.action_label,
+      has_published_pricing=excluded.has_published_pricing,categories=excluded.categories,
+      packages=excluded.packages,source_urls=excluded.source_urls,status=excluded.status,
+      checked_at=excluded.checked_at,updated_at=datetime('now')`,
+    args:[
+      String(event.id),String(event.title||''),event.start_date||null,event.end_date||null,event.city||null,event.country||null,
+      official,String(external?.sponsor_url || official),String(external?.action_url || external?.sponsor_url || official),
+      String(external?.action_label || 'Inquire Now'),external?.has_published_pricing ? 1 : 0,
+      JSON.stringify(categories),JSON.stringify(Array.isArray(external?.packages)?external.packages:[]),
+      JSON.stringify(Array.isArray(external?.source_urls)?external.source_urls:[]),
+      String(external?.status || 'unread'),String(external?.checked_at || new Date().toISOString())
+    ]
+  });
+}
+
 async function enrichOne(db,event) {
   const official=String(event.official_url || event.canonical_url || '').trim();
   if (!official) return {status:'no-url'};
   const existingRows=await db.execute({sql:'SELECT source_url,extraction_metadata FROM extracted_conferences WHERE source_url IN (?,?) LIMIT 1',args:[official,String(event.canonical_url || official)]});
   const existing=existingRows.rows?.[0] || null;
   const oldMeta=safeJson(existing?.extraction_metadata,{});
-  if (recentEnough(oldMeta)) return {status:'fresh'};
+  if (recentEnough(oldMeta)) {
+    if (oldMeta?.external_sponsorship) await storeOpportunity(db,event,oldMeta.external_sponsorship);
+    return {status:'fresh'};
+  }
 
   const main=await fetchHtml(official);
   if (!main.ok || !pageMatchesEdition(main.html,event)) {
-    const meta={...oldMeta,external_sponsorship:{status:'unread',checked_at:new Date().toISOString(),source_urls:[official],action_url:null,packages:[]}};
+    const external={status:'unread',checked_at:new Date().toISOString(),sponsor_url:official,source_urls:[official],action_url:official,action_label:'Inquire Now',has_published_pricing:false,packages:[]};
+    const meta={...oldMeta,external_sponsorship:external};
     if (existing) await db.execute({sql:"UPDATE extracted_conferences SET extraction_metadata=?,updated_at=datetime('now') WHERE source_url=?",args:[JSON.stringify(meta),existing.source_url]});
+    await storeOpportunity(db,event,external);
     return {status:'unread'};
   }
 
@@ -336,9 +512,11 @@ async function enrichOne(db,event) {
   const homeSponsorSignal=SPONSOR_LINK_RE.test(stripTags(main.html)) || candidateLinks.length>0;
   if (!sponsorPages.length && homeSponsorSignal) sponsorPages.push(main);
   if (!sponsorPages.length) {
-    const meta={...oldMeta,external_sponsorship:{status:'not_found',checked_at:new Date().toISOString(),source_urls:[main.finalUrl],action_url:null,packages:[]}};
+    const external={status:'not_found',checked_at:new Date().toISOString(),sponsor_url:main.finalUrl,source_urls:[main.finalUrl],action_url:main.finalUrl,action_label:'Inquire Now',has_published_pricing:false,packages:[]};
+    const meta={...oldMeta,external_sponsorship:external};
     const key=existing?.source_url || official;
     if(existing) await db.execute({sql:"UPDATE extracted_conferences SET extraction_metadata=?,updated_at=datetime('now') WHERE source_url=?",args:[JSON.stringify(meta),key]});
+    await storeOpportunity(db,event,external);
     return {status:'not-found'};
   }
 
@@ -376,6 +554,7 @@ async function enrichOne(db,event) {
   } else {
     await db.execute({sql:"INSERT INTO extracted_conferences(source_url,overview,call_for_papers,program_agenda,keynote_speakers,technical_committee,sponsors_exhibitors,venue_accommodation,fees_pricing,community,extraction_metadata,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,datetime('now'))",args:[official,'{}','{}','{}','[]','[]','[]','{}','{}','{}',JSON.stringify(meta)]});
   }
+  await storeOpportunity(db,event,external);
   return {status:'available',priced,packages:packages.length};
 }
 
@@ -388,7 +567,9 @@ async function main(){
   try{
     const tables=await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('discovery_events','extracted_conferences')");
     if((tables.rows||[]).length<2){console.log('[sponsor-enrich] schema unavailable; skipping');return;}
-    const rows=await db.execute(`SELECT id,title,start_date,start_year,official_url,canonical_url
+    await ensureStoredCatalog(db);
+    const rows=await db.execute(`SELECT id,title,start_date,end_date,start_year,city,country,official_url,canonical_url,primary_category,topics,
+      (SELECT GROUP_CONCAT(category,'|') FROM discovery_event_categories dec WHERE dec.event_id=discovery_events.id) AS categories
       FROM discovery_events
       WHERE status='published'
         AND COALESCE(official_url,canonical_url) IS NOT NULL
