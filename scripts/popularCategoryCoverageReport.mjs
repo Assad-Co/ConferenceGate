@@ -6,12 +6,12 @@ const CATEGORIES=[
   'Artificial Intelligence','Data Science','Cybersecurity','Software & Cloud','Telecommunications',
   'Semiconductors & Electronics','Robotics & Automation','Engineering','Civil & Construction',
   'Mechanical Engineering','Electrical Engineering','Chemical Engineering','Materials Science','Energy',
-  'Petroleum & Geoscience','Renewable Energy','Hydrogen & CCUS','Mining & Minerals','Environment',
-  'Climate & Sustainability','Healthcare','Public Health','Pharmaceuticals & Biotechnology','Nursing',
+  'Petroleum & Geoscience','Geoscience','Geology','Organic Geochemistry','Renewable Energy','Hydrogen & CCUS','Mining & Minerals','Environment',
+  'Climate & Sustainability','Healthcare','Health','Public Health','Pharmaceuticals & Biotechnology','Nursing',
   'Dentistry','Cardiology','Oncology','Neuroscience','Life Sciences','Chemistry','Physics',
   'Mathematics & Statistics','Science','Education','Business','Finance','Economics','Marketing',
   'Supply Chain & Logistics','Manufacturing','Aviation & Aerospace','Maritime','Automotive & Mobility',
-  'Architecture & Urbanism','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
+  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
   'Arts & Culture','Tourism & Hospitality','Blockchain & Web3','Real Estate','Virtual conferences','Open call for papers'
 ];
 const TARGET=Math.max(1,Number(process.env.POPULAR_CATEGORY_RICH_TARGET||25));
