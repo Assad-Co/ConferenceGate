@@ -3233,6 +3233,175 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             )}
           </div>
 
+          {sponsorshipDeals.length > 0 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Sponsorship Deal Rooms</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Private commercial workspaces created when an inquiry enters negotiation. Payment confirmation can only come from the configured payment provider.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {sponsorshipDeals.map((deal) => {
+                  const draft = dealDraft(deal);
+                  return (
+                    <div key={deal.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-5">
+                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
+                              Deal Room
+                            </span>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">
+                              {deal.status.replace(/_/g, ' ')}
+                            </span>
+                            {deal.status === 'paid' && (
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">
+                                Provider-confirmed payment
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-extrabold text-base text-slate-900 mt-2">{deal.opportunityTitle}</h3>
+                          <p className="text-xs text-slate-500">{deal.conferenceTitle} · {deal.counterpartName}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">Agreed amount</div>
+                          <div className="text-lg font-extrabold text-blue-700">
+                            {deal.agreedAmount === null ? 'Not set' : `${deal.currency} ${Number(deal.agreedAmount).toLocaleString()}`}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <input
+                            type="number"
+                            min="0"
+                            value={draft.amount}
+                            onChange={(e) => setDealDraft(deal, { amount: e.target.value })}
+                            placeholder="Agreed amount"
+                            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <textarea
+                            rows={3}
+                            value={draft.proposalNotes}
+                            onChange={(e) => setDealDraft(deal, { proposalNotes: e.target.value })}
+                            placeholder="Proposal / commercial terms"
+                            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <input
+                            value={draft.deliverables}
+                            onChange={(e) => setDealDraft(deal, { deliverables: e.target.value })}
+                            placeholder="Deliverables, comma separated"
+                            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <input
+                            type="url"
+                            value={draft.contractUrl}
+                            onChange={(e) => setDealDraft(deal, { contractUrl: e.target.value })}
+                            placeholder="https://... contract link"
+                            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <input
+                            type="url"
+                            value={draft.invoiceUrl}
+                            onChange={(e) => setDealDraft(deal, { invoiceUrl: e.target.value })}
+                            placeholder="https://... invoice link"
+                            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <button
+                            type="button"
+                            disabled={savingDealId === deal.id}
+                            onClick={() => handleSaveDealTerms(deal)}
+                            className="w-full py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                          >
+                            Save Commercial Terms
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-2">Deal progression</div>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                ['negotiating', 'Negotiating'],
+                                ['agreement_reached', 'Agreement Reached'],
+                                ['contract_pending', 'Contract Pending'],
+                                ['payment_pending', 'Payment Pending'],
+                                ['delivering', 'Delivering'],
+                                ['completed', 'Completed'],
+                                ['canceled', 'Canceled'],
+                              ].map(([status, label]) => (
+                                <button
+                                  key={status}
+                                  type="button"
+                                  disabled={savingDealId === deal.id || deal.status === 'paid' && status === 'payment_pending'}
+                                  onClick={() => handleDealStatus(deal, status as any)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border cursor-pointer disabled:opacity-50 ${
+                                    deal.status === status
+                                      ? 'bg-blue-900 text-white border-blue-900'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            {deal.status === 'payment_pending' && (
+                              <p className="text-[10px] text-amber-700 mt-2">
+                                Waiting for payment-provider confirmation. Neither party can manually mark this Paid.
+                              </p>
+                            )}
+                          </div>
+
+                          {(deal.contractUrl || deal.invoiceUrl) && (
+                            <div className="flex flex-wrap gap-2">
+                              {deal.contractUrl && (
+                                <a href={deal.contractUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-lg bg-slate-100 text-blue-700 text-[10px] font-bold">
+                                  Open Contract
+                                </a>
+                              )}
+                              {deal.invoiceUrl && (
+                                <a href={deal.invoiceUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-lg bg-slate-100 text-blue-700 text-[10px] font-bold">
+                                  Open Invoice
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="max-h-48 overflow-y-auto space-y-2">
+                            {deal.updates.map((update) => (
+                              <div key={update.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[10px] text-slate-600">
+                                <div className="font-bold text-slate-800 uppercase">{update.kind}</div>
+                                <div>{update.text}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              value={draft.updateText}
+                              onChange={(e) => setDealDraft(deal, { updateText: e.target.value })}
+                              placeholder="Add Deal Room update..."
+                              className="flex-1 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                            />
+                            <button
+                              type="button"
+                              disabled={!draft.updateText.trim() || savingDealId === deal.id}
+                              onClick={() => handleAddDealNote(deal)}
+                              className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
             <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
             <p className="text-xs text-slate-500">
