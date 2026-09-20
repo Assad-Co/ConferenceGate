@@ -25,6 +25,8 @@ export interface AuthUser {
   bio: string | null;
   linkedinUrl: string | null;
   avatar: string | null;
+  identityVerified: boolean;
+  identityVerificationMethod: 'LinkedIn' | 'Google' | null;
   reviewerAvailable: boolean;
   professionalExpertise: string[];
   technicalSpecialization: string[];
