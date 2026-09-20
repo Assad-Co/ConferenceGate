@@ -566,6 +566,16 @@ export async function initDb(): Promise<void> {
       UNIQUE(request_id, organizer_id, conference_id)
     );
 
+    CREATE TABLE IF NOT EXISTS sponsorship_engagement_events (
+      id TEXT PRIMARY KEY,
+      need_id TEXT NOT NULL REFERENCES sponsorship_needs(id),
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      event_type TEXT NOT NULL CHECK(event_type IN ('listing_view','inquiry','negotiating','won','contract','payment')),
+      event_day TEXT NOT NULL DEFAULT (date('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(need_id, sponsor_id, event_type, event_day)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
@@ -573,6 +583,7 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deal_updates_deal ON sponsorship_deal_updates(deal_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsor_requests_status ON sponsor_requests(status, start_date, end_date);
     CREATE INDEX IF NOT EXISTS idx_sponsor_request_responses_request ON sponsor_request_responses(request_id, status);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_engagement_need ON sponsorship_engagement_events(need_id, event_type, created_at);
 
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
