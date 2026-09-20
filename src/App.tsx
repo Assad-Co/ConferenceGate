@@ -4,7 +4,16 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './components/auth/AuthScreen';
-import { AuthUser, fetchCurrentUser, logout as apiLogout, updateAvatar, updateProfile, updateReviewerAvailability } from './api/auth';
+import {
+  AuthUser,
+  fetchCurrentUser,
+  logout as apiLogout,
+  updateAvatar,
+  updateProfile,
+  updateReviewerAvailability,
+  updateProfessionalPreferences,
+  type ProfessionalPreferencesPayload,
+} from './api/auth';
 import { resolveAvatar } from './utils/avatar';
 import { isSponsorVerified } from './utils/sponsorVerification';
 import { Footer } from './components/Footer';
@@ -869,7 +878,19 @@ export function App() {
       linkedinUrl: user.linkedinUrl || '',
       avatar,
       ...EMPTY_ACCOUNT_ACHIEVEMENTS,
-      reviewerInfo: { ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo, available: user.reviewerAvailable },
+      expertise: user.professionalExpertise || [],
+      technicalSpecialization: user.technicalSpecialization || [],
+      researchInterests: user.researchInterests || [],
+      preferredRegions: user.preferredRegions || [],
+      committeeAvailable: user.committeeAvailable,
+      sessionChairAvailable: user.sessionChairAvailable,
+      speakerAvailable: user.speakerAvailable,
+      reviewerInfo: {
+        ...EMPTY_ACCOUNT_ACHIEVEMENTS.reviewerInfo,
+        available: user.reviewerAvailable,
+        expertiseKeywords: user.professionalExpertise || [],
+        maxLoad: user.reviewerMaxLoad || 5,
+      },
     }));
     if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.organization || user.name);
@@ -906,6 +927,31 @@ export function App() {
     } catch {
       setUserProfile((prev) => ({ ...prev, reviewerInfo: { ...prev.reviewerInfo, available: !nextAvailable } }));
     }
+  };
+
+  const handleEditProfessionalPreferences = async (payload: ProfessionalPreferencesPayload) => {
+    const updatedUser = await updateProfessionalPreferences(payload);
+    setAuthUser(updatedUser);
+    setUserProfile((prev) => ({
+      ...prev,
+      expertise: updatedUser.professionalExpertise || [],
+      technicalSpecialization: updatedUser.technicalSpecialization || [],
+      researchInterests: updatedUser.researchInterests || [],
+      preferredRegions: updatedUser.preferredRegions || [],
+      committeeAvailable: updatedUser.committeeAvailable,
+      sessionChairAvailable: updatedUser.sessionChairAvailable,
+      speakerAvailable: updatedUser.speakerAvailable,
+      reviewerInfo: {
+        ...prev.reviewerInfo,
+        expertiseKeywords: updatedUser.professionalExpertise || [],
+        maxLoad: updatedUser.reviewerMaxLoad || 5,
+      },
+    }));
+    showToast({
+      type: 'success',
+      title: 'Professional profile updated',
+      message: 'Your expertise and opportunity preferences are ready for matching.',
+    });
   };
 
   const handleEditProfile = async (payload: {
@@ -1509,6 +1555,7 @@ export function App() {
             onAvatarChange={handleAvatarChange}
             hasCustomAvatar={!!authUser.avatar}
             onEditProfile={handleEditProfile}
+          onEditProfessionalPreferences={authUser?.role === 'professional' ? handleEditProfessionalPreferences : undefined}
           />
         )}
 
