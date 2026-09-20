@@ -535,11 +535,44 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS sponsor_requests (
+      id TEXT PRIMARY KEY,
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      title TEXT NOT NULL,
+      description TEXT,
+      categories TEXT NOT NULL DEFAULT '[]',
+      regions TEXT NOT NULL DEFAULT '[]',
+      opportunity_types TEXT NOT NULL DEFAULT '[]',
+      budget_min REAL,
+      budget_max REAL,
+      target_audience TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','closed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsor_request_responses (
+      id TEXT PRIMARY KEY,
+      request_id TEXT NOT NULL REFERENCES sponsor_requests(id),
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','accepted','declined','withdrawn')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(request_id, organizer_id, conference_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_sponsor ON sponsorship_deals(sponsor_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deal_updates_deal ON sponsorship_deal_updates(deal_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_sponsor_requests_status ON sponsor_requests(status, start_date, end_date);
+    CREATE INDEX IF NOT EXISTS idx_sponsor_request_responses_request ON sponsor_request_responses(request_id, status);
 
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
@@ -993,6 +1026,36 @@ export interface SponsorshipDealUpdateRow {
   text: string;
   url: string | null;
   created_at: string;
+}
+
+export interface SponsorRequestRow {
+  id: string;
+  sponsor_id: string;
+  title: string;
+  description: string | null;
+  categories: string;
+  regions: string;
+  opportunity_types: string;
+  budget_min: number | null;
+  budget_max: number | null;
+  target_audience: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: "active" | "closed";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsorRequestResponseRow {
+  id: string;
+  request_id: string;
+  organizer_id: string;
+  conference_id: string;
+  conference_title: string;
+  message: string | null;
+  status: "new" | "accepted" | "declined" | "withdrawn";
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PostRow {
