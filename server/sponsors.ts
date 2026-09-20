@@ -1045,6 +1045,88 @@ sponsorsRouter.patch(
   })
 );
 
+// Sponsor Pro portfolio analytics from real internal marketplace activity only.
+sponsorsRouter.get(
+  "/analytics/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") {
+      return res.status(403).json({ error: "Sponsor account required." });
+    }
+    if (!["active","trialing"].includes(sponsor.subscription_status || "")) {
+      return res.status(402).json({ error: "Sponsor Pro subscription required." });
+    }
+
+    const preference = await dbGet<SponsorPreferenceRow>(
+      "SELECT * FROM sponsor_preferences WHERE sponsor_id=?",
+      [req.userId!]
+    );
+    const activeNeeds = await dbAll<SponsorshipNeedRow>(
+      `SELECT * FROM sponsorship_needs
+        WHERE status='active'
+          AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))`
+    );
+    const ranked = activeNeeds.map((need) => sponsorNeedMatch(preference, need));
+    const meaningfulMatches = ranked.filter((score) => score >= 45).length;
+    const highMatches = ranked.filter((score) => score >= 70).length;
+
+    const inquiries = await dbAll<SponsorshipNeedInquiryRow>(
+      "SELECT * FROM sponsorship_need_inquiries WHERE sponsor_id=? ORDER BY created_at DESC",
+      [req.userId!]
+    );
+    const deals = await dbAll<SponsorshipDealRow>(
+      "SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY updated_at DESC",
+      [req.userId!]
+    );
+    const requests = await dbAll<SponsorRequestRow>(
+      "SELECT * FROM sponsor_requests WHERE sponsor_id=?",
+      [req.userId!]
+    );
+    const responseCount = await dbGet<{ count: number }>(
+      `SELECT COUNT(*) as count
+         FROM sponsor_request_responses rr
+         JOIN sponsor_requests r ON r.id=rr.request_id
+        WHERE r.sponsor_id=?`,
+      [req.userId!]
+    );
+
+    const paidStatuses = new Set(["paid","delivering","completed"]);
+    const committedStatuses = new Set(["agreement_reached","contract_pending","payment_pending","paid","delivering","completed"]);
+    const paidDeals = deals.filter((deal) => paidStatuses.has(deal.status));
+    const activeDeals = deals.filter((deal) => !["completed","canceled"].includes(deal.status));
+    const negotiations = deals.filter((deal) => ["negotiating","agreement_reached","contract_pending","payment_pending"].includes(deal.status));
+    const contracts = deals.filter((deal) => ["contract_pending","payment_pending","paid","delivering","completed"].includes(deal.status));
+    const committedSpend = deals
+      .filter((deal) => committedStatuses.has(deal.status))
+      .reduce((sum, deal) => sum + Number(deal.agreed_amount || 0), 0);
+    const paidSpend = paidDeals.reduce((sum, deal) => sum + Number(deal.agreed_amount || 0), 0);
+
+    res.json({
+      analytics: {
+        meaningfulMatches,
+        highMatches,
+        inquiriesSent: inquiries.length,
+        activeDeals: activeDeals.length,
+        negotiations: negotiations.length,
+        contracts: contracts.length,
+        paidDeals: paidDeals.length,
+        completedDeals: deals.filter((deal) => deal.status === "completed").length,
+        committedSpend,
+        paidSpend,
+        sponsorRequests: requests.length,
+        organizerResponses: Number(responseCount?.count || 0),
+        acceptedRequestResponses: await dbGet<{ count: number }>(
+          `SELECT COUNT(*) as count
+             FROM sponsor_request_responses rr
+             JOIN sponsor_requests r ON r.id=rr.request_id
+            WHERE r.sponsor_id=? AND rr.status='accepted'`,
+          [req.userId!]
+        ).then((row) => Number(row?.count || 0)),
+      },
+    });
+  })
+);
+
 // Stored official sponsorship/exhibitor catalogue. This endpoint performs database reads only:
 // it never crawls, searches, or fetches an organizer website during a customer request.
 sponsorsRouter.get(
