@@ -161,6 +161,27 @@ export async function initDb(): Promise<void> {
     existingColumns = await tableColumns("users");
   }
 
+  // Paid workspace access. Professional accounts remain free; organizer and sponsor workspaces
+  // require an active paid subscription. Provider-specific checkout is configured externally.
+  const BILLING_COLUMNS = [
+    ["subscription_status", "TEXT NOT NULL DEFAULT 'required'"],
+    ["subscription_plan", "TEXT"],
+    ["subscription_provider", "TEXT"],
+    ["subscription_period_end", "TEXT"],
+    ["billing_customer_ref", "TEXT"],
+  ] as const;
+  for (const [col, definition] of BILLING_COLUMNS) {
+    if (!existingColumns.some((c) => c.name === col)) {
+      await db.executeMultiple(`ALTER TABLE users ADD COLUMN ${col} ${definition};`);
+      existingColumns = await tableColumns("users");
+    }
+  }
+  // Free Professionals do not need a paid subscription state.
+  await db.execute({
+    sql: "UPDATE users SET subscription_status = 'free', subscription_plan = COALESCE(subscription_plan, 'professional_free') WHERE role = 'professional' AND subscription_status = 'required'",
+    args: [],
+  });
+
   // Real tracked activity: submissions, peer reviews, reviewer volunteering, and
   // conference registrations — replaces the earlier client-only mock/placeholder data.
   await db.executeMultiple(`
@@ -573,6 +594,11 @@ export interface UserRow {
   session_chair_available: number;
   speaker_available: number;
   reviewer_max_load: number;
+  subscription_status: string;
+  subscription_plan: string | null;
+  subscription_provider: string | null;
+  subscription_period_end: string | null;
+  billing_customer_ref: string | null;
   created_at: string;
 }
 
