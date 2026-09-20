@@ -76,6 +76,8 @@ import {
   addSponsorshipDealUpdate,
   fetchSponsorRequestBoard,
   respondToSponsorRequest,
+  fetchSponsorshipNeedAnalytics,
+  type SponsorshipNeedAnalytics,
   type SponsorshipNeed,
   type SponsorshipNeedInquiry,
   type SponsorshipDeal,
@@ -335,6 +337,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [sponsorRequestResponseDrafts, setSponsorRequestResponseDrafts] = useState<Record<string, { conferenceId: string; message: string }>>({});
   const [respondingSponsorRequestId, setRespondingSponsorRequestId] = useState<string | null>(null);
   const [respondedSponsorRequestIds, setRespondedSponsorRequestIds] = useState<Record<string, boolean>>({});
+  const [sponsorshipAnalytics, setSponsorshipAnalytics] = useState<SponsorshipNeedAnalytics>({
+    needs: [],
+    totals: { views: 0, inquiries: 0, negotiating: 0, won: 0, payments: 0, realizedRevenue: 0 },
+  });
   const [sponsorshipNeedLoading, setSponsorshipNeedLoading] = useState(false);
   const [sponsorshipNeedMessage, setSponsorshipNeedMessage] = useState<string | null>(null);
   const [sponsorshipNeedForm, setSponsorshipNeedForm] = useState({
@@ -354,16 +360,18 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const refreshInternalSponsorship = async () => {
     try {
-      const [needs, inquiries, deals, sponsorRequests] = await Promise.all([
+      const [needs, inquiries, deals, sponsorRequests, sponsorAnalytics] = await Promise.all([
         fetchMySponsorshipNeeds(),
         fetchMySponsorshipNeedInquiries(),
         fetchMySponsorshipDeals(),
         fetchSponsorRequestBoard(),
+        fetchSponsorshipNeedAnalytics(),
       ]);
       setSponsorshipNeeds(needs);
       setSponsorshipNeedInquiries(inquiries);
       setSponsorshipDeals(deals);
       setSponsorRequestBoard(sponsorRequests);
+      setSponsorshipAnalytics(sponsorAnalytics);
     } catch {
       setSponsorshipNeeds([]);
       setSponsorshipNeedInquiries([]);
@@ -430,6 +438,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       if (status === 'negotiating' || status === 'won' || status === 'lost') {
         setSponsorshipDeals(await fetchMySponsorshipDeals());
       }
+      setSponsorshipAnalytics(await fetchSponsorshipNeedAnalytics());
     } catch (error: any) {
       showToast({ type: 'info', title: 'Could not update sponsor inquiry', message: error?.message || 'Please try again.' });
     }
@@ -482,6 +491,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     try {
       const updated = await updateSponsorshipDeal(deal.id, { status });
       setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+      setSponsorshipAnalytics(await fetchSponsorshipNeedAnalytics());
     } catch (error: any) {
       showToast({ type: 'info', title: 'Could not update deal', message: error?.message || 'Please try again.' });
     } finally {
