@@ -62,6 +62,7 @@ async function cycle() {
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
+  await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
 
   // Coverage-driven pass: every Popular Search category has the same minimum target. Categories
   // below target receive extra official-source harvesting until they catch up; strong categories
@@ -134,6 +135,7 @@ async function cycle() {
   // replace extraction_metadata; this final pass restores the official sponsor/exhibitor action
   // URL and public pricing state after every other normalizer has finished.
   await runScript('scripts/enrichExternalSponsorships.mjs');
+  await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
   await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
