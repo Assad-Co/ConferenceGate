@@ -508,3 +508,26 @@ export async function fetchSponsorshipNeedAnalytics(): Promise<SponsorshipNeedAn
   const res = await fetch('/api/sponsors/needs/analytics', { credentials: 'include' });
   return parseResponse(res);
 }
+
+
+export interface SponsorPortfolioAnalytics {
+  meaningfulMatches: number;
+  highMatches: number;
+  inquiriesSent: number;
+  activeDeals: number;
+  negotiations: number;
+  contracts: number;
+  paidDeals: number;
+  completedDeals: number;
+  committedSpend: number;
+  paidSpend: number;
+  sponsorRequests: number;
+  organizerResponses: number;
+  acceptedRequestResponses: number;
+}
+
+export async function fetchSponsorPortfolioAnalytics(): Promise<SponsorPortfolioAnalytics> {
+  const res = await fetch('/api/sponsors/analytics/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.analytics;
+}
