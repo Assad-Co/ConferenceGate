@@ -128,6 +128,44 @@ export async function fetchProfessionalOpportunities(): Promise<ProfessionalOppo
   const data = await parseResponse(res);
   return data.opportunities;
 }
+export interface ProfessionalDirectoryProfile {
+  id: string;
+  name: string;
+  title: string;
+  organization: string;
+  country: string;
+  avatar: string | null;
+  expertise: string[];
+  technicalSpecialization: string[];
+  researchInterests: string[];
+  preferredRegions: string[];
+  identityVerified: boolean;
+  reviewerAvailable: boolean;
+  committeeAvailable: boolean;
+  sessionChairAvailable: boolean;
+  speakerAvailable: boolean;
+  verifiedReviews: number;
+  verifiedCompletedRoles: number;
+  matchScore: number;
+}
+
+export async function searchProfessionals(params: {
+  roleType: 'committee' | 'chair' | 'speaker';
+  q?: string;
+  conferenceId?: string;
+  limit?: number;
+}): Promise<ProfessionalDirectoryProfile[]> {
+  const query = new URLSearchParams({
+    roleType: params.roleType,
+    ...(params.q ? { q: params.q } : {}),
+    ...(params.conferenceId ? { conferenceId: params.conferenceId } : {}),
+    ...(params.limit ? { limit: String(params.limit) } : {}),
+  });
+  const res = await fetch(`/api/activity/professionals/search?${query.toString()}`, { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.professionals;
+}
+
 
 export async function fetchMyProfessionalOpportunityInterestIds(): Promise<string[]> {
   const res = await fetch('/api/activity/professional-opportunities/interests/mine', { credentials: 'include' });
