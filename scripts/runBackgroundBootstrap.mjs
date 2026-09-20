@@ -50,6 +50,7 @@ async function main() {
   // categories are available without waiting for the long discovery/enrichment cycle.
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
+  await runScript('scripts/enrichExternalSponsorships.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
