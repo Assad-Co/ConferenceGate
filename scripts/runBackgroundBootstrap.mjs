@@ -50,6 +50,9 @@ async function main() {
   // categories are available without waiting for the long discovery/enrichment cycle.
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
+  // Populate the stored sponsorship catalog immediately from conferences already in Turso.
+  // This is DB-only and gives the Organizer page cards before slower website enrichment runs.
+  await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
   await runScript('scripts/enrichExternalSponsorships.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
 
