@@ -295,3 +295,82 @@ export async function updateSponsorshipNeedInquiryStatus(
   });
   await parseResponse(res);
 }
+
+
+export interface SponsorshipDealUpdate {
+  id: string;
+  authorId: string;
+  kind: 'note' | 'proposal' | 'contract' | 'invoice' | 'deliverable' | 'payment' | 'status';
+  text: string;
+  url: string | null;
+  createdAt: string;
+}
+
+export interface SponsorshipDeal {
+  id: string;
+  inquiryId: string;
+  needId: string;
+  organizerId: string;
+  sponsorId: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  opportunityTitle: string;
+  counterpartName: string;
+  agreedAmount: number | null;
+  currency: string;
+  status: 'negotiating' | 'agreement_reached' | 'contract_pending' | 'payment_pending' | 'paid' | 'delivering' | 'completed' | 'canceled';
+  proposalNotes: string;
+  deliverables: string[];
+  contractUrl: string | null;
+  invoiceUrl: string | null;
+  paymentReference: string | null;
+  createdAt: string;
+  updatedAt: string;
+  updates: SponsorshipDealUpdate[];
+}
+
+export async function fetchMySponsorshipDeals(): Promise<SponsorshipDeal[]> {
+  const res = await fetch('/api/sponsors/deals/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.deals;
+}
+
+export async function updateSponsorshipDeal(
+  dealId: string,
+  payload: {
+    agreedAmount?: number | null;
+    currency?: string;
+    proposalNotes?: string;
+    deliverables?: string[];
+    contractUrl?: string | null;
+    invoiceUrl?: string | null;
+    status?: 'negotiating' | 'agreement_reached' | 'contract_pending' | 'payment_pending' | 'delivering' | 'completed' | 'canceled';
+  }
+): Promise<SponsorshipDeal> {
+  const res = await fetch(`/api/sponsors/deals/${dealId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.deal;
+}
+
+export async function addSponsorshipDealUpdate(
+  dealId: string,
+  payload: {
+    kind?: 'note' | 'proposal' | 'contract' | 'invoice' | 'deliverable';
+    text: string;
+    url?: string;
+  }
+): Promise<SponsorshipDealUpdate> {
+  const res = await fetch(`/api/sponsors/deals/${dealId}/updates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.update;
+}
