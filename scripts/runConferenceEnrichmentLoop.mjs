@@ -130,6 +130,10 @@ async function cycle() {
     IMAGE_ENRICH_LIMIT: process.env.AAPG_IMAGE_ENRICH_LIMIT || '150',
     IMAGE_ENRICH_CONCURRENCY: process.env.IMAGE_ENRICH_CONCURRENCY || '5',
   });
+  // Run sponsorship discovery last as well. Some authoritative conference syncs intentionally
+  // replace extraction_metadata; this final pass restores the official sponsor/exhibitor action
+  // URL and public pricing state after every other normalizer has finished.
+  await runScript('scripts/enrichExternalSponsorships.mjs');
   await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
