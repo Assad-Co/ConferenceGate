@@ -33,6 +33,8 @@ import { ConferenceLink } from './ConferenceLink';
 import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
+import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
+import type { ProfessionalPreferencesPayload } from '../api/auth';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
 import { resizeImageFile } from '../utils/image';
@@ -87,6 +89,7 @@ interface UserProfileViewProps {
     bio: string;
     linkedinUrl: string;
   }) => Promise<void>;
+  onEditProfessionalPreferences?: (payload: ProfessionalPreferencesPayload) => Promise<void>;
   currentUserEmail?: string;
   keynoteSpeakerMatches?: KeynoteSpeakerMatch[];
 }
@@ -140,6 +143,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onAvatarChange,
   hasCustomAvatar = false,
   onEditProfile,
+  onEditProfessionalPreferences,
   currentUserEmail,
   keynoteSpeakerMatches = [],
 }) => {
@@ -165,6 +169,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     [registrations, conferences]
   );
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isProfessionalPreferencesOpen, setIsProfessionalPreferencesOpen] = useState(false);
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -528,6 +533,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <span>Edit Profile</span>
               </button>
             )}
+            {variant === 'professional' && onEditProfessionalPreferences && (
+              <button
+                onClick={() => setIsProfessionalPreferencesOpen(true)}
+                className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs border border-slate-200 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                <span>Availability & Expertise</span>
+              </button>
+            )}
             {variant === 'professional' && (
               <>
                 <button
@@ -577,6 +591,44 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees} Positions</div>
           </div>
         </div>
+        )}
+
+        {variant === 'professional' && (
+          <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900">Professional Opportunity Profile</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Your expertise and availability for reviewer, committee, chair, and speaker matching.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+                <span className={`px-2.5 py-1 rounded-full ${userProfile.reviewerInfo.available ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                  Reviewer {userProfile.reviewerInfo.available ? 'Available' : 'Off'}
+                </span>
+                <span className={`px-2.5 py-1 rounded-full ${userProfile.committeeAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                  Committee {userProfile.committeeAvailable ? 'Available' : 'Off'}
+                </span>
+                <span className={`px-2.5 py-1 rounded-full ${userProfile.sessionChairAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                  Session Chair {userProfile.sessionChairAvailable ? 'Available' : 'Off'}
+                </span>
+                <span className={`px-2.5 py-1 rounded-full ${userProfile.speakerAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                  Speaker {userProfile.speakerAvailable ? 'Available' : 'Off'}
+                </span>
+              </div>
+            </div>
+            {(userProfile.expertise.length > 0 || userProfile.technicalSpecialization.length > 0 || (userProfile.preferredRegions?.length || 0) > 0) && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {[...userProfile.expertise, ...userProfile.technicalSpecialization, ...(userProfile.preferredRegions || [])]
+                  .slice(0, 12)
+                  .map((item, index) => (
+                    <span key={`${item}-${index}`} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                      {item}
+                    </span>
+                  ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Profile Tabs — organizers and sponsors already have a full dashboard elsewhere for
@@ -1247,6 +1299,23 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           }}
           onSave={onEditProfile}
         />
+      {variant === 'professional' && onEditProfessionalPreferences && (
+        <ProfessionalPreferencesModal
+          isOpen={isProfessionalPreferencesOpen}
+          onClose={() => setIsProfessionalPreferencesOpen(false)}
+          initial={{
+            professionalExpertise: userProfile.expertise || [],
+            technicalSpecialization: userProfile.technicalSpecialization || [],
+            researchInterests: userProfile.researchInterests || [],
+            preferredRegions: userProfile.preferredRegions || [],
+            committeeAvailable: Boolean(userProfile.committeeAvailable),
+            sessionChairAvailable: Boolean(userProfile.sessionChairAvailable),
+            speakerAvailable: Boolean(userProfile.speakerAvailable),
+            reviewerMaxLoad: userProfile.reviewerInfo.maxLoad || 5,
+          }}
+          onSave={onEditProfessionalPreferences}
+        />
+      )}
       )}
 
       <AddAttendanceModal
