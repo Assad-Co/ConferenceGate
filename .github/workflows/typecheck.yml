@@ -24,4 +24,4 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript
-        run: npm run lint
+        run: npx tsc -p tsconfig.check.json --noEmit
