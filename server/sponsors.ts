@@ -7,6 +7,9 @@ import {
   SponsorshipPackageRow,
   SponsorshipApplicationRow,
   SponsorReviewRow,
+  SponsorPreferenceRow,
+  SponsorshipNeedRow,
+  SponsorshipNeedInquiryRow,
   CreatedConferenceRow,
   UserRow,
 } from "./db";
@@ -49,6 +52,415 @@ function safeJson(value: unknown, fallback: any) {
     return fallback;
   }
 }
+
+function cleanStringList(value: unknown, max = 30): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(
+    value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )].slice(0, max);
+}
+
+function overlapRatio(a: string[], b: string[]): number | null {
+  if (!a.length || !b.length) return null;
+  const aa = new Set(a.map((item) => item.toLowerCase()));
+  const bb = new Set(b.map((item) => item.toLowerCase()));
+  let overlap = 0;
+  for (const item of aa) if (bb.has(item)) overlap += 1;
+  return overlap / Math.max(1, Math.min(aa.size, bb.size));
+}
+
+function sponsorNeedMatch(
+  preference: SponsorPreferenceRow | undefined,
+  need: SponsorshipNeedRow
+): number {
+  if (!preference) return 0;
+  const sectors = safeJson(preference.sectors, []);
+  const categories = safeJson(preference.categories, []);
+  const regions = safeJson(preference.regions, []);
+  const types = safeJson(preference.opportunity_types, []);
+  const needSectors = safeJson(need.target_sectors, []);
+  const needCategories = safeJson(need.categories, []);
+  const needRegions = safeJson(need.regions, []);
+  const needTypes = safeJson(need.opportunity_types, []);
+
+  const sector = overlapRatio(sectors, needSectors);
+  const category = overlapRatio(categories, needCategories);
+  const region = overlapRatio(regions, needRegions);
+  const type = overlapRatio(types, needTypes);
+
+  let weighted = 0;
+  let weight = 0;
+  for (const [value, w] of [[sector, 0.35], [category, 0.3], [region, 0.15], [type, 0.2]] as Array<[number | null, number]>) {
+    if (value === null) continue;
+    weighted += value * w;
+    weight += w;
+  }
+
+  let budgetScore: number | null = null;
+  if (need.price_amount !== null && preference.budget_max !== null) {
+    budgetScore =
+      need.price_amount <= preference.budget_max &&
+      (preference.budget_min === null || need.price_amount >= preference.budget_min)
+        ? 1
+        : need.price_amount <= preference.budget_max * 1.25
+          ? 0.5
+          : 0;
+  }
+  if (budgetScore !== null) {
+    weighted += budgetScore * 0.2;
+    weight += 0.2;
+  }
+  return weight ? Math.round((weighted / weight) * 100) : 0;
+}
+
+function toSponsorshipNeedDTO(row: SponsorshipNeedRow, matchScore?: number) {
+  return {
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    organizerId: row.organizer_id,
+    title: row.title,
+    description: row.description || "",
+    categories: safeJson(row.categories, []),
+    targetSectors: safeJson(row.target_sectors, []),
+    regions: safeJson(row.regions, []),
+    opportunityTypes: safeJson(row.opportunity_types, []),
+    priceAmount: row.price_amount,
+    priceOnRequest: Boolean(row.price_on_request),
+    totalSlots: row.total_slots,
+    benefits: safeJson(row.benefits, []),
+    deadline: row.deadline || null,
+    status: row.status,
+    createdAt: row.created_at,
+    matchScore: matchScore ?? null,
+  };
+}
+
+// Sponsor Pro preference profile used for internal opportunity matching.
+sponsorsRouter.get(
+  "/preferences/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const row = await dbGet<SponsorPreferenceRow>("SELECT * FROM sponsor_preferences WHERE sponsor_id = ?", [req.userId!]);
+    res.json({
+      preferences: row
+        ? {
+            sectors: safeJson(row.sectors, []),
+            categories: safeJson(row.categories, []),
+            regions: safeJson(row.regions, []),
+            opportunityTypes: safeJson(row.opportunity_types, []),
+            budgetMin: row.budget_min,
+            budgetMax: row.budget_max,
+            alertFrequency: row.alert_frequency,
+          }
+        : {
+            sectors: [],
+            categories: [],
+            regions: [],
+            opportunityTypes: [],
+            budgetMin: null,
+            budgetMax: null,
+            alertFrequency: "instant",
+          },
+    });
+  })
+);
+
+sponsorsRouter.put(
+  "/preferences/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    if (!["active", "trialing"].includes(user.subscription_status || "")) {
+      return res.status(402).json({ error: "Sponsor Pro subscription required." });
+    }
+    const body = req.body || {};
+    const sectors = cleanStringList(body.sectors);
+    const categories = cleanStringList(body.categories);
+    const regions = cleanStringList(body.regions, 20);
+    const opportunityTypes = cleanStringList(body.opportunityTypes, 20);
+    const budgetMin = body.budgetMin === null || body.budgetMin === "" || body.budgetMin === undefined ? null : Number(body.budgetMin);
+    const budgetMax = body.budgetMax === null || body.budgetMax === "" || body.budgetMax === undefined ? null : Number(body.budgetMax);
+    if (budgetMin !== null && (!Number.isFinite(budgetMin) || budgetMin < 0)) {
+      return res.status(400).json({ error: "budgetMin must be a positive number." });
+    }
+    if (budgetMax !== null && (!Number.isFinite(budgetMax) || budgetMax < 0)) {
+      return res.status(400).json({ error: "budgetMax must be a positive number." });
+    }
+    if (budgetMin !== null && budgetMax !== null && budgetMin > budgetMax) {
+      return res.status(400).json({ error: "budgetMin cannot exceed budgetMax." });
+    }
+    const alertFrequency =
+      body.alertFrequency === "daily" || body.alertFrequency === "weekly" ? body.alertFrequency : "instant";
+
+    await dbRun(
+      `INSERT INTO sponsor_preferences(
+        sponsor_id,sectors,categories,regions,opportunity_types,budget_min,budget_max,alert_frequency,updated_at
+      ) VALUES(?,?,?,?,?,?,?,?,datetime('now'))
+      ON CONFLICT(sponsor_id) DO UPDATE SET
+        sectors=excluded.sectors,categories=excluded.categories,regions=excluded.regions,
+        opportunity_types=excluded.opportunity_types,budget_min=excluded.budget_min,budget_max=excluded.budget_max,
+        alert_frequency=excluded.alert_frequency,updated_at=datetime('now')`,
+      [
+        req.userId!,
+        JSON.stringify(sectors),
+        JSON.stringify(categories),
+        JSON.stringify(regions),
+        JSON.stringify(opportunityTypes),
+        budgetMin,
+        budgetMax,
+        alertFrequency,
+      ]
+    );
+    const row = (await dbGet<SponsorPreferenceRow>("SELECT * FROM sponsor_preferences WHERE sponsor_id = ?", [req.userId!]))!;
+    res.json({
+      preferences: {
+        sectors: safeJson(row.sectors, []),
+        categories: safeJson(row.categories, []),
+        regions: safeJson(row.regions, []),
+        opportunityTypes: safeJson(row.opportunity_types, []),
+        budgetMin: row.budget_min,
+        budgetMax: row.budget_max,
+        alertFrequency: row.alert_frequency,
+      },
+    });
+  })
+);
+
+// Organizer Pro publishes the sponsorship inventory they actually need to fill.
+sponsorsRouter.post(
+  "/needs",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    if (!["active", "trialing"].includes(user.subscription_status || "")) {
+      return res.status(402).json({ error: "Organizer Pro subscription required." });
+    }
+    const body = req.body || {};
+    if (typeof body.conferenceId !== "string" || !body.conferenceId) {
+      return res.status(400).json({ error: "conferenceId is required." });
+    }
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return res.status(400).json({ error: "Sponsorship need title is required." });
+    }
+    const conference = await dbGet<CreatedConferenceRow>(
+      "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
+      [body.conferenceId, req.userId!]
+    );
+    if (!conference) return res.status(404).json({ error: "Conference not found." });
+    const conf = safeJson(conference.data, {});
+    const priceOnRequest = body.priceOnRequest !== false;
+    const priceAmount =
+      priceOnRequest || body.priceAmount === null || body.priceAmount === "" || body.priceAmount === undefined
+        ? null
+        : Number(body.priceAmount);
+    if (!priceOnRequest && (!Number.isFinite(priceAmount) || Number(priceAmount) < 0)) {
+      return res.status(400).json({ error: "A valid sponsorship price is required." });
+    }
+    const totalSlots = Math.max(1, Math.min(1000, Number(body.totalSlots || 1)));
+    const id = `sneed_${crypto.randomUUID()}`;
+    await dbRun(
+      `INSERT INTO sponsorship_needs(
+        id,conference_id,conference_title,organizer_id,title,description,categories,target_sectors,regions,
+        opportunity_types,price_amount,price_on_request,total_slots,benefits,deadline,status,updated_at
+      ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active',datetime('now'))`,
+      [
+        id,
+        body.conferenceId,
+        conf.title || conference.id,
+        req.userId!,
+        body.title.trim(),
+        typeof body.description === "string" ? body.description.trim() || null : null,
+        JSON.stringify(cleanStringList(body.categories)),
+        JSON.stringify(cleanStringList(body.targetSectors)),
+        JSON.stringify(cleanStringList(body.regions, 20)),
+        JSON.stringify(cleanStringList(body.opportunityTypes, 20)),
+        priceAmount,
+        priceOnRequest ? 1 : 0,
+        totalSlots,
+        JSON.stringify(cleanStringList(body.benefits, 30)),
+        typeof body.deadline === "string" ? body.deadline.trim() || null : null,
+      ]
+    );
+
+    const need = (await dbGet<SponsorshipNeedRow>("SELECT * FROM sponsorship_needs WHERE id = ?", [id]))!;
+
+    // Instant alerts only go to paid sponsors who explicitly opted into instant matching and whose
+    // saved preference profile has a meaningful match. No cold email or pre-signup notification.
+    const sponsors = await dbAll<UserRow>(
+      "SELECT * FROM users WHERE role='sponsor' AND subscription_status IN ('active','trialing')"
+    );
+    let notified = 0;
+    for (const sponsor of sponsors) {
+      const preference = await dbGet<SponsorPreferenceRow>(
+        "SELECT * FROM sponsor_preferences WHERE sponsor_id = ?",
+        [sponsor.id]
+      );
+      if (!preference || preference.alert_frequency !== "instant") continue;
+      const score = sponsorNeedMatch(preference, need);
+      if (score < 45) continue;
+      await createNotification(
+        sponsor.id,
+        "sponsorship",
+        `New sponsorship opportunity: ${need.title}`,
+        `${need.conference_title} matches your Sponsor Pro profile (${score}% match). Open the Sponsor Marketplace to review it.`
+      );
+      notified += 1;
+    }
+
+    res.status(201).json({ need: toSponsorshipNeedDTO(need), notifiedSponsors: notified });
+  })
+);
+
+sponsorsRouter.get(
+  "/needs/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    const rows = await dbAll<SponsorshipNeedRow>(
+      "SELECT * FROM sponsorship_needs WHERE organizer_id = ? ORDER BY created_at DESC",
+      [req.userId!]
+    );
+    res.json({ needs: rows.map((row) => toSponsorshipNeedDTO(row)) });
+  })
+);
+
+sponsorsRouter.get(
+  "/needs/matched",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    if (!["active", "trialing"].includes(user.subscription_status || "")) {
+      return res.status(402).json({ error: "Sponsor Pro subscription required." });
+    }
+    const preference = await dbGet<SponsorPreferenceRow>(
+      "SELECT * FROM sponsor_preferences WHERE sponsor_id = ?",
+      [req.userId!]
+    );
+    const rows = await dbAll<SponsorshipNeedRow>(
+      `SELECT * FROM sponsorship_needs
+        WHERE status='active' AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))
+        ORDER BY created_at DESC`
+    );
+    const matched = rows
+      .map((row) => ({ row, score: sponsorNeedMatch(preference, row) }))
+      .sort((a, b) => b.score - a.score || b.row.created_at.localeCompare(a.row.created_at))
+      .map(({ row, score }) => toSponsorshipNeedDTO(row, score));
+    res.json({ needs: matched });
+  })
+);
+
+sponsorsRouter.post(
+  "/needs/:id/inquiries",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    if (!["active", "trialing"].includes(sponsor.subscription_status || "")) {
+      return res.status(402).json({ error: "Sponsor Pro subscription required." });
+    }
+    const need = await dbGet<SponsorshipNeedRow>(
+      "SELECT * FROM sponsorship_needs WHERE id = ? AND status='active'",
+      [req.params.id]
+    );
+    if (!need) return res.status(404).json({ error: "Sponsorship opportunity not found." });
+    const existing = await dbGet<SponsorshipNeedInquiryRow>(
+      "SELECT * FROM sponsorship_need_inquiries WHERE need_id = ? AND sponsor_id = ?",
+      [need.id, req.userId!]
+    );
+    if (existing) return res.json({ inquiry: existing, alreadyExists: true });
+
+    const budget =
+      req.body?.budget === null || req.body?.budget === "" || req.body?.budget === undefined
+        ? null
+        : Number(req.body.budget);
+    if (budget !== null && (!Number.isFinite(budget) || budget < 0)) {
+      return res.status(400).json({ error: "budget must be a positive number." });
+    }
+    const id = `sinq_${crypto.randomUUID()}`;
+    await dbRun(
+      "INSERT INTO sponsorship_need_inquiries(id,need_id,sponsor_id,message,budget,status) VALUES(?,?,?,?,?,'new')",
+      [
+        id,
+        need.id,
+        req.userId!,
+        typeof req.body?.message === "string" ? req.body.message.trim() || null : null,
+        budget,
+      ]
+    );
+    await createNotification(
+      need.organizer_id,
+      "sponsorship",
+      "New Sponsor Pro inquiry",
+      `${sponsor.organization || sponsor.name} is interested in ${need.title} for ${need.conference_title}.`
+    );
+    const row = (await dbGet<SponsorshipNeedInquiryRow>("SELECT * FROM sponsorship_need_inquiries WHERE id = ?", [id]))!;
+    res.status(201).json({ inquiry: row, alreadyExists: false });
+  })
+);
+
+sponsorsRouter.get(
+  "/needs/inquiries/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    const rows = await dbAll<any>(
+      `SELECT i.*, n.title as need_title, n.conference_title, u.name as sponsor_name, u.organization as sponsor_organization
+        FROM sponsorship_need_inquiries i
+        JOIN sponsorship_needs n ON n.id=i.need_id
+        JOIN users u ON u.id=i.sponsor_id
+        WHERE n.organizer_id=?
+        ORDER BY i.created_at DESC`,
+      [req.userId!]
+    );
+    res.json({
+      inquiries: rows.map((row: any) => ({
+        id: row.id,
+        needId: row.need_id,
+        needTitle: row.need_title,
+        conferenceTitle: row.conference_title,
+        sponsorId: row.sponsor_id,
+        sponsorName: row.sponsor_organization || row.sponsor_name,
+        message: row.message || "",
+        budget: row.budget,
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+    });
+  })
+);
+
+sponsorsRouter.patch(
+  "/needs/inquiries/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    const allowed = new Set(["new","contacted","negotiating","won","lost"]);
+    const status = typeof req.body?.status === "string" && allowed.has(req.body.status) ? req.body.status : null;
+    if (!status) return res.status(400).json({ error: "Invalid inquiry status." });
+    const inquiry = await dbGet<any>(
+      `SELECT i.*, n.organizer_id FROM sponsorship_need_inquiries i
+        JOIN sponsorship_needs n ON n.id=i.need_id
+        WHERE i.id=?`,
+      [req.params.id]
+    );
+    if (!inquiry || inquiry.organizer_id !== req.userId) return res.status(404).json({ error: "Inquiry not found." });
+    await dbRun(
+      "UPDATE sponsorship_need_inquiries SET status=?,updated_at=datetime('now') WHERE id=?",
+      [status, req.params.id]
+    );
+    await createNotification(
+      inquiry.sponsor_id,
+      "sponsorship",
+      "Sponsorship inquiry updated",
+      `The organizer updated your sponsorship inquiry to ${status}.`
+    );
+    res.json({ ok: true, status });
+  })
+);
 
 // Stored official sponsorship/exhibitor catalogue. This endpoint performs database reads only:
 // it never crawls, searches, or fetches an organizer website during a customer request.
