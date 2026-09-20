@@ -240,19 +240,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
   >('overview');
 
-  const [sponsorshipCategoryFilter, setSponsorshipCategoryFilter] = useState('All categories');
-  const externalSponsorshipCategories = useMemo(
-    () => ['All categories', ...Array.from(new Set(externalSponsorshipOpportunities.flatMap((item) => item.categories || []))).sort()],
-    [externalSponsorshipOpportunities]
-  );
-  const filteredExternalSponsorships = useMemo(
-    () =>
-      sponsorshipCategoryFilter === 'All categories'
-        ? externalSponsorshipOpportunities
-        : externalSponsorshipOpportunities.filter((item) => item.categories?.includes(sponsorshipCategoryFilter)),
-    [externalSponsorshipOpportunities, sponsorshipCategoryFilter]
-  );
-
   // Real platform activity for the managed conferences — no fabricated totals.
   const overviewStats = useMemo(() => {
     const conferenceIds = new Set(conferences.map((c) => c.id));
@@ -806,6 +793,18 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     rose: Utensils,
     fuchsia: Gift,
   };
+
+  const sponsorshipOpportunityToneKeys = [
+    'violet',
+    'blue',
+    'indigo',
+    'sky',
+    'emerald',
+    'amber',
+    'teal',
+    'rose',
+    'fuchsia',
+  ] as const;
 
   const verifiedSponsorCount = new Set(
     sponsorApplicants.filter((a) => isSponsorVerified(a.sponsor)).map((a) => a.sponsor.id)
@@ -2599,140 +2598,107 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* Tab 5: Sponsorship Packages */}
       {activeTab === 'sponsors' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <div className="space-y-2">
-                <h2 className="text-lg font-bold text-slate-900">Official Conference Sponsorship & Exhibitor Opportunities</h2>
-                <p className="text-xs text-slate-500 max-w-4xl">
-                  Opportunities below come from the conference organizer's own sponsorship, exhibitor, partner, or
-                  commercial-opportunities pages. Published prices are shown exactly when found. When the organizer
-                  does not publish a price, Conference Gate shows <span className="font-bold text-slate-700">Inquire Now</span>
-                  and opens the official enquiry or sponsorship page.
-                </p>
-              </div>
-              <label className="min-w-[240px]">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                  <Filter className="w-3.5 h-3.5" />
-                  Conference category
-                </span>
-                <select
-                  value={sponsorshipCategoryFilter}
-                  onChange={(e) => setSponsorshipCategoryFilter(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
-                >
-                  {externalSponsorshipCategories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
-              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Official website links only
-              </span>
-              <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                {filteredExternalSponsorships.length} conference{filteredExternalSponsorships.length === 1 ? '' : 's'}
-              </span>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
+            <p className="text-xs text-slate-500">
+              Official sponsorship and exhibitor opportunities from upcoming conferences. Published pricing is shown
+              when the organizer provides it; otherwise the same action button opens the official enquiry page.
+            </p>
           </div>
 
-          {filteredExternalSponsorships.length === 0 ? (
+          {externalSponsorshipOpportunities.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
               <Globe className="w-8 h-8 text-slate-300 mx-auto mb-3" />
               <h3 className="font-bold text-sm text-slate-800">Checking official sponsorship and exhibitor pages</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-                ConferenceGate's enrichment worker scans every upcoming published conference and adds it here once an
-                official sponsor, exhibitor, partner, stand, booth, or commercial-opportunity page is verified.
+              <p className="text-xs text-slate-500 mt-1">
+                ConferenceGate is scanning the official websites for sponsor, exhibitor, partner, stand, booth, and
+                commercial-opportunity pages.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filteredExternalSponsorships.map((opportunity) => (
-                <div key={opportunity.conferenceId} className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-                  <div className="p-5 bg-slate-50 border-b border-slate-100 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-sm text-slate-900 leading-snug">{opportunity.conferenceTitle}</h3>
-                        <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                          {(opportunity.city || opportunity.country) && (
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {[opportunity.city, opportunity.country].filter(Boolean).join(', ')}
-                            </span>
-                          )}
-                          {opportunity.startDate && (
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {formatDate(opportunity.startDate)}
-                            </span>
-                          )}
-                        </div>
+            <div className="columns-1 md:columns-2 xl:columns-3 gap-6 [column-fill:_balance]">
+              {externalSponsorshipOpportunities.map((opportunity, index) => {
+                const tone = sponsorshipOpportunityToneKeys[index % sponsorshipOpportunityToneKeys.length];
+                const Icon = sponsorshipOpportunityIcons[tone] || Briefcase;
+                const c = sponsorshipOpportunityColors[tone] || sponsorshipOpportunityColors.blue;
+                const pricedPackages = (opportunity.packages || []).filter((pkg) => pkg.priceAmount !== null);
+                const startingPackage = pricedPackages.length
+                  ? pricedPackages.reduce((min, pkg) =>
+                      (pkg.priceAmount ?? Number.POSITIVE_INFINITY) < (min.priceAmount ?? Number.POSITIVE_INFINITY) ? pkg : min
+                    )
+                  : null;
+
+                return (
+                  <div
+                    key={opportunity.conferenceId}
+                    className={`break-inside-avoid mb-6 bg-white rounded-3xl border ${c.border} shadow-xs overflow-hidden`}
+                  >
+                    <div className={`${c.header} p-5 flex items-start gap-3`}>
+                      <div className={`w-10 h-10 rounded-xl ${c.iconBox} flex items-center justify-center shrink-0`}>
+                        <Icon className={`w-5 h-5 ${c.icon}`} />
                       </div>
-                      <span
-                        className={`px-2 py-1 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${
-                          opportunity.hasPublishedPricing
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        {opportunity.hasPublishedPricing ? 'Published pricing' : 'Price on request'}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-sm text-slate-900">{opportunity.conferenceTitle}</h3>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${c.badge}`}>
+                            {startingPackage?.priceText ? `From ${startingPackage.priceText}` : 'Inquire'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {[opportunity.city, opportunity.country].filter(Boolean).join(', ')}
+                          {opportunity.startDate ? ` · ${formatDate(opportunity.startDate)}` : ''}
+                        </p>
+                        {opportunity.categories?.length > 0 && (
+                          <p className="text-[10px] text-slate-400 mt-1 truncate">
+                            {opportunity.categories.slice(0, 4).join(' · ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(opportunity.categories || []).slice(0, 5).map((category) => (
-                        <span key={category} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[9px] font-semibold text-slate-600">
-                          {category}
-                        </span>
+
+                    <div className="p-4 space-y-2">
+                      {(opportunity.packages || []).slice(0, 8).map((pkg, pkgIndex) => (
+                        <div
+                          key={`${opportunity.conferenceId}__${pkgIndex}__${pkg.name}`}
+                          className="p-3 bg-slate-50 rounded-xl border border-slate-200"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-bold text-xs text-slate-900">{pkg.name}</div>
+                              <div className="text-[10px] text-slate-500 truncate">
+                                {pkg.benefits?.length
+                                  ? pkg.benefits.join(' · ')
+                                  : 'Official sponsorship / exhibitor opportunity'}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {pkg.priceText ? (
+                                <>
+                                  <div className={`font-extrabold text-sm ${c.price}`}>{pkg.priceText}</div>
+                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Published</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className={`font-extrabold text-sm ${c.price}`}>Inquire</div>
+                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Price on request</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <a
+                            href={pkg.sourceUrl || opportunity.actionUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center"
+                          >
+                            {pkg.priceText ? 'Sponsor / Exhibit Now' : 'Inquire Now'}
+                          </a>
+                        </div>
                       ))}
                     </div>
                   </div>
-
-                  <div className="p-4 flex-1 space-y-2">
-                    {(opportunity.packages || []).slice(0, 8).map((pkg, idx) => (
-                      <div key={`${opportunity.conferenceId}-${idx}-${pkg.name}`} className="p-3 rounded-xl border border-slate-200 bg-white">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-bold text-xs text-slate-900">{pkg.name}</div>
-                            {pkg.benefits?.length > 0 && (
-                              <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{pkg.benefits.join(' · ')}</div>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            {pkg.priceText ? (
-                              <>
-                                <div className="font-extrabold text-sm text-emerald-700">{pkg.priceText}</div>
-                                <div className="text-[9px] text-slate-400 uppercase font-bold">Organizer published</div>
-                              </>
-                            ) : (
-                              <div className="text-[10px] font-bold text-slate-500">Price on request</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-4 pt-0 space-y-2">
-                    <a
-                      href={opportunity.actionUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 rounded-xl font-bold text-[11px] bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <Globe className="w-3.5 h-3.5" />
-                      {opportunity.hasPublishedPricing ? 'Sponsor / Exhibit Now' : 'Inquire Now'}
-                    </a>
-                    <a
-                      href={opportunity.sponsorUrl || opportunity.officialUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 rounded-xl font-bold text-[10px] border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer flex items-center justify-center"
-                    >
-                      Open official sponsorship / exhibitor page
-                    </a>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
