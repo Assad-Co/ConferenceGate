@@ -105,6 +105,17 @@ const SEEDS = [
   ['Alzheimer’s Association International Conference 2027','https://aaic.alz.org/','2027-07-18','2027-07-21','Chicago','United States',['Neuroscience','Healthcare','Life Sciences','Public Health','Open call for papers']],
   ['International Congress for Industrial and Applied Mathematics 2027','https://www.siam.org/conferences-events/siam-conferences/iciam27/','2027-07-12','2027-07-16','The Hague','Netherlands',['Mathematics & Statistics','Science','Engineering','Data Science']],
   ['AAIC Neuroscience Next 2027','https://www.alz.org/neurosciencenext','2027-02-15','2027-02-18',null,null,['Virtual conferences','Neuroscience','Healthcare','Life Sciences','Education']]
+  ['World of Concrete 2027','https://www.worldofconcrete.com/','2027-01-19','2027-01-21','Las Vegas','United States',['Civil & Construction','Engineering','Manufacturing','Architecture & Urbanism','Business']],
+  ['2027 AIChE Annual Meeting','https://www.aiche.org/conferences/aiche-annual-meeting/2027','2027-10-31','2027-11-04','San Diego','United States',['Chemical Engineering','Engineering','Energy','Science','Education','Business']],
+  ['Sigma Nursing 49th Biennial Convention','https://www.sigmanursing.org/events/biennial-convention','2027-10-29','2027-11-01','Denver','United States',['Nursing','Healthcare','Public Health','Education','Life Sciences','Open call for papers']],
+  ['AACR Annual Meeting 2027','https://www.aacr.org/meeting/aacr-annual-meeting-2027/','2027-04-02','2027-04-07','Orlando','United States',['Oncology','Healthcare','Life Sciences','Pharmaceuticals & Biotechnology','Science','Open call for papers']],
+  ['AGU27 Annual Meeting','https://www.agu.org/meetings/all-meetings/agu27','2027-12-13','2027-12-17','Washington, D.C.','United States',['Science','Environment','Climate & Sustainability','Petroleum & Geoscience','Education','Virtual conferences','Open call for papers']],
+  ['RE+ 2027','https://www.re-plus.com/about/future-dates/','2027-11-15','2027-11-18','Las Vegas','United States',['Renewable Energy','Energy','Climate & Sustainability','Hydrogen & CCUS','Engineering','Business']],
+  ['Neuroscience 2027','https://www.sfn.org/meetings/past-and-future-sfn-meetings','2027-10-23','2027-10-27','Chicago','United States',['Neuroscience','Life Sciences','Healthcare','Science','Education']],
+  ['DAC 2027 — Design Automation Conference','https://dac.com/2027','2027-07-11','2027-07-14','San Jose','United States',['Semiconductors & Electronics','Electrical Engineering','Software & Cloud','Artificial Intelligence','Cybersecurity','Engineering','Open call for papers']],
+  ['ACS Fall 2027','https://www.acs.org/events/acs-meetings/future-meetings.html','2027-08-22','2027-08-26','San Diego','United States',['Chemistry','Materials Science','Science','Education','Engineering','Open call for papers']],
+  ['AHA BCVS Scientific Sessions 2027','https://professional.heart.org/en/meetings/basic-cardiovascular-sciences','2027-07-19','2027-07-22','Boston','United States',['Cardiology','Healthcare','Life Sciences','Science','Education','Open call for papers']],
+
 ];
 
 function idFor(value) { return 'popular_' + createHash('sha1').update(String(value)).digest('hex').slice(0,24); }
