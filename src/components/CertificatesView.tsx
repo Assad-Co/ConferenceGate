@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Award, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
-import { AbstractSubmission, UserProfile, Conference } from '../types';
+import { AbstractSubmission, UserProfile, Conference, ProfessionalInvitation } from '../types';
 import { ConferenceRegistration } from '../api/activity';
 import { downloadCertificatePDF } from '../utils/certificatePdf';
 import { ConferenceLink } from './ConferenceLink';
@@ -13,6 +13,7 @@ interface CertificatesViewProps {
   onSelectConference: (conf: Conference) => void;
   currentUserId?: string;
   currentUserEmail?: string;
+  professionalInvitations?: ProfessionalInvitation[];
   onBack: () => void;
 }
 
@@ -46,6 +47,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   onSelectConference,
   currentUserId,
   currentUserEmail,
+  professionalInvitations = [],
   onBack,
 }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -118,8 +120,29 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
       });
     });
 
+    professionalInvitations
+      .filter((invitation) => invitation.status === 'completed')
+      .forEach((invitation) => {
+        const roleLabel =
+          invitation.roleType === 'committee'
+            ? 'Technical Committee Service'
+            : invitation.roleType === 'chair'
+              ? 'Session Chair Service'
+              : 'Speaker / Keynote Service';
+        certs.push({
+          id: `role_${invitation.id}`,
+          title: `Certificate of ${roleLabel}`,
+          event: invitation.conferenceTitle,
+          conferenceId: invitation.conferenceId,
+          paperTitle: invitation.title,
+          date: (invitation.completedAt || invitation.respondedAt || invitation.createdAt).split(' ')[0].split('T')[0],
+          issuer: `Verified by ConferenceGate organizer workflow — ${invitation.conferenceTitle}`,
+          verificationHash: certHash(`role_${invitation.id}_${currentUserId || 'anon'}`),
+        });
+      });
+
     return certs;
-  }, [submissions, registrations, currentUserId, currentUserEmail]);
+  }, [submissions, registrations, professionalInvitations, currentUserId, currentUserEmail]);
 
   const handleDownload = (certId: string) => {
     const cert = certificates.find((c) => c.id === certId);
