@@ -1299,6 +1299,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           }}
           onSave={onEditProfile}
         />
+      )}
       {variant === 'professional' && onEditProfessionalPreferences && (
         <ProfessionalPreferencesModal
           isOpen={isProfessionalPreferencesOpen}
@@ -1315,7 +1316,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           }}
           onSave={onEditProfessionalPreferences}
         />
-      )}
       )}
 
       <AddAttendanceModal
