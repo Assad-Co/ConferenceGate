@@ -16,7 +16,7 @@ import {
   Presentation,
   Mic2,
 } from 'lucide-react';
-import { UserProfile, ReviewOpportunity, ProfessionalOpportunity, AbstractSubmission, Conference } from '../types';
+import { UserProfile, ReviewOpportunity, ProfessionalOpportunity, ProfessionalInvitation, AbstractSubmission, Conference } from '../types';
 import { ConferenceLink } from './ConferenceLink';
 
 interface ReviewerPortalProps {
@@ -25,6 +25,8 @@ interface ReviewerPortalProps {
   professionalOpportunities?: ProfessionalOpportunity[];
   professionalOpportunityInterestIds?: string[];
   onProfessionalOpportunityInterest?: (opportunityId: string, interested: boolean) => void | Promise<void>;
+  professionalInvitations?: ProfessionalInvitation[];
+  onProfessionalInvitationDecision?: (invitationId: string, decision: 'accepted' | 'declined') => void | Promise<void>;
   submissions: AbstractSubmission[];
   conferences: Conference[];
   onSelectConference: (conf: Conference) => void;
@@ -124,6 +126,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   professionalOpportunities = [],
   professionalOpportunityInterestIds = [],
   onProfessionalOpportunityInterest,
+  professionalInvitations = [],
+  onProfessionalInvitationDecision,
   submissions,
   conferences,
   onSelectConference,
@@ -204,6 +208,11 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         return b.matchScore - a.matchScore;
       });
   }, [professionalOpportunities, opportunitySearch, userProfile]);
+
+  const pendingProfessionalInvitations = professionalInvitations.filter((item) => item.status === 'pending');
+  const activeProfessionalInvitations = professionalInvitations.filter(
+    (item) => item.status === 'accepted' || item.status === 'completed'
+  );
 
   const roleAvailability = (roleType: ProfessionalOpportunity['roleType']) =>
     roleType === 'committee'
@@ -491,6 +500,79 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               </div>
             </div>
           </div>
+
+          {pendingProfessionalInvitations.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Direct Invitations</h3>
+                  <p className="text-[11px] text-slate-500">Organizer invitations sent specifically to you.</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                  {pendingProfessionalInvitations.length} pending
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingProfessionalInvitations.map((invitation) => {
+                  const RoleIcon =
+                    invitation.roleType === 'committee' ? Users : invitation.roleType === 'chair' ? Presentation : Mic2;
+                  const roleLabel =
+                    invitation.roleType === 'committee'
+                      ? 'Technical Committee'
+                      : invitation.roleType === 'chair'
+                        ? 'Session Chair'
+                        : 'Speaker / Keynote';
+                  return (
+                    <div key={invitation.id} className="p-5 bg-white rounded-2xl border border-blue-200 shadow-xs space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold uppercase">
+                            <RoleIcon className="w-3 h-3" />
+                            {roleLabel}
+                          </span>
+                          <h4 className="font-bold text-sm text-slate-900 mt-2">{invitation.title}</h4>
+                          <p className="text-[11px] text-slate-500">{invitation.conferenceTitle}</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-full">Pending</span>
+                      </div>
+                      {invitation.message && (
+                        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                          {invitation.message}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => onProfessionalInvitationDecision?.(invitation.id, 'declined')}
+                          className="py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          onClick={() => onProfessionalInvitationDecision?.(invitation.id, 'accepted')}
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Accept Invitation
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {activeProfessionalInvitations.length > 0 && roleFilter === 'recommended' && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+              <div className="text-xs font-bold text-emerald-900">
+                {activeProfessionalInvitations.filter((item) => item.status === 'accepted').length} active role
+                {activeProfessionalInvitations.filter((item) => item.status === 'accepted').length === 1 ? '' : 's'} ·
+                {' '}{activeProfessionalInvitations.filter((item) => item.status === 'completed').length} verified completed
+              </div>
+              <p className="text-[10px] text-emerald-800 mt-1">
+                A role becomes a verified ConferenceGate credential only after the organizer marks the accepted service completed.
+              </p>
+            </div>
+          )}
 
           {(roleFilter === 'recommended' || roleFilter === 'reviewer') && (
             visibleReviewerOpportunities.length > 0 ? (
