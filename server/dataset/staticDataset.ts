@@ -599,8 +599,10 @@ export interface LaunchSearchResult {
   acronym: string | null;
   /** Who runs it, where the source named them. */
   organization: string | null;
-  /** Its subject, used to choose the banner's palette. */
+  /** Its primary subject, used to choose the banner's palette. */
   category: string | null;
+  /** All derived/original ConferenceGate categories used by filters. */
+  categories: string[];
   /** Source-stated CFP status, where one exists. */
   cfpStatus: string | null;
   /** CFP tab contains substantive information, not a placeholder or bare link. */
