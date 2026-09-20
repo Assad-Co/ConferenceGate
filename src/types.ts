@@ -377,6 +377,22 @@ export interface TechnicalCommitteeOpportunity {
   description: string;
 }
 
+export interface ProfessionalOpportunity {
+  id: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  organizerId: string;
+  organizerName: string;
+  roleType: 'committee' | 'chair' | 'speaker';
+  title: string;
+  description: string;
+  expertiseRequired: string[];
+  preferredRegions: string[];
+  deadline: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+}
+
 export type CelebrationKind =
   | 'abstract-accepted'
   | 'reviewer-milestone'
