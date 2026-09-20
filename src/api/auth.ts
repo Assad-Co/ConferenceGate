@@ -27,6 +27,11 @@ export interface AuthUser {
   avatar: string | null;
   identityVerified: boolean;
   identityVerificationMethod: 'LinkedIn' | 'Google' | null;
+  subscriptionStatus: 'free' | 'required' | 'trialing' | 'active' | 'past_due' | 'canceled' | string;
+  subscriptionPlan: string | null;
+  subscriptionProvider: string | null;
+  subscriptionPeriodEnd: string | null;
+  hasPaidAccess: boolean;
   reviewerAvailable: boolean;
   professionalExpertise: string[];
   technicalSpecialization: string[];
