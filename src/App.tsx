@@ -42,6 +42,9 @@ import {
   volunteerForReview,
   fetchMyVolunteeredOpportunityIds,
   fetchReviewOpportunities,
+  fetchProfessionalOpportunities,
+  fetchMyProfessionalOpportunityInterestIds,
+  setProfessionalOpportunityInterest,
   publishReviewOpportunity,
   withdrawReviewOpportunity,
   PublishReviewOpportunityPayload,
@@ -117,6 +120,7 @@ import {
   UserProfile,
   PostAuthor,
   ReviewOpportunity,
+  ProfessionalOpportunity,
 } from './types';
 
 const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
@@ -373,6 +377,8 @@ export function App() {
   const [registrations, setRegistrations] = useState<ConferenceRegistration[]>([]);
   const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
   const [reviewOpportunities, setReviewOpportunities] = useState<ReviewOpportunity[]>([]);
+  const [professionalOpportunities, setProfessionalOpportunities] = useState<ProfessionalOpportunity[]>([]);
+  const [professionalOpportunityInterestIds, setProfessionalOpportunityInterestIds] = useState<string[]>([]);
   const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
   const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
   // Real, non-organizer-scoped registration totals per conference — used to show a genuine
@@ -386,6 +392,10 @@ export function App() {
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
     fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
+    if (authUser.role === 'professional') {
+      fetchProfessionalOpportunities().then(setProfessionalOpportunities).catch(() => {});
+      fetchMyProfessionalOpportunityInterestIds().then(setProfessionalOpportunityInterestIds).catch(() => {});
+    }
     fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
     fetchMyNotifications().then(setNotifications).catch(() => {});
     fetchMyConferenceInteractions()
@@ -444,6 +454,10 @@ export function App() {
     }
     if (['reviewer', 'organizer'].includes(activeTab)) {
       fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
+    }
+    if (activeTab === 'reviewer' && authUser.role === 'professional') {
+      fetchProfessionalOpportunities().then(setProfessionalOpportunities).catch(() => {});
+      fetchMyProfessionalOpportunityInterestIds().then(setProfessionalOpportunityInterestIds).catch(() => {});
     }
     // Database-only refresh: no website search runs here. This simply reloads the already-stored
     // sponsorship catalog when the Organizer workspace is opened.
@@ -1096,6 +1110,26 @@ export function App() {
     }
   };
 
+  const handleProfessionalOpportunityInterest = async (opportunityId: string, interested: boolean) => {
+    try {
+      const active = await setProfessionalOpportunityInterest(opportunityId, interested);
+      setProfessionalOpportunityInterestIds((prev) =>
+        active
+          ? (prev.includes(opportunityId) ? prev : [...prev, opportunityId])
+          : prev.filter((id) => id !== opportunityId)
+      );
+      showToast({
+        type: active ? 'success' : 'info',
+        title: active ? 'Interest sent to organizer' : 'Interest withdrawn',
+        message: active
+          ? 'The organizer can now see that you are interested in this professional role.'
+          : 'You are no longer marked as interested in this opportunity.',
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not update interest', message: err.message || 'Please try again.' });
+    }
+  };
+
   const handlePublishReviewOpportunity = async (payload: PublishReviewOpportunityPayload) => {
     try {
       const opportunity = await publishReviewOpportunity(payload);
@@ -1466,6 +1500,9 @@ export function App() {
           <ReviewerPortal
             userProfile={userProfile}
             opportunities={reviewOpportunities}
+            professionalOpportunities={professionalOpportunities}
+            professionalOpportunityInterestIds={professionalOpportunityInterestIds}
+            onProfessionalOpportunityInterest={handleProfessionalOpportunityInterest}
             submissions={submissions}
             conferences={conferences}
             onSelectConference={handleSelectConference}
