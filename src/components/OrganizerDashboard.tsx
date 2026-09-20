@@ -2720,7 +2720,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                       className="w-full py-2 rounded-xl font-bold text-[11px] bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <Globe className="w-3.5 h-3.5" />
-                      {opportunity.hasPublishedPricing ? 'View / Register with Organizer' : 'Inquire Now'}
+                      {opportunity.hasPublishedPricing ? 'Sponsor / Exhibit Now' : 'Inquire Now'}
                     </a>
                     <a
                       href={opportunity.sponsorUrl || opportunity.officialUrl}
