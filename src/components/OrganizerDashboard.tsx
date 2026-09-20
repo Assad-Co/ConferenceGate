@@ -4204,6 +4204,69 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             )}
           </div>
 
+          {/* Internal Sponsor Marketplace Funnel */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Sponsor Marketplace Funnel</h3>
+                <p className="text-[11px] text-slate-500 mt-1">Real Sponsor Pro activity on your internally published sponsorship needs.</p>
+              </div>
+              <span className="text-xs font-extrabold text-emerald-700">
+                ${sponsorshipAnalytics.totals.realizedRevenue.toLocaleString()} Provider-confirmed revenue
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              {[
+                ['Views', sponsorshipAnalytics.totals.views],
+                ['Inquiries', sponsorshipAnalytics.totals.inquiries],
+                ['Negotiating', sponsorshipAnalytics.totals.negotiating],
+                ['Won', sponsorshipAnalytics.totals.won],
+                ['Paid', sponsorshipAnalytics.totals.payments],
+                ['Revenue', `${sponsorshipAnalytics.totals.realizedRevenue.toLocaleString()}`],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">{label}</div>
+                  <div className="text-lg font-extrabold text-slate-900 mt-1">{value}</div>
+                </div>
+              ))}
+            </div>
+            {sponsorshipAnalytics.needs.length > 0 && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500">
+                      <tr>
+                        <th className="p-3">Opportunity</th>
+                        <th className="p-3">Views</th>
+                        <th className="p-3">Inquiries</th>
+                        <th className="p-3">Inquiry Rate</th>
+                        <th className="p-3">Won</th>
+                        <th className="p-3">Win Rate</th>
+                        <th className="p-3">Paid Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sponsorshipAnalytics.needs.map((item) => (
+                        <tr key={item.needId}>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{item.title}</div>
+                            <div className="text-[10px] text-slate-500">{item.conferenceTitle}</div>
+                          </td>
+                          <td className="p-3">{item.views}</td>
+                          <td className="p-3">{item.inquiries}</td>
+                          <td className="p-3">{item.inquiryRate}%</td>
+                          <td className="p-3">{item.won}</td>
+                          <td className="p-3">{item.winRate}%</td>
+                          <td className="p-3 font-bold text-emerald-700">${item.realizedRevenue.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Sponsor Performance */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
