@@ -179,7 +179,11 @@ function extractPricedPackages(page) {
     if (!matches.length) continue;
     for (const m of matches) {
       const amount=parseAmount(m[3]);
-      if (!amount || amount < 100) continue; // avoid years, booth numbers and tiny incidental numbers
+      const hasCurrency=Boolean(m[1] || m[2] || m[4]);
+      const hasPriceCue=/\b(price|pricing|rate|cost|investment|fee|from|starting at)\b/i.test(line);
+      if (!amount || amount < 100 || (!hasCurrency && !hasPriceCue)) continue;
+      // A bare conference year or attendance statistic is not a sponsorship price.
+      if (!hasCurrency && amount >= 1900 && amount <= 2100) continue;
       let name=cleanPackageName(line.slice(0,m.index));
       if (!looksLikePackageName(name)) {
         for (let back=1;back<=3;back++) {
