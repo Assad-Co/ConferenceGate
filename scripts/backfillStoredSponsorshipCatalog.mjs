@@ -180,10 +180,10 @@ async function main() {
         de.official_url,de.canonical_url,de.registration_url,de.source_url,de.primary_category,de.topics,
         (SELECT GROUP_CONCAT(category,'|') FROM discovery_event_categories dec WHERE dec.event_id=de.id) AS categories,
         (SELECT ec.extraction_metadata FROM extracted_conferences ec
-           WHERE ec.source_url=de.official_url OR ec.source_url=de.canonical_url OR json_extract(ec.extraction_metadata,'$.discovery_event_id')=de.id
+           WHERE ec.source_url=de.official_url OR ec.source_url=de.canonical_url OR CASE WHEN json_valid(ec.extraction_metadata) THEN json_extract(ec.extraction_metadata,'$.discovery_event_id')=de.id ELSE 0 END
            ORDER BY ec.updated_at DESC LIMIT 1) AS extraction_metadata,
         (SELECT ec.sponsors_exhibitors FROM extracted_conferences ec
-           WHERE ec.source_url=de.official_url OR ec.source_url=de.canonical_url OR json_extract(ec.extraction_metadata,'$.discovery_event_id')=de.id
+           WHERE ec.source_url=de.official_url OR ec.source_url=de.canonical_url OR CASE WHEN json_valid(ec.extraction_metadata) THEN json_extract(ec.extraction_metadata,'$.discovery_event_id')=de.id ELSE 0 END
            ORDER BY ec.updated_at DESC LIMIT 1) AS sponsors_exhibitors
       FROM discovery_events de
       WHERE de.status='published'
