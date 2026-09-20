@@ -712,6 +712,14 @@ export function descriptionWorthShowing(record: LaunchConferenceRecord): string 
 }
 
 const CONFERENCE_CATEGORY_RULES: Array<[string, RegExp]> = [
+  ["Organic Geochemistry", /organic geochem|petroleum geochem|biomarker|source rock|molecular geochem/],
+  ["Geoscience", /geoscience|geoscientist|earth science|geophysics|geochemistry|sedimentology|stratigraph/],
+  ["Geology", /\bgeology\b|geological|structural geology|sedimentary geology|tectonics|petrology/],
+  ["Politics", /political science|politics|governance|democracy|institutions|elections|legislature|public administration/],
+  ["Health", /\bhealth\b|healthcare|medical|medicine|clinical|hospital|patient|health technology/],
+  ["Automotive", /automotive|vehicle|mobility|automobile|electric vehicle|autonomous driving/],
+  ["Architecture", /architecture|architectural|architects|built environment|urban design/],
+  ["Materials", /materials science|materials research|advanced materials|metallurgy|polymers?|ceramics|composites|nanomaterials/],
   ["Artificial Intelligence", /artificial intelligence|machine learning|deep learning|generative ai|large language model|\bllm\b|\bai\b/],
   ["Data Science", /data science|data analytics|big data|data engineering|business intelligence/],
   ["Cybersecurity", /cybersecurity|cyber security|information security|network security|zero trust|ethical hacking/],
