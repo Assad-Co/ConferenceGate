@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader2, BriefcaseBusiness, Users, Presentation, Mic2, MapPin } from 'lucide-react';
+import { X, Loader2, Briefcase, Users, Presentation, Mic2, MapPin } from 'lucide-react';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 
 interface ProfessionalPreferencesModalProps {
