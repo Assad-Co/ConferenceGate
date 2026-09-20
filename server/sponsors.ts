@@ -66,9 +66,48 @@ sponsorsRouter.get(
         ORDER BY CASE WHEN start_date IS NULL THEN 1 ELSE 0 END, start_date ASC, conference_title ASC`
     ).catch(() => []);
 
+    const currencyEvidence = (pkg: any) => {
+      const priceText = String(pkg?.price_text || "");
+      const currency = String(pkg?.currency || "");
+      return /(?:\$|€|£|\b(?:USD|EUR|GBP|BHD|SAR|AED|QAR|KWD|OMR|CAD|AUD|SGD|CHF|JPY|CNY)\b|\bBD\b)/i.test(
+        `${priceText} ${currency}`
+      );
+    };
+    const sponsorPackageName = (name: unknown) => {
+      const value = String(name || "").trim();
+      if (!value || /abstract|paper|research|results|patient|study|conference we track|scored/i.test(value)) return false;
+      return /sponsor|sponsorship|partner package|exhibit|exhibitor|booth|stand package|table sponsor|dinner sponsor|lunch sponsor|reception sponsor|lanyard|badge sponsor|app sponsor|digital sponsor|gala|golf sponsor|branding|advertis|package|platinum|gold sponsor|silver sponsor|bronze sponsor|diamond|premium sponsor|title sponsor|exclusive sponsor|networking sponsor|hospitality sponsor|workshop sponsor|session sponsor|delegate gift/i.test(value);
+    };
+
     const opportunities = rows.map((row: any) => {
-      const packages = safeJson(row.packages, []);
+      const rawPackages = safeJson(row.packages, []);
       const categories = safeJson(row.categories, []);
+      const cleanedPackages = (Array.isArray(rawPackages) ? rawPackages : [])
+        .filter((pkg: any) => sponsorPackageName(pkg?.name))
+        .map((pkg: any) => {
+          const validPrice = currencyEvidence(pkg);
+          return {
+            name: typeof pkg?.name === "string" && pkg.name.trim() ? pkg.name.trim() : "Sponsorship / Exhibition Opportunity",
+            priceText: validPrice && typeof pkg?.price_text === "string" && pkg.price_text.trim() ? pkg.price_text.trim() : null,
+            priceAmount: validPrice && Number.isFinite(Number(pkg?.price_amount)) ? Number(pkg.price_amount) : null,
+            currency: validPrice && typeof pkg?.currency === "string" && pkg.currency.trim() ? pkg.currency.trim() : null,
+            benefits: Array.isArray(pkg?.benefits)
+              ? pkg.benefits.filter((value: unknown) => typeof value === "string" && value.trim()).slice(0, 4)
+              : [],
+            sourceUrl: typeof pkg?.source_url === "string" && pkg.source_url ? pkg.source_url : row.sponsor_url || row.action_url,
+          };
+        });
+      const packages = cleanedPackages.length
+        ? cleanedPackages
+        : [{
+            name: "Sponsorship / Exhibitor Enquiry",
+            priceText: null,
+            priceAmount: null,
+            currency: null,
+            benefits: [],
+            sourceUrl: row.sponsor_url || row.action_url,
+          }];
+      const hasPublishedPricing = packages.some((pkg: any) => pkg.priceText && pkg.priceAmount !== null);
       return {
         conferenceId: String(row.event_id),
         conferenceTitle: String(row.conference_title || ""),
@@ -79,19 +118,10 @@ sponsorsRouter.get(
         officialUrl: row.official_url,
         sponsorUrl: row.sponsor_url,
         actionUrl: row.action_url,
-        actionLabel: row.action_label || (row.has_published_pricing ? "View Sponsorship" : "Inquire Now"),
-        hasPublishedPricing: Boolean(row.has_published_pricing),
+        actionLabel: hasPublishedPricing ? "View Sponsorship" : "Inquire Now",
+        hasPublishedPricing,
         categories: Array.isArray(categories) ? categories : [],
-        packages: (Array.isArray(packages) ? packages : []).map((pkg: any) => ({
-          name: typeof pkg?.name === "string" && pkg.name.trim() ? pkg.name.trim() : "Sponsorship / Exhibition Opportunity",
-          priceText: typeof pkg?.price_text === "string" && pkg.price_text.trim() ? pkg.price_text.trim() : null,
-          priceAmount: Number.isFinite(Number(pkg?.price_amount)) ? Number(pkg.price_amount) : null,
-          currency: typeof pkg?.currency === "string" && pkg.currency.trim() ? pkg.currency.trim() : null,
-          benefits: Array.isArray(pkg?.benefits)
-            ? pkg.benefits.filter((value: unknown) => typeof value === "string" && value.trim()).slice(0, 4)
-            : [],
-          sourceUrl: typeof pkg?.source_url === "string" && pkg.source_url ? pkg.source_url : row.sponsor_url || row.action_url,
-        })),
+        packages,
         checkedAt: row.checked_at || null,
       };
     });
