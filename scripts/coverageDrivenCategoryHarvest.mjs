@@ -81,7 +81,72 @@ const CATEGORY_SOURCES = {
   'Open call for papers':['ieee.org','acm.org','aiche.org','acs.org','agu.org']
 };
 
+const CATEGORY_SPONSOR_SOURCES = {
+  'Artificial Intelligence':['gitex.com','theaisummit.com','worldaishow.com','superai.com'],
+  'Data Science':['odsc.com','databricks.com','snowflake.com','bigdata-london.com'],
+  'Cybersecurity':['infosecurityeurope.com','gisec.ae','blackhatmea.com','cybertechisrael.com'],
+  'Software & Cloud':['cloudfest.com','kubecon.io','events.linuxfoundation.org','websummit.com'],
+  'Telecommunications':['mwckigali.com','capacitymedia.com','internationaltelecomsweek.com','mwcbarcelona.com'],
+  'Semiconductors & Electronics':['semiconwest.org','semiconsea.org','semiconchina.org','electronica.de'],
+  'Robotics & Automation':['automatica-munich.com','robotics-summit.com','promatshow.com','hannovermesse.de'],
+  'Engineering':['bauma.de','worldofconcrete.com','event.asme.org','thebig5.ae'],
+  'Civil & Construction':['worldofconcrete.com','bauma.de','big5global.com','thebig5.ae'],
+  'Mechanical Engineering':['event.asme.org','bauma.de','hannovermesse.de','imts.com'],
+  'Electrical Engineering':['middleeast-energy.com','electronica.de','ieee-pes.org','intersolar.de'],
+  'Chemical Engineering':['achema.de','aiche.org','cphi.com','chemukexpo.com'],
+  'Materials Science':['jec-world.events','tms.org','mrs.org','formnext.com'],
+  'Materials':['jec-world.events','tms.org','mrs.org','formnext.com'],
+  'Energy':['ceraweek.com','worldfutureenergysummit.com','middleeast-energy.com','adipec.com','gastechevent.com'],
+  'Petroleum & Geoscience':['meos-geo.com','iptcnet.org','otcnet.org','spe.org','aapg.org','eage.org'],
+  'Geoscience':['meos-geo.com','iptcnet.org','eage.org','aapg.org','seg.org'],
+  'Geology':['meos-geo.com','eage.org','aapg.org','seg.org'],
+  'Organic Geochemistry':['imogconference.org','eage.org','aapg.org','goldschmidt.info'],
+  'Renewable Energy':['thesmartere.de','windeurope.org','re-plus.com','worldfutureenergysummit.com'],
+  'Hydrogen & CCUS':['worldhydrogensummit.com','hydrogen-worldexpo.com','ghgt.info','gastechevent.com'],
+  'Mining & Minerals':['miningindaba.com','minesandmoney.com','pdac.ca','smeannualconference.org'],
+  'Environment':['pollutec.com','ifat.de','worldfutureenergysummit.com','smartcityexpo.com'],
+  'Climate & Sustainability':['worldfutureenergysummit.com','windeurope.org','pollutec.com','smartcityexpo.com'],
+  'Healthcare':['medica-tradefair.com','himssconference.com','worldhealthexpo.com','hlth.com'],
+  'Health':['medica-tradefair.com','worldhealthexpo.com','himssconference.com','hlth.com'],
+  'Public Health':['apha.org','ephconference.eu','worldhealthexpo.com','himssconference.com'],
+  'Pharmaceuticals & Biotechnology':['cphi.com','bioeurope.com','convention.bio.org','slas.org'],
+  'Nursing':['sigmanursing.org','icn.ch','worldhealthexpo.com','himssconference.com'],
+  'Dentistry':['aeedc.com','ids-cologne.de','gnydm.com','ada.org'],
+  'Cardiology':['escardio.org','professional.heart.org','tctconference.com','accscientificsession.acc.org'],
+  'Oncology':['asco.org','esmo.org','aacr.org','nccn.org'],
+  'Neuroscience':['sfn.org','aaic.alz.org','alz.org','fens.org'],
+  'Life Sciences':['slas.org','convention.bio.org','cphi.com','bioeurope.com'],
+  'Chemistry':['pittcon.org','acs.org','achema.de','analytica.de'],
+  'Physics':['spie.org','photonicseurope.org','aps.org','summit.aps.org'],
+  'Mathematics & Statistics':['amstat.org','siam.org','jointmathematicsmeetings.org','ams.org'],
+  'Science':['pittcon.org','spie.org','agu.org','acs.org'],
+  'Education':['bettshow.com','conference.iste.org','educause.edu','sxswedu.com'],
+  'Business':['websummit.com','milkeninstitute.org','money2020.com','gitex.com'],
+  'Finance':['sibos.com','money2020.com','seamlessxtra.com','consensus.coindesk.com'],
+  'Economics':['aeaweb.org','milkeninstitute.org','money2020.com','aaea.org'],
+  'Marketing':['dmexco.com','advertisingweek.com','contentmarketingworld.com','sxsw.com'],
+  'Supply Chain & Logistics':['transportlogistic.de','manifestvegas.com','cscmpedge.org','promatshow.com'],
+  'Manufacturing':['imts.com','hannovermesse.de','formnext.com','promatshow.com'],
+  'Aviation & Aerospace':['dubaiairshow.aero','farnboroughairshow.com','siae.fr','scitech.aiaa.org'],
+  'Maritime':['posidonia-events.com','nor-shipping.com','smm-hamburg.com','seatrade-maritime.com'],
+  'Automotive & Mobility':['automechanika.messefrankfurt.com','iaa-mobility.com','ces.tech','mobilitymove.de'],
+  'Automotive':['automechanika.messefrankfurt.com','iaa-mobility.com','ces.tech','mobilitymove.de'],
+  'Architecture & Urbanism':['cityscapeglobal.com','mipim.com','smartcityexpo.com','big5global.com'],
+  'Architecture':['cityscapeglobal.com','mipim.com','conferenceonarchitecture.com','big5global.com'],
+  'Agriculture & Food':['agritechnica.com','gulfood.com','worldagritechinnovation.com','ifama.org'],
+  'Law & Regulation':['legalweekshow.com','ibanet.org','iapp.org','americanbar.org'],
+  'Government & Policy':['worldgovernmentsummit.org','milkeninstitute.org','smartcityexpo.com','aspanet.org'],
+  'Social Sciences':['isa-sociology.org','apsanet.org','aspanet.org','aeaweb.org'],
+  'Arts & Culture':['sxsw.com','artbasel.com','frieze.com','aaslh.org'],
+  'Tourism & Hospitality':['itb.com','wtm.com','arabiantravelmarket.com','phocuswrightconference.com'],
+  'Blockchain & Web3':['parisblockchainweek.com','token2049.com','consensus.coindesk.com','money2020.com'],
+  'Real Estate':['cityscapeglobal.com','mipim.com','exporeal.net','smartcityexpo.com'],
+  'Virtual conferences':['events.linuxfoundation.org','acs.org','aapg.org','alz.org'],
+  'Open call for papers':['ieee.org','acm.org','aiche.org','acs.org','agu.org','spie.org']
+};
+
 const TARGET = Math.max(1, Number(process.env.POPULAR_CATEGORY_RICH_TARGET || 25));
+const SPONSOR_TARGET = Math.max(1, Number(process.env.POPULAR_CATEGORY_SPONSOR_TARGET || 12));
 const MAX_DOMAINS = Math.max(10, Number(process.env.CATEGORY_HARVEST_MAX_DOMAINS || 90));
 const MAX_PAGES = Math.max(100, Number(process.env.CATEGORY_HARVEST_MAX_PAGES || 720));
 const PAGES_PER_DOMAIN = Math.max(3, Number(process.env.CATEGORY_HARVEST_PAGES_PER_DOMAIN || 10));
@@ -155,7 +220,7 @@ async function main() {
     const result=await db.execute(`
       SELECT de.id,de.image_url,ec.overview,ec.call_for_papers,ec.program_agenda,ec.keynote_speakers,
              ec.technical_committee,ec.sponsors_exhibitors,ec.venue_accommodation,ec.fees_pricing,
-             ec.community,GROUP_CONCAT(dec.category,'|') AS categories
+             ec.community,ec.extraction_metadata,GROUP_CONCAT(dec.category,'|') AS categories
         FROM discovery_events de
         JOIN extracted_conferences ec
           ON de.id=json_extract(ec.extraction_metadata,'$.discovery_event_id')
@@ -169,18 +234,29 @@ async function main() {
     `);
 
     const counts=Object.fromEntries(CATEGORIES.map((category)=>[category,0]));
+    const sponsorCounts=Object.fromEntries(CATEGORIES.map((category)=>[category,0]));
     for (const row of result.rows || []) {
-      if (!visualReady(row) || visibleTabs(row) < 6) continue;
       const categories=String(row.categories||'').split('|').map((x)=>x.trim()).filter(Boolean);
+      const meta=safe(row.extraction_metadata,{});
+      const sponsorAvailable=meta?.external_sponsorship?.status==='available' && Boolean(meta?.external_sponsorship?.action_url);
       for (const category of new Set(categories)) {
-        if (Object.hasOwn(counts,category)) counts[category]+=1;
+        if (!Object.hasOwn(counts,category)) continue;
+        if (visualReady(row) && visibleTabs(row) >= 6) counts[category]+=1;
+        if (sponsorAvailable) sponsorCounts[category]+=1;
       }
     }
 
     const under=CATEGORIES
-      .map((category)=>({category,count:counts[category]||0,deficit:Math.max(0,TARGET-(counts[category]||0))}))
+      .map((category)=>({
+        category,
+        count:counts[category]||0,
+        sponsorCount:sponsorCounts[category]||0,
+        richDeficit:Math.max(0,TARGET-(counts[category]||0)),
+        sponsorDeficit:Math.max(0,SPONSOR_TARGET-(sponsorCounts[category]||0)),
+      }))
+      .map((row)=>({...row,deficit:Math.max(row.richDeficit,row.sponsorDeficit)}))
       .filter((row)=>row.deficit>0)
-      .sort((a,b)=>b.deficit-a.deficit || a.count-b.count || a.category.localeCompare(b.category));
+      .sort((a,b)=>b.sponsorDeficit-a.sponsorDeficit || b.richDeficit-a.richDeficit || a.category.localeCompare(b.category));
 
     if (!under.length) {
       console.log('[category-coverage-harvest] all='+CATEGORIES.length+' categories target_met='+TARGET);
@@ -190,7 +266,7 @@ async function main() {
     const domains=[];
     const seen=new Set();
     for (const row of under) {
-      for (const domain of CATEGORY_SOURCES[row.category] || []) {
+      for (const domain of [...(CATEGORY_SPONSOR_SOURCES[row.category] || []), ...(CATEGORY_SOURCES[row.category] || [])]) {
         if (seen.has(domain)) continue;
         seen.add(domain);
         domains.push(domain);
@@ -200,9 +276,10 @@ async function main() {
     }
 
     console.log('[category-coverage-harvest] target='+TARGET+
+      ' sponsor_target='+SPONSOR_TARGET+
       ' under_target='+under.length+'/'+CATEGORIES.length+
       ' selected_domains='+domains.length+
-      ' weakest='+under.slice(0,12).map((x)=>x.category+':'+x.count).join(' | '));
+      ' weakest='+under.slice(0,12).map((x)=>x.category+':rich'+x.count+'/sponsor'+x.sponsorCount).join(' | '));
 
     if (!domains.length) return;
     await runCli([
