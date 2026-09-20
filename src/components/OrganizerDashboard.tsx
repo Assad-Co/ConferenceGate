@@ -71,8 +71,12 @@ import {
   fetchMySponsorshipNeeds,
   fetchMySponsorshipNeedInquiries,
   updateSponsorshipNeedInquiryStatus,
+  fetchMySponsorshipDeals,
+  updateSponsorshipDeal,
+  addSponsorshipDealUpdate,
   type SponsorshipNeed,
   type SponsorshipNeedInquiry,
+  type SponsorshipDeal,
 } from '../api/sponsors';
 
 interface OrganizerDashboardProps {
@@ -321,6 +325,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const [sponsorshipNeeds, setSponsorshipNeeds] = useState<SponsorshipNeed[]>([]);
   const [sponsorshipNeedInquiries, setSponsorshipNeedInquiries] = useState<SponsorshipNeedInquiry[]>([]);
+  const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
+  const [dealDrafts, setDealDrafts] = useState<Record<string, { amount: string; deliverables: string; proposalNotes: string; contractUrl: string; invoiceUrl: string; updateText: string }>>({});
+  const [savingDealId, setSavingDealId] = useState<string | null>(null);
   const [sponsorshipNeedLoading, setSponsorshipNeedLoading] = useState(false);
   const [sponsorshipNeedMessage, setSponsorshipNeedMessage] = useState<string | null>(null);
   const [sponsorshipNeedForm, setSponsorshipNeedForm] = useState({
@@ -340,12 +347,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const refreshInternalSponsorship = async () => {
     try {
-      const [needs, inquiries] = await Promise.all([
+      const [needs, inquiries, deals] = await Promise.all([
         fetchMySponsorshipNeeds(),
         fetchMySponsorshipNeedInquiries(),
+        fetchMySponsorshipDeals(),
       ]);
       setSponsorshipNeeds(needs);
       setSponsorshipNeedInquiries(inquiries);
+      setSponsorshipDeals(deals);
     } catch {
       setSponsorshipNeeds([]);
       setSponsorshipNeedInquiries([]);
@@ -409,8 +418,82 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       setSponsorshipNeedInquiries((prev) =>
         prev.map((item) => item.id === inquiryId ? { ...item, status } : item)
       );
+      if (status === 'negotiating' || status === 'won' || status === 'lost') {
+        setSponsorshipDeals(await fetchMySponsorshipDeals());
+      }
     } catch (error: any) {
       showToast({ type: 'info', title: 'Could not update sponsor inquiry', message: error?.message || 'Please try again.' });
+    }
+  };
+
+  const dealDraft = (deal: SponsorshipDeal) =>
+    dealDrafts[deal.id] || {
+      amount: deal.agreedAmount === null ? '' : String(deal.agreedAmount),
+      deliverables: (deal.deliverables || []).join(', '),
+      proposalNotes: deal.proposalNotes || '',
+      contractUrl: deal.contractUrl || '',
+      invoiceUrl: deal.invoiceUrl || '',
+      updateText: '',
+    };
+
+  const setDealDraft = (deal: SponsorshipDeal, patch: Partial<ReturnType<typeof dealDraft>>) => {
+    setDealDrafts((prev) => ({ ...prev, [deal.id]: { ...dealDraft(deal), ...patch } }));
+  };
+
+  const handleSaveDealTerms = async (deal: SponsorshipDeal) => {
+    const draft = dealDraft(deal);
+    setSavingDealId(deal.id);
+    try {
+      const updated = await updateSponsorshipDeal(deal.id, {
+        agreedAmount: draft.amount ? Number(draft.amount) : null,
+        proposalNotes: draft.proposalNotes,
+        deliverables: draft.deliverables.split(',').map((item) => item.trim()).filter(Boolean),
+        contractUrl: draft.contractUrl || null,
+        invoiceUrl: draft.invoiceUrl || null,
+      });
+      setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+      setDealDrafts((prev) => {
+        const next = { ...prev };
+        delete next[deal.id];
+        return next;
+      });
+      showToast({ type: 'success', title: 'Deal terms saved', message: 'The sponsor has been notified of the Deal Room update.' });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not save deal terms', message: error?.message || 'Please try again.' });
+    } finally {
+      setSavingDealId(null);
+    }
+  };
+
+  const handleDealStatus = async (
+    deal: SponsorshipDeal,
+    status: 'negotiating' | 'agreement_reached' | 'contract_pending' | 'payment_pending' | 'delivering' | 'completed' | 'canceled'
+  ) => {
+    setSavingDealId(deal.id);
+    try {
+      const updated = await updateSponsorshipDeal(deal.id, { status });
+      setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not update deal', message: error?.message || 'Please try again.' });
+    } finally {
+      setSavingDealId(null);
+    }
+  };
+
+  const handleAddDealNote = async (deal: SponsorshipDeal) => {
+    const draft = dealDraft(deal);
+    if (!draft.updateText.trim()) return;
+    setSavingDealId(deal.id);
+    try {
+      const update = await addSponsorshipDealUpdate(deal.id, { text: draft.updateText.trim() });
+      setSponsorshipDeals((prev) =>
+        prev.map((item) => item.id === deal.id ? { ...item, updates: [...item.updates, update] } : item)
+      );
+      setDealDraft(deal, { updateText: '' });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not post Deal Room update', message: error?.message || 'Please try again.' });
+    } finally {
+      setSavingDealId(null);
     }
   };
 
