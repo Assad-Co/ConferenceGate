@@ -9,7 +9,6 @@ import {
   Plus,
   Send,
   ShieldCheck,
-  Zap,
   Filter,
   Users,
   Search,
@@ -328,21 +327,23 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             </p>
           </div>
 
-          {/* Kudos & Availability Card */}
+          {/* Verified activity & availability card */}
           <div className="bg-white border border-blue-100 p-5 rounded-2xl shrink-0 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-5">
               <div>
-                <div className="text-[10px] uppercase font-bold text-blue-400">Total Reviewer Kudos</div>
+                <div className="text-[10px] uppercase font-bold text-blue-400">Verified Reviews</div>
                 <div className="text-2xl font-extrabold text-blue-700 flex items-center gap-1">
-                  <Zap className="w-5 h-5 fill-blue-600" />
-                  <span>+{userProfile.contributions.reviewerKudos} Kudos</span>
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>{completedSubmissions.length}</span>
                 </div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Completed inside ConferenceGate</div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] uppercase font-bold text-blue-400">Reviews Done</div>
+                <div className="text-[10px] uppercase font-bold text-blue-400">Verified Roles</div>
                 <div className="text-xl font-bold text-slate-900">
-                  {userProfile.contributions.abstractsReviewed} Papers
+                  {professionalInvitations.filter((item) => item.status === 'completed').length}
                 </div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Organizer-confirmed</div>
               </div>
             </div>
 
