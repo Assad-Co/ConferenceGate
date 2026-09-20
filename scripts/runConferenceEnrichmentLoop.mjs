@@ -41,6 +41,7 @@ const DEFAULT_PRIORITY_ORGS = [
   'world-nuclear-exhibition.com','formnext.com','farnboroughairshow.com','hannovermesse.de',
   'mwcbarcelona.com','blackhat.com','events.linuxfoundation.org','websummit.com',
   'pdac.ca','hlth.com','slas.org','worldagritechinnovation.com',
+  'eageannual.org','apsanet.org','conferenceonarchitecture.com','conference.iste.org','mrs.org',
   'nor-shipping.com','iaa-mobility.com','itb.com','mipim.com','smeannualconference.org',
   'ephconference.eu','icn.ch','ids-cologne.de','aeaweb.org','token2049.com','exporeal.net',
   'mwcshanghai.com','aaic.alz.org'
@@ -60,6 +61,7 @@ async function cycle() {
   // never fill, because the workers only iterate discovery_events.
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
+  await runScript('scripts/syncRequestedCategoryExpansion.mjs');
 
   // Coverage-driven pass: every Popular Search category has the same minimum target. Categories
   // below target receive extra official-source harvesting until they catch up; strong categories
@@ -111,6 +113,7 @@ async function cycle() {
   // Re-apply it after generic readers so blocked pages cannot erase official program/pricing data.
   await runScript('scripts/syncAapgOfficialUpcoming.mjs');
   await runScript('scripts/syncVerifiedCalendarBatch.mjs');
+  await runScript('scripts/syncRequestedCategoryExpansion.mjs');
   await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
