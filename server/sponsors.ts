@@ -708,7 +708,7 @@ sponsorsRouter.patch(
       ).catch(() => {});
     }
     await dbRun(
-      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)"
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
       [
         `sdu_${crypto.randomUUID()}`,
         deal.id,
