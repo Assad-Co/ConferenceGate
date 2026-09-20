@@ -1,4 +1,4 @@
-import { AbstractSubmission, Conference, NotificationItem, ReviewOpportunity, ProfessionalOpportunity } from '../types';
+import { AbstractSubmission, Conference, NotificationItem, ReviewOpportunity, ProfessionalOpportunity, ProfessionalInvitation } from '../types';
 
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
@@ -173,6 +173,57 @@ export async function closeProfessionalOpportunity(id: string): Promise<void> {
     credentials: 'include',
   });
   await parseResponse(res);
+}
+
+export async function fetchMyProfessionalInvitations(): Promise<ProfessionalInvitation[]> {
+  const res = await fetch('/api/activity/professional-invitations/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.invitations;
+}
+
+export async function respondToProfessionalInvitation(
+  invitationId: string,
+  decision: 'accepted' | 'declined'
+): Promise<ProfessionalInvitation> {
+  const res = await fetch(`/api/activity/professional-invitations/${invitationId}/respond`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ decision }),
+  });
+  const data = await parseResponse(res);
+  return data.invitation;
+}
+
+export interface CreateProfessionalInvitationPayload {
+  professionalId: string;
+  conferenceId: string;
+  opportunityId?: string;
+  roleType: 'committee' | 'chair' | 'speaker';
+  title: string;
+  message?: string;
+}
+
+export async function createProfessionalInvitation(
+  payload: CreateProfessionalInvitationPayload
+): Promise<ProfessionalInvitation> {
+  const res = await fetch('/api/activity/professional-invitations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.invitation;
+}
+
+export async function completeProfessionalInvitation(invitationId: string): Promise<ProfessionalInvitation> {
+  const res = await fetch(`/api/activity/professional-invitations/${invitationId}/complete`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  const data = await parseResponse(res);
+  return data.invitation;
 }
 
 export interface PublishReviewOpportunityPayload {
