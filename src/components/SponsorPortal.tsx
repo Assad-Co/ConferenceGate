@@ -28,9 +28,15 @@ import {
   fetchMySponsorshipDeals,
   updateSponsorshipDeal,
   addSponsorshipDealUpdate,
+  createSponsorRequest,
+  fetchMySponsorRequests,
+  fetchMySponsorRequestResponses,
+  decideSponsorRequestResponse,
   type SponsorPreferences,
   type SponsorshipNeed,
   type SponsorshipDeal,
+  type SponsorRequest,
+  type SponsorRequestResponse,
 } from '../api/sponsors';
 import { useToast } from './Toast';
 
@@ -68,7 +74,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'deals' | 'preferences' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'requests' | 'deals' | 'preferences' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -96,6 +102,21 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
   const [dealNotes, setDealNotes] = useState<Record<string, string>>({});
   const [dealUpdatingId, setDealUpdatingId] = useState<string | null>(null);
+  const [sponsorRequests, setSponsorRequests] = useState<SponsorRequest[]>([]);
+  const [sponsorRequestResponses, setSponsorRequestResponses] = useState<SponsorRequestResponse[]>([]);
+  const [requestSaving, setRequestSaving] = useState(false);
+  const [requestDraft, setRequestDraft] = useState({
+    title: '',
+    description: '',
+    categories: '',
+    regions: '',
+    opportunityTypes: '',
+    budgetMin: '',
+    budgetMax: '',
+    targetAudience: '',
+    startDate: '',
+    endDate: '',
+  });
   const { showToast } = useToast();
 
   const listFromText = (value: string) =>
@@ -104,10 +125,12 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const loadSponsorMatching = async () => {
     setSponsorDataLoading(true);
     try {
-      const [pref, needs, deals] = await Promise.all([
+      const [pref, needs, deals, requests, responses] = await Promise.all([
         fetchMySponsorPreferences(),
         fetchMatchedSponsorshipNeeds(),
         fetchMySponsorshipDeals(),
+        fetchMySponsorRequests(),
+        fetchMySponsorRequestResponses(),
       ]);
       setPreferences(pref);
       setPreferenceDraft({
@@ -121,6 +144,8 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       });
       setMatchedNeeds(needs);
       setSponsorshipDeals(deals);
+      setSponsorRequests(requests);
+      setSponsorRequestResponses(responses);
     } catch {
       setMatchedNeeds([]);
     } finally {
@@ -210,6 +235,47 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       showToast({ type: 'info', title: 'Could not post Deal Room update', message: error?.message || 'Please try again.' });
     } finally {
       setDealUpdatingId(null);
+    }
+  };
+
+  const handleCreateSponsorRequest = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!requestDraft.title.trim()) return;
+    setRequestSaving(true);
+    try {
+      const request = await createSponsorRequest({
+        title: requestDraft.title.trim(),
+        description: requestDraft.description.trim() || undefined,
+        categories: listFromText(requestDraft.categories),
+        regions: listFromText(requestDraft.regions),
+        opportunityTypes: listFromText(requestDraft.opportunityTypes),
+        budgetMin: requestDraft.budgetMin ? Number(requestDraft.budgetMin) : null,
+        budgetMax: requestDraft.budgetMax ? Number(requestDraft.budgetMax) : null,
+        targetAudience: requestDraft.targetAudience.trim() || undefined,
+        startDate: requestDraft.startDate || undefined,
+        endDate: requestDraft.endDate || undefined,
+      });
+      setSponsorRequests((prev) => [request, ...prev]);
+      setRequestDraft({
+        title: '', description: '', categories: '', regions: '', opportunityTypes: '',
+        budgetMin: '', budgetMax: '', targetAudience: '', startDate: '', endDate: '',
+      });
+      showToast({ type: 'success', title: 'Sponsor Request published', message: 'Paid organizers can now propose relevant conferences.' });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not publish Sponsor Request', message: error?.message || 'Please try again.' });
+    } finally {
+      setRequestSaving(false);
+    }
+  };
+
+  const handleSponsorRequestResponseDecision = async (responseId: string, status: 'accepted' | 'declined') => {
+    try {
+      await decideSponsorRequestResponse(responseId, status);
+      setSponsorRequestResponses((prev) =>
+        prev.map((item) => item.id === responseId ? { ...item, status } : item)
+      );
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not update response', message: error?.message || 'Please try again.' });
     }
   };
 
@@ -395,6 +461,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               {unreadAlertCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'requests'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5" />
+          My Sponsor Requests ({sponsorRequests.length})
         </button>
         <button
           onClick={() => setActiveTab('deals')}
@@ -711,6 +788,106 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Sponsor Pro reverse marketplace */}
+      {activeTab === 'requests' && (
+        <div className="space-y-6">
+          <form onSubmit={handleCreateSponsorRequest} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Publish What You Want to Sponsor</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Create a Sponsor Request and let paid organizers respond with relevant conferences. ConferenceGate does not expose your private email.
+              </p>
+            </div>
+            <input
+              required
+              value={requestDraft.title}
+              onChange={(e) => setRequestDraft({ ...requestDraft, title: e.target.value })}
+              placeholder="e.g. Seeking GCC energy conferences for 2027"
+              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+            />
+            <textarea
+              rows={3}
+              value={requestDraft.description}
+              onChange={(e) => setRequestDraft({ ...requestDraft, description: e.target.value })}
+              placeholder="Describe the audience, strategic objective, or sponsorship type you want."
+              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input value={requestDraft.categories} onChange={(e) => setRequestDraft({ ...requestDraft, categories: e.target.value })} placeholder="Categories, comma separated" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input value={requestDraft.regions} onChange={(e) => setRequestDraft({ ...requestDraft, regions: e.target.value })} placeholder="Regions, comma separated" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input value={requestDraft.opportunityTypes} onChange={(e) => setRequestDraft({ ...requestDraft, opportunityTypes: e.target.value })} placeholder="Booth, dinner, session, title..." className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input value={requestDraft.targetAudience} onChange={(e) => setRequestDraft({ ...requestDraft, targetAudience: e.target.value })} placeholder="Target audience: CIOs, geoscientists..." className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input type="number" min="0" value={requestDraft.budgetMin} onChange={(e) => setRequestDraft({ ...requestDraft, budgetMin: e.target.value })} placeholder="Minimum budget" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input type="number" min="0" value={requestDraft.budgetMax} onChange={(e) => setRequestDraft({ ...requestDraft, budgetMax: e.target.value })} placeholder="Maximum budget" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input type="date" value={requestDraft.startDate} onChange={(e) => setRequestDraft({ ...requestDraft, startDate: e.target.value })} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+              <input type="date" value={requestDraft.endDate} onChange={(e) => setRequestDraft({ ...requestDraft, endDate: e.target.value })} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
+            </div>
+            <button disabled={requestSaving} className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60">
+              {requestSaving ? 'Publishing…' : 'Publish Sponsor Request'}
+            </button>
+          </form>
+
+          {sponsorRequests.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {sponsorRequests.map((request) => (
+                <div key={request.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900">{request.title}</h3>
+                      <p className="text-[11px] text-slate-500">{request.responseCount} organizer response{request.responseCount === 1 ? '' : 's'}</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">{request.status}</span>
+                  </div>
+                  {request.description && <p className="text-xs text-slate-600">{request.description}</p>}
+                  <div className="flex flex-wrap gap-1">
+                    {[...request.categories, ...request.regions, ...request.opportunityTypes].slice(0, 10).map((item) => (
+                      <span key={item} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">{item}</span>
+                    ))}
+                  </div>
+                  {(request.budgetMin !== null || request.budgetMax !== null) && (
+                    <div className="text-xs font-bold text-blue-700">
+                      Budget: {request.budgetMin !== null ? `${request.budgetMin.toLocaleString()}` : 'Any'} – {request.budgetMax !== null ? `${request.budgetMax.toLocaleString()}` : 'Open'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <h3 className="font-bold text-sm text-slate-900">Organizer Responses</h3>
+              <p className="text-xs text-slate-500 mt-1">Accept a relevant conference proposal or decline it.</p>
+            </div>
+            {sponsorRequestResponses.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No organizer responses yet.</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {sponsorRequestResponses.map((response) => (
+                  <div key={response.id} className="p-5 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">{response.conferenceTitle}</div>
+                      <div className="text-[11px] text-slate-500">{response.organizerName} · Responded to: {response.requestTitle}</div>
+                      {response.message && <p className="text-[11px] text-slate-600 mt-1">{response.message}</p>}
+                    </div>
+                    {response.status === 'new' ? (
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => handleSponsorRequestResponseDecision(response.id, 'declined')} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer">Decline</button>
+                        <button onClick={() => handleSponsorRequestResponseDecision(response.id, 'accepted')} className="px-3 py-2 rounded-lg bg-blue-900 text-white text-xs font-bold cursor-pointer">Accept</button>
+                      </div>
+                    ) : (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        response.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                      }`}>{response.status}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
