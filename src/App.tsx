@@ -74,9 +74,11 @@ import {
   fetchReviewableSponsors,
   submitSponsorReview,
   fetchMySponsorProfile,
+  fetchExternalSponsorshipOpportunities,
   SponsorApplicationSummary,
   SponsorApplicant,
   ReviewableSponsor,
+  ExternalSponsorshipOpportunity,
 } from './api/sponsors';
 import {
   fetchFeed,
@@ -190,6 +192,7 @@ export function App() {
   const [myApplications, setMyApplications] = useState<SponsorApplicationSummary[]>([]);
   const [packageApplicants, setPackageApplicants] = useState<SponsorApplicant[]>([]);
   const [reviewableSponsorsReal, setReviewableSponsorsReal] = useState<ReviewableSponsor[]>([]);
+  const [externalSponsorshipOpportunities, setExternalSponsorshipOpportunities] = useState<ExternalSponsorshipOpportunity[]>([]);
   const [mySponsorProfileStats, setMySponsorProfileStats] = useState<{
     rating: number;
     reviewsCount: number;
@@ -394,6 +397,7 @@ export function App() {
       fetchMyCreatedConferences().then(setMyConferences).catch(() => {});
       fetchApplicantsForMyPackages().then(setPackageApplicants).catch(() => {});
       fetchReviewableSponsors().then(setReviewableSponsorsReal).catch(() => {});
+      fetchExternalSponsorshipOpportunities().then(setExternalSponsorshipOpportunities).catch(() => {});
     }
     if (authUser.role === 'sponsor') {
       fetchMySponsorApplications().then(setMyApplications).catch(() => {});
@@ -1435,6 +1439,7 @@ export function App() {
             feedbackSummary={feedbackSummary}
             sponsorshipPackages={organizerOwnPackages}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
+            externalSponsorshipOpportunities={externalSponsorshipOpportunities}
             onActivateOpportunityPackage={handleActivateOpportunityPackage}
             sponsorApplicants={packageApplicants}
             onDecideApplication={handleDecideApplication}
