@@ -27,7 +27,7 @@ import {
   Trash2,
   RefreshCw,
 } from 'lucide-react';
-import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile } from '../types';
+import { AbstractSubmission, Conference, ConferenceRole, NotificationItem, Post, UserProfile, ProfessionalInvitation } from '../types';
 import { ConferenceFeedbackModal } from './ConferenceFeedbackModal';
 import { ConferenceLink } from './ConferenceLink';
 import { ProfileAnalytics } from './ProfileAnalytics';
@@ -57,7 +57,7 @@ import {
   AddCommitteePositionPayload,
 } from '../api/activity';
 
-type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'analytics' | 'notifications';
+type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'trust' | 'analytics' | 'notifications';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -91,6 +91,9 @@ interface UserProfileViewProps {
   }) => Promise<void>;
   onEditProfessionalPreferences?: (payload: ProfessionalPreferencesPayload) => Promise<void>;
   currentUserEmail?: string;
+  identityVerified?: boolean;
+  identityVerificationMethod?: 'LinkedIn' | 'Google' | null;
+  professionalInvitations?: ProfessionalInvitation[];
   keynoteSpeakerMatches?: KeynoteSpeakerMatch[];
 }
 
@@ -145,6 +148,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onEditProfile,
   onEditProfessionalPreferences,
   currentUserEmail,
+  identityVerified = false,
+  identityVerificationMethod = null,
+  professionalInvitations = [],
   keynoteSpeakerMatches = [],
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
@@ -391,7 +397,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     }
   };
 
+  const completedProfessionalRoles = professionalInvitations.filter((item) => item.status === 'completed');
   const committeeEntries = [
+    ...completedProfessionalRoles
+      .filter((item) => item.roleType === 'committee' || item.roleType === 'chair')
+      .map((item) => ({
+        title: item.title,
+        conferenceName: item.conferenceTitle,
+        year: Number((item.completedAt || item.respondedAt || item.createdAt || '').slice(0, 4)) || new Date().getFullYear(),
+        roleLabel: item.roleType === 'chair' ? 'Session Chair' : 'Technical Committee Member',
+      })),
     ...userProfile.verifiedAchievements
       .filter((a) => a.badgeType === 'committee' || a.badgeType === 'chair')
       .map((a) => ({
@@ -413,6 +428,33 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   ]
     .filter((entry, idx, arr) => arr.findIndex((e) => e.title === entry.title && e.year === entry.year) === idx)
     .sort((a, b) => b.year - a.year);
+
+  const profileCompletenessChecks = [
+    Boolean(userProfile.name?.trim()),
+    Boolean(userProfile.title?.trim()),
+    Boolean(userProfile.organization?.trim()),
+    Boolean(userProfile.bio?.trim() && userProfile.bio.trim().length >= 40),
+    Boolean(userProfile.city?.trim() || userProfile.country?.trim()),
+    Boolean(hasCustomAvatar),
+    (userProfile.expertise || []).length > 0,
+    (userProfile.technicalSpecialization || []).length > 0,
+    (userProfile.researchInterests || []).length > 0,
+    (userProfile.preferredRegions || []).length > 0,
+    Boolean(
+      userProfile.reviewerInfo.available ||
+      userProfile.committeeAvailable ||
+      userProfile.sessionChairAvailable ||
+      userProfile.speakerAvailable
+    ),
+  ];
+  const profileCompleteness = Math.round(
+    (profileCompletenessChecks.filter(Boolean).length / profileCompletenessChecks.length) * 100
+  );
+  const verifiedReviewCount = submissions.reduce(
+    (count, submission) => count + submission.reviews.filter((review) => review.reviewerId === currentUserId).length,
+    0
+  );
+  const verifiedRoleCount = completedProfessionalRoles.length;
 
   const conferenceGateIndex = Math.min(
     1000,
@@ -445,11 +487,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 </span>
               )}
               <span className="absolute -bottom-1 -right-1 group/badge">
-                <span className="w-7 h-7 rounded-full bg-blue-600 ring-[3px] ring-white shadow-md flex items-center justify-center cursor-default">
+                <span className={`w-7 h-7 rounded-full ring-[3px] ring-white shadow-md flex items-center justify-center cursor-default ${
+                  identityVerified ? 'bg-blue-600' : 'bg-slate-400'
+                }`}>
                   <ShieldCheck className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
                 </span>
                 <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/badge:opacity-100">
-                  Verified Conference Identity
+                  {identityVerified
+                    ? `Identity connected via ${identityVerificationMethod || 'trusted provider'}`
+                    : 'ConferenceGate account — identity provider not connected'}
                   <span className="absolute top-full right-2.5 -mt-px border-4 border-transparent border-t-slate-900" />
                 </span>
               </span>
@@ -601,6 +647,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Your expertise and availability for reviewer, committee, chair, and speaker matching.
                 </p>
+                <div className="mt-3 max-w-sm">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
+                    <span>Profile completeness</span>
+                    <span>{profileCompleteness}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${profileCompleteness}%` }} />
+                  </div>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 text-[10px] font-bold">
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.reviewerInfo.available ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
@@ -643,6 +698,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 { id: 'reviews', label: 'Peer Reviews & Kudos' },
                 { id: 'committee', label: 'Committee Positions' },
                 { id: 'badges', label: 'Verified Badges' },
+                { id: 'trust', label: 'Trust & Verification' },
                 { id: 'analytics', label: 'Engagement Analytics' },
               ]
             : [
@@ -1265,6 +1321,67 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 reviews, and committee roles.
               </p>
             )}
+          </div>
+        )}
+
+        {activeTab === 'trust' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Trust & Verification</h3>
+              <p className="text-[11px] text-slate-500 mt-1">
+                ConferenceGate separates platform-verified activity, official-source evidence, and self-reported history.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Identity</div>
+                <div className={`text-sm font-extrabold mt-1 ${identityVerified ? 'text-emerald-700' : 'text-slate-700'}`}>
+                  {identityVerified ? 'Connected' : 'Not connected'}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {identityVerified ? identityVerificationMethod : 'Connect LinkedIn or Google'}
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Platform Reviews</div>
+                <div className="text-sm font-extrabold text-blue-700 mt-1">{verifiedReviewCount} verified</div>
+                <div className="text-[10px] text-slate-500 mt-1">Completed inside ConferenceGate</div>
+              </div>
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Completed Roles</div>
+                <div className="text-sm font-extrabold text-indigo-700 mt-1">{verifiedRoleCount} verified</div>
+                <div className="text-[10px] text-slate-500 mt-1">Confirmed completed by organizer</div>
+              </div>
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="text-[10px] font-bold uppercase text-slate-400">Official Speaker Evidence</div>
+                <div className="text-sm font-extrabold text-violet-700 mt-1">{keynoteSpeakerMatches.length} matched</div>
+                <div className="text-[10px] text-slate-500 mt-1">Named on official conference sources</div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50">
+              <h4 className="text-xs font-bold text-amber-900">Self-reported records stay clearly labeled</h4>
+              <p className="text-[11px] text-amber-800 mt-1">
+                Committee positions or attendance added manually are useful career history, but they are not counted as
+                platform-verified activity unless ConferenceGate receives organizer confirmation or other supported evidence.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">Professional profile completeness</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Higher completeness improves matching quality; it does not guarantee invitations.
+                  </p>
+                </div>
+                <span className="text-xl font-extrabold text-blue-700">{profileCompleteness}%</span>
+              </div>
+              <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden mt-4">
+                <div className="h-full bg-blue-600 rounded-full" style={{ width: `${profileCompleteness}%` }} />
+              </div>
+            </div>
           </div>
         )}
 
