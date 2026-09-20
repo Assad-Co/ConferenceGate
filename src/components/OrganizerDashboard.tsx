@@ -2686,7 +2686,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                             </div>
                           </div>
                           <a
-                            href={pkg.sourceUrl || opportunity.actionUrl}
+                            href={opportunity.actionUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center"
