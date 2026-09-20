@@ -25,8 +25,12 @@ import {
   updateMySponsorPreferences,
   fetchMatchedSponsorshipNeeds,
   inquireAboutSponsorshipNeed,
+  fetchMySponsorshipDeals,
+  updateSponsorshipDeal,
+  addSponsorshipDealUpdate,
   type SponsorPreferences,
   type SponsorshipNeed,
+  type SponsorshipDeal,
 } from '../api/sponsors';
 import { useToast } from './Toast';
 
@@ -64,7 +68,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'preferences' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'deals' | 'preferences' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -89,6 +93,9 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [inquiredNeedIds, setInquiredNeedIds] = useState<Record<string, boolean>>({});
   const [inquiringNeedId, setInquiringNeedId] = useState<string | null>(null);
+  const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
+  const [dealNotes, setDealNotes] = useState<Record<string, string>>({});
+  const [dealUpdatingId, setDealUpdatingId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const listFromText = (value: string) =>
@@ -97,9 +104,10 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const loadSponsorMatching = async () => {
     setSponsorDataLoading(true);
     try {
-      const [pref, needs] = await Promise.all([
+      const [pref, needs, deals] = await Promise.all([
         fetchMySponsorPreferences(),
         fetchMatchedSponsorshipNeeds(),
+        fetchMySponsorshipDeals(),
       ]);
       setPreferences(pref);
       setPreferenceDraft({
@@ -112,6 +120,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         alertFrequency: pref.alertFrequency,
       });
       setMatchedNeeds(needs);
+      setSponsorshipDeals(deals);
     } catch {
       setMatchedNeeds([]);
     } finally {
@@ -169,6 +178,38 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       showToast({ type: 'info', title: 'Could not send inquiry', message: error?.message || 'Please try again.' });
     } finally {
       setInquiringNeedId(null);
+    }
+  };
+
+  const handleSponsorDealStatus = async (
+    deal: SponsorshipDeal,
+    status: 'negotiating' | 'agreement_reached' | 'contract_pending' | 'payment_pending' | 'delivering' | 'completed' | 'canceled'
+  ) => {
+    setDealUpdatingId(deal.id);
+    try {
+      const updated = await updateSponsorshipDeal(deal.id, { status });
+      setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not update Deal Room', message: error?.message || 'Please try again.' });
+    } finally {
+      setDealUpdatingId(null);
+    }
+  };
+
+  const handleSponsorDealNote = async (deal: SponsorshipDeal) => {
+    const text = (dealNotes[deal.id] || '').trim();
+    if (!text) return;
+    setDealUpdatingId(deal.id);
+    try {
+      const update = await addSponsorshipDealUpdate(deal.id, { text });
+      setSponsorshipDeals((prev) =>
+        prev.map((item) => item.id === deal.id ? { ...item, updates: [...item.updates, update] } : item)
+      );
+      setDealNotes((prev) => ({ ...prev, [deal.id]: '' }));
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not post Deal Room update', message: error?.message || 'Please try again.' });
+    } finally {
+      setDealUpdatingId(null);
     }
   };
 
@@ -354,6 +395,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               {unreadAlertCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('deals')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'deals'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Briefcase className="w-3.5 h-3.5" />
+          Deal Rooms ({sponsorshipDeals.length})
         </button>
         <button
           onClick={() => setActiveTab('preferences')}
@@ -658,6 +710,137 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Sponsor Pro shared commercial Deal Rooms */}
+      {activeTab === 'deals' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900">Sponsorship Deal Rooms</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Private deal workspaces with organizers. Commercial terms, deliverables, contracts, invoices, status history, and provider-confirmed payment are kept together.
+            </p>
+          </div>
+
+          {sponsorshipDeals.length === 0 ? (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <h3 className="text-sm font-bold text-slate-800">No active Deal Rooms yet</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                A Deal Room opens when an organizer moves your sponsorship inquiry into negotiation.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sponsorshipDeals.map((deal) => (
+                <div key={deal.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-5">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
+                          {deal.status.replace(/_/g, ' ')}
+                        </span>
+                        {deal.status === 'paid' && (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                            Payment provider confirmed
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-extrabold text-base text-slate-900 mt-2">{deal.opportunityTitle}</h3>
+                      <p className="text-xs text-slate-500">{deal.conferenceTitle} · Organizer: {deal.counterpartName}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-400 uppercase font-bold">Agreed amount</div>
+                      <div className="text-lg font-extrabold text-blue-700">
+                        {deal.agreedAmount === null ? 'Not set' : `${deal.currency} ${Number(deal.agreedAmount).toLocaleString()}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {deal.proposalNotes && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] uppercase font-bold text-slate-400">Commercial terms</div>
+                      <p className="text-xs text-slate-700 mt-1 whitespace-pre-wrap">{deal.proposalNotes}</p>
+                    </div>
+                  )}
+
+                  {deal.deliverables.length > 0 && (
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-2">Deliverables</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {deal.deliverables.map((item) => (
+                          <span key={item} className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {deal.contractUrl && (
+                      <a href={deal.contractUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-lg bg-slate-100 text-blue-700 text-[10px] font-bold">
+                        View Contract
+                      </a>
+                    )}
+                    {deal.invoiceUrl && (
+                      <a href={deal.invoiceUrl} target="_blank" rel="noreferrer" className="px-3 py-2 rounded-lg bg-slate-100 text-blue-700 text-[10px] font-bold">
+                        View Invoice
+                      </a>
+                    )}
+                    {deal.status === 'agreement_reached' && (
+                      <button
+                        onClick={() => handleSponsorDealStatus(deal, 'contract_pending')}
+                        disabled={dealUpdatingId === deal.id}
+                        className="px-3 py-2 rounded-lg bg-blue-900 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        Proceed to Contract
+                      </button>
+                    )}
+                    {deal.status === 'contract_pending' && (
+                      <button
+                        onClick={() => handleSponsorDealStatus(deal, 'payment_pending')}
+                        disabled={dealUpdatingId === deal.id}
+                        className="px-3 py-2 rounded-lg bg-blue-900 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        Contract Accepted · Await Payment
+                      </button>
+                    )}
+                  </div>
+
+                  {deal.status === 'payment_pending' && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                      Payment is pending. ConferenceGate will show <strong>Paid</strong> only after the configured payment provider confirms settlement.
+                    </div>
+                  )}
+
+                  <div className="max-h-48 overflow-y-auto space-y-2">
+                    {deal.updates.map((update) => (
+                      <div key={update.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[10px] text-slate-600">
+                        <div className="font-bold text-slate-800 uppercase">{update.kind}</div>
+                        <div>{update.text}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      value={dealNotes[deal.id] || ''}
+                      onChange={(e) => setDealNotes((prev) => ({ ...prev, [deal.id]: e.target.value }))}
+                      placeholder="Add a note or question to the Deal Room..."
+                      className="flex-1 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                    />
+                    <button
+                      onClick={() => handleSponsorDealNote(deal)}
+                      disabled={!String(dealNotes[deal.id] || '').trim() || dealUpdatingId === deal.id}
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
