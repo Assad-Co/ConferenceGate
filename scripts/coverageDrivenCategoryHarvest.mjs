@@ -238,12 +238,22 @@ async function main() {
     const sponsorCounts=Object.fromEntries(CATEGORIES.map((category)=>[category,0]));
     for (const row of result.rows || []) {
       const categories=String(row.categories||'').split('|').map((x)=>x.trim()).filter(Boolean);
-      const meta=safe(row.extraction_metadata,{});
-      const sponsorAvailable=meta?.external_sponsorship?.status==='available' && Boolean(meta?.external_sponsorship?.action_url);
       for (const category of new Set(categories)) {
         if (!Object.hasOwn(counts,category)) continue;
         if (visualReady(row) && visibleTabs(row) >= 6) counts[category]+=1;
-        if (sponsorAvailable) sponsorCounts[category]+=1;
+      }
+    }
+
+    // Sponsorship coverage is measured from the customer-facing stored catalogue, not from a
+    // transient crawl result. Its category JSON has already been normalized to the original
+    // ConferenceGate taxonomy by enrichExternalSponsorships.mjs.
+    const storedSponsors=await db.execute(
+      "SELECT categories FROM discovery_sponsorship_opportunities WHERE status='available'"
+    ).catch(()=>({rows:[]}));
+    for(const row of storedSponsors.rows || []){
+      const categories=safe(row.categories,[]);
+      for(const category of new Set(Array.isArray(categories)?categories:[])){
+        if(Object.hasOwn(sponsorCounts,category)) sponsorCounts[category]+=1;
       }
     }
 
