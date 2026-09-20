@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Briefcase,
   CheckCircle2,
@@ -12,10 +12,22 @@ import {
   BellRing,
   CheckCheck,
   Clock,
+  Target,
+  SlidersHorizontal,
+  Send,
+  DollarSign,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile, NotificationItem } from '../types';
 import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
-import { SponsorApplicationSummary } from '../api/sponsors';
+import {
+  SponsorApplicationSummary,
+  fetchMySponsorPreferences,
+  updateMySponsorPreferences,
+  fetchMatchedSponsorshipNeeds,
+  inquireAboutSponsorshipNeed,
+  type SponsorPreferences,
+  type SponsorshipNeed,
+} from '../api/sponsors';
 import { useToast } from './Toast';
 
 interface SponsorPortalProps {
@@ -52,9 +64,113 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'roi' | 'profile'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'preferences' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
+  const [preferences, setPreferences] = useState<SponsorPreferences>({
+    sectors: [],
+    categories: [],
+    regions: [],
+    opportunityTypes: [],
+    budgetMin: null,
+    budgetMax: null,
+    alertFrequency: 'instant',
+  });
+  const [preferenceDraft, setPreferenceDraft] = useState({
+    sectors: '',
+    categories: '',
+    regions: '',
+    opportunityTypes: '',
+    budgetMin: '',
+    budgetMax: '',
+    alertFrequency: 'instant' as SponsorPreferences['alertFrequency'],
+  });
+  const [matchedNeeds, setMatchedNeeds] = useState<SponsorshipNeed[]>([]);
+  const [sponsorDataLoading, setSponsorDataLoading] = useState(true);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [inquiredNeedIds, setInquiredNeedIds] = useState<Record<string, boolean>>({});
+  const [inquiringNeedId, setInquiringNeedId] = useState<string | null>(null);
   const { showToast } = useToast();
+
+  const listFromText = (value: string) =>
+    [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))];
+
+  const loadSponsorMatching = async () => {
+    setSponsorDataLoading(true);
+    try {
+      const [pref, needs] = await Promise.all([
+        fetchMySponsorPreferences(),
+        fetchMatchedSponsorshipNeeds(),
+      ]);
+      setPreferences(pref);
+      setPreferenceDraft({
+        sectors: pref.sectors.join(', '),
+        categories: pref.categories.join(', '),
+        regions: pref.regions.join(', '),
+        opportunityTypes: pref.opportunityTypes.join(', '),
+        budgetMin: pref.budgetMin === null ? '' : String(pref.budgetMin),
+        budgetMax: pref.budgetMax === null ? '' : String(pref.budgetMax),
+        alertFrequency: pref.alertFrequency,
+      });
+      setMatchedNeeds(needs);
+    } catch {
+      setMatchedNeeds([]);
+    } finally {
+      setSponsorDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSponsorMatching();
+  }, []);
+
+  const saveSponsorPreferences = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingPreferences(true);
+    try {
+      const payload: SponsorPreferences = {
+        sectors: listFromText(preferenceDraft.sectors),
+        categories: listFromText(preferenceDraft.categories),
+        regions: listFromText(preferenceDraft.regions),
+        opportunityTypes: listFromText(preferenceDraft.opportunityTypes),
+        budgetMin: preferenceDraft.budgetMin ? Number(preferenceDraft.budgetMin) : null,
+        budgetMax: preferenceDraft.budgetMax ? Number(preferenceDraft.budgetMax) : null,
+        alertFrequency: preferenceDraft.alertFrequency,
+      };
+      const saved = await updateMySponsorPreferences(payload);
+      setPreferences(saved);
+      setMatchedNeeds(await fetchMatchedSponsorshipNeeds());
+      showToast({
+        type: 'success',
+        title: 'Sponsor matching updated',
+        message: 'Your Sponsor Pro preferences are now being used to rank sponsorship opportunities.',
+      });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not save preferences', message: error?.message || 'Please try again.' });
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
+
+  const handleNeedInquiry = async (need: SponsorshipNeed) => {
+    if (inquiredNeedIds[need.id]) return;
+    setInquiringNeedId(need.id);
+    try {
+      await inquireAboutSponsorshipNeed(need.id, {
+        message: 'We are interested in discussing ' + need.title + ' for ' + need.conferenceTitle + '.',
+        budget: need.priceAmount,
+      });
+      setInquiredNeedIds((prev) => ({ ...prev, [need.id]: true }));
+      showToast({
+        type: 'success',
+        title: 'Inquiry sent',
+        message: 'The organizer has been notified inside ConferenceGate.',
+      });
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Could not send inquiry', message: error?.message || 'Please try again.' });
+    } finally {
+      setInquiringNeedId(null);
+    }
+  };
 
   const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
 
@@ -214,6 +330,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         <button
+          onClick={() => setActiveTab('matches')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'matches'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5" />
+          Matched Opportunities ({matchedNeeds.length})
+        </button>
+        <button
           onClick={() => setActiveTab('marketplace')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'marketplace'
@@ -227,6 +354,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               {unreadAlertCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('preferences')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'preferences'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Matching Preferences
         </button>
         <button
           onClick={() => setActiveTab('roi')}
@@ -250,6 +388,100 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <StarRating rating={sponsorProfile.rating} size="w-3 h-3" />
         </button>
       </div>
+
+      {/* Sponsor Pro: internally matched organizer sponsorship needs */}
+      {activeTab === 'matches' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900">Matched Sponsorship Opportunities</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Ranked against your saved sectors, categories, regions, opportunity types, and budget. These are organizer-published needs inside ConferenceGate.
+            </p>
+          </div>
+
+          {sponsorDataLoading ? (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-500">
+              Loading Sponsor Pro matches…
+            </div>
+          ) : matchedNeeds.length === 0 ? (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Target className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <h3 className="text-sm font-bold text-slate-800">No internal sponsorship needs yet</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Complete Matching Preferences and ConferenceGate will rank new organizer opportunities here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {matchedNeeds.map((need) => {
+                const inquired = Boolean(inquiredNeedIds[need.id]);
+                return (
+                  <div key={need.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold">
+                            {need.matchScore ?? 0}% Match
+                          </span>
+                          {need.deadline && (
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+                              Deadline {need.deadline}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-base text-slate-900 mt-2">{need.title}</h3>
+                        <p className="text-xs text-slate-500">{need.conferenceTitle}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        {need.priceOnRequest ? (
+                          <>
+                            <div className="text-sm font-extrabold text-blue-700">Inquire</div>
+                            <div className="text-[9px] uppercase text-slate-400 font-bold">Price on request</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-sm font-extrabold text-blue-700">${Number(need.priceAmount || 0).toLocaleString()}</div>
+                            <div className="text-[9px] uppercase text-slate-400 font-bold">Published price</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {need.description && <p className="text-xs text-slate-600 leading-relaxed">{need.description}</p>}
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...need.categories, ...need.targetSectors, ...need.opportunityTypes].slice(0, 10).map((item) => (
+                        <span key={item} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+
+                    {need.benefits.length > 0 && (
+                      <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        {need.benefits.slice(0, 4).join(' · ')}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleNeedInquiry(need)}
+                      disabled={inquired || inquiringNeedId === need.id}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ${
+                        inquired
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-blue-900 hover:bg-blue-950 text-white disabled:opacity-60'
+                      }`}
+                    >
+                      {inquired ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                      {inquired ? 'Inquiry Sent' : 'Inquire with Organizer'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab 1: Marketplace */}
       {activeTab === 'marketplace' && (
@@ -427,6 +659,93 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Sponsor Pro matching preferences */}
+      {activeTab === 'preferences' && (
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={saveSponsorPreferences} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Sponsor Matching Preferences</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                ConferenceGate uses these saved preferences for in-app matching and alerts. It does not send pre-signup notifications.
+              </p>
+            </div>
+
+            {[
+              ['Sectors / Industries', 'sectors', 'Energy, Oil & Gas, Artificial Intelligence'],
+              ['Conference Categories', 'categories', 'Petroleum & Geoscience, Energy, Engineering'],
+              ['Regions', 'regions', 'Middle East, Europe, North America'],
+              ['Opportunity Types', 'opportunityTypes', 'Exhibition Booth, Gala Dinner, Technical Session'],
+            ].map(([label, key, placeholder]) => (
+              <div key={key}>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">{label}</label>
+                <input
+                  value={(preferenceDraft as any)[key]}
+                  onChange={(e) => setPreferenceDraft({ ...preferenceDraft, [key]: e.target.value })}
+                  placeholder={placeholder}
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">Separate values with commas.</p>
+              </div>
+            ))}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Minimum Budget</label>
+                <div className="relative">
+                  <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="number"
+                    min="0"
+                    value={preferenceDraft.budgetMin}
+                    onChange={(e) => setPreferenceDraft({ ...preferenceDraft, budgetMin: e.target.value })}
+                    className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Maximum Budget</label>
+                <div className="relative">
+                  <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="number"
+                    min="0"
+                    value={preferenceDraft.budgetMax}
+                    onChange={(e) => setPreferenceDraft({ ...preferenceDraft, budgetMax: e.target.value })}
+                    className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Alert Frequency</label>
+              <select
+                value={preferenceDraft.alertFrequency}
+                onChange={(e) =>
+                  setPreferenceDraft({
+                    ...preferenceDraft,
+                    alertFrequency: e.target.value as SponsorPreferences['alertFrequency'],
+                  })
+                }
+                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
+              >
+                <option value="instant">Instant for strong matches</option>
+                <option value="daily">Daily summary</option>
+                <option value="weekly">Weekly summary</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingPreferences}
+              className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+            >
+              {savingPreferences ? 'Saving…' : 'Save Matching Preferences'}
+            </button>
+          </form>
         </div>
       )}
 
