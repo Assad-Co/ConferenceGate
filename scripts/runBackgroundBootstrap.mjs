@@ -46,6 +46,10 @@ async function main() {
   await runScript('scripts/repairApifyDiscoveryEvidence.mjs');
   await runScript('scripts/importApifyValidated.mjs');
   await runScript('scripts/importLinkedInValidated.mjs');
+  // Fast verified inserts first so the newly requested IMOG/geoscience/politics/health/etc.
+  // categories are available without waiting for the long discovery/enrichment cycle.
+  await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
+  await runScript('scripts/syncRequestedCategoryExpansion.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
