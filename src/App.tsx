@@ -45,6 +45,8 @@ import {
   fetchProfessionalOpportunities,
   fetchMyProfessionalOpportunityInterestIds,
   setProfessionalOpportunityInterest,
+  fetchMyProfessionalInvitations,
+  respondToProfessionalInvitation,
   publishReviewOpportunity,
   withdrawReviewOpportunity,
   PublishReviewOpportunityPayload,
@@ -121,6 +123,7 @@ import {
   PostAuthor,
   ReviewOpportunity,
   ProfessionalOpportunity,
+  ProfessionalInvitation,
 } from './types';
 
 const AUTH_ROLE_TO_USER_ROLE: Record<AuthUser['role'], UserRole> = {
@@ -379,6 +382,7 @@ export function App() {
   const [reviewOpportunities, setReviewOpportunities] = useState<ReviewOpportunity[]>([]);
   const [professionalOpportunities, setProfessionalOpportunities] = useState<ProfessionalOpportunity[]>([]);
   const [professionalOpportunityInterestIds, setProfessionalOpportunityInterestIds] = useState<string[]>([]);
+  const [professionalInvitations, setProfessionalInvitations] = useState<ProfessionalInvitation[]>([]);
   const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
   const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
   // Real, non-organizer-scoped registration totals per conference — used to show a genuine
@@ -395,6 +399,7 @@ export function App() {
     if (authUser.role === 'professional') {
       fetchProfessionalOpportunities().then(setProfessionalOpportunities).catch(() => {});
       fetchMyProfessionalOpportunityInterestIds().then(setProfessionalOpportunityInterestIds).catch(() => {});
+      fetchMyProfessionalInvitations().then(setProfessionalInvitations).catch(() => {});
     }
     fetchRegistrationCountsByConference().then(setRegistrationCountsByConference).catch(() => {});
     fetchMyNotifications().then(setNotifications).catch(() => {});
@@ -458,6 +463,7 @@ export function App() {
     if (activeTab === 'reviewer' && authUser.role === 'professional') {
       fetchProfessionalOpportunities().then(setProfessionalOpportunities).catch(() => {});
       fetchMyProfessionalOpportunityInterestIds().then(setProfessionalOpportunityInterestIds).catch(() => {});
+      fetchMyProfessionalInvitations().then(setProfessionalInvitations).catch(() => {});
     }
     // Database-only refresh: no website search runs here. This simply reloads the already-stored
     // sponsorship catalog when the Organizer workspace is opened.
@@ -1130,6 +1136,26 @@ export function App() {
     }
   };
 
+  const handleProfessionalInvitationDecision = async (
+    invitationId: string,
+    decision: 'accepted' | 'declined'
+  ) => {
+    try {
+      const updated = await respondToProfessionalInvitation(invitationId, decision);
+      setProfessionalInvitations((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      showToast({
+        type: decision === 'accepted' ? 'success' : 'info',
+        title: decision === 'accepted' ? 'Invitation accepted' : 'Invitation declined',
+        message:
+          decision === 'accepted'
+            ? 'The organizer has been notified. This role will become a verified credential after the organizer marks it completed.'
+            : 'The organizer has been notified of your decision.',
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Could not respond', message: err.message || 'Please try again.' });
+    }
+  };
+
   const handlePublishReviewOpportunity = async (payload: PublishReviewOpportunityPayload) => {
     try {
       const opportunity = await publishReviewOpportunity(payload);
@@ -1503,6 +1529,8 @@ export function App() {
             professionalOpportunities={professionalOpportunities}
             professionalOpportunityInterestIds={professionalOpportunityInterestIds}
             onProfessionalOpportunityInterest={handleProfessionalOpportunityInterest}
+            professionalInvitations={professionalInvitations}
+            onProfessionalInvitationDecision={handleProfessionalInvitationDecision}
             submissions={submissions}
             conferences={conferences}
             onSelectConference={handleSelectConference}
@@ -1576,6 +1604,9 @@ export function App() {
             userProfile={userProfile}
             currentUserId={authUser.id}
             currentUserEmail={authUser.email}
+            identityVerified={authUser.identityVerified}
+            identityVerificationMethod={authUser.identityVerificationMethod}
+            professionalInvitations={professionalInvitations}
             keynoteSpeakerMatches={authUser.keynoteSpeakerMatches}
             submissions={submissions}
             posts={posts}
@@ -1605,6 +1636,7 @@ export function App() {
             onSelectConference={handleSelectConference}
             currentUserId={authUser?.id}
             currentUserEmail={authUser?.email}
+            professionalInvitations={professionalInvitations}
             onBack={() => setActiveTab('profile')}
           />
         )}
