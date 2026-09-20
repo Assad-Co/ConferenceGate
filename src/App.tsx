@@ -1270,13 +1270,11 @@ export function App() {
     });
   };
 
-  const handleCreateConference = async (newConfData: Partial<Conference>) => {
+  const handleCreateConference = async (newConfData: Partial<Conference>): Promise<Conference> => {
     const newConf: Conference = {
       id: `conf_${Date.now()}`,
       title: newConfData.title || 'New Conference',
       organizerName: newConfData.organizerName || 'Conference Organizing Board',
-      // No stock photography stands in for imagery the organizer didn't supply — a card with no
-      // banner shows the conference's initials instead of a stranger's conference.
       organizerLogo: newConfData.organizerLogo || '',
       banner: newConfData.banner || '',
       logo: newConfData.logo || '',
@@ -1305,21 +1303,24 @@ export function App() {
       communityPosts: 0,
     };
 
-    setConferences((prev) => [newConf, ...prev]);
-    setMyConferences((prev) => [newConf, ...prev]);
     try {
-      await createConferenceRemote(newConf);
+      const persisted = await createConferenceRemote(newConf);
+      const saved = persisted || newConf;
+      setConferences((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)]);
+      setMyConferences((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)]);
       showToast({
         type: 'success',
         title: 'Conference created',
-        message: `"${newConf.title}" is now live in the discovery feed.`,
+        message: `"${saved.title}" is now live in ConferenceGate.`,
       });
+      return saved;
     } catch (e) {
       showToast({
         type: 'info',
         title: "Couldn't save conference",
-        message: e instanceof Error ? e.message : 'It is visible now, but may not persist after a reload.',
+        message: e instanceof Error ? e.message : 'The conference was not published. Please try again.',
       });
+      throw e;
     }
   };
 
