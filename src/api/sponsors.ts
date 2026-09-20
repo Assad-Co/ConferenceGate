@@ -473,3 +473,38 @@ export async function decideSponsorRequestResponse(
   });
   await parseResponse(res);
 }
+
+
+export interface SponsorshipNeedAnalyticsItem {
+  needId: string;
+  title: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  publishedPrice: number | null;
+  views: number;
+  inquiries: number;
+  negotiating: number;
+  won: number;
+  contracts: number;
+  payments: number;
+  realizedRevenue: number;
+  inquiryRate: number;
+  winRate: number;
+}
+
+export interface SponsorshipNeedAnalytics {
+  needs: SponsorshipNeedAnalyticsItem[];
+  totals: {
+    views: number;
+    inquiries: number;
+    negotiating: number;
+    won: number;
+    payments: number;
+    realizedRevenue: number;
+  };
+}
+
+export async function fetchSponsorshipNeedAnalytics(): Promise<SponsorshipNeedAnalytics> {
+  const res = await fetch('/api/sponsors/needs/analytics', { credentials: 'include' });
+  return parseResponse(res);
+}
