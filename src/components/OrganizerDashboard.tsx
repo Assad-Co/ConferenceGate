@@ -2914,6 +2914,232 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* Tab 5: Sponsorship Packages */}
       {activeTab === 'sponsors' && (
         <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-blue-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-blue-600">Organizer Pro · Internal Marketplace</span>
+              <h2 className="text-xl font-bold text-slate-900">Publish Sponsorship Need</h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+                Tell Sponsor Pro members exactly what this conference needs. ConferenceGate stores the opportunity,
+                matches it against signed-up sponsor preferences, and sends in-app alerts to strong instant-alert matches.
+              </p>
+            </div>
+
+            <form onSubmit={handlePublishSponsorshipNeed} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <select
+                required
+                value={sponsorshipNeedForm.conferenceId}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, conferenceId: e.target.value })}
+                className="md:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
+              >
+                <option value="">Select one of your conferences...</option>
+                {conferences.map((conference) => (
+                  <option key={conference.id} value={conference.id}>{conference.title}</option>
+                ))}
+              </select>
+
+              <input
+                required
+                value={sponsorshipNeedForm.title}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, title: e.target.value })}
+                placeholder="Opportunity title — e.g. Gala Dinner Sponsorship"
+                className="md:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+              <textarea
+                rows={3}
+                value={sponsorshipNeedForm.description}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, description: e.target.value })}
+                placeholder="Describe the audience, visibility, deliverables, and why this opportunity matters."
+                className="md:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+
+              <input
+                value={sponsorshipNeedForm.categories}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, categories: e.target.value })}
+                placeholder="Conference categories, comma separated"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+              <input
+                value={sponsorshipNeedForm.targetSectors}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, targetSectors: e.target.value })}
+                placeholder="Target sponsor sectors, comma separated"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+              <input
+                value={sponsorshipNeedForm.regions}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, regions: e.target.value })}
+                placeholder="Preferred sponsor regions"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+              <input
+                value={sponsorshipNeedForm.opportunityTypes}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, opportunityTypes: e.target.value })}
+                placeholder="Types: Booth, Dinner, App, Session..."
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+
+              <label className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs font-semibold text-slate-700">
+                <span>Price on request</span>
+                <input
+                  type="checkbox"
+                  checked={sponsorshipNeedForm.priceOnRequest}
+                  onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, priceOnRequest: e.target.checked })}
+                  className="w-4 h-4 accent-blue-700"
+                />
+              </label>
+              <input
+                type="number"
+                min="0"
+                disabled={sponsorshipNeedForm.priceOnRequest}
+                value={sponsorshipNeedForm.priceAmount}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, priceAmount: e.target.value })}
+                placeholder="Published price (USD)"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs disabled:opacity-50"
+              />
+
+              <input
+                type="number"
+                min="1"
+                value={sponsorshipNeedForm.totalSlots}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, totalSlots: e.target.value })}
+                placeholder="Number of available slots"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+              <input
+                type="date"
+                value={sponsorshipNeedForm.deadline}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, deadline: e.target.value })}
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+
+              <input
+                value={sponsorshipNeedForm.benefits}
+                onChange={(e) => setSponsorshipNeedForm({ ...sponsorshipNeedForm, benefits: e.target.value })}
+                placeholder="Benefits, comma separated"
+                className="md:col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+              />
+
+              <button
+                type="submit"
+                disabled={sponsorshipNeedLoading || !sponsorshipNeedForm.conferenceId || !sponsorshipNeedForm.title.trim()}
+                className="md:col-span-2 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {sponsorshipNeedLoading ? 'Publishing…' : 'Publish Need & Match Sponsors'}
+              </button>
+            </form>
+
+            {sponsorshipNeedMessage && (
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800">
+                {sponsorshipNeedMessage}
+              </div>
+            )}
+          </div>
+
+          {sponsorshipNeeds.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Your Sponsorship Needs</h2>
+                  <p className="text-xs text-slate-500">Internal ConferenceGate opportunities visible to paid Sponsor Pro members.</p>
+                </div>
+                <span className="text-xs font-bold text-blue-700">{sponsorshipNeeds.length} published</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {sponsorshipNeeds.map((need) => (
+                  <div key={need.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-900">{need.title}</h3>
+                        <p className="text-[11px] text-slate-500">{need.conferenceTitle}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">
+                        {need.status}
+                      </span>
+                    </div>
+                    <div className="text-sm font-extrabold text-blue-700">
+                      {need.priceOnRequest ? 'Price on request' : `${Number(need.priceAmount || 0).toLocaleString()}`}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {need.totalSlots} slot{need.totalSlots === 1 ? '' : 's'}
+                      {need.deadline ? ` · Deadline ${need.deadline}` : ''}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {[...need.categories, ...need.targetSectors, ...need.opportunityTypes].slice(0, 8).map((item) => (
+                        <span key={item} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Sponsor CRM</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Track internal sponsor inquiries from first contact through negotiation and won/lost.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-500">{sponsorshipNeedInquiries.length} inquiries</span>
+            </div>
+            {sponsorshipNeedInquiries.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No Sponsor Pro inquiries yet. New internal inquiries will appear here automatically.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500">
+                    <tr>
+                      <th className="p-3">Sponsor</th>
+                      <th className="p-3">Conference / Opportunity</th>
+                      <th className="p-3">Budget</th>
+                      <th className="p-3">Message</th>
+                      <th className="p-3">Pipeline</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sponsorshipNeedInquiries.map((inquiry) => (
+                      <tr key={inquiry.id}>
+                        <td className="p-3 font-bold text-slate-900">{inquiry.sponsorName}</td>
+                        <td className="p-3">
+                          <div className="font-semibold text-slate-800">{inquiry.needTitle}</div>
+                          <div className="text-[10px] text-slate-500">{inquiry.conferenceTitle}</div>
+                        </td>
+                        <td className="p-3">
+                          {inquiry.budget === null ? '—' : `${Number(inquiry.budget).toLocaleString()}`}
+                        </td>
+                        <td className="p-3 max-w-xs text-slate-600">{inquiry.message || '—'}</td>
+                        <td className="p-3">
+                          <select
+                            value={inquiry.status}
+                            onChange={(e) =>
+                              handleSponsorshipInquiryStatus(
+                                inquiry.id,
+                                e.target.value as 'new' | 'contacted' | 'negotiating' | 'won' | 'lost'
+                              )
+                            }
+                            className="p-2 rounded-lg border border-slate-200 bg-white text-[10px] font-bold"
+                          >
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="negotiating">Negotiating</option>
+                            <option value="won">Won</option>
+                            <option value="lost">Lost</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
             <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
             <p className="text-xs text-slate-500">
