@@ -139,6 +139,56 @@ function pickSponsorLinks(html, base) {
     })
     .slice(0, MAX_LINKS);
 }
+
+// Many large event sites hide commercial pages in menus, JS navigation, or PDFs. Probe a bounded
+// set of conventional organiser paths as a backstop so global coverage does not depend on homepage
+// anchor text alone. Failed probes are cheap and never become visible data.
+function commonSponsorUrls(base) {
+  let origin;
+  try { origin=new URL(base).origin; } catch { return []; }
+  const paths=[
+    '/sponsor','/sponsors','/sponsorship','/sponsorship-opportunities','/sponsorship-options',
+    '/become-a-sponsor','/sponsor-us','/exhibit','/exhibitors','/exhibitor','/exhibition',
+    '/exhibit-with-us','/become-an-exhibitor','/book-a-stand','/reserve-a-booth',
+    '/commercial-opportunities','/commercial-partners','/partners','/partnership',
+    '/industry','/industry-opportunities','/industry-support','/industry-partners',
+    '/prospectus','/sponsorship-prospectus','/exhibitor-prospectus','/media-kit',
+    '/sponsorship-and-exhibition','/sponsorship-exhibition','/sponsor-exhibit',
+  ];
+  return paths.map((p)=>origin+p);
+}
+
+async function sponsorUrlsFromSitemap(base) {
+  let origin;
+  try { origin=new URL(base).origin; } catch { return []; }
+  const sitemapCandidates=[origin+'/sitemap.xml',origin+'/sitemap_index.xml',origin+'/sitemap-index.xml'];
+  const out=[];
+  const seen=new Set();
+  for(const sitemapUrl of sitemapCandidates){
+    try{
+      const res=await fetch(sitemapUrl,{
+        headers:{'User-Agent':USER_AGENT,'Accept':'application/xml,text/xml,text/plain,*/*'},
+        redirect:'follow',
+        signal:AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if(!res.ok) continue;
+      const xml=await res.text();
+      const locs=[...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)].map((m)=>decodeEntities(m[1].trim()));
+      for(const loc of locs){
+        const url=absoluteUrl(loc,origin);
+        if(!url || hostOf(url)!==hostOf(origin)) continue;
+        const key=url.replace(/#.*$/,'').replace(/\/$/,'');
+        if(seen.has(key)) continue;
+        if(SPONSOR_LINK_RE.test(url) || /industry|prospectus|media-kit|commercial|booth|stand/i.test(url)){
+          seen.add(key); out.push(url);
+        }
+        if(out.length>=MAX_LINKS*2) break;
+      }
+      if(out.length>=MAX_LINKS*2) break;
+    }catch{}
+  }
+  return out;
+}
 function currencyFromParts(code1, symbol, code2) {
   const code = (code1 || code2 || '').toUpperCase();
   if (code) return code;
@@ -264,14 +314,18 @@ async function enrichOne(db,event) {
 
   const candidateLinks=pickSponsorLinks(main.html,main.finalUrl);
   const known=(Array.isArray(oldMeta?.deep_page_urls)?oldMeta.deep_page_urls:[])
-    .filter((u)=>typeof u==='string' && SPONSOR_LINK_RE.test(u))
+    .filter((u)=>typeof u==='string' && (SPONSOR_LINK_RE.test(u) || /industry|prospectus|media-kit|commercial|booth|stand/i.test(u)))
     .map((href)=>({href,label:'known sponsor/exhibitor page',score:9}));
-  const merged=[...candidateLinks,...known];
+  const sitemapLinks=(await sponsorUrlsFromSitemap(main.finalUrl))
+    .map((href)=>({href,label:'sitemap sponsor/exhibitor page',score:8}));
+  const conventional=commonSponsorUrls(main.finalUrl)
+    .map((href)=>({href,label:'conventional sponsor/exhibitor path',score:7}));
+  const merged=[...candidateLinks,...known,...sitemapLinks,...conventional];
   const seen=new Set();
   const links=merged.filter((x)=>{
     const k=x.href.replace(/#.*$/,'').replace(/\/$/,'');
     if(seen.has(k)) return false; seen.add(k); return true;
-  }).slice(0,MAX_LINKS);
+  }).slice(0,Math.max(MAX_LINKS,12));
 
   const sponsorPages=[];
   for (const link of links) {
