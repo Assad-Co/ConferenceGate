@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import crypto from "crypto";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { dbGet, dbRun, UserRow } from "./db";
@@ -54,6 +55,44 @@ billingRouter.post(
   })
 );
 
+
+// Payment-provider settlement sync for a sponsorship Deal Room. Only a verified provider
+// adapter with BILLING_SYNC_SECRET can mark a deal as paid; users cannot self-assert payment.
+billingRouter.post(
+  "/deal-payment-sync",
+  asyncHandler(async (req, res: Response) => {
+    const expected = process.env.BILLING_SYNC_SECRET?.trim();
+    const supplied = String(req.header("x-billing-sync-secret") || "");
+    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+
+    const dealId = typeof req.body?.dealId === "string" ? req.body.dealId : "";
+    const paymentReference =
+      typeof req.body?.paymentReference === "string" ? req.body.paymentReference.trim() : "";
+    const paid = req.body?.paid === true;
+    if (!dealId || !paid || !paymentReference) {
+      return res.status(400).json({ error: "dealId, paid=true, and paymentReference are required" });
+    }
+
+    const deal = await dbGet<any>("SELECT * FROM sponsorship_deals WHERE id=?", [dealId]);
+    if (!deal) return res.status(404).json({ error: "Deal not found" });
+
+    await dbRun(
+      "UPDATE sponsorship_deals SET status='paid',payment_reference=?,updated_at=datetime('now') WHERE id=?",
+      [paymentReference, dealId]
+    );
+    await dbRun(
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+      [
+        `sdu_${crypto.randomUUID()}`,
+        dealId,
+        deal.organizer_id,
+        "payment",
+        `Payment confirmed by provider. Reference: ${paymentReference}`,
+      ]
+    ).catch(() => {});
+    res.json({ ok: true });
+  })
+);
 
 billingRouter.use(requireAuth);
 
