@@ -298,13 +298,13 @@ function storedFormat(value: unknown): "in-person" | "hybrid" | "online" | null 
 const POPULAR_QUALITY_SEARCHES = new Set([
   "artificial intelligence","data science","cybersecurity","software & cloud","telecommunications",
   "semiconductors & electronics","robotics & automation","engineering","civil & construction",
-  "mechanical engineering","electrical engineering","chemical engineering","materials science","energy",
-  "petroleum & geoscience","renewable energy","hydrogen & ccus","mining & minerals","environment",
-  "climate & sustainability","healthcare","public health","pharmaceuticals & biotechnology","nursing",
+  "mechanical engineering","electrical engineering","chemical engineering","materials science","materials","energy",
+  "petroleum & geoscience","geoscience","geology","organic geochemistry","renewable energy","hydrogen & ccus","mining & minerals","environment",
+  "climate & sustainability","healthcare","health","public health","pharmaceuticals & biotechnology","nursing",
   "dentistry","cardiology","oncology","neuroscience","life sciences","chemistry","physics",
   "mathematics & statistics","science","education","business","finance","economics","marketing",
-  "supply chain & logistics","manufacturing","aviation & aerospace","maritime","automotive & mobility",
-  "architecture & urbanism","agriculture & food","law & regulation","government & policy","social sciences",
+  "supply chain & logistics","manufacturing","aviation & aerospace","maritime","automotive & mobility","automotive",
+  "architecture & urbanism","architecture","agriculture & food","law & regulation","government & policy","politics","social sciences",
   "arts & culture","tourism & hospitality","blockchain & web3","real estate"
 ]);
 function isPopularQualitySearch(query: string): boolean {
