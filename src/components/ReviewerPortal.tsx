@@ -577,19 +577,15 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : roleFilter === 'reviewer' ? (
               <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
                 <Filter className="w-7 h-7 text-slate-300 mx-auto mb-2" />
-                <h3 className="font-bold text-sm text-slate-800">
-                  {roleFilter === 'recommended' ? 'No matching reviewer opportunities yet' : 'No reviewer opportunities found'}
-                </h3>
+                <h3 className="font-bold text-sm text-slate-800">No reviewer opportunities found</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  {roleFilter === 'recommended'
-                    ? 'Add more expertise to your Professional Matching Profile or check all Reviewer opportunities.'
-                    : 'Try a different search term or check again when organizers publish new calls for reviewers.'}
+                  Try a different search term or check again when organizers publish new calls for reviewers.
                 </p>
               </div>
-            )
+            ) : null
           )}
 
           {(roleFilter === 'recommended' || roleFilter === 'committee' || roleFilter === 'chair' || roleFilter === 'speaker') && (
@@ -695,6 +691,18 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               </div>
             ) : null
           )}
+
+          {roleFilter === 'recommended' &&
+            visibleReviewerOpportunities.length === 0 &&
+            visibleProfessionalOpportunities.length === 0 && (
+              <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+                <Sparkles className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+                <h3 className="font-bold text-sm text-slate-900">No matching opportunities yet</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                  Complete your expertise and availability profile, or check the individual role tabs to see all organizer-published openings.
+                </p>
+              </div>
+            )}
         </div>
       )}
 
