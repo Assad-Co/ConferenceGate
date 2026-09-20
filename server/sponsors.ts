@@ -10,6 +10,8 @@ import {
   SponsorPreferenceRow,
   SponsorshipNeedRow,
   SponsorshipNeedInquiryRow,
+  SponsorshipDealRow,
+  SponsorshipDealUpdateRow,
   CreatedConferenceRow,
   UserRow,
 } from "./db";
@@ -114,6 +116,109 @@ function sponsorNeedMatch(
     weight += 0.2;
   }
   return weight ? Math.round((weighted / weight) * 100) : 0;
+}
+
+function toSponsorshipDealDTO(
+  row: SponsorshipDealRow,
+  updates: SponsorshipDealUpdateRow[] = [],
+  counterpartName = ""
+) {
+  return {
+    id: row.id,
+    inquiryId: row.inquiry_id,
+    needId: row.need_id,
+    organizerId: row.organizer_id,
+    sponsorId: row.sponsor_id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    opportunityTitle: row.opportunity_title,
+    counterpartName,
+    agreedAmount: row.agreed_amount,
+    currency: row.currency,
+    status: row.status,
+    proposalNotes: row.proposal_notes || "",
+    deliverables: safeJson(row.deliverables, []),
+    contractUrl: row.contract_url,
+    invoiceUrl: row.invoice_url,
+    paymentReference: row.payment_reference,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    updates: updates.map((update) => ({
+      id: update.id,
+      authorId: update.author_id,
+      kind: update.kind,
+      text: update.text,
+      url: update.url,
+      createdAt: update.created_at,
+    })),
+  };
+}
+
+async function ensureDealForInquiry(
+  inquiryId: string,
+  targetStatus: "negotiating" | "agreement_reached"
+): Promise<SponsorshipDealRow | undefined> {
+  const existing = await dbGet<SponsorshipDealRow>(
+    "SELECT * FROM sponsorship_deals WHERE inquiry_id = ?",
+    [inquiryId]
+  );
+  if (existing) {
+    if (existing.status === "negotiating" && targetStatus === "agreement_reached") {
+      await dbRun(
+        "UPDATE sponsorship_deals SET status='agreement_reached', updated_at=datetime('now') WHERE id=?",
+        [existing.id]
+      );
+      return dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [existing.id]);
+    }
+    return existing;
+  }
+
+  const context = await dbGet<any>(
+    `SELECT i.*, n.organizer_id,n.conference_id,n.conference_title,n.title as opportunity_title,
+            n.price_amount,n.price_on_request
+       FROM sponsorship_need_inquiries i
+       JOIN sponsorship_needs n ON n.id=i.need_id
+      WHERE i.id=?`,
+    [inquiryId]
+  );
+  if (!context) return undefined;
+
+  const id = `sdeal_${crypto.randomUUID()}`;
+  const agreedAmount =
+    context.price_on_request ? (context.budget ?? null) : (context.price_amount ?? context.budget ?? null);
+  await dbRun(
+    `INSERT INTO sponsorship_deals(
+      id,inquiry_id,need_id,organizer_id,sponsor_id,conference_id,conference_title,opportunity_title,
+      agreed_amount,currency,status,proposal_notes,deliverables
+    ) VALUES(?,?,?,?,?,?,?,?,?,'USD',?,?,?)`,
+    [
+      id,
+      inquiryId,
+      context.need_id,
+      context.organizer_id,
+      context.sponsor_id,
+      context.conference_id,
+      context.conference_title,
+      context.opportunity_title,
+      agreedAmount,
+      targetStatus,
+      context.message || null,
+      "[]",
+    ]
+  );
+  await dbRun(
+    "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+    [
+      `sdu_${crypto.randomUUID()}`,
+      id,
+      context.organizer_id,
+      "status",
+      targetStatus === "agreement_reached"
+        ? "Organizer moved the sponsorship inquiry to Won / agreement reached."
+        : "Organizer opened a sponsorship Deal Room for negotiation.",
+    ]
+  );
+  return dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [id]);
 }
 
 function toSponsorshipNeedDTO(row: SponsorshipNeedRow, matchScore?: number) {
@@ -452,13 +557,188 @@ sponsorsRouter.patch(
       "UPDATE sponsorship_need_inquiries SET status=?,updated_at=datetime('now') WHERE id=?",
       [status, req.params.id]
     );
+    let deal: SponsorshipDealRow | undefined;
+    if (status === "negotiating") {
+      deal = await ensureDealForInquiry(req.params.id, "negotiating");
+    } else if (status === "won") {
+      deal = await ensureDealForInquiry(req.params.id, "agreement_reached");
+    } else if (status === "lost") {
+      const existingDeal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE inquiry_id=?", [req.params.id]);
+      if (existingDeal && existingDeal.status !== "completed") {
+        await dbRun("UPDATE sponsorship_deals SET status='canceled',updated_at=datetime('now') WHERE id=?", [existingDeal.id]);
+        deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [existingDeal.id]);
+      }
+    }
     await createNotification(
       inquiry.sponsor_id,
       "sponsorship",
       "Sponsorship inquiry updated",
       `The organizer updated your sponsorship inquiry to ${status}.`
     );
-    res.json({ ok: true, status });
+    res.json({ ok: true, status, deal: deal ? toSponsorshipDealDTO(deal) : null });
+  })
+);
+
+// Deal Room shared by the paid organizer and sponsor once an inquiry enters negotiation.
+sponsorsRouter.get(
+  "/deals/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!user || !["organizer","sponsor"].includes(user.role)) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+    if (!["active","trialing"].includes(user.subscription_status || "")) {
+      return res.status(402).json({ error: "Paid workspace subscription required." });
+    }
+
+    const rows = await dbAll<SponsorshipDealRow>(
+      user.role === "organizer"
+        ? "SELECT * FROM sponsorship_deals WHERE organizer_id=? ORDER BY updated_at DESC"
+        : "SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY updated_at DESC",
+      [req.userId!]
+    );
+    const deals = [];
+    for (const row of rows) {
+      const updates = await dbAll<SponsorshipDealUpdateRow>(
+        "SELECT * FROM sponsorship_deal_updates WHERE deal_id=? ORDER BY created_at ASC",
+        [row.id]
+      );
+      const counterpartId = user.role === "organizer" ? row.sponsor_id : row.organizer_id;
+      const counterpart = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [counterpartId]);
+      deals.push(toSponsorshipDealDTO(
+        row,
+        updates,
+        counterpart?.organization || counterpart?.name || ""
+      ));
+    }
+    res.json({ deals });
+  })
+);
+
+sponsorsRouter.patch(
+  "/deals/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!user || !["organizer","sponsor"].includes(user.role)) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+    if (!["active","trialing"].includes(user.subscription_status || "")) {
+      return res.status(402).json({ error: "Paid workspace subscription required." });
+    }
+    const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
+    if (!deal || (deal.organizer_id !== req.userId && deal.sponsor_id !== req.userId)) {
+      return res.status(404).json({ error: "Deal not found." });
+    }
+
+    const body = req.body || {};
+    const updates: string[] = [];
+    const args: any[] = [];
+    if (body.agreedAmount !== undefined) {
+      const amount = body.agreedAmount === null || body.agreedAmount === "" ? null : Number(body.agreedAmount);
+      if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+        return res.status(400).json({ error: "agreedAmount must be a positive number." });
+      }
+      updates.push("agreed_amount=?");
+      args.push(amount);
+    }
+    if (typeof body.currency === "string" && /^[A-Z]{3}$/.test(body.currency.trim().toUpperCase())) {
+      updates.push("currency=?");
+      args.push(body.currency.trim().toUpperCase());
+    }
+    if (typeof body.proposalNotes === "string") {
+      updates.push("proposal_notes=?");
+      args.push(body.proposalNotes.trim() || null);
+    }
+    if (Array.isArray(body.deliverables)) {
+      updates.push("deliverables=?");
+      args.push(JSON.stringify(cleanStringList(body.deliverables, 50)));
+    }
+    for (const [field, column] of [["contractUrl","contract_url"],["invoiceUrl","invoice_url"]] as const) {
+      if (body[field] !== undefined) {
+        const value = typeof body[field] === "string" ? body[field].trim() : "";
+        if (value && !/^https:\/\//i.test(value)) {
+          return res.status(400).json({ error: `${field} must be an https URL.` });
+        }
+        updates.push(`${column}=?`);
+        args.push(value || null);
+      }
+    }
+
+    // Commercial status progression is constrained. "paid" is intentionally excluded: only the
+    // payment-provider sync route can mark money as received.
+    const allowedUserStatuses = new Set([
+      "negotiating","agreement_reached","contract_pending","payment_pending","delivering","completed","canceled"
+    ]);
+    if (typeof body.status === "string") {
+      if (!allowedUserStatuses.has(body.status)) return res.status(400).json({ error: "Invalid deal status." });
+      if (body.status === "completed" && deal.status !== "paid" && deal.status !== "delivering") {
+        return res.status(409).json({ error: "A deal cannot be completed before payment/delivery status." });
+      }
+      updates.push("status=?");
+      args.push(body.status);
+    }
+
+    if (!updates.length) return res.status(400).json({ error: "No supported deal fields supplied." });
+    args.push(deal.id);
+    await dbRun(
+      `UPDATE sponsorship_deals SET ${updates.join(",")},updated_at=datetime('now') WHERE id=?`,
+      args
+    );
+    await dbRun(
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+      [
+        `sdu_${crypto.randomUUID()}`,
+        deal.id,
+        req.userId!,
+        "status",
+        typeof body.status === "string" ? `Deal updated to ${body.status}.` : "Commercial terms updated.",
+      ]
+    );
+
+    const updated = (await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [deal.id]))!;
+    const updatesRows = await dbAll<SponsorshipDealUpdateRow>(
+      "SELECT * FROM sponsorship_deal_updates WHERE deal_id=? ORDER BY created_at ASC",
+      [deal.id]
+    );
+    const otherId = req.userId === deal.organizer_id ? deal.sponsor_id : deal.organizer_id;
+    await createNotification(otherId, "sponsorship", "Sponsorship Deal Room updated", `${deal.opportunity_title} has new commercial terms or status.`);
+    res.json({ deal: toSponsorshipDealDTO(updated, updatesRows) });
+  })
+);
+
+sponsorsRouter.post(
+  "/deals/:id/updates",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
+    if (!deal || (deal.organizer_id !== req.userId && deal.sponsor_id !== req.userId)) {
+      return res.status(404).json({ error: "Deal not found." });
+    }
+    const textValue = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+    if (!textValue) return res.status(400).json({ error: "Update text is required." });
+    const allowedKinds = new Set(["note","proposal","contract","invoice","deliverable"]);
+    const kind = typeof req.body?.kind === "string" && allowedKinds.has(req.body.kind) ? req.body.kind : "note";
+    const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+    if (url && !/^https:\/\//i.test(url)) return res.status(400).json({ error: "url must be an https URL." });
+
+    const id = `sdu_${crypto.randomUUID()}`;
+    await dbRun(
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text,url) VALUES(?,?,?,?,?,?)",
+      [id, deal.id, req.userId!, kind, textValue, url || null]
+    );
+    await dbRun("UPDATE sponsorship_deals SET updated_at=datetime('now') WHERE id=?", [deal.id]);
+    const otherId = req.userId === deal.organizer_id ? deal.sponsor_id : deal.organizer_id;
+    await createNotification(otherId, "sponsorship", "New Deal Room update", `${deal.opportunity_title}: ${textValue.slice(0, 140)}`);
+    const row = (await dbGet<SponsorshipDealUpdateRow>("SELECT * FROM sponsorship_deal_updates WHERE id=?", [id]))!;
+    res.status(201).json({
+      update: {
+        id: row.id,
+        authorId: row.author_id,
+        kind: row.kind,
+        text: row.text,
+        url: row.url,
+        createdAt: row.created_at,
+      },
+    });
   })
 );
 
