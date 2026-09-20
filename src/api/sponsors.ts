@@ -374,3 +374,102 @@ export async function addSponsorshipDealUpdate(
   const data = await parseResponse(res);
   return data.update;
 }
+
+
+export interface SponsorRequest {
+  id: string;
+  sponsorId: string;
+  sponsorName: string;
+  title: string;
+  description: string;
+  categories: string[];
+  regions: string[];
+  opportunityTypes: string[];
+  budgetMin: number | null;
+  budgetMax: number | null;
+  targetAudience: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: 'active' | 'closed';
+  responseCount: number;
+  createdAt: string;
+}
+
+export interface SponsorRequestResponse {
+  id: string;
+  requestId: string;
+  requestTitle: string;
+  organizerId: string;
+  organizerName: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  message: string;
+  status: 'new' | 'accepted' | 'declined' | 'withdrawn';
+  createdAt: string;
+}
+
+export async function createSponsorRequest(payload: {
+  title: string;
+  description?: string;
+  categories?: string[];
+  regions?: string[];
+  opportunityTypes?: string[];
+  budgetMin?: number | null;
+  budgetMax?: number | null;
+  targetAudience?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<SponsorRequest> {
+  const res = await fetch('/api/sponsors/requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.request;
+}
+
+export async function fetchMySponsorRequests(): Promise<SponsorRequest[]> {
+  const res = await fetch('/api/sponsors/requests/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.requests;
+}
+
+export async function fetchSponsorRequestBoard(): Promise<SponsorRequest[]> {
+  const res = await fetch('/api/sponsors/requests/board', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.requests;
+}
+
+export async function respondToSponsorRequest(
+  requestId: string,
+  payload: { conferenceId: string; message?: string }
+): Promise<void> {
+  const res = await fetch(`/api/sponsors/requests/${requestId}/respond`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  await parseResponse(res);
+}
+
+export async function fetchMySponsorRequestResponses(): Promise<SponsorRequestResponse[]> {
+  const res = await fetch('/api/sponsors/requests/responses/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.responses;
+}
+
+export async function decideSponsorRequestResponse(
+  responseId: string,
+  status: 'accepted' | 'declined'
+): Promise<void> {
+  const res = await fetch(`/api/sponsors/requests/responses/${responseId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ status }),
+  });
+  await parseResponse(res);
+}
