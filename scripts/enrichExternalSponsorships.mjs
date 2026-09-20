@@ -207,18 +207,21 @@ function extractPricedPackages(page) {
   }).slice(0,20);
 }
 function extractNamedPackages(page) {
-  const headings=extractHeadings(page.html);
+  // Sponsorship pages vary wildly: some use proper h2/h3 package headings (MEOS GEO does this),
+  // while others render package names as cards, bold text, or short CMS blocks. Read headings first
+  // and then short page lines so named opportunities still surface even when no public price exists.
+  const candidates=[...extractHeadings(page.html), ...textLines(page.html).filter((line)=>line.length<=120)];
   const seen=new Set();
   const out=[];
-  for (const heading of headings) {
-    const name=cleanPackageName(heading);
+  for (const candidate of candidates) {
+    const name=cleanPackageName(candidate);
     if (!looksLikePackageName(name)) continue;
     const key=name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({ name, price_text:null, price_amount:null, currency:null, benefits:[], source_url:page.finalUrl });
   }
-  return out.slice(0,16);
+  return out.slice(0,24);
 }
 function chooseActionUrl(pages, fallback) {
   const candidates=[];
