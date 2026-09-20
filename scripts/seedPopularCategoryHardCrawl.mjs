@@ -104,7 +104,7 @@ const SEEDS = [
   ['ESC Congress 2027','https://www.escardio.org/events/congresses/esc-congress/future-destinations/','2027-08-27','2027-08-30','Milan','Italy',['Cardiology','Healthcare','Life Sciences','Science']],
   ['Alzheimer’s Association International Conference 2027','https://aaic.alz.org/','2027-07-18','2027-07-21','Chicago','United States',['Neuroscience','Healthcare','Life Sciences','Public Health','Open call for papers']],
   ['International Congress for Industrial and Applied Mathematics 2027','https://www.siam.org/conferences-events/siam-conferences/iciam27/','2027-07-12','2027-07-16','The Hague','Netherlands',['Mathematics & Statistics','Science','Engineering','Data Science']],
-  ['AAIC Neuroscience Next 2027','https://www.alz.org/neurosciencenext','2027-02-15','2027-02-18',null,null,['Virtual conferences','Neuroscience','Healthcare','Life Sciences','Education']]
+  ['AAIC Neuroscience Next 2027','https://www.alz.org/neurosciencenext','2027-02-15','2027-02-18',null,null,['Virtual conferences','Neuroscience','Healthcare','Life Sciences','Education']],
   ['World of Concrete 2027','https://www.worldofconcrete.com/','2027-01-19','2027-01-21','Las Vegas','United States',['Civil & Construction','Engineering','Manufacturing','Architecture & Urbanism','Business']],
   ['2027 AIChE Annual Meeting','https://www.aiche.org/conferences/aiche-annual-meeting/2027','2027-10-31','2027-11-04','San Diego','United States',['Chemical Engineering','Engineering','Energy','Science','Education','Business']],
   ['Sigma Nursing 49th Biennial Convention','https://www.sigmanursing.org/events/biennial-convention','2027-10-29','2027-11-01','Denver','United States',['Nursing','Healthcare','Public Health','Education','Life Sciences','Open call for papers']],
