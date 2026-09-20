@@ -59,7 +59,7 @@ import {
   PublishReviewOpportunityPayload,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
-import { SponsorApplicant, ReviewableSponsor, notifyVerifiedSponsors } from '../api/sponsors';
+import { SponsorApplicant, ReviewableSponsor, ExternalSponsorshipOpportunity, notifyVerifiedSponsors } from '../api/sponsors';
 
 interface OrganizerDashboardProps {
   conferences: Conference[];
@@ -74,6 +74,7 @@ interface OrganizerDashboardProps {
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities: SponsorshipOpportunity[];
+  externalSponsorshipOpportunities?: ExternalSponsorshipOpportunity[];
   onActivateOpportunityPackage: (opp: { key: string; tier: string; price: number; slots: number; benefits: string[] }) => void;
   sponsorApplicants?: SponsorApplicant[];
   onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
@@ -222,6 +223,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
   sponsorshipOpportunities,
+  externalSponsorshipOpportunities = [],
   onActivateOpportunityPackage,
   sponsorApplicants = [],
   onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
@@ -237,6 +239,19 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
   >('overview');
+
+  const [sponsorshipCategoryFilter, setSponsorshipCategoryFilter] = useState('All categories');
+  const externalSponsorshipCategories = useMemo(
+    () => ['All categories', ...Array.from(new Set(externalSponsorshipOpportunities.flatMap((item) => item.categories || []))).sort()],
+    [externalSponsorshipOpportunities]
+  );
+  const filteredExternalSponsorships = useMemo(
+    () =>
+      sponsorshipCategoryFilter === 'All categories'
+        ? externalSponsorshipOpportunities
+        : externalSponsorshipOpportunities.filter((item) => item.categories?.includes(sponsorshipCategoryFilter)),
+    [externalSponsorshipOpportunities, sponsorshipCategoryFilter]
+  );
 
   // Real platform activity for the managed conferences — no fabricated totals.
   const overviewStats = useMemo(() => {
@@ -2584,101 +2599,142 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* Tab 5: Sponsorship Packages */}
       {activeTab === 'sponsors' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
-            <p className="text-xs text-slate-500">
-              Tentative pricing and packages available across every part of your conference program. Activate a
-              package to make it available to sponsors in the marketplace.
-            </p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <div className="space-y-2">
+                <h2 className="text-lg font-bold text-slate-900">Official Conference Sponsorship & Exhibitor Opportunities</h2>
+                <p className="text-xs text-slate-500 max-w-4xl">
+                  Opportunities below come from the conference organizer's own sponsorship, exhibitor, partner, or
+                  commercial-opportunities pages. Published prices are shown exactly when found. When the organizer
+                  does not publish a price, Conference Gate shows <span className="font-bold text-slate-700">Inquire Now</span>
+                  and opens the official enquiry or sponsorship page.
+                </p>
+              </div>
+              <label className="min-w-[240px]">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                  <Filter className="w-3.5 h-3.5" />
+                  Conference category
+                </span>
+                <select
+                  value={sponsorshipCategoryFilter}
+                  onChange={(e) => setSponsorshipCategoryFilter(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                >
+                  {externalSponsorshipCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Official website links only
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                {filteredExternalSponsorships.length} conference{filteredExternalSponsorships.length === 1 ? '' : 's'}
+              </span>
+            </div>
           </div>
 
-          <div className="columns-1 md:columns-2 xl:columns-3 gap-6 [column-fill:_balance]">
-            {sponsorshipOpportunities.map((opp) => {
-              const Icon = sponsorshipOpportunityIcons[opp.category] || Briefcase;
-              const c = sponsorshipOpportunityColors[opp.category] || sponsorshipOpportunityColors.blue;
-              const startingPrice = Math.min(...opp.packages.map((p) => p.price));
-              return (
-                <div
-                  key={opp.id}
-                  className={`break-inside-avoid mb-6 bg-white rounded-3xl border ${c.border} shadow-xs overflow-hidden`}
-                >
-                  <div className={`${c.header} p-5 flex items-start gap-3`}>
-                    <div className={`w-10 h-10 rounded-xl ${c.iconBox} flex items-center justify-center shrink-0`}>
-                      <Icon className={`w-5 h-5 ${c.icon}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-sm text-slate-900">{opp.name}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${c.badge}`}>
-                          From ${startingPrice.toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{opp.description}</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-2">
-                    {opp.packages.map((pkg) => {
-                      const key = `${opp.id}__${pkg.tier}`;
-                      const isActive = sponsorshipPackages.some((p) => p.sourceOpportunityId === key);
-                      return (
-                        <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-bold text-xs text-slate-900">{pkg.tier}</div>
-                              <div className="text-[10px] text-slate-500 truncate">
-                                Up to {pkg.slots} sponsor{pkg.slots === 1 ? '' : 's'} · {pkg.benefits.join(' · ')}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <div className={`font-extrabold text-sm ${c.price}`}>
-                                ${pkg.price.toLocaleString()}
-                              </div>
-                              <div className="text-[9px] text-slate-400 uppercase font-bold">Tentative</div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() =>
-                              !isActive &&
-                              onActivateOpportunityPackage({
-                                key,
-                                tier: pkg.tier,
-                                price: pkg.price,
-                                slots: pkg.slots,
-                                benefits: pkg.benefits,
-                              })
-                            }
-                            disabled={isActive}
-                            className={`mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors ${
-                              isActive
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
-                                : 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
-                            }`}
-                          >
-                            {isActive ? '✓ Active in Marketplace' : 'Activate for This Conference'}
-                          </button>
-                          {isActive && (
-                            <button
-                              onClick={() => {
-                                const activePackage = sponsorshipPackages.find((p) => p.sourceOpportunityId === key);
-                                if (activePackage) handleNotifyVerifiedSponsors(opp.name, activePackage.id, key);
-                              }}
-                              className="mt-1.5 w-full py-1.5 rounded-lg font-bold text-[11px] cursor-pointer transition-colors bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1.5"
-                            >
-                              <Bell className="w-3 h-3" />
-                              {key in notifiedOpportunityKeys
-                                ? `Notified ${notifiedOpportunityKeys[key]} Verified Sponsors ✓`
-                                : `Notify ${verifiedSponsorCount} Verified Sponsors`}
-                            </button>
+          {filteredExternalSponsorships.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+              <Globe className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+              <h3 className="font-bold text-sm text-slate-800">Checking official sponsorship and exhibitor pages</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                ConferenceGate's enrichment worker scans every upcoming published conference and adds it here once an
+                official sponsor, exhibitor, partner, stand, booth, or commercial-opportunity page is verified.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredExternalSponsorships.map((opportunity) => (
+                <div key={opportunity.conferenceId} className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+                  <div className="p-5 bg-slate-50 border-b border-slate-100 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-sm text-slate-900 leading-snug">{opportunity.conferenceTitle}</h3>
+                        <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                          {(opportunity.city || opportunity.country) && (
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {[opportunity.city, opportunity.country].filter(Boolean).join(', ')}
+                            </span>
+                          )}
+                          {opportunity.startDate && (
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(opportunity.startDate)}
+                            </span>
                           )}
                         </div>
-                      );
-                    })}
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${
+                          opportunity.hasPublishedPricing
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        {opportunity.hasPublishedPricing ? 'Published pricing' : 'Price on request'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(opportunity.categories || []).slice(0, 5).map((category) => (
+                        <span key={category} className="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-[9px] font-semibold text-slate-600">
+                          {category}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 flex-1 space-y-2">
+                    {(opportunity.packages || []).slice(0, 8).map((pkg, idx) => (
+                      <div key={`${opportunity.conferenceId}-${idx}-${pkg.name}`} className="p-3 rounded-xl border border-slate-200 bg-white">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs text-slate-900">{pkg.name}</div>
+                            {pkg.benefits?.length > 0 && (
+                              <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">{pkg.benefits.join(' · ')}</div>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            {pkg.priceText ? (
+                              <>
+                                <div className="font-extrabold text-sm text-emerald-700">{pkg.priceText}</div>
+                                <div className="text-[9px] text-slate-400 uppercase font-bold">Organizer published</div>
+                              </>
+                            ) : (
+                              <div className="text-[10px] font-bold text-slate-500">Price on request</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4 pt-0 space-y-2">
+                    <a
+                      href={opportunity.actionUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 rounded-xl font-bold text-[11px] bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      {opportunity.hasPublishedPricing ? 'View / Register with Organizer' : 'Inquire Now'}
+                    </a>
+                    <a
+                      href={opportunity.sponsorUrl || opportunity.officialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 rounded-xl font-bold text-[10px] border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer flex items-center justify-center"
+                    >
+                      Open official sponsorship / exhibitor page
+                    </a>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Existing Published Packages */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
