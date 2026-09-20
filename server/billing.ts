@@ -81,6 +81,10 @@ billingRouter.post(
       [paymentReference, dealId]
     );
     await dbRun(
+      "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'payment')",
+      [`sev_${crypto.randomUUID()}`, deal.need_id, deal.sponsor_id]
+    ).catch(() => {});
+    await dbRun(
       "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
       [
         `sdu_${crypto.randomUUID()}`,
