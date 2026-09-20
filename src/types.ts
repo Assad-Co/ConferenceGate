@@ -393,6 +393,22 @@ export interface ProfessionalOpportunity {
   createdAt: string;
 }
 
+export interface ProfessionalInvitation {
+  id: string;
+  organizerId: string;
+  professionalId: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  opportunityId: string | null;
+  roleType: 'committee' | 'chair' | 'speaker';
+  title: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'declined' | 'completed' | 'withdrawn';
+  createdAt: string;
+  respondedAt: string | null;
+  completedAt: string | null;
+}
+
 export type CelebrationKind =
   | 'abstract-accepted'
   | 'reviewer-milestone'
