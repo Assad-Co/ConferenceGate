@@ -190,7 +190,7 @@ export const ProfessionalPreferencesModal: React.FC<ProfessionalPreferencesModal
           </div>
 
           <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
-            <BriefcaseBusiness className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+            <Briefcase className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
             <p className="text-[11px] text-blue-900">
               In Phase 2, paid organizers will search and match against these preferences. Professionals remain free and control whether they are available for each role.
             </p>
