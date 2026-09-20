@@ -16,6 +16,7 @@ import { harvestDirectoryConferences } from "./server/directoryHarvest";
 import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
+import { billingRouter } from "./server/billing";
 import { postsRouter } from "./server/posts";
 import {
   initDb,
@@ -86,6 +87,9 @@ async function startServer() {
 
   // Real sponsorship packages, applications, and reviews
   app.use("/api/sponsors", sponsorsRouter);
+
+  // Paid organizer / sponsor workspace access and checkout handoff
+  app.use("/api/billing", billingRouter);
 
   // Real community feed: posts, reactions, comments, reposts, saves
   app.use("/api/posts", postsRouter);
