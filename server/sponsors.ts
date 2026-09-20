@@ -50,83 +50,53 @@ function safeJson(value: unknown, fallback: any) {
   }
 }
 
-// Official-site sponsorship/exhibitor opportunities discovered for the full ConferenceGate
-// catalogue. These are not ConferenceGate-created packages: every link points back to the
-// conference organiser's own sponsor/exhibit/enquiry page, and a missing public price stays null.
+// Stored official sponsorship/exhibitor catalogue. This endpoint performs database reads only:
+// it never crawls, searches, or fetches an organizer website during a customer request.
 sponsorsRouter.get(
   "/external-opportunities",
   asyncHandler(async (_req: AuthedRequest, res: Response) => {
     const rows = await dbAll<any>(
-      `SELECT
-         de.id, de.title, de.start_date, de.end_date, de.city, de.country,
-         de.official_url, de.canonical_url, de.primary_category, de.topics,
-         (
-           SELECT ec.extraction_metadata
-           FROM extracted_conferences ec
-           WHERE ec.source_url = de.official_url OR ec.source_url = de.canonical_url
-           ORDER BY ec.updated_at DESC
-           LIMIT 1
-         ) AS extraction_metadata
-       FROM discovery_events de
-       WHERE de.status = 'published'
-         AND COALESCE(de.official_url, de.canonical_url) IS NOT NULL
-         AND (
-           (de.start_date IS NOT NULL AND date(de.start_date) >= date('now'))
-           OR (de.start_date IS NULL AND de.start_year >= CAST(strftime('%Y','now') AS INTEGER))
-         )
-       ORDER BY CASE WHEN de.start_date IS NULL THEN 1 ELSE 0 END, de.start_date ASC, de.title ASC`
-    );
-
-    const categoryRows = await dbAll<{ event_id: string; category: string }>(
-      "SELECT event_id, category FROM discovery_event_categories"
+      `SELECT *
+         FROM discovery_sponsorship_opportunities
+        WHERE status = 'available'
+          AND (
+            (start_date IS NOT NULL AND date(start_date) >= date('now'))
+            OR start_date IS NULL
+          )
+        ORDER BY CASE WHEN start_date IS NULL THEN 1 ELSE 0 END, start_date ASC, conference_title ASC`
     ).catch(() => []);
-    const categoriesByEvent = new Map<string, string[]>();
-    for (const row of categoryRows) {
-      const current = categoriesByEvent.get(row.event_id) || [];
-      if (row.category && !current.includes(row.category)) current.push(row.category);
-      categoriesByEvent.set(row.event_id, current);
-    }
 
-    const opportunities = rows.flatMap((row: any) => {
-      const meta = safeJson(row.extraction_metadata, {});
-      const external = meta?.external_sponsorship;
-      if (!external || external.status !== "available" || !external.action_url) return [];
-
-      const topics = safeJson(row.topics, []);
-      const categories = categoriesByEvent.get(String(row.id)) || [
-        row.primary_category,
-        ...(Array.isArray(topics) ? topics : []),
-      ].filter(Boolean);
-      const uniqueCategories = [...new Set(categories.map((value) => String(value).trim()).filter(Boolean))];
-
-      const packages = (Array.isArray(external.packages) ? external.packages : []).map((pkg: any) => ({
-        name: typeof pkg?.name === "string" && pkg.name.trim() ? pkg.name.trim() : "Sponsorship / Exhibition Opportunity",
-        priceText: typeof pkg?.price_text === "string" && pkg.price_text.trim() ? pkg.price_text.trim() : null,
-        priceAmount: Number.isFinite(Number(pkg?.price_amount)) ? Number(pkg.price_amount) : null,
-        currency: typeof pkg?.currency === "string" && pkg.currency.trim() ? pkg.currency.trim() : null,
-        benefits: Array.isArray(pkg?.benefits) ? pkg.benefits.filter((value: unknown) => typeof value === "string" && value.trim()).slice(0, 4) : [],
-        sourceUrl: typeof pkg?.source_url === "string" && pkg.source_url ? pkg.source_url : external.sponsor_url || external.action_url,
-      }));
-
-      return [{
-        conferenceId: String(row.id),
-        conferenceTitle: String(row.title || ""),
+    const opportunities = rows.map((row: any) => {
+      const packages = safeJson(row.packages, []);
+      const categories = safeJson(row.categories, []);
+      return {
+        conferenceId: String(row.event_id),
+        conferenceTitle: String(row.conference_title || ""),
         startDate: row.start_date || null,
         endDate: row.end_date || null,
         city: row.city || null,
         country: row.country || null,
-        officialUrl: row.official_url || row.canonical_url,
-        sponsorUrl: external.sponsor_url || external.action_url,
-        actionUrl: external.action_url,
-        actionLabel: external.has_published_pricing ? "View Sponsorship" : "Inquire Now",
-        hasPublishedPricing: Boolean(external.has_published_pricing),
-        categories: uniqueCategories,
-        packages,
-        checkedAt: external.checked_at || null,
-      }];
+        officialUrl: row.official_url,
+        sponsorUrl: row.sponsor_url,
+        actionUrl: row.action_url,
+        actionLabel: row.action_label || (row.has_published_pricing ? "View Sponsorship" : "Inquire Now"),
+        hasPublishedPricing: Boolean(row.has_published_pricing),
+        categories: Array.isArray(categories) ? categories : [],
+        packages: (Array.isArray(packages) ? packages : []).map((pkg: any) => ({
+          name: typeof pkg?.name === "string" && pkg.name.trim() ? pkg.name.trim() : "Sponsorship / Exhibition Opportunity",
+          priceText: typeof pkg?.price_text === "string" && pkg.price_text.trim() ? pkg.price_text.trim() : null,
+          priceAmount: Number.isFinite(Number(pkg?.price_amount)) ? Number(pkg.price_amount) : null,
+          currency: typeof pkg?.currency === "string" && pkg.currency.trim() ? pkg.currency.trim() : null,
+          benefits: Array.isArray(pkg?.benefits)
+            ? pkg.benefits.filter((value: unknown) => typeof value === "string" && value.trim()).slice(0, 4)
+            : [],
+          sourceUrl: typeof pkg?.source_url === "string" && pkg.source_url ? pkg.source_url : row.sponsor_url || row.action_url,
+        })),
+        checkedAt: row.checked_at || null,
+      };
     });
 
-    res.json({ opportunities });
+    res.json({ opportunities, source: "stored_catalog" });
   })
 );
 
