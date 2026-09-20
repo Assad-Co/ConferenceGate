@@ -57,6 +57,9 @@ import {
   OrganizerBroadcast,
   assignReviewerToSubmission,
   PublishReviewOpportunityPayload,
+  searchProfessionals,
+  createProfessionalInvitation,
+  type ProfessionalDirectoryProfile,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
 import { SponsorApplicant, ReviewableSponsor, ExternalSponsorshipOpportunity, notifyVerifiedSponsors } from '../api/sponsors';
@@ -237,8 +240,73 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'wizard' | 'abstracts' | 'committee' | 'sponsors' | 'communications' | 'analytics'
+    'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'communications' | 'analytics'
   >('overview');
+
+  const [professionalSearch, setProfessionalSearch] = useState({
+    conferenceId: '',
+    roleType: 'committee' as 'committee' | 'chair' | 'speaker',
+    query: '',
+  });
+  const [professionalResults, setProfessionalResults] = useState<ProfessionalDirectoryProfile[]>([]);
+  const [professionalSearchLoading, setProfessionalSearchLoading] = useState(false);
+  const [professionalSearchError, setProfessionalSearchError] = useState<string | null>(null);
+  const [professionalInvitingId, setProfessionalInvitingId] = useState<string | null>(null);
+  const [professionalInvitedIds, setProfessionalInvitedIds] = useState<Record<string, boolean>>({});
+
+  const handleSearchProfessionalNetwork = async () => {
+    setProfessionalSearchLoading(true);
+    setProfessionalSearchError(null);
+    try {
+      const results = await searchProfessionals({
+        roleType: professionalSearch.roleType,
+        q: professionalSearch.query.trim() || undefined,
+        conferenceId: professionalSearch.conferenceId || undefined,
+        limit: 50,
+      });
+      setProfessionalResults(results);
+    } catch (error: any) {
+      setProfessionalResults([]);
+      setProfessionalSearchError(error?.message || 'Could not search the Professional Network.');
+    } finally {
+      setProfessionalSearchLoading(false);
+    }
+  };
+
+  const handleInviteProfessional = async (professional: ProfessionalDirectoryProfile) => {
+    const conference = conferences.find((item) => item.id === professionalSearch.conferenceId);
+    if (!conference) {
+      setProfessionalSearchError('Select one of your conferences before sending an invitation.');
+      return;
+    }
+    const roleTitle =
+      professionalSearch.roleType === 'committee'
+        ? 'Technical Committee Member'
+        : professionalSearch.roleType === 'chair'
+          ? 'Session Chair'
+          : 'Speaker / Keynote';
+    setProfessionalInvitingId(professional.id);
+    setProfessionalSearchError(null);
+    try {
+      await createProfessionalInvitation({
+        professionalId: professional.id,
+        conferenceId: conference.id,
+        roleType: professionalSearch.roleType,
+        title: roleTitle,
+        message: `We would like to invite you to serve as ${roleTitle} for ${conference.title}. Your ConferenceGate expertise profile matched this conference.`,
+      });
+      setProfessionalInvitedIds((prev) => ({ ...prev, [professional.id]: true }));
+      showToast({
+        type: 'success',
+        title: 'Professional invitation sent',
+        message: `${professional.name} can now accept or decline the ${roleTitle} invitation in their Opportunity Center.`,
+      });
+    } catch (error: any) {
+      setProfessionalSearchError(error?.message || 'Could not send invitation.');
+    } finally {
+      setProfessionalInvitingId(null);
+    }
+  };
 
   // Real platform activity for the managed conferences — no fabricated totals.
   const overviewStats = useMemo(() => {
@@ -1181,6 +1249,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'overview', label: 'Dashboard Overview' },
           { id: 'wizard', label: 'Conference Wizard' },
           { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
+          { id: 'professionals', label: 'Professional Network' },
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length + externalSponsorshipOpportunities.length})` },
           { id: 'communications', label: 'Communications Hub' },
@@ -1982,6 +2051,147 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   })}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Paid Organizer Pro: Professional Network */}
+      {activeTab === 'professionals' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-blue-600">Organizer Pro</span>
+              <h2 className="text-xl font-bold text-slate-900">Professional Network</h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+                Search free Professional profiles by role and expertise, then send a real ConferenceGate invitation.
+                Match percentages use the professional's stored expertise, verified platform activity, and profile completeness.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <select
+                value={professionalSearch.conferenceId}
+                onChange={(e) => setProfessionalSearch({ ...professionalSearch, conferenceId: e.target.value })}
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
+              >
+                <option value="">Select conference</option>
+                {conferences.map((conference) => (
+                  <option key={conference.id} value={conference.id}>{conference.title}</option>
+                ))}
+              </select>
+              <select
+                value={professionalSearch.roleType}
+                onChange={(e) =>
+                  setProfessionalSearch({
+                    ...professionalSearch,
+                    roleType: e.target.value as 'committee' | 'chair' | 'speaker',
+                  })
+                }
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
+              >
+                <option value="committee">Technical Committee</option>
+                <option value="chair">Session Chair</option>
+                <option value="speaker">Speaker / Keynote</option>
+              </select>
+              <input
+                value={professionalSearch.query}
+                onChange={(e) => setProfessionalSearch({ ...professionalSearch, query: e.target.value })}
+                placeholder="Expertise, topic, organization..."
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium"
+              />
+              <button
+                type="button"
+                onClick={handleSearchProfessionalNetwork}
+                disabled={professionalSearchLoading}
+                className="p-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {professionalSearchLoading ? <Clock className="w-4 h-4 animate-spin" /> : <Filter className="w-4 h-4" />}
+                Find Professionals
+              </button>
+            </div>
+
+            {professionalSearchError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                {professionalSearchError}
+              </div>
+            )}
+          </div>
+
+          {professionalResults.length === 0 && !professionalSearchLoading ? (
+            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+              <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <h3 className="text-sm font-bold text-slate-800">Search the Professional Network</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Results appear only for Professionals who enabled availability for the selected role.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {professionalResults.map((professional) => {
+                const invited = Boolean(professionalInvitedIds[professional.id]);
+                return (
+                  <div key={professional.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={resolveAvatar(professional.avatar, professional.name)}
+                        alt={professional.name}
+                        className="w-12 h-12 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-sm text-slate-900">{professional.name}</h3>
+                          {professional.identityVerified && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3" />
+                              Identity connected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {[professional.title, professional.organization, professional.country].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold shrink-0">
+                        {professional.matchScore}% Match
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="text-slate-400 font-bold uppercase">Verified Reviews</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-0.5">{professional.verifiedReviews}</div>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <span className="text-slate-400 font-bold uppercase">Completed Roles</span>
+                        <div className="text-sm font-extrabold text-slate-900 mt-0.5">{professional.verifiedCompletedRoles}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...professional.expertise, ...professional.technicalSpecialization].slice(0, 8).map((item) => (
+                        <span key={item} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={invited || professionalInvitingId === professional.id}
+                      onClick={() => handleInviteProfessional(professional)}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ${
+                        invited
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-blue-900 hover:bg-blue-950 text-white disabled:opacity-60'
+                      }`}
+                    >
+                      {invited ? <CheckCircle2 className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                      {invited ? 'Invitation Sent' : 'Invite Professional'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
