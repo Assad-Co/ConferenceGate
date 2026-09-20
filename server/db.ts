@@ -502,8 +502,44 @@ export async function initDb(): Promise<void> {
       UNIQUE(need_id, sponsor_id)
     );
 
+    CREATE TABLE IF NOT EXISTS sponsorship_deals (
+      id TEXT PRIMARY KEY,
+      inquiry_id TEXT UNIQUE NOT NULL REFERENCES sponsorship_need_inquiries(id),
+      need_id TEXT NOT NULL REFERENCES sponsorship_needs(id),
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      opportunity_title TEXT NOT NULL,
+      agreed_amount REAL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      status TEXT NOT NULL DEFAULT 'negotiating'
+        CHECK(status IN ('negotiating','agreement_reached','contract_pending','payment_pending','paid','delivering','completed','canceled')),
+      proposal_notes TEXT,
+      deliverables TEXT NOT NULL DEFAULT '[]',
+      contract_url TEXT,
+      invoice_url TEXT,
+      payment_reference TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsorship_deal_updates (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL REFERENCES sponsorship_deals(id),
+      author_id TEXT NOT NULL REFERENCES users(id),
+      kind TEXT NOT NULL DEFAULT 'note'
+        CHECK(kind IN ('note','proposal','contract','invoice','deliverable','payment','status')),
+      text TEXT NOT NULL,
+      url TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_sponsor ON sponsorship_deals(sponsor_id, status);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_deal_updates_deal ON sponsorship_deal_updates(deal_id, created_at);
 
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
@@ -926,6 +962,37 @@ export interface SponsorshipNeedInquiryRow {
   status: "new" | "contacted" | "negotiating" | "won" | "lost" | "withdrawn";
   created_at: string;
   updated_at: string;
+}
+
+export interface SponsorshipDealRow {
+  id: string;
+  inquiry_id: string;
+  need_id: string;
+  organizer_id: string;
+  sponsor_id: string;
+  conference_id: string;
+  conference_title: string;
+  opportunity_title: string;
+  agreed_amount: number | null;
+  currency: string;
+  status: "negotiating" | "agreement_reached" | "contract_pending" | "payment_pending" | "paid" | "delivering" | "completed" | "canceled";
+  proposal_notes: string | null;
+  deliverables: string;
+  contract_url: string | null;
+  invoice_url: string | null;
+  payment_reference: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SponsorshipDealUpdateRow {
+  id: string;
+  deal_id: string;
+  author_id: string;
+  kind: "note" | "proposal" | "contract" | "invoice" | "deliverable" | "payment" | "status";
+  text: string;
+  url: string | null;
+  created_at: string;
 }
 
 export interface PostRow {
