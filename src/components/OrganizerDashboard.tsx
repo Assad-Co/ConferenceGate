@@ -3202,6 +3202,98 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
           )}
 
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-blue-600">Reverse Marketplace</span>
+                <h2 className="text-lg font-bold text-slate-900">Sponsor Request Board</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Paid sponsors publish what they are looking for. Respond with one of your conferences instead of sending cold outreach.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-slate-500">{sponsorRequestBoard.length} active requests</span>
+            </div>
+
+            {sponsorRequestBoard.length === 0 ? (
+              <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                No active Sponsor Pro requests yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sponsorRequestBoard.map((request) => {
+                  const draft = sponsorRequestDraft(request.id);
+                  const responded = Boolean(respondedSponsorRequestIds[request.id]);
+                  return (
+                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase text-blue-600">{request.sponsorName}</div>
+                          <h3 className="font-bold text-sm text-slate-900 mt-1">{request.title}</h3>
+                        </div>
+                        {(request.budgetMin !== null || request.budgetMax !== null) && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full shrink-0">
+                            {request.budgetMin !== null ? `${request.budgetMin.toLocaleString()}` : 'Any'} – {request.budgetMax !== null ? `${request.budgetMax.toLocaleString()}` : 'Open'}
+                          </span>
+                        )}
+                      </div>
+                      {request.description && <p className="text-xs text-slate-600">{request.description}</p>}
+                      <div className="flex flex-wrap gap-1">
+                        {[...request.categories, ...request.regions, ...request.opportunityTypes].slice(0, 10).map((item) => (
+                          <span key={item} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">{item}</span>
+                        ))}
+                      </div>
+
+                      {responded ? (
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Conference proposal sent to sponsor.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <select
+                            value={draft.conferenceId}
+                            onChange={(e) =>
+                              setSponsorRequestResponseDrafts((prev) => ({
+                                ...prev,
+                                [request.id]: { ...draft, conferenceId: e.target.value },
+                              }))
+                            }
+                            className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
+                          >
+                            <option value="">Select conference to propose...</option>
+                            {conferences.map((conference) => (
+                              <option key={conference.id} value={conference.id}>{conference.title}</option>
+                            ))}
+                          </select>
+                          <textarea
+                            rows={2}
+                            value={draft.message}
+                            onChange={(e) =>
+                              setSponsorRequestResponseDrafts((prev) => ({
+                                ...prev,
+                                [request.id]: { ...draft, message: e.target.value },
+                              }))
+                            }
+                            placeholder="Why your conference matches this sponsor request..."
+                            className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                          />
+                          <button
+                            type="button"
+                            disabled={!draft.conferenceId || respondingSponsorRequestId === request.id}
+                            onClick={() => handleRespondToSponsorRequest(request)}
+                            className="w-full py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            {respondingSponsorRequestId === request.id ? 'Sending…' : 'Propose Conference to Sponsor'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
               <div>
