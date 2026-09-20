@@ -2609,10 +2609,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           {externalSponsorshipOpportunities.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
               <Globe className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-              <h3 className="font-bold text-sm text-slate-800">Checking official sponsorship and exhibitor pages</h3>
+              <h3 className="font-bold text-sm text-slate-800">No stored sponsorship opportunities yet</h3>
               <p className="text-xs text-slate-500 mt-1">
-                ConferenceGate is scanning the official websites for sponsor, exhibitor, partner, stand, booth, and
-                commercial-opportunity pages.
+                This page reads the ConferenceGate sponsorship catalog only. Background enrichment updates the stored
+                catalog separately; opening this page does not run a live website search.
               </p>
             </div>
           ) : (
