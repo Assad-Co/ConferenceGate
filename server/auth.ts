@@ -195,6 +195,14 @@ async function toPublicUser(row: UserRow) {
     linkedinUrl: row.linkedin_url,
     avatar: row.avatar,
     reviewerAvailable: !!row.reviewer_available,
+    professionalExpertise: parseJsonArray(row.professional_expertise).filter((v) => typeof v === "string"),
+    technicalSpecialization: parseJsonArray(row.technical_specialization).filter((v) => typeof v === "string"),
+    researchInterests: parseJsonArray(row.research_interests).filter((v) => typeof v === "string"),
+    preferredRegions: parseJsonArray(row.preferred_regions).filter((v) => typeof v === "string"),
+    committeeAvailable: !!row.committee_available,
+    sessionChairAvailable: !!row.session_chair_available,
+    speakerAvailable: !!row.speaker_available,
+    reviewerMaxLoad: Number(row.reviewer_max_load || 5),
     keynoteSpeakerMatches,
   };
 }
@@ -396,6 +404,76 @@ authRouter.patch("/me/reviewer-availability", requireAuth, asyncHandler(async (r
     return res.status(400).json({ error: "available must be a boolean" });
   }
   await dbRun("UPDATE users SET reviewer_available = ? WHERE id = ?", [body.available ? 1 : 0, req.userId!]);
+  const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
+  res.json({ user: await toPublicUser(row) });
+}));
+
+authRouter.patch("/me/professional-preferences", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const current = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]);
+  if (!current) return res.status(401).json({ error: "Not authenticated" });
+  if (current.role !== "professional") {
+    return res.status(403).json({ error: "Professional preferences are available to professional accounts." });
+  }
+
+  const body = req.body || {};
+  const normalizeList = (value: unknown, field: string, max = 20) => {
+    if (!Array.isArray(value)) throw new Error(`${field} must be an array`);
+    return [...new Set(
+      value
+        .filter((item) => typeof item === "string")
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    )].slice(0, max);
+  };
+
+  let expertise: string[];
+  let specialization: string[];
+  let interests: string[];
+  let regions: string[];
+  try {
+    expertise = normalizeList(body.professionalExpertise ?? [], "professionalExpertise");
+    specialization = normalizeList(body.technicalSpecialization ?? [], "technicalSpecialization");
+    interests = normalizeList(body.researchInterests ?? [], "researchInterests");
+    regions = normalizeList(body.preferredRegions ?? [], "preferredRegions", 12);
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : "Invalid professional preferences" });
+  }
+
+  for (const field of ["committeeAvailable", "sessionChairAvailable", "speakerAvailable"] as const) {
+    if (typeof body[field] !== "boolean") {
+      return res.status(400).json({ error: `${field} must be a boolean` });
+    }
+  }
+
+  const maxLoad = Number(body.reviewerMaxLoad);
+  if (!Number.isInteger(maxLoad) || maxLoad < 1 || maxLoad > 50) {
+    return res.status(400).json({ error: "reviewerMaxLoad must be an integer between 1 and 50" });
+  }
+
+  await dbRun(
+    `UPDATE users
+        SET professional_expertise = ?,
+            technical_specialization = ?,
+            research_interests = ?,
+            preferred_regions = ?,
+            committee_available = ?,
+            session_chair_available = ?,
+            speaker_available = ?,
+            reviewer_max_load = ?
+      WHERE id = ?`,
+    [
+      JSON.stringify(expertise),
+      JSON.stringify(specialization),
+      JSON.stringify(interests),
+      JSON.stringify(regions),
+      body.committeeAvailable ? 1 : 0,
+      body.sessionChairAvailable ? 1 : 0,
+      body.speakerAvailable ? 1 : 0,
+      maxLoad,
+      req.userId!,
+    ]
+  );
+
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: await toPublicUser(row) });
 }));
