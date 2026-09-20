@@ -23,6 +23,7 @@ import {
   ExternalPaperMatchRow,
   SelfReportedAttendanceRow,
   SelfReportedCommitteePositionRow,
+  UserRow,
 } from "./db";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
@@ -544,6 +545,158 @@ activityRouter.delete(
     }
     await dbRun("DELETE FROM review_opportunities WHERE id = ?", [req.params.id]);
     res.json({ ok: true });
+  })
+);
+
+function tokenSet(values: Array<string | null | undefined>): Set<string> {
+  const stop = new Set(["and","the","for","with","from","into","using","conference","general","science","engineering"]);
+  return new Set(
+    values
+      .flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9+#.-]+/g))
+      .map((value) => value.trim())
+      .filter((value) => value.length >= 3 && !stop.has(value))
+  );
+}
+
+function parseStringArray(value: string | null | undefined): string[] {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+// Paid Organizer Pro professional directory. Only professional-facing profile fields and verified
+// platform activity counts are returned; email/private account data never leaves the server.
+activityRouter.get(
+  "/professionals/search",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    if (!organizer || organizer.role !== "organizer") {
+      return res.status(403).json({ error: "Only organizer accounts can search the Professional Network." });
+    }
+    if (!["active", "trialing"].includes(organizer.subscription_status || "")) {
+      return res.status(402).json({ error: "Organizer Pro subscription required." });
+    }
+
+    const roleType =
+      req.query.roleType === "committee" || req.query.roleType === "chair" || req.query.roleType === "speaker"
+        ? req.query.roleType
+        : "committee";
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 160) : "";
+    const conferenceId = typeof req.query.conferenceId === "string" ? req.query.conferenceId : "";
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit || 40)));
+
+    let conferenceTerms: string[] = [];
+    if (conferenceId) {
+      const conf = await dbGet<CreatedConferenceRow>(
+        "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
+        [conferenceId, req.userId!]
+      );
+      if (conf) {
+        try {
+          const data = JSON.parse(conf.data);
+          conferenceTerms = [
+            data.title,
+            data.industry,
+            ...(Array.isArray(data.topics) ? data.topics : []),
+            ...(Array.isArray(data.tracks) ? data.tracks.map((track: any) => typeof track === "string" ? track : track?.name) : []),
+          ].filter(Boolean);
+        } catch {}
+      }
+    }
+
+    const professionals = await dbAll<UserRow>(
+      `SELECT * FROM users
+        WHERE role = 'professional'
+        ORDER BY created_at DESC
+        LIMIT 500`
+    );
+    const queryTokens = tokenSet([q, ...conferenceTerms]);
+
+    const results = [];
+    for (const professional of professionals) {
+      const available =
+        roleType === "committee"
+          ? !!professional.committee_available
+          : roleType === "chair"
+            ? !!professional.session_chair_available
+            : !!professional.speaker_available;
+      if (!available) continue;
+
+      const expertise = parseStringArray(professional.professional_expertise);
+      const specialization = parseStringArray(professional.technical_specialization);
+      const interests = parseStringArray(professional.research_interests);
+      const regions = parseStringArray(professional.preferred_regions);
+      const profileTokens = tokenSet([
+        professional.name,
+        professional.title,
+        professional.organization,
+        professional.bio,
+        ...expertise,
+        ...specialization,
+        ...interests,
+        ...regions,
+      ]);
+
+      if (q && !String([
+        professional.name,professional.title,professional.organization,professional.country,
+        ...expertise,...specialization,...interests,
+      ].filter(Boolean).join(" ")).toLowerCase().includes(q.toLowerCase()) && queryTokens.size > 0) {
+        const overlap = [...queryTokens].some((token) => profileTokens.has(token));
+        if (!overlap) continue;
+      }
+
+      let overlap = 0;
+      for (const token of queryTokens) if (profileTokens.has(token)) overlap += 1;
+      const relevance = queryTokens.size ? overlap / queryTokens.size : 0.5;
+
+      const [reviewCountRow, roleCountRow] = await Promise.all([
+        dbGet<{ count: number }>(
+          "SELECT COUNT(*) as count FROM submission_reviews WHERE reviewer_id = ?",
+          [professional.id]
+        ),
+        dbGet<{ count: number }>(
+          "SELECT COUNT(*) as count FROM professional_invitations WHERE professional_id = ? AND status = 'completed'",
+          [professional.id]
+        ),
+      ]);
+      const reviewCount = reviewCountRow?.count || 0;
+      const completedRoleCount = roleCountRow?.count || 0;
+      const evidenceScore = Math.min(1, (reviewCount / 10) * 0.6 + (completedRoleCount / 5) * 0.4);
+      const profileCompleteness = [
+        professional.title, professional.organization, professional.bio, professional.country,
+        expertise.length, specialization.length, interests.length, regions.length
+      ].filter(Boolean).length / 8;
+      const score = Math.round(
+        Math.max(0, Math.min(1, relevance * 0.65 + evidenceScore * 0.2 + profileCompleteness * 0.15)) * 100
+      );
+
+      results.push({
+        id: professional.id,
+        name: professional.name,
+        title: professional.title || "",
+        organization: professional.organization || "",
+        country: professional.country || "",
+        avatar: professional.avatar || null,
+        expertise,
+        technicalSpecialization: specialization,
+        researchInterests: interests,
+        preferredRegions: regions,
+        identityVerified: Boolean(professional.linkedin_id || professional.google_id),
+        reviewerAvailable: Boolean(professional.reviewer_available),
+        committeeAvailable: Boolean(professional.committee_available),
+        sessionChairAvailable: Boolean(professional.session_chair_available),
+        speakerAvailable: Boolean(professional.speaker_available),
+        verifiedReviews: reviewCount,
+        verifiedCompletedRoles: completedRoleCount,
+        matchScore: score,
+      });
+    }
+
+    results.sort((a, b) => b.matchScore - a.matchScore || b.verifiedCompletedRoles - a.verifiedCompletedRoles || b.verifiedReviews - a.verifiedReviews);
+    res.json({ professionals: results.slice(0, limit) });
   })
 );
 
