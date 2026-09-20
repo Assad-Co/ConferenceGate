@@ -168,8 +168,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     ...(isAttendeeRole ? [{ id: 'home', label: 'Home', icon: Home, match: ['home'] }] : []),
     ...(isAttendeeRole ? [{ id: 'discover', label: 'Discover', icon: Layers, match: ['discover'] }] : []),
     ...(isAttendeeRole ? [{ id: 'abstracts', label: 'My Abstracts', icon: FileText, match: ['abstracts'] }] : []),
+    ...(isAttendeeRole ? [{ id: 'reviewer', label: 'Opportunities', icon: Award, match: ['reviewer', 'reviews', 'opportunities'] }] : []),
     { id: 'community', label: 'Feed', icon: Users, match: ['community', 'feed'] },
-    ...(role === 'reviewer' ? [{ id: 'reviewer', label: 'Reviewer', icon: Award, match: ['reviewer', 'reviews'] }] : []),
     ...(role === 'organizer' ? [{ id: 'organizer', label: 'Organizer', icon: Building2, match: ['organizer'] }] : []),
     ...(role === 'sponsor' ? [{ id: 'sponsor', label: 'Sponsor', icon: Briefcase, match: ['sponsor'] }] : []),
   ];
