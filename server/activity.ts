@@ -10,6 +10,8 @@ import {
   NotificationRow,
   ReviewVolunteerRow,
   ReviewOpportunityRow,
+  ProfessionalOpportunityRow,
+  ProfessionalOpportunityInterestRow,
   ConferenceRegistrationRow,
   ConferenceInteractionRow,
   ConferenceFeedbackRow,
@@ -541,6 +543,177 @@ activityRouter.delete(
     }
     await dbRun("DELETE FROM review_opportunities WHERE id = ?", [req.params.id]);
     res.json({ ok: true });
+  })
+);
+
+function toProfessionalOpportunityDTO(row: ProfessionalOpportunityRow) {
+  let expertiseRequired: string[] = [];
+  let preferredRegions: string[] = [];
+  try { expertiseRequired = JSON.parse(row.expertise_required || "[]"); } catch {}
+  try { preferredRegions = JSON.parse(row.preferred_regions || "[]"); } catch {}
+  return {
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    organizerId: row.organizer_id,
+    organizerName: row.organizer_name,
+    roleType: row.role_type,
+    title: row.title,
+    description: row.description || "",
+    expertiseRequired: Array.isArray(expertiseRequired) ? expertiseRequired : [],
+    preferredRegions: Array.isArray(preferredRegions) ? preferredRegions : [],
+    deadline: row.deadline || "",
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+// Unified non-review opportunity feed for free Professional accounts. These records are explicit
+// organizer-published openings only; ConferenceGate never infers a vacancy from a conference page.
+activityRouter.get(
+  "/professional-opportunities",
+  asyncHandler(async (_req: AuthedRequest, res: Response) => {
+    const rows = await dbAll<ProfessionalOpportunityRow>(
+      `SELECT * FROM professional_opportunities
+        WHERE status = 'active'
+          AND (deadline IS NULL OR deadline = '' OR date(deadline) >= date('now'))
+        ORDER BY created_at DESC`
+    );
+    res.json({ opportunities: rows.map(toProfessionalOpportunityDTO) });
+  })
+);
+
+// Backend publishing foundation for Phase 2. The organizer UI is intentionally not added in
+// Phase 1, but the contract is ready and ownership is enforced against created_conferences.
+activityRouter.post(
+  "/professional-opportunities",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const body = req.body || {};
+    const roleType =
+      body.roleType === "committee" || body.roleType === "chair" || body.roleType === "speaker"
+        ? body.roleType
+        : null;
+    if (!roleType) {
+      return res.status(400).json({ error: "roleType must be committee, chair, or speaker" });
+    }
+    if (typeof body.conferenceId !== "string" || !body.conferenceId) {
+      return res.status(400).json({ error: "conferenceId is required" });
+    }
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return res.status(400).json({ error: "Opportunity title is required" });
+    }
+
+    const conference = await dbGet<CreatedConferenceRow>(
+      "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
+      [body.conferenceId, req.userId!]
+    );
+    if (!conference) {
+      return res.status(404).json({ error: "You can only publish opportunities for conferences you created." });
+    }
+
+    const conferenceData = JSON.parse(conference.data);
+    const organizer = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+    const id = `po_${crypto.randomUUID()}`;
+    const expertise = Array.isArray(body.expertiseRequired)
+      ? [...new Set(body.expertiseRequired.filter((v: unknown) => typeof v === "string").map((v: string) => v.trim()).filter(Boolean))].slice(0, 30)
+      : [];
+    const regions = Array.isArray(body.preferredRegions)
+      ? [...new Set(body.preferredRegions.filter((v: unknown) => typeof v === "string").map((v: string) => v.trim()).filter(Boolean))].slice(0, 20)
+      : [];
+
+    await dbRun(
+      `INSERT INTO professional_opportunities(
+        id,conference_id,conference_title,organizer_id,organizer_name,role_type,title,description,
+        expertise_required,preferred_regions,deadline,status
+      ) VALUES(?,?,?,?,?,?,?,?,?,?,?,'active')`,
+      [
+        id,
+        body.conferenceId,
+        conferenceData.title || conference.id,
+        req.userId!,
+        organizer?.name || "Organizer",
+        roleType,
+        body.title.trim(),
+        typeof body.description === "string" ? body.description.trim() || null : null,
+        JSON.stringify(expertise),
+        JSON.stringify(regions),
+        typeof body.deadline === "string" ? body.deadline.trim() || null : null,
+      ]
+    );
+
+    const row = (await dbGet<ProfessionalOpportunityRow>("SELECT * FROM professional_opportunities WHERE id = ?", [id]))!;
+    res.status(201).json({ opportunity: toProfessionalOpportunityDTO(row) });
+  })
+);
+
+activityRouter.delete(
+  "/professional-opportunities/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const opportunity = await dbGet<ProfessionalOpportunityRow>(
+      "SELECT * FROM professional_opportunities WHERE id = ?",
+      [req.params.id]
+    );
+    if (!opportunity) return res.status(404).json({ error: "Opportunity not found" });
+    if (opportunity.organizer_id !== req.userId) {
+      return res.status(403).json({ error: "Only the organizer who published this opportunity can close it." });
+    }
+    await dbRun("UPDATE professional_opportunities SET status = 'closed' WHERE id = ?", [req.params.id]);
+    res.json({ ok: true });
+  })
+);
+
+activityRouter.get(
+  "/professional-opportunities/interests/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const rows = await dbAll<ProfessionalOpportunityInterestRow>(
+      "SELECT * FROM professional_opportunity_interests WHERE professional_id = ? ORDER BY created_at DESC",
+      [req.userId!]
+    );
+    res.json({ opportunityIds: rows.map((row) => row.opportunity_id) });
+  })
+);
+
+activityRouter.post(
+  "/professional-opportunities/:id/interest",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<{ role: string; name: string }>("SELECT role,name FROM users WHERE id = ?", [req.userId!]);
+    if (!user || user.role !== "professional") {
+      return res.status(403).json({ error: "Only Professional accounts can express interest in professional roles." });
+    }
+    const opportunity = await dbGet<ProfessionalOpportunityRow>(
+      "SELECT * FROM professional_opportunities WHERE id = ? AND status = 'active'",
+      [req.params.id]
+    );
+    if (!opportunity) return res.status(404).json({ error: "Opportunity not found or no longer active" });
+
+    const existing = await dbGet<ProfessionalOpportunityInterestRow>(
+      "SELECT * FROM professional_opportunity_interests WHERE opportunity_id = ? AND professional_id = ?",
+      [opportunity.id, req.userId!]
+    );
+    if (!existing) {
+      await dbRun(
+        "INSERT INTO professional_opportunity_interests(id,opportunity_id,professional_id) VALUES(?,?,?)",
+        [`poi_${crypto.randomUUID()}`, opportunity.id, req.userId!]
+      );
+      await createNotification(
+        opportunity.organizer_id,
+        "invitation",
+        "New professional interest",
+        `${user.name} is interested in ${opportunity.title} for ${opportunity.conference_title}.`
+      );
+    }
+    res.status(existing ? 200 : 201).json({ interested: true });
+  })
+);
+
+activityRouter.delete(
+  "/professional-opportunities/:id/interest",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    await dbRun(
+      "DELETE FROM professional_opportunity_interests WHERE opportunity_id = ? AND professional_id = ?",
+      [req.params.id, req.userId!]
+    );
+    res.json({ interested: false });
   })
 );
 
