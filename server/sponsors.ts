@@ -453,11 +453,16 @@ sponsorsRouter.get(
         WHERE status='active' AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))
         ORDER BY created_at DESC`
     );
-    const matched = rows
+    const ranked = rows
       .map((row) => ({ row, score: sponsorNeedMatch(preference, row) }))
-      .sort((a, b) => b.score - a.score || b.row.created_at.localeCompare(a.row.created_at))
-      .map(({ row, score }) => toSponsorshipNeedDTO(row, score));
-    res.json({ needs: matched });
+      .sort((a, b) => b.score - a.score || b.row.created_at.localeCompare(a.row.created_at));
+    for (const { row } of ranked.slice(0, 100)) {
+      await dbRun(
+        "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'listing_view')",
+        [`sev_${crypto.randomUUID()}`, row.id, req.userId!]
+      ).catch(() => {});
+    }
+    res.json({ needs: ranked.map(({ row, score }) => toSponsorshipNeedDTO(row, score)) });
   })
 );
 
@@ -504,6 +509,10 @@ sponsorsRouter.post(
       "New Sponsor Pro inquiry",
       `${sponsor.organization || sponsor.name} is interested in ${need.title} for ${need.conference_title}.`
     );
+    await dbRun(
+      "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'inquiry')",
+      [`sev_${crypto.randomUUID()}`, need.id, req.userId!]
+    ).catch(() => {});
     const row = (await dbGet<SponsorshipNeedInquiryRow>("SELECT * FROM sponsorship_need_inquiries WHERE id = ?", [id]))!;
     res.status(201).json({ inquiry: row, alreadyExists: false });
   })
@@ -570,6 +579,12 @@ sponsorsRouter.patch(
         await dbRun("UPDATE sponsorship_deals SET status='canceled',updated_at=datetime('now') WHERE id=?", [existingDeal.id]);
         deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [existingDeal.id]);
       }
+    }
+    if (status === "negotiating" || status === "won") {
+      await dbRun(
+        "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,?)",
+        [`sev_${crypto.randomUUID()}`, inquiry.need_id, inquiry.sponsor_id, status]
+      ).catch(() => {});
     }
     await createNotification(
       inquiry.sponsor_id,
@@ -686,8 +701,14 @@ sponsorsRouter.patch(
       `UPDATE sponsorship_deals SET ${updates.join(",")},updated_at=datetime('now') WHERE id=?`,
       args
     );
+    if (body.status === "contract_pending") {
+      await dbRun(
+        "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'contract')",
+        [`sev_${crypto.randomUUID()}`, deal.need_id, deal.sponsor_id]
+      ).catch(() => {});
+    }
     await dbRun(
-      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)"
       [
         `sdu_${crypto.randomUUID()}`,
         deal.id,
@@ -739,6 +760,62 @@ sponsorsRouter.post(
         text: row.text,
         url: row.url,
         createdAt: row.created_at,
+      },
+    });
+  })
+);
+
+sponsorsRouter.get(
+  "/needs/analytics",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
+    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
+      return res.status(402).json({ error: "Organizer Pro subscription required." });
+    }
+
+    const rows = await dbAll<any>(
+      `SELECT n.id,n.title,n.conference_id,n.conference_title,n.price_amount,n.price_on_request,
+              COUNT(DISTINCT CASE WHEN e.event_type='listing_view' THEN e.sponsor_id END) as views,
+              COUNT(DISTINCT CASE WHEN e.event_type='inquiry' THEN e.sponsor_id END) as inquiries,
+              COUNT(DISTINCT CASE WHEN e.event_type='negotiating' THEN e.sponsor_id END) as negotiating,
+              COUNT(DISTINCT CASE WHEN e.event_type='won' THEN e.sponsor_id END) as won,
+              COUNT(DISTINCT CASE WHEN e.event_type='contract' THEN e.sponsor_id END) as contracts,
+              COUNT(DISTINCT CASE WHEN e.event_type='payment' THEN e.sponsor_id END) as payments,
+              COALESCE(SUM(DISTINCT CASE WHEN d.status IN ('paid','delivering','completed') THEN d.agreed_amount ELSE NULL END),0) as realized_revenue
+         FROM sponsorship_needs n
+         LEFT JOIN sponsorship_engagement_events e ON e.need_id=n.id
+         LEFT JOIN sponsorship_deals d ON d.need_id=n.id
+        WHERE n.organizer_id=?
+        GROUP BY n.id
+        ORDER BY n.created_at DESC`,
+      [req.userId!]
+    );
+    const needs = rows.map((row: any) => ({
+      needId: row.id,
+      title: row.title,
+      conferenceId: row.conference_id,
+      conferenceTitle: row.conference_title,
+      publishedPrice: row.price_on_request ? null : row.price_amount,
+      views: Number(row.views || 0),
+      inquiries: Number(row.inquiries || 0),
+      negotiating: Number(row.negotiating || 0),
+      won: Number(row.won || 0),
+      contracts: Number(row.contracts || 0),
+      payments: Number(row.payments || 0),
+      realizedRevenue: Number(row.realized_revenue || 0),
+      inquiryRate: Number(row.views || 0) > 0 ? Number(((Number(row.inquiries || 0) / Number(row.views)) * 100).toFixed(1)) : 0,
+      winRate: Number(row.inquiries || 0) > 0 ? Number(((Number(row.won || 0) / Number(row.inquiries)) * 100).toFixed(1)) : 0,
+    }));
+    res.json({
+      needs,
+      totals: {
+        views: needs.reduce((sum: number, item: any) => sum + item.views, 0),
+        inquiries: needs.reduce((sum: number, item: any) => sum + item.inquiries, 0),
+        negotiating: needs.reduce((sum: number, item: any) => sum + item.negotiating, 0),
+        won: needs.reduce((sum: number, item: any) => sum + item.won, 0),
+        payments: needs.reduce((sum: number, item: any) => sum + item.payments, 0),
+        realizedRevenue: needs.reduce((sum: number, item: any) => sum + item.realizedRevenue, 0),
       },
     });
   })
