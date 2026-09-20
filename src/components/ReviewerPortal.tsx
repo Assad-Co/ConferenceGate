@@ -16,12 +16,15 @@ import {
   Presentation,
   Mic2,
 } from 'lucide-react';
-import { UserProfile, ReviewOpportunity, AbstractSubmission, Conference } from '../types';
+import { UserProfile, ReviewOpportunity, ProfessionalOpportunity, AbstractSubmission, Conference } from '../types';
 import { ConferenceLink } from './ConferenceLink';
 
 interface ReviewerPortalProps {
   userProfile: UserProfile;
   opportunities: ReviewOpportunity[];
+  professionalOpportunities?: ProfessionalOpportunity[];
+  professionalOpportunityInterestIds?: string[];
+  onProfessionalOpportunityInterest?: (opportunityId: string, interested: boolean) => void | Promise<void>;
   submissions: AbstractSubmission[];
   conferences: Conference[];
   onSelectConference: (conf: Conference) => void;
@@ -77,9 +80,50 @@ function opportunityMatchScore(userProfile: UserProfile, opportunity: ReviewOppo
   return Math.max(0, Math.min(100, Math.round((requiredRatio * 0.7 + generalRatio * 0.3) * 100)));
 }
 
+function professionalOpportunityMatchScore(userProfile: UserProfile, opportunity: ProfessionalOpportunity): number | null {
+  const profileTokens = normalizeMatchTokens([
+    ...(userProfile.expertise || []),
+    ...(userProfile.technicalSpecialization || []),
+    ...(userProfile.researchInterests || []),
+    ...(userProfile.keywords || []),
+  ]);
+  const opportunityTokens = normalizeMatchTokens([
+    ...(opportunity.expertiseRequired || []),
+    opportunity.title,
+    opportunity.description,
+    opportunity.conferenceTitle,
+  ]);
+  if (profileTokens.size === 0 || opportunityTokens.size === 0) return null;
+
+  let matches = 0;
+  for (const token of opportunityTokens) if (profileTokens.has(token)) matches += 1;
+  const expertiseTokens = normalizeMatchTokens(opportunity.expertiseRequired || []);
+  let expertiseMatches = 0;
+  for (const token of expertiseTokens) if (profileTokens.has(token)) expertiseMatches += 1;
+
+  const expertiseRatio = expertiseTokens.size ? expertiseMatches / expertiseTokens.size : matches / opportunityTokens.size;
+  const generalRatio = matches / opportunityTokens.size;
+
+  const userRegions = new Set((userProfile.preferredRegions || []).map((v) => v.toLowerCase()));
+  const requestedRegions = (opportunity.preferredRegions || []).map((v) => v.toLowerCase());
+  const regionScore =
+    requestedRegions.length === 0 || userRegions.size === 0
+      ? null
+      : requestedRegions.some((region) => userRegions.has(region))
+        ? 1
+        : 0;
+
+  const base = expertiseRatio * 0.75 + generalRatio * 0.25;
+  const weighted = regionScore === null ? base : base * 0.85 + regionScore * 0.15;
+  return Math.max(0, Math.min(100, Math.round(weighted * 100)));
+}
+
 export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   userProfile,
   opportunities,
+  professionalOpportunities = [],
+  professionalOpportunityInterestIds = [],
+  onProfessionalOpportunityInterest,
   submissions,
   conferences,
   onSelectConference,
@@ -130,6 +174,50 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
       : roleFilter === 'reviewer'
         ? rankedReviewerOpportunities
         : [];
+
+  const rankedProfessionalOpportunities = useMemo(() => {
+    const query = opportunitySearch.trim().toLowerCase();
+    return (professionalOpportunities || [])
+      .map((opportunity) => ({
+        opportunity,
+        matchScore: professionalOpportunityMatchScore(userProfile, opportunity),
+      }))
+      .filter(({ opportunity }) => {
+        if (!query) return true;
+        return [
+          opportunity.conferenceTitle,
+          opportunity.title,
+          opportunity.description,
+          opportunity.organizerName,
+          ...(opportunity.expertiseRequired || []),
+          ...(opportunity.preferredRegions || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => {
+        if (a.matchScore === null && b.matchScore === null) return a.opportunity.conferenceTitle.localeCompare(b.opportunity.conferenceTitle);
+        if (a.matchScore === null) return 1;
+        if (b.matchScore === null) return -1;
+        return b.matchScore - a.matchScore;
+      });
+  }, [professionalOpportunities, opportunitySearch, userProfile]);
+
+  const roleAvailability = (roleType: ProfessionalOpportunity['roleType']) =>
+    roleType === 'committee'
+      ? Boolean(userProfile.committeeAvailable)
+      : roleType === 'chair'
+        ? Boolean(userProfile.sessionChairAvailable)
+        : Boolean(userProfile.speakerAvailable);
+
+  const visibleProfessionalOpportunities = rankedProfessionalOpportunities.filter(({ opportunity, matchScore }) => {
+    if (roleFilter === 'recommended') {
+      return roleAvailability(opportunity.roleType) && (matchScore === null || matchScore >= 35);
+    }
+    return opportunity.roleType === roleFilter;
+  });
 
   // Every submission on the platform is fetched for other views (e.g. a reviewer's own
   // abstracts), but a paper only belongs in this reviewer's queue if an organizer actually
@@ -293,7 +381,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          Opportunity Center ({opportunities.length})
+          Opportunity Center ({opportunities.length + professionalOpportunities.length})
         </button>
         <button
           onClick={() => setActiveTab('evaluate')}
@@ -336,7 +424,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 <h2 className="text-lg font-bold text-slate-900">Professional Opportunity Center</h2>
                 <p className="text-xs text-slate-500 mt-1 max-w-3xl">
                   ConferenceGate only shows opportunities that an organizer actually publishes. Your stored expertise
-                  is used to rank reviewer opportunities; no committee, chair, or speaker vacancy is inferred from a conference page.
+                  is used to rank organizer-published opportunities; no committee, chair, or speaker vacancy is inferred from a conference page.
                 </p>
               </div>
               <div className="relative w-full lg:w-80">
@@ -504,34 +592,108 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             )
           )}
 
-          {roleFilter === 'committee' && (
-            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
-              <Users className="w-8 h-8 text-indigo-300 mx-auto mb-3" />
-              <h3 className="font-bold text-sm text-slate-900">No organizer-published Technical Committee openings yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-                Your committee availability is {userProfile.committeeAvailable ? 'ON' : 'OFF'}. ConferenceGate will list a role here only after an organizer explicitly publishes that committee need.
-              </p>
-            </div>
-          )}
+          {(roleFilter === 'recommended' || roleFilter === 'committee' || roleFilter === 'chair' || roleFilter === 'speaker') && (
+            visibleProfessionalOpportunities.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visibleProfessionalOpportunities.map(({ opportunity: opp, matchScore }) => {
+                  const RoleIcon = opp.roleType === 'committee' ? Users : opp.roleType === 'chair' ? Presentation : Mic2;
+                  const roleLabel =
+                    opp.roleType === 'committee'
+                      ? 'Technical Committee'
+                      : opp.roleType === 'chair'
+                        ? 'Session Chair'
+                        : 'Speaker / Keynote';
+                  const interested = professionalOpportunityInterestIds.includes(opp.id);
+                  return (
+                    <div key={opp.id} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xs hover:border-blue-300 transition-all">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                              <RoleIcon className="w-3 h-3" />
+                              {roleLabel}
+                            </span>
+                            {matchScore !== null ? (
+                              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md ${
+                                matchScore >= 70
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : matchScore >= 35
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {matchScore}% profile match
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                                Add expertise to calculate match
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-bold text-base text-slate-900 mt-2">{opp.title}</h3>
+                          <ConferenceLink
+                            conferences={conferences}
+                            conferenceId={opp.conferenceId}
+                            conferenceTitle={opp.conferenceTitle}
+                            onSelectConference={onSelectConference}
+                            className="text-xs text-slate-500 font-medium"
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full shrink-0">
+                          {opp.deadline ? `Deadline ${opp.deadline}` : 'Open'}
+                        </span>
+                      </div>
 
-          {roleFilter === 'chair' && (
-            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
-              <Presentation className="w-8 h-8 text-violet-300 mx-auto mb-3" />
-              <h3 className="font-bold text-sm text-slate-900">No organizer-published Session Chair openings yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-                Your Session Chair availability is {userProfile.sessionChairAvailable ? 'ON' : 'OFF'}. Openings will appear only when the organizer publishes them.
-              </p>
-            </div>
-          )}
+                      {opp.description && (
+                        <p className="text-xs text-slate-600 leading-relaxed">{opp.description}</p>
+                      )}
 
-          {roleFilter === 'speaker' && (
-            <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
-              <Mic2 className="w-8 h-8 text-rose-300 mx-auto mb-3" />
-              <h3 className="font-bold text-sm text-slate-900">No organizer-published Speaker / Keynote openings yet</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
-                Your Speaker / Keynote availability is {userProfile.speakerAvailable ? 'ON' : 'OFF'}. ConferenceGate does not infer speaking vacancies from ordinary conference pages.
-              </p>
-            </div>
+                      <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div>Organizer: <strong className="text-slate-800">{opp.organizerName}</strong></div>
+                        {opp.preferredRegions?.length > 0 && (
+                          <div>Preferred Regions: <strong className="text-slate-800">{opp.preferredRegions.join(' · ')}</strong></div>
+                        )}
+                      </div>
+
+                      {opp.expertiseRequired?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 text-[10px] font-semibold text-slate-600">
+                          {opp.expertiseRequired.map((exp, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-slate-100 rounded-md">#{exp}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => onProfessionalOpportunityInterest?.(opp.id, !interested)}
+                        className={`w-full py-2.5 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                          interested
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : 'bg-blue-900 hover:bg-blue-950 text-white'
+                        }`}
+                      >
+                        {interested ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        <span>{interested ? 'Interested · Withdraw' : 'Express Interest'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : roleFilter !== 'recommended' ? (
+              <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center">
+                {roleFilter === 'committee' ? (
+                  <Users className="w-8 h-8 text-indigo-300 mx-auto mb-3" />
+                ) : roleFilter === 'chair' ? (
+                  <Presentation className="w-8 h-8 text-violet-300 mx-auto mb-3" />
+                ) : (
+                  <Mic2 className="w-8 h-8 text-rose-300 mx-auto mb-3" />
+                )}
+                <h3 className="font-bold text-sm text-slate-900">
+                  No organizer-published {roleFilter === 'committee' ? 'Technical Committee' : roleFilter === 'chair' ? 'Session Chair' : 'Speaker / Keynote'} openings yet
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
+                  ConferenceGate will show a role here only after an organizer explicitly publishes that opening.
+                </p>
+              </div>
+            ) : null
           )}
         </div>
       )}
