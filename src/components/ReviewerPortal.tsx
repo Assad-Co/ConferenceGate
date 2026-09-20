@@ -170,7 +170,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   const visibleReviewerOpportunities =
     roleFilter === 'recommended'
-      ? rankedReviewerOpportunities.filter((item) => item.matchScore === null || item.matchScore >= 35)
+      ? rankedReviewerOpportunities.filter((item) => item.matchScore !== null && item.matchScore >= 35)
       : roleFilter === 'reviewer'
         ? rankedReviewerOpportunities
         : [];
@@ -214,7 +214,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   const visibleProfessionalOpportunities = rankedProfessionalOpportunities.filter(({ opportunity, matchScore }) => {
     if (roleFilter === 'recommended') {
-      return roleAvailability(opportunity.roleType) && (matchScore === null || matchScore >= 35);
+      return roleAvailability(opportunity.roleType) && matchScore !== null && matchScore >= 35;
     }
     return opportunity.roleType === roleFilter;
   });
