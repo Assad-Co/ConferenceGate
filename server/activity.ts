@@ -12,6 +12,7 @@ import {
   ReviewOpportunityRow,
   ProfessionalOpportunityRow,
   ProfessionalOpportunityInterestRow,
+  ProfessionalInvitationRow,
   ConferenceRegistrationRow,
   ConferenceInteractionRow,
   ConferenceFeedbackRow,
@@ -714,6 +715,171 @@ activityRouter.delete(
       [req.params.id, req.userId!]
     );
     res.json({ interested: false });
+  })
+);
+
+function toProfessionalInvitationDTO(row: ProfessionalInvitationRow) {
+  return {
+    id: row.id,
+    organizerId: row.organizer_id,
+    professionalId: row.professional_id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    opportunityId: row.opportunity_id,
+    roleType: row.role_type,
+    title: row.title,
+    message: row.message || "",
+    status: row.status,
+    createdAt: row.created_at,
+    respondedAt: row.responded_at,
+    completedAt: row.completed_at,
+  };
+}
+
+activityRouter.get(
+  "/professional-invitations/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const rows = await dbAll<ProfessionalInvitationRow>(
+      "SELECT * FROM professional_invitations WHERE professional_id = ? ORDER BY created_at DESC",
+      [req.userId!]
+    );
+    res.json({ invitations: rows.map(toProfessionalInvitationDTO) });
+  })
+);
+
+activityRouter.post(
+  "/professional-invitations/:id/respond",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const decision = req.body?.decision === "accepted" || req.body?.decision === "declined" ? req.body.decision : null;
+    if (!decision) return res.status(400).json({ error: "decision must be accepted or declined" });
+
+    const invitation = await dbGet<ProfessionalInvitationRow>(
+      "SELECT * FROM professional_invitations WHERE id = ? AND professional_id = ?",
+      [req.params.id, req.userId!]
+    );
+    if (!invitation) return res.status(404).json({ error: "Invitation not found" });
+    if (invitation.status !== "pending") {
+      return res.status(409).json({ error: "This invitation has already been answered." });
+    }
+
+    await dbRun(
+      "UPDATE professional_invitations SET status = ?, responded_at = datetime('now') WHERE id = ?",
+      [decision, invitation.id]
+    );
+    const professional = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+    await createNotification(
+      invitation.organizer_id,
+      "invitation",
+      decision === "accepted" ? "Professional invitation accepted" : "Professional invitation declined",
+      `${professional?.name || "A professional"} ${decision} your ${invitation.title} invitation for ${invitation.conference_title}.`
+    );
+
+    const updated = (await dbGet<ProfessionalInvitationRow>("SELECT * FROM professional_invitations WHERE id = ?", [invitation.id]))!;
+    res.json({ invitation: toProfessionalInvitationDTO(updated) });
+  })
+);
+
+// Phase 2 organizer foundation: create a direct invitation to a specific professional.
+activityRouter.post(
+  "/professional-invitations",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const body = req.body || {};
+    const roleType =
+      body.roleType === "committee" || body.roleType === "chair" || body.roleType === "speaker"
+        ? body.roleType
+        : null;
+    if (!roleType) return res.status(400).json({ error: "roleType must be committee, chair, or speaker" });
+    if (typeof body.professionalId !== "string" || !body.professionalId) {
+      return res.status(400).json({ error: "professionalId is required" });
+    }
+    if (typeof body.conferenceId !== "string" || !body.conferenceId) {
+      return res.status(400).json({ error: "conferenceId is required" });
+    }
+    if (typeof body.title !== "string" || !body.title.trim()) {
+      return res.status(400).json({ error: "Invitation title is required" });
+    }
+
+    const organizer = await dbGet<{ role: string; name: string }>("SELECT role,name FROM users WHERE id = ?", [req.userId!]);
+    if (!organizer || organizer.role !== "organizer") {
+      return res.status(403).json({ error: "Only organizer accounts can invite professionals." });
+    }
+    const conference = await dbGet<CreatedConferenceRow>(
+      "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
+      [body.conferenceId, req.userId!]
+    );
+    if (!conference) {
+      return res.status(404).json({ error: "You can only invite professionals to conferences you created." });
+    }
+    const professional = await dbGet<{ role: string; name: string }>(
+      "SELECT role,name FROM users WHERE id = ?",
+      [body.professionalId]
+    );
+    if (!professional || professional.role !== "professional") {
+      return res.status(404).json({ error: "Professional account not found." });
+    }
+
+    const conferenceData = JSON.parse(conference.data);
+    const existing = await dbGet<ProfessionalInvitationRow>(
+      `SELECT * FROM professional_invitations
+        WHERE organizer_id = ? AND professional_id = ? AND conference_id = ? AND role_type = ?
+          AND status IN ('pending','accepted')`,
+      [req.userId!, body.professionalId, body.conferenceId, roleType]
+    );
+    if (existing) return res.status(409).json({ error: "An active invitation for this role already exists." });
+
+    const id = `pinv_${crypto.randomUUID()}`;
+    await dbRun(
+      `INSERT INTO professional_invitations(
+        id,organizer_id,professional_id,conference_id,conference_title,opportunity_id,role_type,title,message,status
+      ) VALUES(?,?,?,?,?,?,?,?,?,'pending')`,
+      [
+        id,
+        req.userId!,
+        body.professionalId,
+        body.conferenceId,
+        conferenceData.title || conference.id,
+        typeof body.opportunityId === "string" ? body.opportunityId : null,
+        roleType,
+        body.title.trim(),
+        typeof body.message === "string" ? body.message.trim() || null : null,
+      ]
+    );
+    await createNotification(
+      body.professionalId,
+      "invitation",
+      "New conference role invitation",
+      `${organizer.name} invited you as ${body.title.trim()} for ${conferenceData.title || conference.id}.`
+    );
+    const row = (await dbGet<ProfessionalInvitationRow>("SELECT * FROM professional_invitations WHERE id = ?", [id]))!;
+    res.status(201).json({ invitation: toProfessionalInvitationDTO(row) });
+  })
+);
+
+// Organizer marks an accepted role completed only after the service is actually delivered.
+// Completion is the event that makes the role eligible for verified history/certificates.
+activityRouter.post(
+  "/professional-invitations/:id/complete",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const invitation = await dbGet<ProfessionalInvitationRow>(
+      "SELECT * FROM professional_invitations WHERE id = ? AND organizer_id = ?",
+      [req.params.id, req.userId!]
+    );
+    if (!invitation) return res.status(404).json({ error: "Invitation not found" });
+    if (invitation.status !== "accepted") {
+      return res.status(409).json({ error: "Only an accepted invitation can be completed." });
+    }
+    await dbRun(
+      "UPDATE professional_invitations SET status = 'completed', completed_at = datetime('now') WHERE id = ?",
+      [invitation.id]
+    );
+    await createNotification(
+      invitation.professional_id,
+      "achievement",
+      "Verified conference role completed",
+      `Your ${invitation.title} role for ${invitation.conference_title} is now verified as completed.`
+    );
+    const updated = (await dbGet<ProfessionalInvitationRow>("SELECT * FROM professional_invitations WHERE id = ?", [invitation.id]))!;
+    res.json({ invitation: toProfessionalInvitationDTO(updated) });
   })
 );
 
