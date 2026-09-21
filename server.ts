@@ -17,6 +17,7 @@ import { activityRouter } from "./server/activity";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
+import { workspacesRouter } from "./server/workspaces";
 import { postsRouter } from "./server/posts";
 import {
   initDb,
@@ -90,6 +91,9 @@ async function startServer() {
 
   // Paid organizer / sponsor workspace access and checkout handoff
   app.use("/api/billing", billingRouter);
+
+  // Paid organizer/sponsor team workspaces, seats, roles, and audit trail
+  app.use("/api/workspaces", workspacesRouter);
 
   // Real community feed: posts, reactions, comments, reposts, saves
   app.use("/api/posts", postsRouter);
