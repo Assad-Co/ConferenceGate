@@ -29,3 +29,5 @@ jobs:
         run: node --check scripts/refreshSponsorWatchlistAlerts.mjs
       - name: Production build
         run: npm run build
+      - name: Built server smoke test
+        run: node scripts/smokeBuiltServer.mjs
