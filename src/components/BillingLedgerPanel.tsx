@@ -132,8 +132,9 @@ export const BillingLedgerPanel: React.FC<BillingLedgerPanelProps> = ({ perspect
                   <th className="p-3">Provider</th>
                   <th className="p-3">Reference</th>
                   <th className="p-3">Amount</th>
+                  <th className="p-3">Payment State</th>
                   {perspective === 'organizer' && <th className="p-3">Organizer Payout</th>}
-                  <th className="p-3">Settled</th>
+                  <th className="p-3">Provider Event</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -145,8 +146,21 @@ export const BillingLedgerPanel: React.FC<BillingLedgerPanelProps> = ({ perspect
                     </td>
                     <td className="p-3 font-semibold text-slate-700">{payment.provider}</td>
                     <td className="p-3 font-mono text-[10px] text-slate-600">{payment.paymentReference}</td>
-                    <td className="p-3 font-extrabold text-emerald-700">
+                    <td className={
+                      'p-3 font-extrabold ' +
+                      (payment.status === 'refunded' ? 'text-rose-700 line-through' : 'text-emerald-700')
+                    }>
                       {payment.amount === null ? '—' : `${payment.currency} ${payment.amount.toLocaleString()}`}
+                    </td>
+                    <td className="p-3">
+                      <span className={
+                        'inline-flex px-2 py-1 rounded-full text-[9px] font-bold uppercase ' +
+                        (payment.status === 'refunded'
+                          ? 'bg-rose-50 text-rose-700'
+                          : 'bg-emerald-50 text-emerald-700')
+                      }>
+                        {payment.status}
+                      </span>
                     </td>
                     {perspective === 'organizer' && (
                       <td className="p-3">
@@ -171,7 +185,10 @@ export const BillingLedgerPanel: React.FC<BillingLedgerPanelProps> = ({ perspect
                         )}
                       </td>
                     )}
-                    <td className="p-3 text-slate-500">{payment.settledAt}</td>
+                    <td className="p-3 text-slate-500">
+                      <div>{payment.settledAt}</div>
+                      <div className="text-[9px] font-mono text-slate-400 mt-1">{payment.paymentReference}</div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
