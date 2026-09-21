@@ -37,12 +37,20 @@ export interface BillingLedgerPayment {
   currency: string;
   status: 'settled' | 'refunded';
   settledAt: string;
+  payoutStatus: 'pending' | 'held' | 'paid' | 'refunded' | null;
+  payoutAmount: number | null;
+  platformFeeAmount: number | null;
+  payoutReference: string | null;
+  payoutPaidAt: string | null;
 }
 
 export interface BillingLedger {
   summary: {
     settledPayments: number;
     settledAmount: number;
+    payoutPaidAmount: number;
+    payoutPendingAmount: number;
+    payoutPendingCount: number;
   };
   payments: BillingLedgerPayment[];
 }
