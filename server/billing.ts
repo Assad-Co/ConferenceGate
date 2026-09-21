@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import crypto from "crypto";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
-import { dbGet, dbRun, UserRow } from "./db";
+import { dbAll, dbGet, dbRun, UserRow } from "./db";
 
 export const billingRouter = Router();
 
@@ -203,19 +203,16 @@ billingRouter.get(
             WHERE d.sponsor_id=? AND p.status='settled'`,
       [req.userId!]
     );
-    const recent = await (async () => {
-      const { dbAll } = await import("./db");
-      return dbAll<any>(
-        row.role === "organizer"
-          ? `SELECT p.*,d.conference_title,d.opportunity_title
-               FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
-              WHERE d.organizer_id=? ORDER BY p.settled_at DESC LIMIT 50`
-          : `SELECT p.*,d.conference_title,d.opportunity_title
-               FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
-              WHERE d.sponsor_id=? ORDER BY p.settled_at DESC LIMIT 50`,
-        [req.userId!]
-      );
-    })();
+    const recent = await dbAll<any>(
+      row.role === "organizer"
+        ? `SELECT p.*,d.conference_title,d.opportunity_title
+             FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.organizer_id=? ORDER BY p.settled_at DESC LIMIT 50`
+        : `SELECT p.*,d.conference_title,d.opportunity_title
+             FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.sponsor_id=? ORDER BY p.settled_at DESC LIMIT 50`,
+      [req.userId!]
+    );
 
     res.json({
       summary: {
