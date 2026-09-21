@@ -314,10 +314,8 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     }
   };
 
-  const watchlistKey = (
-    sourceType: SponsorSavedOpportunity['sourceType'],
-    sourceId: string
-  ) => `${sourceType}:${sourceId}`;
+  const watchlistKey = (sourceType: SponsorSavedOpportunity['sourceType'], sourceId: string) =>
+    sourceType + ':' + sourceId;
 
   const savedByKey = useMemo(() => {
     const map = new Map<string, SponsorSavedOpportunity>();
@@ -351,7 +349,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   };
 
   const handleSavedAlertToggle = async (item: SponsorSavedOpportunity) => {
-    setWatchlistBusyKey(`alert:${item.id}`);
+    setWatchlistBusyKey('alert:' + item.id);
     try {
       const updated = await setSponsorWatchAlert(item.id, !item.alertEnabled);
       setSavedOpportunities((prev) => prev.map((saved) => saved.id === updated.id ? updated : saved));
@@ -363,7 +361,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   };
 
   const handleRemoveSavedOpportunity = async (item: SponsorSavedOpportunity) => {
-    setWatchlistBusyKey(`remove:${item.id}`);
+    setWatchlistBusyKey('remove:' + item.id);
     try {
       await removeSponsorSavedOpportunity(item.id);
       setSavedOpportunities((prev) => prev.filter((saved) => saved.id !== item.id));
@@ -372,6 +370,32 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     } finally {
       setWatchlistBusyKey(null);
     }
+  };
+
+  const renderSaveButton = (
+    sourceType: SponsorSavedOpportunity['sourceType'],
+    sourceId: string,
+    compact = false
+  ) => {
+    const saved = savedByKey.has(watchlistKey(sourceType, sourceId));
+    const busy = watchlistBusyKey === watchlistKey(sourceType, sourceId);
+    return (
+      <button
+        type="button"
+        onClick={() => handleSaveOpportunity(sourceType, sourceId)}
+        disabled={busy}
+        className={
+          (compact ? 'px-3 py-2.5' : 'w-full py-2.5') +
+          ' rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ' +
+          (saved
+            ? 'bg-blue-50 border-blue-200 text-blue-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300')
+        }
+      >
+        {saved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+        {saved ? 'Saved' : 'Save'}
+      </button>
+    );
   };
 
   const unreadAlertCount = sponsorAlerts.filter((a) => !a.read).length;
@@ -559,11 +583,12 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('saved')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'saved'
+          className={
+            'px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ' +
+            (activeTab === 'saved'
               ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
+              : 'hover:bg-slate-100 text-slate-700')
+          }
         >
           <Bookmark className="w-3.5 h-3.5" />
           Saved ({savedOpportunities.length})
@@ -721,29 +746,16 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                     )}
 
                     <div className="grid grid-cols-[auto_1fr] gap-2">
-                      <button
-                        onClick={() => handleSaveOpportunity('internal_need', need.id)}
-                        disabled={watchlistBusyKey === watchlistKey('internal_need', need.id)}
-                        className={`px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
-                          savedByKey.has(watchlistKey('internal_need', need.id))
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-300'
-                        }`}
-                        title={savedByKey.has(watchlistKey('internal_need', need.id)) ? 'Open saved opportunities' : 'Save opportunity'}
-                      >
-                        {savedByKey.has(watchlistKey('internal_need', need.id))
-                          ? <BookmarkCheck className="w-4 h-4" />
-                          : <Bookmark className="w-4 h-4" />}
-                        {savedByKey.has(watchlistKey('internal_need', need.id)) ? 'Saved' : 'Save'}
-                      </button>
+                      {renderSaveButton('internal_need', need.id, true)}
                       <button
                         onClick={() => handleNeedInquiry(need)}
                         disabled={inquired || inquiringNeedId === need.id}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ${
-                          inquired
+                        className={
+                          'w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ' +
+                          (inquired
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-blue-900 hover:bg-blue-950 text-white disabled:opacity-60'
-                        }`}
+                            : 'bg-blue-900 hover:bg-blue-950 text-white disabled:opacity-60')
+                        }
                       >
                         {inquired ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                         {inquired ? 'Inquiry Sent' : 'Inquire with Organizer'}
@@ -864,21 +876,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
                         <div className="space-y-2">
                           {renderApplyButton(pkg.id)}
-                          <button
-                            type="button"
-                            onClick={() => handleSaveOpportunity('package', pkg.id)}
-                            disabled={watchlistBusyKey === watchlistKey('package', pkg.id)}
-                            className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                              savedByKey.has(watchlistKey('package', pkg.id))
-                                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300'
-                            }`}
-                          >
-                            {savedByKey.has(watchlistKey('package', pkg.id))
-                              ? <BookmarkCheck className="w-4 h-4" />
-                              : <Bookmark className="w-4 h-4" />}
-                            {savedByKey.has(watchlistKey('package', pkg.id)) ? 'Saved to Watchlist' : 'Save Opportunity'}
-                          </button>
+                          {renderSaveButton('package', pkg.id)}
                         </div>
                       </div>
                     ))}
@@ -944,21 +942,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
                         <div className="space-y-2">
                           {renderApplyButton(pkg.id)}
-                          <button
-                            type="button"
-                            onClick={() => handleSaveOpportunity('package', pkg.id)}
-                            disabled={watchlistBusyKey === watchlistKey('package', pkg.id)}
-                            className={`w-full py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                              savedByKey.has(watchlistKey('package', pkg.id))
-                                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300'
-                            }`}
-                          >
-                            {savedByKey.has(watchlistKey('package', pkg.id))
-                              ? <BookmarkCheck className="w-4 h-4" />
-                              : <Bookmark className="w-4 h-4" />}
-                            {savedByKey.has(watchlistKey('package', pkg.id)) ? 'Saved to Watchlist' : 'Save Opportunity'}
-                          </button>
+                          {renderSaveButton('package', pkg.id)}
                         </div>
                       </div>
                     ))}
@@ -979,21 +963,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 <span className="text-[10px] font-bold uppercase text-blue-600">Sponsor Pro Watchlist</span>
                 <h2 className="text-xl font-bold text-slate-900 mt-1">Saved Sponsorship Opportunities</h2>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                  Shared across your Sponsor Pro workspace. Use the bell on each saved item to control watch alerts;
-                  your overall delivery cadence is controlled under Matching Preferences.
+                  Shared across your Sponsor Pro workspace. The bell controls alerts for each item; the delivery
+                  cadence comes from Matching Preferences.
                 </p>
               </div>
-              <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 min-w-44">
-                <div className="text-[9px] font-bold uppercase text-blue-500">Alert Cadence</div>
-                <div className="text-sm font-extrabold text-blue-900 capitalize">{preferences.alertFrequency}</div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('preferences')}
-                  className="text-[10px] font-bold text-blue-700 mt-1 cursor-pointer"
-                >
-                  Change preferences
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('preferences')}
+                className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold cursor-pointer"
+              >
+                Alerts: {preferences.alertFrequency}
+              </button>
             </div>
           </div>
 
@@ -1002,7 +982,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               <Bookmark className="w-9 h-9 text-slate-300 mx-auto mb-2" />
               <h3 className="text-sm font-bold text-slate-800">Your watchlist is empty</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Save matched opportunities or organizer-published sponsorship packages to compare them here.
+                Save matched opportunities or organizer-published packages to compare them here.
               </p>
             </div>
           ) : (
@@ -1011,133 +991,25 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 const snapshot = item.snapshot || {};
                 const isNeed = item.sourceType === 'internal_need';
                 const isPackage = item.sourceType === 'package';
-                const priceAmount = isNeed
-                  ? snapshot.priceAmount
-                  : isPackage
-                    ? snapshot.price
-                    : null;
-                const priceOnRequest = isNeed ? Boolean(snapshot.priceOnRequest) : false;
-                const categories = Array.isArray(snapshot.categories) ? snapshot.categories : [];
+                const price = isNeed ? snapshot.priceAmount : isPackage ? snapshot.price : null;
+                const priceOnRequest = isNeed && Boolean(snapshot.priceOnRequest);
                 const benefits = Array.isArray(snapshot.benefits) ? snapshot.benefits : [];
-                const actionUrl =
-                  item.sourceType === 'external_catalog' && typeof snapshot.actionUrl === 'string'
-                    ? snapshot.actionUrl
-                    : null;
-
                 return (
                   <div key={item.id} className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[9px] font-bold uppercase">
-                            {item.sourceType === 'internal_need'
-                              ? 'Matched Need'
-                              : item.sourceType === 'package'
-                                ? 'Published Package'
-                                : 'Official External'}
-                          </span>
-                          {isNeed && Number.isFinite(Number(snapshot.matchScore)) && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold">
-                              {Number(snapshot.matchScore)}% Match
-                            </span>
-                          )}
-                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[9px] font-bold uppercase">
+                          {isNeed ? 'Matched Need' : isPackage ? 'Published Package' : 'Official External'}
+                        </span>
                         <h3 className="font-bold text-sm text-slate-900 mt-2">{item.title}</h3>
                         <p className="text-[11px] text-slate-500">{item.conferenceTitle}</p>
                       </div>
                       <div className="text-right shrink-0">
                         {priceOnRequest ? (
                           <div className="text-sm font-extrabold text-blue-700">Price on request</div>
-                        ) : Number.isFinite(Number(priceAmount)) ? (
+                        ) : Number.isFinite(Number(price)) ? (
                           <div className="text-sm font-extrabold text-blue-700">
-                            {'$'}{Number(priceAmount).toLocaleString()}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {categories.slice(0, 8).map((category: string) => (
-                          <span key={category} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">
-                            {category}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {benefits.length > 0 && (
-                      <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
-                        {benefits.slice(0, 4).join(' · ')}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
-                      {actionUrl ? (
-                        <a
-                          href={actionUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold text-center"
-                        >
-                          Open Official Opportunity
-                        </a>
-                      ) : isNeed ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const need = matchedNeeds.find((candidate) => candidate.id === item.sourceId);
-                            if (need) handleNeedInquiry(need);
-                            else setActiveTab('matches');
-                          }}
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
-                        >
-                          Review / Inquire
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('marketplace')}
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
-                        >
-                          Open Marketplace
-                        </button>
-                      )}
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={watchlistBusyKey === `alert:${item.id}`}
-                          onClick={() => handleSavedAlertToggle(item)}
-                          className={`p-2.5 rounded-xl border cursor-pointer disabled:opacity-50 ${
-                            item.alertEnabled
-                              ? 'bg-amber-50 border-amber-200 text-amber-700'
-                              : 'bg-white border-slate-200 text-slate-500'
-                          }`}
-                          title={item.alertEnabled ? 'Watch alerts enabled' : 'Watch alerts disabled'}
-                        >
-                          {item.alertEnabled ? <BellRing className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={watchlistBusyKey === `remove:${item.id}`}
-                          onClick={() => handleRemoveSavedOpportunity(item)}
-                          className="p-2.5 rounded-xl border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
-                          title="Remove from watchlist"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sponsor Pro reverse marketplace */}
+                            {'
       {activeTab === 'requests' && (
         <div className="space-y-6">
           <form onSubmit={handleCreateSponsorRequest} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
@@ -1656,21 +1528,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     </div>
   );
 };
-}{Number(priceAmount).toLocaleString()}
+}{Number(price).toLocaleString()}
                           </div>
                         ) : null}
                       </div>
                     </div>
-
-                    {categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {categories.slice(0, 8).map((category: string) => (
-                          <span key={category} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">
-                            {category}
-                          </span>
-                        ))}
-                      </div>
-                    )}
 
                     {benefits.length > 0 && (
                       <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
@@ -1679,56 +1541,33 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                     )}
 
                     <div className="grid grid-cols-[1fr_auto] gap-2">
-                      {actionUrl ? (
-                        <a
-                          href={actionUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold text-center"
-                        >
-                          Open Official Opportunity
-                        </a>
-                      ) : isNeed ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const need = matchedNeeds.find((candidate) => candidate.id === item.sourceId);
-                            if (need) handleNeedInquiry(need);
-                            else setActiveTab('matches');
-                          }}
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
-                        >
-                          Review / Inquire
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('marketplace')}
-                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
-                        >
-                          Open Marketplace
-                        </button>
-                      )}
-
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab(isNeed ? 'matches' : 'marketplace')}
+                        className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+                      >
+                        Open Opportunity
+                      </button>
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          disabled={watchlistBusyKey === `alert:${item.id}`}
+                          disabled={watchlistBusyKey === 'alert:' + item.id}
                           onClick={() => handleSavedAlertToggle(item)}
-                          className={`p-2.5 rounded-xl border cursor-pointer disabled:opacity-50 ${
-                            item.alertEnabled
+                          className={
+                            'p-2.5 rounded-xl border cursor-pointer disabled:opacity-50 ' +
+                            (item.alertEnabled
                               ? 'bg-amber-50 border-amber-200 text-amber-700'
-                              : 'bg-white border-slate-200 text-slate-500'
-                          }`}
+                              : 'bg-white border-slate-200 text-slate-500')
+                          }
                           title={item.alertEnabled ? 'Watch alerts enabled' : 'Watch alerts disabled'}
                         >
                           {item.alertEnabled ? <BellRing className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                         </button>
                         <button
                           type="button"
-                          disabled={watchlistBusyKey === `remove:${item.id}`}
+                          disabled={watchlistBusyKey === 'remove:' + item.id}
                           onClick={() => handleRemoveSavedOpportunity(item)}
-                          className="p-2.5 rounded-xl border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
+                          className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
                           title="Remove from watchlist"
                         >
                           <Trash2 className="w-4 h-4" />
