@@ -6,6 +6,7 @@ import { OAuth2Client } from "google-auth-library";
 import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
 import { copyLinkedInAvatarToDataUrl } from "./linkedinAvatar";
+import { resolvePaidAccountContext } from "./workspaceAccess";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -181,6 +182,11 @@ async function findKeynoteSpeakerMatches(row: UserRow): Promise<KeynoteSpeakerId
 
 async function toPublicUser(row: UserRow) {
   const keynoteSpeakerMatches = await findKeynoteSpeakerMatches(row);
+  const paidContext =
+    row.role === "organizer" || row.role === "sponsor"
+      ? await resolvePaidAccountContext(row.id, row.role)
+      : null;
+  const billingOwner = paidContext?.accountOwner || row;
   return {
     id: row.id,
     email: row.email,
@@ -196,14 +202,14 @@ async function toPublicUser(row: UserRow) {
     avatar: row.avatar,
     identityVerified: Boolean(row.linkedin_id || row.google_id),
     identityVerificationMethod: row.linkedin_id ? "LinkedIn" : row.google_id ? "Google" : null,
-    subscriptionStatus: row.role === "professional" ? "free" : (row.subscription_status || "required"),
-    subscriptionPlan: row.subscription_plan || (row.role === "professional" ? "professional_free" : null),
-    subscriptionProvider: row.subscription_provider || null,
-    subscriptionPeriodEnd: row.subscription_period_end || null,
-    hasPaidAccess:
-      row.role === "professional" ||
-      row.subscription_status === "active" ||
-      row.subscription_status === "trialing",
+    subscriptionStatus: row.role === "professional" ? "free" : (billingOwner.subscription_status || "required"),
+    subscriptionPlan: billingOwner.subscription_plan || (row.role === "professional" ? "professional_free" : null),
+    subscriptionProvider: billingOwner.subscription_provider || null,
+    subscriptionPeriodEnd: billingOwner.subscription_period_end || null,
+    hasPaidAccess: row.role === "professional" || Boolean(paidContext?.paid),
+    workspaceId: paidContext?.workspaceId || null,
+    workspaceRole: paidContext?.workspaceRole || null,
+    workspaceOwnerId: paidContext?.accountId || null,
     reviewerAvailable: !!row.reviewer_available,
     professionalExpertise: parseJsonArray(row.professional_expertise).filter((v) => typeof v === "string"),
     technicalSpecialization: parseJsonArray(row.technical_specialization).filter((v) => typeof v === "string"),
