@@ -91,6 +91,27 @@ async function startServer() {
   app.use(express.json({ limit: "3mb" }));
   app.use(cookieParser());
 
+  // Browser state-changing requests must originate from this ConferenceGate host. Provider and
+  // trusted server-to-server calls either use the raw webhook routes above or omit Origin.
+  app.use((req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+    const origin = req.get("origin");
+    if (!origin) return next();
+    try {
+      const originHost = new URL(origin).host.toLowerCase();
+      const requestHost = String(req.get("host") || "").toLowerCase();
+      const configuredHost = process.env.PUBLIC_BASE_URL
+        ? new URL(process.env.PUBLIC_BASE_URL).host.toLowerCase()
+        : "";
+      if (originHost !== requestHost && (!configuredHost || originHost !== configuredHost)) {
+        return res.status(403).json({ error: "Cross-site request rejected." });
+      }
+    } catch {
+      return res.status(400).json({ error: "Invalid request origin." });
+    }
+    next();
+  });
+
   // Liveness + database readiness check. This endpoint exposes no secrets and is safe for
   // Render health monitoring.
   app.get("/api/health", async (_req, res) => {
