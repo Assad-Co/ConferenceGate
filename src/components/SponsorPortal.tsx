@@ -32,6 +32,8 @@ import {
   fetchMySponsorRequests,
   fetchMySponsorRequestResponses,
   decideSponsorRequestResponse,
+  fetchSponsorPortfolioAnalytics,
+  type SponsorPortfolioAnalytics,
   type SponsorPreferences,
   type SponsorshipNeed,
   type SponsorshipDeal,
@@ -105,6 +107,21 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [sponsorRequests, setSponsorRequests] = useState<SponsorRequest[]>([]);
   const [sponsorRequestResponses, setSponsorRequestResponses] = useState<SponsorRequestResponse[]>([]);
   const [requestSaving, setRequestSaving] = useState(false);
+  const [sponsorAnalytics, setSponsorAnalytics] = useState<SponsorPortfolioAnalytics>({
+    meaningfulMatches: 0,
+    highMatches: 0,
+    inquiriesSent: 0,
+    activeDeals: 0,
+    negotiations: 0,
+    contracts: 0,
+    paidDeals: 0,
+    completedDeals: 0,
+    committedSpend: 0,
+    paidSpend: 0,
+    sponsorRequests: 0,
+    organizerResponses: 0,
+    acceptedRequestResponses: 0,
+  });
   const [requestDraft, setRequestDraft] = useState({
     title: '',
     description: '',
@@ -125,12 +142,13 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const loadSponsorMatching = async () => {
     setSponsorDataLoading(true);
     try {
-      const [pref, needs, deals, requests, responses] = await Promise.all([
+      const [pref, needs, deals, requests, responses, analytics] = await Promise.all([
         fetchMySponsorPreferences(),
         fetchMatchedSponsorshipNeeds(),
         fetchMySponsorshipDeals(),
         fetchMySponsorRequests(),
         fetchMySponsorRequestResponses(),
+        fetchSponsorPortfolioAnalytics(),
       ]);
       setPreferences(pref);
       setPreferenceDraft({
@@ -146,6 +164,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       setSponsorshipDeals(deals);
       setSponsorRequests(requests);
       setSponsorRequestResponses(responses);
+      setSponsorAnalytics(analytics);
     } catch {
       setMatchedNeeds([]);
     } finally {
@@ -1109,41 +1128,76 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Real-time ROI Dashboard */}
+      {/* Sponsor Pro: real portfolio analytics */}
       {activeTab === 'roi' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Packages in Marketplace</div>
-              <div className="text-2xl font-extrabold text-slate-900">{sponsorshipPackages.length}</div>
-              <div className="text-[11px] font-semibold text-slate-500">Published across all conferences</div>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900">Sponsor Pro Portfolio Analytics</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              These metrics come from your real ConferenceGate matching, inquiries, Deal Rooms, Sponsor Requests, and provider-confirmed payments. No impression or lead numbers are invented.
+            </p>
+          </div>
 
-            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Applications Submitted</div>
-              <div className="text-2xl font-extrabold text-blue-600">{myApplications.length}</div>
-              <div className="text-[11px] font-semibold text-slate-500">
-                {myApplications.filter((a) => a.status === 'Pending').length} pending review
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              ['Strong Matches', sponsorAnalytics.meaningfulMatches, '45%+ profile match'],
+              ['High Matches', sponsorAnalytics.highMatches, '70%+ profile match'],
+              ['Inquiries Sent', sponsorAnalytics.inquiriesSent, 'Internal organizer inquiries'],
+              ['Active Deal Rooms', sponsorAnalytics.activeDeals, 'Open commercial workflows'],
+              ['Negotiating', sponsorAnalytics.negotiations, 'Negotiation through payment pending'],
+              ['Contracts', sponsorAnalytics.contracts, 'Contract stage or later'],
+              ['Paid Deals', sponsorAnalytics.paidDeals, 'Provider-confirmed'],
+              ['Completed Deals', sponsorAnalytics.completedDeals, 'Delivered and completed'],
+            ].map(([label, value, note]) => (
+              <div key={String(label)} className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs">
+                <div className="text-[10px] font-bold uppercase text-slate-400">{label}</div>
+                <div className="text-2xl font-extrabold text-slate-900 mt-1">{value}</div>
+                <div className="text-[10px] text-slate-500 mt-1">{note}</div>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Sponsor Rating</div>
-              <div className="text-2xl font-extrabold text-blue-700">{sponsorProfile.rating.toFixed(1)}/5</div>
-              <div className="text-[11px] font-semibold text-blue-600">{sponsorProfile.reviewsCount} organizer reviews</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6 rounded-3xl bg-blue-50 border border-blue-100">
+              <div className="text-[10px] font-bold uppercase text-blue-500">Committed Sponsorship Spend</div>
+              <div className="text-3xl font-extrabold text-blue-900 mt-2">
+                {'$'}{sponsorAnalytics.committedSpend.toLocaleString()}
+              </div>
+              <p className="text-[11px] text-blue-700 mt-1">
+                Agreed deals from agreement reached onward. This is not the same as money settled.
+              </p>
             </div>
+            <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100">
+              <div className="text-[10px] font-bold uppercase text-emerald-600">Provider-Confirmed Paid Spend</div>
+              <div className="text-3xl font-extrabold text-emerald-900 mt-2">
+                {'$'}{sponsorAnalytics.paidSpend.toLocaleString()}
+              </div>
+              <p className="text-[11px] text-emerald-700 mt-1">
+                Only deals confirmed paid by the configured payment-provider settlement sync.
+              </p>
+            </div>
+          </div>
 
-            <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-1">
-              <div className="text-xs font-bold text-slate-400 uppercase">Sponsorship History</div>
-              <div className="text-2xl font-extrabold text-emerald-700">{sortedHistory.length}</div>
-              <div className="text-[11px] font-semibold text-emerald-600">Past conferences sponsored</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-5 bg-white rounded-2xl border border-slate-200">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Sponsor Requests</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.sponsorRequests}</div>
+              <div className="text-[10px] text-slate-500">Requests you published</div>
+            </div>
+            <div className="p-5 bg-white rounded-2xl border border-slate-200">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Organizer Responses</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.organizerResponses}</div>
+              <div className="text-[10px] text-slate-500">Conference proposals received</div>
+            </div>
+            <div className="p-5 bg-white rounded-2xl border border-slate-200">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Accepted Proposals</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.acceptedRequestResponses}</div>
+              <div className="text-[10px] text-slate-500">Reverse-marketplace proposals accepted</div>
             </div>
           </div>
 
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-500">
-            Logo impression tracking and digital booth traffic analytics aren't wired up to live tracking yet — the
-            numbers above (packages, applications, rating, and history) are real and update as you apply, get
-            approved, and receive organizer feedback.
+            Audience impressions, booth visitors, lead scans, QR interactions, and sponsored-session engagement remain unavailable until ConferenceGate has a real event-tracking source for them. They are intentionally not estimated.
           </div>
         </div>
       )}
