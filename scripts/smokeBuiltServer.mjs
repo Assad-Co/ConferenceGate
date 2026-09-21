@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 
 const port = Number(process.env.SMOKE_PORT || 3107);
 const child = spawn(process.execPath, ['dist/server.cjs'], {
@@ -6,6 +7,7 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     ...process.env,
     PORT: String(port),
     NODE_ENV: 'test',
+    TEST_DATABASE_PATH: process.env.TEST_DATABASE_PATH || '/tmp/conferencegate-smoke.db',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -49,4 +51,8 @@ try {
     sleep(3000),
   ]);
   if (child.exitCode === null) child.kill('SIGKILL');
+  const testDb = process.env.TEST_DATABASE_PATH || '/tmp/conferencegate-smoke.db';
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.rmSync(testDb + suffix, { force: true }); } catch {}
+  }
 }
