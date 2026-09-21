@@ -187,14 +187,14 @@ async function currentSnapshot(db, saved) {
   };
 }
 
-async function cadenceAllows(db, savedId, frequency) {
+async function cadenceAllows(db, sponsorId, frequency) {
   if (frequency === 'instant') return true;
   const minHours = frequency === 'weekly' ? 168 : 24;
   const result = await db.execute({
     sql: `SELECT (julianday('now') - julianday(MAX(created_at))) * 24.0 AS age_hours
             FROM sponsor_watch_alert_events
-           WHERE saved_opportunity_id=?`,
-    args: [savedId],
+           WHERE sponsor_id=?`,
+    args: [sponsorId],
   });
   const age = result.rows?.[0]?.age_hours;
   return age === null || age === undefined || Number(age) >= minHours;
@@ -247,6 +247,7 @@ async function main() {
     let notified = 0;
     let disabledSynced = 0;
     let cadenceDeferred = 0;
+    const digestChanges = new Map();
 
     for (const saved of result.rows || []) {
       checked += 1;
@@ -282,11 +283,6 @@ async function main() {
       }
 
       const frequency = String(saved.alert_frequency || 'instant');
-      if (!(await cadenceAllows(db, String(saved.id), frequency))) {
-        cadenceDeferred += 1;
-        continue;
-      }
-
       const summary = changeSummary(
         String(saved.source_type),
         beforeMaterial,
@@ -294,23 +290,74 @@ async function main() {
         String(saved.conference_title || saved.title || 'Saved sponsorship opportunity')
       );
 
-      await notify(db, String(saved.sponsor_id), 'Saved sponsorship opportunity updated', summary);
-      await db.execute({
-        sql: `INSERT OR IGNORE INTO sponsor_watch_alert_events(
-                id,saved_opportunity_id,sponsor_id,fingerprint,summary
-              ) VALUES(?,?,?,?,?)`,
-        args: [
-          `swa_${crypto.randomUUID()}`,
-          saved.id,
-          saved.sponsor_id,
-          afterFingerprint,
-          summary,
-        ],
-      });
-      await db.execute({
-        sql: "UPDATE sponsor_saved_opportunities SET snapshot=?,updated_at=datetime('now') WHERE id=?",
-        args: [JSON.stringify(after), saved.id],
-      });
+      if (frequency === 'instant') {
+        await notify(db, String(saved.sponsor_id), 'Saved sponsorship opportunity updated', summary);
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO sponsor_watch_alert_events(
+                  id,saved_opportunity_id,sponsor_id,fingerprint,summary
+                ) VALUES(?,?,?,?,?)`,
+          args: [
+            `swa_${crypto.randomUUID()}`,
+            saved.id,
+            saved.sponsor_id,
+            afterFingerprint,
+            summary,
+          ],
+        });
+        await db.execute({
+          sql: "UPDATE sponsor_saved_opportunities SET snapshot=?,updated_at=datetime('now') WHERE id=?",
+          args: [JSON.stringify(after), saved.id],
+        });
+        notified += 1;
+        continue;
+      }
+
+      const sponsorId = String(saved.sponsor_id);
+      const group = digestChanges.get(sponsorId) || {
+        frequency,
+        changes: [],
+      };
+      group.changes.push({ saved, after, fingerprint: afterFingerprint, summary });
+      digestChanges.set(sponsorId, group);
+    }
+
+    for (const [sponsorId, group] of digestChanges.entries()) {
+      if (!(await cadenceAllows(db, sponsorId, group.frequency))) {
+        cadenceDeferred += group.changes.length;
+        continue;
+      }
+
+      const labels = group.changes.slice(0, 3).map((change) => change.summary.replace(/\.$/, ''));
+      const extra = group.changes.length > 3 ? ` and ${group.changes.length - 3} more` : '';
+      const digestMessage =
+        `${group.changes.length} saved sponsorship opportunit${group.changes.length === 1 ? 'y has' : 'ies have'} changed: ` +
+        labels.join('; ') + extra + '.';
+
+      await notify(
+        db,
+        sponsorId,
+        group.frequency === 'weekly' ? 'Weekly sponsorship watchlist update' : 'Daily sponsorship watchlist update',
+        digestMessage
+      );
+
+      for (const change of group.changes) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO sponsor_watch_alert_events(
+                  id,saved_opportunity_id,sponsor_id,fingerprint,summary
+                ) VALUES(?,?,?,?,?)`,
+          args: [
+            `swa_${crypto.randomUUID()}`,
+            change.saved.id,
+            change.saved.sponsor_id,
+            change.fingerprint,
+            change.summary,
+          ],
+        });
+        await db.execute({
+          sql: "UPDATE sponsor_saved_opportunities SET snapshot=?,updated_at=datetime('now') WHERE id=?",
+          args: [JSON.stringify(change.after), change.saved.id],
+        });
+      }
       notified += 1;
     }
 
@@ -320,6 +367,7 @@ async function main() {
       notified,
       disabledSynced,
       cadenceDeferred,
+      digestAccounts: digestChanges.size,
     }));
   } finally {
     db.close();
