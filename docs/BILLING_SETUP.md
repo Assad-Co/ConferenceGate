@@ -41,6 +41,10 @@ https://<conferencegate-domain>/api/billing/webhooks/fastspring
 
 ConferenceGate verifies the `X-FS-Signature` HMAC against the exact raw request body before processing any event.
 
+For first-time account linking, enable **webhook expansion for the account object/contact details** in FastSpring so the signed subscription event contains the purchaser's account contact email. ConferenceGate matches that email to the existing paid-role account and then stores FastSpring's account ID as the durable billing customer reference. After that first link, later lifecycle events can resolve the account by the stored provider ID.
+
+Do not rely on an unexpanded first subscription event that contains only an opaque account ID; ConferenceGate cannot safely guess which user owns it.
+
 Recommended subscription events:
 
 - `subscription.activated`
