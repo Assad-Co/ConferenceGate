@@ -930,11 +930,10 @@ function toSponsorRequestDTO(row: SponsorRequestRow, sponsorName = "", responseC
 sponsorsRouter.post(
   "/requests",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
-    if (!["active","trialing"].includes(sponsor.subscription_status || "")) {
-      return res.status(402).json({ error: "Sponsor Pro subscription required." });
-    }
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
+    const sponsor = sponsorContext.accountOwner;
     const body = req.body || {};
     if (typeof body.title !== "string" || !body.title.trim()) {
       return res.status(400).json({ error: "Request title is required." });
@@ -953,7 +952,7 @@ sponsorsRouter.post(
       ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'active')`,
       [
         id,
-        req.userId!,
+        accountId,
         body.title.trim(),
         typeof body.description === "string" ? body.description.trim() || null : null,
         JSON.stringify(cleanStringList(body.categories)),
@@ -974,9 +973,10 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/requests/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
-    const rows = await dbAll<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE sponsor_id=? ORDER BY created_at DESC", [req.userId!]);
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
+    const sponsor = sponsorContext.accountOwner;
+    const rows = await dbAll<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE sponsor_id=? ORDER BY created_at DESC", [sponsorContext.accountId]);
     const result = [];
     for (const row of rows) {
       const count = await dbGet<{ count: number }>("SELECT COUNT(*) as count FROM sponsor_request_responses WHERE request_id=?", [row.id]);
@@ -989,11 +989,8 @@ sponsorsRouter.get(
 sponsorsRouter.get(
   "/requests/board",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
-    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
-      return res.status(402).json({ error: "Organizer Pro subscription required." });
-    }
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer");
+    if (!organizerContext) return;
     const rows = await dbAll<any>(
       `SELECT r.*,u.name as sponsor_name,u.organization as sponsor_organization
          FROM sponsor_requests r JOIN users u ON u.id=r.sponsor_id
@@ -1010,21 +1007,20 @@ sponsorsRouter.get(
 sponsorsRouter.post(
   "/requests/:id/respond",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
-    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
-      return res.status(402).json({ error: "Organizer Pro subscription required." });
-    }
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer", true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
+    const organizer = organizerContext.accountOwner;
     const request = await dbGet<SponsorRequestRow>("SELECT * FROM sponsor_requests WHERE id=? AND status='active'", [req.params.id]);
     if (!request) return res.status(404).json({ error: "Sponsor request not found." });
     const conferenceId = typeof req.body?.conferenceId === "string" ? req.body.conferenceId : "";
     if (!conferenceId) return res.status(400).json({ error: "conferenceId is required." });
-    const conference = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id=? AND organizer_id=?", [conferenceId, req.userId!]);
+    const conference = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id=? AND organizer_id=?", [conferenceId, accountId]);
     if (!conference) return res.status(404).json({ error: "Conference not found." });
     const conf = safeJson(conference.data, {});
     const existing = await dbGet<SponsorRequestResponseRow>(
       "SELECT * FROM sponsor_request_responses WHERE request_id=? AND organizer_id=? AND conference_id=?",
-      [request.id, req.userId!, conferenceId]
+      [request.id, accountId, conferenceId]
     );
     if (existing) return res.json({ response: existing, alreadyExists: true });
 
@@ -1034,14 +1030,15 @@ sponsorsRouter.post(
       [
         id,
         request.id,
-        req.userId!,
+        accountId,
         conferenceId,
         conf.title || conference.id,
         typeof req.body?.message === "string" ? req.body.message.trim() || null : null,
       ]
     );
-    await createNotification(
+    await notifyPaidAccount(
       request.sponsor_id,
+      "sponsor",
       "sponsorship",
       "Organizer responded to your Sponsor Request",
       `${organizer.organization || organizer.name} proposed ${conf.title || conference.id} for "${request.title}".`
@@ -1054,8 +1051,8 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/requests/responses/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
     const rows = await dbAll<any>(
       `SELECT rr.*,r.title as request_title,u.name as organizer_name,u.organization as organizer_organization
          FROM sponsor_request_responses rr
@@ -1063,7 +1060,7 @@ sponsorsRouter.get(
          JOIN users u ON u.id=rr.organizer_id
         WHERE r.sponsor_id=?
         ORDER BY rr.created_at DESC`,
-      [req.userId!]
+      [sponsorContext.accountId]
     );
     res.json({
       responses: rows.map((row: any) => ({
@@ -1085,8 +1082,9 @@ sponsorsRouter.get(
 sponsorsRouter.patch(
   "/requests/responses/:id",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!sponsor || sponsor.role !== "sponsor") return res.status(403).json({ error: "Sponsor account required." });
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
     const status = req.body?.status === "accepted" || req.body?.status === "declined" ? req.body.status : null;
     if (!status) return res.status(400).json({ error: "status must be accepted or declined." });
     const row = await dbGet<any>(
@@ -1094,10 +1092,11 @@ sponsorsRouter.patch(
          JOIN sponsor_requests r ON r.id=rr.request_id WHERE rr.id=?`,
       [req.params.id]
     );
-    if (!row || row.sponsor_id !== req.userId) return res.status(404).json({ error: "Response not found." });
+    if (!row || row.sponsor_id !== accountId) return res.status(404).json({ error: "Response not found." });
     await dbRun("UPDATE sponsor_request_responses SET status=?,updated_at=datetime('now') WHERE id=?", [status, req.params.id]);
-    await createNotification(
+    await notifyPaidAccount(
       row.organizer_id,
+      "organizer",
       "sponsorship",
       status === "accepted" ? "Sponsor Request response accepted" : "Sponsor Request response declined",
       `The sponsor ${status} your conference proposal for their Sponsor Request.`
@@ -1110,17 +1109,13 @@ sponsorsRouter.patch(
 sponsorsRouter.get(
   "/analytics/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const sponsor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!sponsor || sponsor.role !== "sponsor") {
-      return res.status(403).json({ error: "Sponsor account required." });
-    }
-    if (!["active","trialing"].includes(sponsor.subscription_status || "")) {
-      return res.status(402).json({ error: "Sponsor Pro subscription required." });
-    }
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
 
     const preference = await dbGet<SponsorPreferenceRow>(
       "SELECT * FROM sponsor_preferences WHERE sponsor_id=?",
-      [req.userId!]
+      [accountId]
     );
     const activeNeeds = await dbAll<SponsorshipNeedRow>(
       `SELECT * FROM sponsorship_needs
@@ -1133,22 +1128,22 @@ sponsorsRouter.get(
 
     const inquiries = await dbAll<SponsorshipNeedInquiryRow>(
       "SELECT * FROM sponsorship_need_inquiries WHERE sponsor_id=? ORDER BY created_at DESC",
-      [req.userId!]
+      [accountId]
     );
     const deals = await dbAll<SponsorshipDealRow>(
       "SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY updated_at DESC",
-      [req.userId!]
+      [accountId]
     );
     const requests = await dbAll<SponsorRequestRow>(
       "SELECT * FROM sponsor_requests WHERE sponsor_id=?",
-      [req.userId!]
+      [accountId]
     );
     const responseCount = await dbGet<{ count: number }>(
       `SELECT COUNT(*) as count
          FROM sponsor_request_responses rr
          JOIN sponsor_requests r ON r.id=rr.request_id
         WHERE r.sponsor_id=?`,
-      [req.userId!]
+      [accountId]
     );
 
     const paidStatuses = new Set(["paid","delivering","completed"]);
@@ -1181,7 +1176,7 @@ sponsorsRouter.get(
              FROM sponsor_request_responses rr
              JOIN sponsor_requests r ON r.id=rr.request_id
             WHERE r.sponsor_id=? AND rr.status='accepted'`,
-          [req.userId!]
+          [accountId]
         ).then((row) => Number(row?.count || 0)),
       },
     });
