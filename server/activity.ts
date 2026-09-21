@@ -32,9 +32,27 @@ import { searchSemanticScholarConferencePapers } from "./semanticscholar";
 import { searchDblpConferencePapers } from "./dblp";
 import { searchOpenAlexConferencePapers } from "./openalex";
 import { searchWebForConferenceFacts } from "./braveSearch";
+import { resolvePaidAccountContext, canOperateWorkspace } from "./workspaceAccess";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
+
+async function organizerWorkspaceContext(req: AuthedRequest, res: Response, write = false) {
+  const context = await resolvePaidAccountContext(req.userId!, "organizer");
+  if (!context) {
+    res.status(403).json({ error: "Organizer account required." });
+    return null;
+  }
+  if (!context.paid) {
+    res.status(402).json({ error: "Organizer Pro subscription required." });
+    return null;
+  }
+  if (write && !canOperateWorkspace(context.workspaceRole)) {
+    res.status(403).json({ error: "This workspace seat is read-only." });
+    return null;
+  }
+  return context;
+}
 
 const RECOMMENDATION_TO_STATUS: Record<string, string> = {
   Accept: "Accepted",
@@ -485,6 +503,9 @@ activityRouter.get(
 activityRouter.post(
   "/review-opportunities",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const body = req.body || {};
     if (typeof body.conferenceId !== "string" || !body.conferenceId) {
       return res.status(400).json({ error: "conferenceId is required" });
@@ -495,13 +516,13 @@ activityRouter.post(
 
     const conference = await dbGet<CreatedConferenceRow>(
       "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
-      [body.conferenceId, req.userId!]
+      [body.conferenceId, accountId]
     );
     if (!conference) {
-      return res.status(404).json({ error: "You can only publish a call for reviewers for conferences you created." });
+      return res.status(404).json({ error: "You can only publish a call for reviewers for conferences in this workspace." });
     }
     const conferenceData = JSON.parse(conference.data);
-    const organizer = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+    const organizer = organizerContext.accountOwner;
 
     const id = `ro_${crypto.randomUUID()}`;
     const track = typeof body.track === "string" && body.track.trim() ? body.track.trim() : null;
@@ -514,7 +535,7 @@ activityRouter.post(
         id,
         body.conferenceId,
         conferenceData.title || conference.id,
-        req.userId!,
+        accountId,
         organizer?.name || "Organizer",
         body.topic.trim(),
         track,
@@ -534,14 +555,16 @@ activityRouter.post(
 activityRouter.delete(
   "/review-opportunities/:id",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
     const opportunity = await dbGet<ReviewOpportunityRow>("SELECT * FROM review_opportunities WHERE id = ?", [
       req.params.id,
     ]);
     if (!opportunity) {
       return res.status(404).json({ error: "Opportunity not found" });
     }
-    if (opportunity.organizer_id !== req.userId) {
-      return res.status(403).json({ error: "Only the organizer who published this can withdraw it" });
+    if (opportunity.organizer_id !== organizerContext.accountId) {
+      return res.status(403).json({ error: "This opportunity belongs to another organizer workspace." });
     }
     await dbRun("DELETE FROM review_opportunities WHERE id = ?", [req.params.id]);
     res.json({ ok: true });
@@ -572,13 +595,10 @@ function parseStringArray(value: string | null | undefined): string[] {
 activityRouter.get(
   "/professionals/search",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
-    if (!organizer || organizer.role !== "organizer") {
-      return res.status(403).json({ error: "Only organizer accounts can search the Professional Network." });
-    }
-    if (!["active", "trialing"].includes(organizer.subscription_status || "")) {
-      return res.status(402).json({ error: "Organizer Pro subscription required." });
-    }
+    const organizerContext = await organizerWorkspaceContext(req, res);
+    if (!organizerContext) return;
+    const organizer = organizerContext.actor;
+    const accountId = organizerContext.accountId;
 
     const roleType =
       req.query.roleType === "committee" || req.query.roleType === "chair" || req.query.roleType === "speaker"
@@ -592,7 +612,7 @@ activityRouter.get(
     if (conferenceId) {
       const conf = await dbGet<CreatedConferenceRow>(
         "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
-        [conferenceId, req.userId!]
+        [conferenceId, accountId]
       );
       if (conf) {
         try {
@@ -742,6 +762,9 @@ activityRouter.get(
 activityRouter.post(
   "/professional-opportunities",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const body = req.body || {};
     const roleType =
       body.roleType === "committee" || body.roleType === "chair" || body.roleType === "speaker"
@@ -759,14 +782,14 @@ activityRouter.post(
 
     const conference = await dbGet<CreatedConferenceRow>(
       "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
-      [body.conferenceId, req.userId!]
+      [body.conferenceId, accountId]
     );
     if (!conference) {
-      return res.status(404).json({ error: "You can only publish opportunities for conferences you created." });
+      return res.status(404).json({ error: "You can only publish opportunities for conferences in this workspace." });
     }
 
     const conferenceData = JSON.parse(conference.data);
-    const organizer = await dbGet<{ name: string }>("SELECT name FROM users WHERE id = ?", [req.userId!]);
+    const organizer = organizerContext.accountOwner;
     const id = `po_${crypto.randomUUID()}`;
     const expertise = Array.isArray(body.expertiseRequired)
       ? [...new Set(body.expertiseRequired.filter((v: unknown) => typeof v === "string").map((v: string) => v.trim()).filter(Boolean))].slice(0, 30)
@@ -784,7 +807,7 @@ activityRouter.post(
         id,
         body.conferenceId,
         conferenceData.title || conference.id,
-        req.userId!,
+        accountId,
         organizer?.name || "Organizer",
         roleType,
         body.title.trim(),
@@ -803,6 +826,8 @@ activityRouter.post(
 activityRouter.delete(
   "/professional-opportunities/:id",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
     const opportunity = await dbGet<ProfessionalOpportunityRow>(
       "SELECT * FROM professional_opportunities WHERE id = ?",
       [req.params.id]
@@ -865,7 +890,7 @@ activityRouter.delete(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     await dbRun(
       "DELETE FROM professional_opportunity_interests WHERE opportunity_id = ? AND professional_id = ?",
-      [req.params.id, req.userId!]
+      [req.params.id, organizerContext.accountId]
     );
     res.json({ interested: false });
   })
@@ -936,6 +961,9 @@ activityRouter.post(
 activityRouter.post(
   "/professional-invitations",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const body = req.body || {};
     const roleType =
       body.roleType === "committee" || body.roleType === "chair" || body.roleType === "speaker"
@@ -952,16 +980,13 @@ activityRouter.post(
       return res.status(400).json({ error: "Invitation title is required" });
     }
 
-    const organizer = await dbGet<{ role: string; name: string }>("SELECT role,name FROM users WHERE id = ?", [req.userId!]);
-    if (!organizer || organizer.role !== "organizer") {
-      return res.status(403).json({ error: "Only organizer accounts can invite professionals." });
-    }
+    const organizer = organizerContext.actor;
     const conference = await dbGet<CreatedConferenceRow>(
       "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
-      [body.conferenceId, req.userId!]
+      [body.conferenceId, accountId]
     );
     if (!conference) {
-      return res.status(404).json({ error: "You can only invite professionals to conferences you created." });
+      return res.status(404).json({ error: "You can only invite professionals to conferences in this workspace." });
     }
     const professional = await dbGet<{ role: string; name: string }>(
       "SELECT role,name FROM users WHERE id = ?",
@@ -976,7 +1001,7 @@ activityRouter.post(
       `SELECT * FROM professional_invitations
         WHERE organizer_id = ? AND professional_id = ? AND conference_id = ? AND role_type = ?
           AND status IN ('pending','accepted')`,
-      [req.userId!, body.professionalId, body.conferenceId, roleType]
+      [accountId, body.professionalId, body.conferenceId, roleType]
     );
     if (existing) return res.status(409).json({ error: "An active invitation for this role already exists." });
 
@@ -987,7 +1012,7 @@ activityRouter.post(
       ) VALUES(?,?,?,?,?,?,?,?,?,'pending')`,
       [
         id,
-        req.userId!,
+        accountId,
         body.professionalId,
         body.conferenceId,
         conferenceData.title || conference.id,
@@ -1013,6 +1038,8 @@ activityRouter.post(
 activityRouter.post(
   "/professional-invitations/:id/complete",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
     const invitation = await dbGet<ProfessionalInvitationRow>(
       "SELECT * FROM professional_invitations WHERE id = ? AND organizer_id = ?",
       [req.params.id, req.userId!]
@@ -1487,13 +1514,15 @@ activityRouter.post("/external-papers/decide", asyncHandler(async (req: AuthedRe
 // client-side Conference shape is large and nested; every account can see every created
 // conference, mirroring the platform-wide submissions/registrations views elsewhere.
 activityRouter.post("/conferences", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
   const body = req.body || {};
   if (typeof body.id !== "string" || !body.id || typeof body.title !== "string" || !body.title.trim()) {
     return res.status(400).json({ error: "A conference object with id and title is required" });
   }
   await dbRun("INSERT INTO created_conferences (id, organizer_id, data) VALUES (?, ?, ?)", [
     body.id,
-    req.userId!,
+    organizerContext.accountId,
     JSON.stringify(body),
   ]);
   res.status(201).json({ conference: body });
@@ -1508,9 +1537,11 @@ activityRouter.get("/conferences", asyncHandler(async (_req: AuthedRequest, res:
 // (stats, analytics, committee roster, etc.) to their own data instead of every conference on
 // the platform.
 activityRouter.get("/conferences/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
   const rows = await dbAll<CreatedConferenceRow>(
     "SELECT * FROM created_conferences WHERE organizer_id = ? ORDER BY created_at DESC",
-    [req.userId!]
+    [organizerContext.accountId]
   );
   res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
 }));
@@ -1519,8 +1550,10 @@ activityRouter.get("/conferences/mine", asyncHandler(async (req: AuthedRequest, 
 // abstract submissions — so the organizer's notification bell can surface genuine events instead
 // of demo content.
 activityRouter.get("/organizer/activity-feed", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
   const myConferences = await dbAll<{ id: string }>("SELECT id FROM created_conferences WHERE organizer_id = ?", [
-    req.userId!,
+    organizerContext.accountId,
   ]);
   if (myConferences.length === 0) {
     return res.json({ items: [] });
