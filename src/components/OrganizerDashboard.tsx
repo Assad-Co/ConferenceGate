@@ -1529,7 +1529,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-600">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  Verified Organizer
+                  Organizer Pro Active
                 </div>
                 <h3 className="font-extrabold text-base text-slate-900 truncate">{organizerName}</h3>
                 {(organizerCity || organizerCountry) && (
