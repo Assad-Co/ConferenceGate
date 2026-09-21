@@ -22,3 +22,30 @@ export async function fetchCheckoutUrl(): Promise<{ checkoutUrl: string | null; 
   const res = await fetch('/api/billing/checkout', { credentials: 'include' });
   return parseResponse(res);
 }
+
+
+export interface BillingLedgerPayment {
+  id: string;
+  dealId: string;
+  conferenceTitle: string;
+  opportunityTitle: string;
+  provider: string;
+  paymentReference: string;
+  amount: number | null;
+  currency: string;
+  status: 'settled' | 'refunded';
+  settledAt: string;
+}
+
+export interface BillingLedger {
+  summary: {
+    settledPayments: number;
+    settledAmount: number;
+  };
+  payments: BillingLedgerPayment[];
+}
+
+export async function fetchBillingLedger(): Promise<BillingLedger> {
+  const res = await fetch('/api/billing/ledger/mine', { credentials: 'include' });
+  return parseResponse(res);
+}
