@@ -21,11 +21,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Clean install
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
-      - name: Frontend bundle
-        run: npx vite build --outDir /tmp/conferencegate-vite
-      - name: Server bundle
-        run: npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=/tmp/conferencegate-server.cjs
+      - name: Production build
+        run: npm run build
