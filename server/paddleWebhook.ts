@@ -1,6 +1,7 @@
 import express, { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { dbGet, dbRun, UserRow } from "./db";
+import { ensurePayoutObligation } from "./payouts";
 
 export const paddleWebhookRouter = Router();
 
@@ -191,6 +192,13 @@ paddleWebhookRouter.post(
       await dbRun(
         "UPDATE sponsorship_deals SET status='paid',payment_reference=?,updated_at=datetime('now') WHERE id=?",
         [paymentReference, dealId]
+      );
+      await ensurePayoutObligation(
+        deal,
+        "paddle",
+        paymentReference,
+        deal.agreed_amount ?? null,
+        String(deal.currency || "USD").toUpperCase()
       );
       await dbRun(
         "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'payment')",
