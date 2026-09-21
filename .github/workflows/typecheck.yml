@@ -25,5 +25,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Sponsor watch worker syntax
+        run: node --check scripts/refreshSponsorWatchlistAlerts.mjs
       - name: Production build
         run: npm run build
