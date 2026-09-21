@@ -166,6 +166,61 @@ export async function fetchExternalSponsorshipOpportunities(): Promise<ExternalS
 }
 
 
+export interface SponsorSavedOpportunity {
+  id: string;
+  sourceType: 'internal_need' | 'package' | 'external_catalog';
+  sourceId: string;
+  conferenceId: string | null;
+  conferenceTitle: string;
+  title: string;
+  snapshot: Record<string, any>;
+  alertEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchSponsorWatchlist(): Promise<SponsorSavedOpportunity[]> {
+  const res = await fetch('/api/sponsors/watchlist/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return Array.isArray(data.items) ? data.items : [];
+}
+
+export async function saveSponsorOpportunity(
+  sourceType: SponsorSavedOpportunity['sourceType'],
+  sourceId: string
+): Promise<SponsorSavedOpportunity> {
+  const res = await fetch('/api/sponsors/watchlist', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ sourceType, sourceId }),
+  });
+  const data = await parseResponse(res);
+  return data.item;
+}
+
+export async function setSponsorWatchAlert(
+  itemId: string,
+  alertEnabled: boolean
+): Promise<SponsorSavedOpportunity> {
+  const res = await fetch(`/api/sponsors/watchlist/${itemId}/alerts`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ alertEnabled }),
+  });
+  const data = await parseResponse(res);
+  return data.item;
+}
+
+export async function removeSponsorSavedOpportunity(itemId: string): Promise<void> {
+  const res = await fetch(`/api/sponsors/watchlist/${itemId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  await parseResponse(res);
+}
+
 export interface SponsorPreferences {
   sectors: string[];
   categories: string[];
