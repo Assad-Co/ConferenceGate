@@ -1,10 +1,17 @@
-const requiredCore = [
+const checkoutProvider = (process.env.BILLING_CHECKOUT_PROVIDER || 'hosted').trim().toLowerCase();
+
+const coreRequired = [
   'TURSO_DATABASE_URL',
   'TURSO_AUTH_TOKEN',
-  'ORGANIZER_CHECKOUT_URL',
-  'SPONSOR_CHECKOUT_URL',
   'BILLING_SYNC_SECRET',
 ];
+
+const checkoutRequired =
+  checkoutProvider === 'paddle'
+    ? ['PADDLE_API_KEY', 'PADDLE_ORGANIZER_PRICE_ID', 'PADDLE_SPONSOR_PRICE_ID', 'PADDLE_WEBHOOK_SECRET']
+    : ['ORGANIZER_CHECKOUT_URL', 'SPONSOR_CHECKOUT_URL'];
+
+const required = [...coreRequired, ...checkoutRequired];
 
 const optionalIntegrations = [
   'JWT_SECRET',
@@ -18,9 +25,10 @@ const optionalIntegrations = [
   'JINA_API_KEY',
   'FIRECRAWL_API_KEY',
   'GEMINI_API_KEY',
+  'PUBLIC_BASE_URL',
 ];
 
-const missingCore = requiredCore.filter((name) => !process.env[name]?.trim());
+const missingRequired = required.filter((name) => !process.env[name]?.trim());
 const enabledBillingProviders = [
   process.env.FASTSPRING_WEBHOOK_SECRET?.trim() ? 'fastspring' : null,
   process.env.PADDLE_WEBHOOK_SECRET?.trim() ? 'paddle' : null,
@@ -28,21 +36,25 @@ const enabledBillingProviders = [
 
 const report = {
   mode: process.env.NODE_ENV || 'development',
-  core: Object.fromEntries(requiredCore.map((name) => [name, Boolean(process.env[name]?.trim())])),
+  checkoutProvider,
+  required: Object.fromEntries(required.map((name) => [name, Boolean(process.env[name]?.trim())])),
   billingProviders: enabledBillingProviders,
   integrations: Object.fromEntries(optionalIntegrations.map((name) => [name, Boolean(process.env[name]?.trim())])),
   payoutFeeBps: Number(process.env.SPONSORSHIP_PLATFORM_FEE_BPS || 0),
   ready:
-    missingCore.length === 0 &&
+    missingRequired.length === 0 &&
     enabledBillingProviders.length > 0,
   warnings: [],
 };
 
-if (missingCore.length) {
-  report.warnings.push('Missing required production configuration: ' + missingCore.join(', '));
+if (missingRequired.length) {
+  report.warnings.push('Missing required production configuration: ' + missingRequired.join(', '));
 }
 if (enabledBillingProviders.length === 0) {
   report.warnings.push('No verified subscription webhook provider is configured.');
+}
+if (checkoutProvider === 'paddle' && !enabledBillingProviders.includes('paddle')) {
+  report.warnings.push('Paddle checkout is selected but the Paddle webhook secret is not configured.');
 }
 if (!process.env.JWT_SECRET?.trim()) {
   report.warnings.push('JWT_SECRET is not set; ConferenceGate will use the persisted database secret.');
