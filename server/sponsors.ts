@@ -1535,16 +1535,16 @@ sponsorsRouter.post(
       `SELECT DISTINCT sa.sponsor_id as sponsor_id
        FROM sponsorship_applications sa
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
-       WHERE sp.organizer_id = ? AND sa.status = 'Approved'`,
+       JOIN users u ON u.id = sa.sponsor_id
+       WHERE sp.organizer_id = ?
+         AND sa.status = 'Approved'
+         AND u.role='sponsor'
+         AND u.subscription_status IN ('active','trialing')`,
       [accountId]
     );
 
     let notifiedCount = 0;
     for (const row of sponsorRows) {
-      const stats = await sponsorDerivedStats(row.sponsor_id);
-      // Mirrors src/utils/sponsorVerification.ts's isSponsorVerified.
-      const verified = stats.reviewsCount === 0 || stats.rating >= 3.0;
-      if (!verified) continue;
       await notifyPaidAccount(
         row.sponsor_id,
         "sponsor",
@@ -1576,6 +1576,14 @@ sponsorsRouter.post(
     ]);
     if (!pkg) {
       return res.status(404).json({ error: "That sponsorship package no longer exists." });
+    }
+
+    const approvedCount = await dbGet<{ count: number }>(
+      "SELECT COUNT(*) as count FROM sponsorship_applications WHERE package_id=? AND status='Approved'",
+      [pkg.id]
+    );
+    if (Number(approvedCount?.count || 0) >= pkg.total_slots) {
+      return res.status(409).json({ error: "This sponsorship package is fully allocated." });
     }
 
     const existing = await dbGet<SponsorshipApplicationRow>(
@@ -1733,6 +1741,16 @@ sponsorsRouter.post(
       return res.status(403).json({ error: "You can only review applicants for your own conferences." });
     }
 
+    if (status === "Approved" && application.status !== "Approved") {
+      const approvedCount = await dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsorship_applications WHERE package_id=? AND status='Approved'",
+        [pkg.id]
+      );
+      if (Number(approvedCount?.count || 0) >= pkg.total_slots) {
+        return res.status(409).json({ error: "This sponsorship package has no remaining slots." });
+      }
+    }
+
     await dbRun("UPDATE sponsorship_applications SET status = ?, decided_at = datetime('now') WHERE id = ?", [
       status,
       req.params.id,
@@ -1804,11 +1822,22 @@ sponsorsRouter.post(
       return res.status(403).json({ error: "You can only review sponsors you've approved for one of your conferences." });
     }
 
-    const id = `srev_${crypto.randomUUID()}`;
-    await dbRun(
-      "INSERT INTO sponsor_reviews (id, sponsor_id, organizer_id, conference_title, rating, comment) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, body.sponsorId, accountId, body.conferenceTitle.trim(), rating, body.comment || null]
+    const existingReview = await dbGet<SponsorReviewRow>(
+      "SELECT * FROM sponsor_reviews WHERE sponsor_id=? AND organizer_id=? AND conference_title=? ORDER BY created_at DESC LIMIT 1",
+      [body.sponsorId, accountId, body.conferenceTitle.trim()]
     );
+    if (existingReview) {
+      await dbRun(
+        "UPDATE sponsor_reviews SET rating=?,comment=?,created_at=datetime('now') WHERE id=?",
+        [rating, body.comment || null, existingReview.id]
+      );
+    } else {
+      const id = `srev_${crypto.randomUUID()}`;
+      await dbRun(
+        "INSERT INTO sponsor_reviews (id, sponsor_id, organizer_id, conference_title, rating, comment) VALUES (?, ?, ?, ?, ?, ?)",
+        [id, body.sponsorId, accountId, body.conferenceTitle.trim(), rating, body.comment || null]
+      );
+    }
     const stats = await sponsorDerivedStats(body.sponsorId);
     res.status(201).json({ ok: true, ...stats });
   })
