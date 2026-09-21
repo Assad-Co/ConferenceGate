@@ -33,5 +33,7 @@ jobs:
         run: npm run build
       - name: Billing webhook smoke test
         run: node scripts/smokeBillingWebhooks.mjs
+      - name: Commercial lifecycle smoke test
+        run: node scripts/smokeCommercialLifecycle.mjs
       - name: Built server smoke test
         run: node scripts/smokeBuiltServer.mjs
