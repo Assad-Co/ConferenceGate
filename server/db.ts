@@ -610,6 +610,30 @@ export async function initDb(): Promise<void> {
       UNIQUE(need_id, sponsor_id, event_type, event_day)
     );
 
+    CREATE TABLE IF NOT EXISTS billing_provider_events (
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      subject_id TEXT,
+      payload_hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'processed' CHECK(status IN ('processed','ignored','failed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(provider, event_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsorship_payments (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL REFERENCES sponsorship_deals(id),
+      provider TEXT NOT NULL,
+      payment_reference TEXT NOT NULL UNIQUE,
+      amount REAL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      status TEXT NOT NULL DEFAULT 'settled' CHECK(status IN ('settled','refunded')),
+      settled_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
@@ -620,6 +644,8 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_account_workspace_members_user ON account_workspace_members(user_id, status);
     CREATE INDEX IF NOT EXISTS idx_account_workspace_audit_workspace ON account_workspace_audit(workspace_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_engagement_need ON sponsorship_engagement_events(need_id, event_type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_billing_provider_events_subject ON billing_provider_events(subject_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_payments_deal ON sponsorship_payments(deal_id, settled_at);
 
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
