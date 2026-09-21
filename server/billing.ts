@@ -29,10 +29,23 @@ billingRouter.post(
     if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
 
     const body = req.body || {};
+    const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
+    const eventId = typeof body.eventId === "string" ? body.eventId.trim() : "";
+    const eventType = typeof body.eventType === "string" ? body.eventType.trim() : "subscription.sync";
     const allowed = new Set(["required", "trialing", "active", "past_due", "canceled"]);
     const status = typeof body.status === "string" && allowed.has(body.status) ? body.status : null;
     const userId = typeof body.userId === "string" ? body.userId : "";
-    if (!userId || !status) return res.status(400).json({ error: "userId and valid status are required" });
+    if (!provider || !eventId || !userId || !status) {
+      return res.status(400).json({ error: "provider, eventId, userId and valid status are required" });
+    }
+
+    const existing = await dbGet<{ id: string }>(
+      "SELECT id FROM billing_provider_events WHERE provider=? AND event_id=?",
+      [provider, eventId]
+    );
+    if (existing) return res.json({ ok: true, duplicate: true });
+
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
 
     await dbRun(
       `UPDATE users
@@ -45,16 +58,21 @@ billingRouter.post(
       [
         status,
         typeof body.plan === "string" ? body.plan : null,
-        typeof body.provider === "string" ? body.provider : null,
+        provider,
         typeof body.periodEnd === "string" ? body.periodEnd : null,
         typeof body.customerRef === "string" ? body.customerRef : null,
         userId,
       ]
     );
-    res.json({ ok: true });
+
+    await dbRun(
+      "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
+      [`bpe_${crypto.randomUUID()}`, provider, eventId, eventType, userId, payloadHash]
+    );
+
+    res.json({ ok: true, duplicate: false });
   })
 );
-
 
 // Payment-provider settlement sync for a sponsorship Deal Room. Only a verified provider
 // adapter with BILLING_SYNC_SECRET can mark a deal as paid; users cannot self-assert payment.
@@ -65,21 +83,60 @@ billingRouter.post(
     const supplied = String(req.header("x-billing-sync-secret") || "");
     if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
 
-    const dealId = typeof req.body?.dealId === "string" ? req.body.dealId : "";
+    const body = req.body || {};
+    const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
+    const eventId = typeof body.eventId === "string" ? body.eventId.trim() : "";
+    const dealId = typeof body.dealId === "string" ? body.dealId : "";
     const paymentReference =
-      typeof req.body?.paymentReference === "string" ? req.body.paymentReference.trim() : "";
-    const paid = req.body?.paid === true;
-    if (!dealId || !paid || !paymentReference) {
-      return res.status(400).json({ error: "dealId, paid=true, and paymentReference are required" });
+      typeof body.paymentReference === "string" ? body.paymentReference.trim() : "";
+    const paid = body.paid === true;
+    if (!provider || !eventId || !dealId || !paid || !paymentReference) {
+      return res.status(400).json({
+        error: "provider, eventId, dealId, paid=true, and paymentReference are required",
+      });
     }
+
+    const duplicateEvent = await dbGet<{ id: string }>(
+      "SELECT id FROM billing_provider_events WHERE provider=? AND event_id=?",
+      [provider, eventId]
+    );
+    if (duplicateEvent) return res.json({ ok: true, duplicate: true });
 
     const deal = await dbGet<any>("SELECT * FROM sponsorship_deals WHERE id=?", [dealId]);
     if (!deal) return res.status(404).json({ error: "Deal not found" });
+
+    const existingPayment = await dbGet<any>(
+      "SELECT * FROM sponsorship_payments WHERE payment_reference=?",
+      [paymentReference]
+    );
+    if (existingPayment && existingPayment.deal_id !== dealId) {
+      return res.status(409).json({ error: "Payment reference is already linked to another deal." });
+    }
+
+    const amount =
+      body.amount === undefined || body.amount === null || body.amount === ""
+        ? (deal.agreed_amount ?? null)
+        : Number(body.amount);
+    if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+      return res.status(400).json({ error: "amount must be a positive number." });
+    }
+    const currency =
+      typeof body.currency === "string" && /^[A-Z]{3}$/.test(body.currency.trim().toUpperCase())
+        ? body.currency.trim().toUpperCase()
+        : String(deal.currency || "USD").toUpperCase();
 
     await dbRun(
       "UPDATE sponsorship_deals SET status='paid',payment_reference=?,updated_at=datetime('now') WHERE id=?",
       [paymentReference, dealId]
     );
+
+    if (!existingPayment) {
+      await dbRun(
+        "INSERT INTO sponsorship_payments(id,deal_id,provider,payment_reference,amount,currency,status) VALUES(?,?,?,?,?,?,'settled')",
+        [`spay_${crypto.randomUUID()}`, dealId, provider, paymentReference, amount, currency]
+      );
+    }
+
     await dbRun(
       "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'payment')",
       [`sev_${crypto.randomUUID()}`, deal.need_id, deal.sponsor_id]
@@ -91,10 +148,17 @@ billingRouter.post(
         dealId,
         deal.organizer_id,
         "payment",
-        `Payment confirmed by provider. Reference: ${paymentReference}`,
+        `Payment confirmed by ${provider}. Reference: ${paymentReference}`,
       ]
     ).catch(() => {});
-    res.json({ ok: true });
+
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    await dbRun(
+      "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
+      [`bpe_${crypto.randomUUID()}`, provider, eventId, "deal.payment.settled", dealId, payloadHash]
+    );
+
+    res.json({ ok: true, duplicate: false });
   })
 );
 
@@ -112,6 +176,64 @@ billingRouter.get(
       provider: row.subscription_provider || null,
       periodEnd: row.subscription_period_end || null,
       hasPaidAccess: hasPaidAccess(row),
+    });
+  })
+);
+
+billingRouter.get(
+  "/ledger/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!row || !["organizer","sponsor"].includes(row.role)) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+    if (!hasPaidAccess(row)) {
+      return res.status(402).json({ error: "Paid workspace subscription required." });
+    }
+
+    const payments = await dbGet<{ count: number; total: number | null }>(
+      row.role === "organizer"
+        ? `SELECT COUNT(*) as count, COALESCE(SUM(p.amount),0) as total
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.organizer_id=? AND p.status='settled'`
+        : `SELECT COUNT(*) as count, COALESCE(SUM(p.amount),0) as total
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.sponsor_id=? AND p.status='settled'`,
+      [req.userId!]
+    );
+    const recent = await (async () => {
+      const { dbAll } = await import("./db");
+      return dbAll<any>(
+        row.role === "organizer"
+          ? `SELECT p.*,d.conference_title,d.opportunity_title
+               FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
+              WHERE d.organizer_id=? ORDER BY p.settled_at DESC LIMIT 50`
+          : `SELECT p.*,d.conference_title,d.opportunity_title
+               FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
+              WHERE d.sponsor_id=? ORDER BY p.settled_at DESC LIMIT 50`,
+        [req.userId!]
+      );
+    })();
+
+    res.json({
+      summary: {
+        settledPayments: Number(payments?.count || 0),
+        settledAmount: Number(payments?.total || 0),
+      },
+      payments: recent.map((payment: any) => ({
+        id: payment.id,
+        dealId: payment.deal_id,
+        conferenceTitle: payment.conference_title,
+        opportunityTitle: payment.opportunity_title,
+        provider: payment.provider,
+        paymentReference: payment.payment_reference,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        settledAt: payment.settled_at,
+      })),
     });
   })
 );
