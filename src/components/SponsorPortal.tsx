@@ -1019,9 +1019,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 const priceOnRequest = isNeed ? Boolean(snapshot.priceOnRequest) : false;
                 const categories = Array.isArray(snapshot.categories) ? snapshot.categories : [];
                 const benefits = Array.isArray(snapshot.benefits) ? snapshot.benefits : [];
-                const actionUrl = item.sourceType === 'external_catalog' && typeof snapshot.actionUrl === 'string'
-                  ? snapshot.actionUrl
-                  : null;
+                const actionUrl =
+                  item.sourceType === 'external_catalog' && typeof snapshot.actionUrl === 'string'
+                    ? snapshot.actionUrl
+                    : null;
+
                 return (
                   <div key={item.id} className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
                     <div className="flex items-start justify-between gap-4">
@@ -1048,7 +1050,94 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                           <div className="text-sm font-extrabold text-blue-700">Price on request</div>
                         ) : Number.isFinite(Number(priceAmount)) ? (
                           <div className="text-sm font-extrabold text-blue-700">
-                            {'
+                            {'$'}{Number(priceAmount).toLocaleString()}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {categories.slice(0, 8).map((category: string) => (
+                          <span key={category} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">
+                            {category}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {benefits.length > 0 && (
+                      <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        {benefits.slice(0, 4).join(' · ')}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      {actionUrl ? (
+                        <a
+                          href={actionUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold text-center"
+                        >
+                          Open Official Opportunity
+                        </a>
+                      ) : isNeed ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const need = matchedNeeds.find((candidate) => candidate.id === item.sourceId);
+                            if (need) handleNeedInquiry(need);
+                            else setActiveTab('matches');
+                          }}
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Review / Inquire
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('marketplace')}
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Open Marketplace
+                        </button>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={watchlistBusyKey === `alert:${item.id}`}
+                          onClick={() => handleSavedAlertToggle(item)}
+                          className={`p-2.5 rounded-xl border cursor-pointer disabled:opacity-50 ${
+                            item.alertEnabled
+                              ? 'bg-amber-50 border-amber-200 text-amber-700'
+                              : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                          title={item.alertEnabled ? 'Watch alerts enabled' : 'Watch alerts disabled'}
+                        >
+                          {item.alertEnabled ? <BellRing className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={watchlistBusyKey === `remove:${item.id}`}
+                          onClick={() => handleRemoveSavedOpportunity(item)}
+                          className="p-2.5 rounded-xl border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 cursor-pointer disabled:opacity-50"
+                          title="Remove from watchlist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sponsor Pro reverse marketplace */}
       {activeTab === 'requests' && (
         <div className="space-y-6">
           <form onSubmit={handleCreateSponsorRequest} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
