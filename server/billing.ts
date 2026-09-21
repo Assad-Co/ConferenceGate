@@ -8,6 +8,60 @@ import { ensurePayoutObligation } from "./payouts";
 
 export const billingRouter = Router();
 
+function paddleApiBase(): string {
+  return process.env.PADDLE_ENV?.trim().toLowerCase() === "sandbox"
+    ? "https://sandbox-api.paddle.com"
+    : "https://api.paddle.com";
+}
+
+async function createPaddleSubscriptionCheckout(row: UserRow): Promise<string | null> {
+  const apiKey = process.env.PADDLE_API_KEY?.trim();
+  const priceId =
+    row.role === "organizer"
+      ? process.env.PADDLE_ORGANIZER_PRICE_ID?.trim()
+      : row.role === "sponsor"
+        ? process.env.PADDLE_SPONSOR_PRICE_ID?.trim()
+        : "";
+  if (!apiKey || !priceId) return null;
+
+  const response = await fetch(`${paddleApiBase()}/transactions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Paddle-Version": "1",
+    },
+    body: JSON.stringify({
+      items: [{ price_id: priceId, quantity: 1 }],
+      collection_mode: "automatic",
+      custom_data: {
+        conferencegate_user_id: row.id,
+        conferencegate_role: row.role,
+      },
+    }),
+  });
+
+  const textBody = await response.text();
+  let payload: any = {};
+  try {
+    payload = textBody ? JSON.parse(textBody) : {};
+  } catch {
+    payload = {};
+  }
+  if (!response.ok) {
+    const detail =
+      payload?.error?.detail ||
+      payload?.error?.code ||
+      `Paddle checkout request failed with status ${response.status}.`;
+    throw new Error(String(detail));
+  }
+
+  const checkoutUrl = payload?.data?.checkout?.url;
+  return typeof checkoutUrl === "string" && /^https:\/\//i.test(checkoutUrl)
+    ? checkoutUrl
+    : null;
+}
+
 function hasPaidAccess(row: UserRow): boolean {
   return (
     row.role === "professional" ||
@@ -481,6 +535,26 @@ billingRouter.get(
       });
     }
 
+    const checkoutProvider = process.env.BILLING_CHECKOUT_PROVIDER?.trim().toLowerCase();
+    if (checkoutProvider === "paddle") {
+      try {
+        const paddleCheckout = await createPaddleSubscriptionCheckout(row);
+        if (!paddleCheckout) {
+          return res.status(503).json({
+            error:
+              row.role === "organizer"
+                ? "Paddle Organizer Pro checkout is not configured yet."
+                : "Paddle Sponsor Pro checkout is not configured yet.",
+          });
+        }
+        return res.json({ checkoutUrl: paddleCheckout, alreadyActive: false, provider: "paddle" });
+      } catch (error: any) {
+        return res.status(502).json({
+          error: error?.message || "Could not create Paddle checkout.",
+        });
+      }
+    }
+
     const checkoutUrl =
       row.role === "organizer"
         ? process.env.ORGANIZER_CHECKOUT_URL?.trim()
@@ -494,7 +568,7 @@ billingRouter.get(
             : "Sponsor checkout is not configured yet.",
       });
     }
-    res.json({ checkoutUrl, alreadyActive: false });
+    res.json({ checkoutUrl, alreadyActive: false, provider: checkoutProvider || "hosted" });
   })
 );
 
