@@ -158,6 +158,8 @@ activityRouter.get("/submissions", asyncHandler(async (_req: AuthedRequest, res:
 activityRouter.post(
   "/submissions/:id/assign-reviewer",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await organizerWorkspaceContext(req, res, true);
+    if (!organizerContext) return;
     const submission = await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [req.params.id]);
     if (!submission) {
       return res.status(404).json({ error: "Submission not found" });
@@ -178,8 +180,8 @@ activityRouter.post(
       "SELECT organizer_id FROM created_conferences WHERE id = ?",
       [submission.conference_id]
     );
-    if (ownedConference && ownedConference.organizer_id !== req.userId) {
-      return res.status(403).json({ error: "Only this conference's organizer can invite reviewers to it" });
+    if (ownedConference && ownedConference.organizer_id !== organizerContext.accountId) {
+      return res.status(403).json({ error: "Only this conference's organizer workspace can invite reviewers to it" });
     }
 
     try {
@@ -833,8 +835,8 @@ activityRouter.delete(
       [req.params.id]
     );
     if (!opportunity) return res.status(404).json({ error: "Opportunity not found" });
-    if (opportunity.organizer_id !== req.userId) {
-      return res.status(403).json({ error: "Only the organizer who published this opportunity can close it." });
+    if (opportunity.organizer_id !== organizerContext.accountId) {
+      return res.status(403).json({ error: "This opportunity belongs to another organizer workspace." });
     }
     await dbRun("UPDATE professional_opportunities SET status = 'closed' WHERE id = ?", [req.params.id]);
     res.json({ ok: true });
@@ -933,7 +935,7 @@ activityRouter.post(
 
     const invitation = await dbGet<ProfessionalInvitationRow>(
       "SELECT * FROM professional_invitations WHERE id = ? AND professional_id = ?",
-      [req.params.id, req.userId!]
+      [req.params.id, organizerContext.accountId]
     );
     if (!invitation) return res.status(404).json({ error: "Invitation not found" });
     if (invitation.status !== "pending") {
@@ -1219,17 +1221,21 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
 // Scoped to feedback left on conferences this organizer created — not a platform-wide average,
 // which would mix in every other organizer's events.
 activityRouter.get("/feedback/summary", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
   const row = (await dbGet<{ avgScore: number | null; count: number }>(
     `SELECT AVG(cf.overall_score) as avgScore, COUNT(*) as count
      FROM conference_feedback cf
      JOIN created_conferences cc ON cc.id = cf.conference_id
      WHERE cc.organizer_id = ?`,
-    [req.userId!]
+    [organizerContext.accountId]
   ))!;
   res.json({ averageScore: row.avgScore || 0, responseCount: row.count });
 }));
 
 activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
   const body = req.body || {};
   if (typeof body.subject !== "string" || !body.subject.trim()) {
     return res.status(400).json({ error: "Subject is required" });
@@ -1241,7 +1247,7 @@ activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: 
   const id = `bc_${crypto.randomUUID()}`;
   await dbRun(
     "INSERT INTO organizer_broadcasts (id, organizer_id, recipient_group, subject, body) VALUES (?, ?, ?, ?, ?)",
-    [id, req.userId!, body.recipientGroup || "All Attendees", body.subject.trim(), body.body.trim()]
+    [id, organizerContext.accountId, body.recipientGroup || "All Attendees", body.subject.trim(), body.body.trim()]
   );
 
   const row = (await dbGet<OrganizerBroadcastRow>("SELECT * FROM organizer_broadcasts WHERE id = ?", [id]))!;
@@ -1257,9 +1263,11 @@ activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: 
 }));
 
 activityRouter.get("/broadcasts/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
   const rows = await dbAll<OrganizerBroadcastRow>(
     "SELECT * FROM organizer_broadcasts WHERE organizer_id = ? ORDER BY created_at DESC",
-    [req.userId!]
+    [organizerContext.accountId]
   );
   res.json({
     broadcasts: rows.map((row) => ({
