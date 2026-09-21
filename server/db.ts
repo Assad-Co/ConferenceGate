@@ -484,6 +484,16 @@ export async function initDb(): Promise<void> {
       UNIQUE(sponsor_id, source_type, source_id)
     );
 
+    CREATE TABLE IF NOT EXISTS sponsor_watch_alert_events (
+      id TEXT PRIMARY KEY,
+      saved_opportunity_id TEXT NOT NULL REFERENCES sponsor_saved_opportunities(id),
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      fingerprint TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(saved_opportunity_id, fingerprint)
+    );
+
     CREATE TABLE IF NOT EXISTS sponsorship_needs (
       id TEXT PRIMARY KEY,
       conference_id TEXT NOT NULL,
@@ -650,6 +660,7 @@ export async function initDb(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_sponsor_saved_opportunities_sponsor ON sponsor_saved_opportunities(sponsor_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_sponsor_watch_alert_events_saved ON sponsor_watch_alert_events(saved_opportunity_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
