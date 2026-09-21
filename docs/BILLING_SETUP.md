@@ -128,6 +128,19 @@ When a sponsorship Deal Room payment is verified, ConferenceGate creates a payou
 
 A collected sponsor payment **does not** mark the organizer payout as paid.
 
+### Refund reconciliation
+
+A verified refund must use the protected normalization route:
+
+```text
+POST /api/billing/deal-refund-sync
+x-billing-sync-secret: <BILLING_SYNC_SECRET>
+```
+
+The adapter supplies the provider event ID, Deal Room ID, refund reference, and `refunded=true`.
+
+If the organizer payout is still pending, ConferenceGate marks the payout obligation `refunded`. If the organizer has already been paid, the obligation moves to `held` so finance can reconcile the already-sent payout. Refunded sponsor payments are excluded from sponsorship revenue analytics.
+
 A trusted payout adapter confirms an organizer payout through:
 
 ```text
