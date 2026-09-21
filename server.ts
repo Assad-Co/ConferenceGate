@@ -18,6 +18,7 @@ import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
+import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
 import { postsRouter } from "./server/posts";
 import {
   initDb,
@@ -65,6 +66,10 @@ async function startServer() {
 
   const app = express();
   const PORT = 3000;
+
+  // Provider webhooks must receive the exact raw request bytes for signature verification.
+  // Mount them before the global JSON parser.
+  app.use("/api/billing/webhooks/fastspring", fastSpringWebhookRouter);
 
   app.use(express.json({ limit: "3mb" }));
   app.use(cookieParser());
