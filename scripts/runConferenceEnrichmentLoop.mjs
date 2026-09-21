@@ -136,6 +136,9 @@ async function cycle() {
   // URL and public pricing state after every other normalizer has finished.
   await runScript('scripts/enrichExternalSponsorships.mjs');
   await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
+  // Stored-data change detection for Sponsor Pro watchlists. Alert cadence is enforced inside the
+  // watcher, so the normal six-hour enrichment cycle is safe for instant/daily/weekly preferences.
+  await runScript('scripts/refreshSponsorWatchlistAlerts.mjs');
   await runScript('scripts/popularCategoryCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
