@@ -27,6 +27,8 @@ jobs:
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Sponsor watch worker syntax
         run: node --check scripts/refreshSponsorWatchlistAlerts.mjs
+      - name: Production readiness script syntax
+        run: node --check scripts/checkProductionReadiness.mjs
       - name: Production build
         run: npm run build
       - name: Built server smoke test
