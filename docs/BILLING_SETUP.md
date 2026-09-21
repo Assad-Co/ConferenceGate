@@ -1,0 +1,132 @@
+# ConferenceGate Billing Setup
+
+ConferenceGate keeps **workspace subscriptions** and **sponsorship-deal settlement** separate:
+
+1. Organizer Pro and Sponsor Pro subscriptions control access to the paid workspaces.
+2. Sponsorship Deal Rooms track commercial agreements between a sponsor and an organizer.
+3. A Deal Room can only become `paid` after a verified provider settlement event or the protected internal settlement adapter.
+
+No browser success page can grant paid access or mark a sponsorship deal paid.
+
+## Required production environment
+
+Set these in the Render service environment. Never commit their values.
+
+| Variable | Purpose |
+| --- | --- |
+| `ORGANIZER_CHECKOUT_URL` | Hosted checkout URL for Organizer Pro |
+| `SPONSOR_CHECKOUT_URL` | Hosted checkout URL for Sponsor Pro |
+| `BILLING_SYNC_SECRET` | Secret for the protected server-to-server normalization endpoints |
+| `FASTSPRING_WEBHOOK_SECRET` | FastSpring HMAC SHA-256 webhook secret, if FastSpring is used |
+| `PADDLE_WEBHOOK_SECRET` | Paddle notification-destination secret, if Paddle is used |
+| `PADDLE_WEBHOOK_TOLERANCE_SECONDS` | Optional signature timestamp tolerance; defaults to 5 seconds |
+| `TURSO_DATABASE_URL` | Persistent production database |
+| `TURSO_AUTH_TOKEN` | Persistent production database credential |
+
+You only need the provider-specific webhook secret for providers you actually enable.
+
+## FastSpring
+
+Webhook destination:
+
+```text
+https://<conferencegate-domain>/api/billing/webhooks/fastspring
+```
+
+ConferenceGate verifies the `X-FS-Signature` HMAC against the exact raw request body before processing any event.
+
+Recommended subscription events:
+
+- `subscription.activated`
+- `subscription.updated`
+- `subscription.canceled`
+- `subscription.uncanceled`
+- `subscription.deactivated`
+- `subscription.paused`
+- `subscription.resumed`
+- `subscription.payment.overdue`
+- `subscription.charge.failed`
+
+For first-time account linking, the FastSpring account contact email should match the Organizer/Sponsor ConferenceGate account email. Once linked, ConferenceGate stores the FastSpring account ID as the billing customer reference.
+
+Webhook events are idempotent: the same FastSpring event ID is processed only once.
+
+## Paddle
+
+Webhook destination:
+
+```text
+https://<conferencegate-domain>/api/billing/webhooks/paddle
+```
+
+ConferenceGate verifies `Paddle-Signature` using the exact raw request body, HMAC-SHA256, and timestamp replay protection.
+
+Recommended subscription events:
+
+- `subscription.created`
+- `subscription.updated`
+- `subscription.activated`
+- `subscription.trialing`
+- `subscription.past_due`
+- `subscription.paused`
+- `subscription.resumed`
+- `subscription.canceled`
+
+For the first subscription checkout, include this Paddle custom data:
+
+```json
+{
+  "conferencegate_user_id": "<signed-in ConferenceGate user id>"
+}
+```
+
+ConferenceGate then stores Paddle's `customer_id` as the billing customer reference for later lifecycle events.
+
+### Sponsorship Deal Room payments with Paddle
+
+When creating a Paddle transaction for an agreed sponsorship deal, include:
+
+```json
+{
+  "conferencegate_deal_id": "<ConferenceGate sponsorship deal id>"
+}
+```
+
+Subscribe the webhook destination to:
+
+```text
+transaction.completed
+```
+
+A verified `transaction.completed` event will:
+
+- record a provider payment ledger entry,
+- set the corresponding Deal Room to `paid`,
+- store the Paddle transaction ID as the payment reference,
+- record a payment funnel event,
+- append an auditable Deal Room payment update.
+
+ConferenceGate deliberately uses the agreed Deal Room amount as the local commercial amount unless a future reconciliation adapter explicitly validates provider totals and currency.
+
+## Protected normalization endpoints
+
+The following routes remain available for a trusted server-side adapter and require `BILLING_SYNC_SECRET`:
+
+```text
+POST /api/billing/provider-sync
+POST /api/billing/deal-payment-sync
+```
+
+They must never be called directly from browser code.
+
+## Deployment validation
+
+Every push to `main` now runs:
+
+```text
+npm ci --ignore-scripts --no-audit --no-fund
+npx tsc -p tsconfig.check.json --noEmit
+npm run build
+```
+
+This is intentionally aligned with the production deployment path so a legacy patch script or dependency-lock mismatch cannot silently pass CI and fail only on Render.
