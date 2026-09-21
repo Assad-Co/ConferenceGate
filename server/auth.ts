@@ -51,6 +51,37 @@ type AuthRole = (typeof ALLOWED_ROLES)[number];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_ATTEMPTS = 30;
+const authAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function authRateLimit(req: Request, res: Response, next: NextFunction) {
+  const now = Date.now();
+  const key = String(req.ip || req.socket.remoteAddress || "unknown");
+  const current = authAttempts.get(key);
+  const bucket =
+    !current || current.resetAt <= now
+      ? { count: 0, resetAt: now + AUTH_WINDOW_MS }
+      : current;
+  bucket.count += 1;
+  authAttempts.set(key, bucket);
+
+  // Opportunistic cleanup keeps this lightweight map bounded on a single-instance deployment.
+  if (authAttempts.size > 5000) {
+    for (const [ip, value] of authAttempts) {
+      if (value.resetAt <= now) authAttempts.delete(ip);
+    }
+  }
+
+  if (bucket.count > AUTH_MAX_ATTEMPTS) {
+    const retrySeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    res.setHeader("Retry-After", String(retrySeconds));
+    return res.status(429).json({ error: "Too many authentication attempts. Please try again later." });
+  }
+  next();
+}
+
+
 interface KeynoteSpeakerIdentityMatch {
   conferenceTitle: string;
   conferenceUrl: string;
@@ -287,7 +318,7 @@ export function publicUserSummary(row: UserRow) {
 
 export const authRouter = Router();
 
-authRouter.post("/signup", asyncHandler(async (req, res) => {
+authRouter.post("/signup", authRateLimit, asyncHandler(async (req, res) => {
   const { role, name, email, password, organization, title, linkedinUrl } = req.body || {};
 
   if (typeof role !== "string" || !ALLOWED_ROLES.includes(role.toLowerCase() as AuthRole)) {
@@ -334,7 +365,7 @@ authRouter.post("/signup", asyncHandler(async (req, res) => {
   res.status(201).json({ user: await toPublicUser(row) });
 }));
 
-authRouter.post("/login", asyncHandler(async (req, res) => {
+authRouter.post("/login", authRateLimit, asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (typeof email !== "string" || typeof password !== "string") {
     return res.status(400).json({ error: "Email and password are required" });
@@ -518,7 +549,7 @@ authRouter.post("/avatar", requireAuth, asyncHandler(async (req: AuthedRequest, 
 
 const googleClient = process.env.GOOGLE_OAUTH_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID) : null;
 
-authRouter.post("/google", asyncHandler(async (req, res) => {
+authRouter.post("/google", authRateLimit, asyncHandler(async (req, res) => {
   const { credential, role } = req.body || {};
 
   if (!googleClient) {
