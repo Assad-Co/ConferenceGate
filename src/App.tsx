@@ -15,7 +15,6 @@ import {
   type ProfessionalPreferencesPayload,
 } from './api/auth';
 import { resolveAvatar } from './utils/avatar';
-import { isSponsorVerified } from './utils/sponsorVerification';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
@@ -231,7 +230,7 @@ export function App() {
     description: authUser?.bio || '',
     industry: authUser?.title || '',
     ...mySponsorProfileStats,
-    verificationStatus: isSponsorVerified(mySponsorProfileStats) ? 'Verified' : 'Restricted',
+    reputationStatus: mySponsorProfileStats.reviewsCount > 0 ? 'Organizer Reviewed' : 'New',
   };
 
   const refreshOrganizerSponsorData = () => {
