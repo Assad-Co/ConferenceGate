@@ -1,4 +1,4 @@
-name: TypeScript Check
+name: Application Validation
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  typecheck:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,3 +25,7 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Frontend bundle
+        run: npx vite build --outDir /tmp/conferencegate-vite
+      - name: Server bundle
+        run: npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=/tmp/conferencegate-server.cjs
