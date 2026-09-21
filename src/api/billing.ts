@@ -11,6 +11,8 @@ export interface BillingStatus {
   provider: string | null;
   periodEnd: string | null;
   hasPaidAccess: boolean;
+  workspaceId?: string | null;
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | null;
 }
 
 export async function fetchBillingStatus(): Promise<BillingStatus> {
