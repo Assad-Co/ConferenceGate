@@ -349,7 +349,7 @@ export interface SponsorProfile {
   reviewsCount: number;
   reviews: SponsorReview[];
   sponsorshipHistory: SponsorHistoryEntry[];
-  verificationStatus: 'Verified' | 'Restricted';
+  reputationStatus: 'New' | 'Organizer Reviewed';
 }
 
 export interface ReviewOpportunity {
