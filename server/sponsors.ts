@@ -20,9 +20,54 @@ import {
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { createNotification } from "./activity";
+import { resolvePaidAccountContext, canOperateWorkspace, type PaidAccountRole } from "./workspaceAccess";
 
 export const sponsorsRouter = Router();
 sponsorsRouter.use(requireAuth);
+
+async function paidWorkspaceContext(
+  req: AuthedRequest,
+  res: Response,
+  role: PaidAccountRole,
+  write = false
+) {
+  const context = await resolvePaidAccountContext(req.userId!, role);
+  if (!context) {
+    res.status(403).json({ error: role === "organizer" ? "Organizer account required." : "Sponsor account required." });
+    return null;
+  }
+  if (!context.paid) {
+    res.status(402).json({ error: role === "organizer" ? "Organizer Pro subscription required." : "Sponsor Pro subscription required." });
+    return null;
+  }
+  if (write && !canOperateWorkspace(context.workspaceRole)) {
+    res.status(403).json({ error: "This workspace seat is read-only." });
+    return null;
+  }
+  return context;
+}
+
+async function notifyPaidAccount(
+  accountId: string,
+  accountRole: PaidAccountRole,
+  type: string,
+  title: string,
+  message: string
+) {
+  const rows = await dbAll<{ user_id: string }>(
+    `SELECT ? as user_id
+      UNION
+     SELECT m.user_id
+       FROM account_workspace_members m
+       JOIN account_workspaces w ON w.id=m.workspace_id
+      WHERE w.owner_id=? AND w.account_role=? AND m.status='active'`,
+    [accountId, accountId, accountRole]
+  ).catch(() => [{ user_id: accountId }]);
+
+  for (const row of rows) {
+    await createNotification(row.user_id, type, title, message);
+  }
+}
 
 function toPackageDTO(row: SponsorshipPackageRow, approvedCounts: Record<string, number>) {
   const approved = approvedCounts[row.id] || 0;
