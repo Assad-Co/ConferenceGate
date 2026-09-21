@@ -1591,6 +1591,7 @@ export function App() {
           <SponsorPortal
             sponsorshipPackages={sponsorshipPackagesReal}
             sponsorshipOpportunities={sampleSponsorshipOpportunities}
+            externalSponsorshipOpportunities={externalSponsorshipOpportunities}
             myApplications={myApplications}
             sponsorProfile={sponsorProfileForPortal}
             sponsorAlerts={sponsorNotifications}
