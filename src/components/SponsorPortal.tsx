@@ -6,7 +6,6 @@ import {
   Sparkles,
   Star,
   ShieldCheck,
-  ShieldAlert,
   History,
   MessageSquareQuote,
   Bell,
@@ -23,7 +22,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile, NotificationItem } from '../types';
-import { isSponsorVerified, sponsorVerificationReason, sponsorOpportunityMatch, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
+import { sponsorOpportunityMatch } from '../utils/sponsorVerification';
 import {
   SponsorApplicationSummary,
   fetchMySponsorPreferences,
@@ -408,7 +407,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     setTimeout(() => alertsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
-  const verified = isSponsorVerified(sponsorProfile);
+  const hasOrganizerReviews = sponsorProfile.reviewsCount > 0;
 
   const applicationByPackageId = useMemo(() => {
     const map = new Map<string, SponsorApplicationSummary>();
@@ -417,7 +416,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   }, [myApplications]);
 
   const handleApplySponsorship = (packageId: string) => {
-    if (!verified || applicationByPackageId.has(packageId)) return;
+    if (applicationByPackageId.has(packageId)) return;
     onApplyForSponsorship(packageId);
   };
 
@@ -476,10 +475,9 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     return (
       <button
         onClick={() => handleApplySponsorship(packageId)}
-        disabled={!verified}
-        className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-900"
+        className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
       >
-        {verified ? 'Apply for Sponsorship' : 'Applications Restricted'}
+        Apply for Sponsorship
       </button>
     );
   };
@@ -495,15 +493,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                 Corporate Sponsorship Marketplace
               </span>
-              {verified ? (
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Verified Sponsor
-                </span>
-              ) : (
-                <span className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  Registration Restricted
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Sponsor Pro Active
+              </span>
+              {hasOrganizerReviews && (
+                <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  Organizer Reviewed
                 </span>
               )}
               {sponsorAlerts.length > 0 && (
@@ -534,7 +531,9 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <div className="bg-white border border-slate-200 p-4 rounded-2xl flex items-center gap-6 shrink-0 shadow-xs">
             <div>
               <div className="text-[10px] uppercase font-bold text-slate-400">Sponsor Rating</div>
-              <div className="text-2xl font-extrabold text-blue-700">{sponsorProfile.rating.toFixed(1)}/5</div>
+              <div className="text-2xl font-extrabold text-blue-700">
+                {hasOrganizerReviews ? `${sponsorProfile.rating.toFixed(1)}/5` : 'New'}
+              </div>
             </div>
             <div className="border-l border-slate-200 pl-6">
               <div className="text-[10px] uppercase font-bold text-slate-400">Organizer Reviews</div>
@@ -543,18 +542,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           </div>
         </div>
       </div>
-
-      {!verified && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-rose-800">
-            <span className="font-bold">Your account cannot apply for new sponsorships right now.</span>{' '}
-            {sponsorVerificationReason(sponsorProfile)} Conference Gate requires a minimum {SPONSOR_RATING_THRESHOLD.toFixed(1)}/5
-            rating from past organizers before a sponsor can register for opportunities. See your Sponsor
-            Profile tab for details and past feedback.
-          </div>
-        </div>
-      )}
 
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
@@ -1560,17 +1547,10 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                   </div>
                 </div>
               </div>
-              {verified ? (
-                <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1.5 self-start sm:self-center">
-                  <ShieldCheck className="w-4 h-4" />
-                  Verified Sponsor
-                </span>
-              ) : (
-                <span className="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-bold flex items-center gap-1.5 self-start sm:self-center">
-                  <ShieldAlert className="w-4 h-4" />
-                  Restricted
-                </span>
-              )}
+              <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1.5 self-start sm:self-center">
+                <ShieldCheck className="w-4 h-4" />
+                Sponsor Pro Active
+              </span>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">{sponsorProfile.description}</p>
@@ -1586,12 +1566,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               </div>
             </div>
 
-            {!verified && (
-              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-rose-800">{sponsorVerificationReason(sponsorProfile)}</p>
-              </div>
-            )}
           </div>
 
           {/* Sponsorship History */}
