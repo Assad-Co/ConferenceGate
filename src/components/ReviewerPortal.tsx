@@ -421,7 +421,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          Completed Reviews History
+          Verified Professional History
         </button>
       </div>
 
@@ -911,7 +911,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
             {reviewSubmitted && (
               <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>Review successfully submitted! +20 Reviewer Kudos awarded to your verified profile.</span>
+                <span>Review successfully submitted and recorded as verified ConferenceGate activity.</span>
               </div>
             )}
 
@@ -921,7 +921,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                <span>Submit Official Review (+20 Kudos)</span>
+                <span>Submit Official Review</span>
               </button>
             </div>
           </form>
@@ -933,16 +933,57 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
             <h3 className="text-base font-bold text-slate-900">
-              {activeTab === 'my-reviews' ? 'Papers Pending Your Review' : 'Verified Review History'}
+              {activeTab === 'my-reviews' ? 'Papers Pending Your Review' : 'Verified Professional History'}
             </h3>
             <p className="text-xs text-slate-500">
               {activeTab === 'my-reviews'
                 ? "Papers you haven't submitted a review for yet."
-                : 'All completed reviews are recorded in your permanent, verified Conference Gate record.'}
+                : 'Completed reviews and organizer-confirmed professional roles are recorded here as verified ConferenceGate activity.'}
             </p>
           </div>
 
           <div className="space-y-4">
+            {activeTab === 'history' && professionalInvitations.filter((item) => item.status === 'completed').length > 0 && (
+              <div className="space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verified Conference Roles</div>
+                {professionalInvitations
+                  .filter((item) => item.status === 'completed')
+                  .map((item) => {
+                    const RoleIcon =
+                      item.roleType === 'committee' ? Users : item.roleType === 'chair' ? Presentation : Mic2;
+                    const label =
+                      item.roleType === 'committee'
+                        ? 'Technical Committee'
+                        : item.roleType === 'chair'
+                          ? 'Session Chair'
+                          : 'Speaker / Keynote';
+                    return (
+                      <div key={item.id} className="p-5 bg-white rounded-2xl border border-emerald-200 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                            <RoleIcon className="w-3.5 h-3.5" />
+                            {label}
+                          </span>
+                          <h4 className="font-bold text-sm text-slate-900">{item.title}</h4>
+                          <p className="text-xs text-slate-500">{item.conferenceTitle}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl inline-flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Organizer Verified
+                          </span>
+                          {item.completedAt && (
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              Completed {item.completedAt.split('T')[0].split(' ')[0]}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
             {activeTab === 'my-reviews' &&
               (pendingSubmissions.length === 0 ? (
                 <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
@@ -982,11 +1023,11 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               ))}
 
             {activeTab === 'history' &&
-              (completedSubmissions.length === 0 ? (
+              (completedSubmissions.length === 0 && professionalInvitations.filter((item) => item.status === 'completed').length === 0 ? (
                 <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
-                  No completed reviews yet.
+                  No verified professional activity yet.
                 </div>
-              ) : (
+              ) : completedSubmissions.length > 0 ? (
                 completedSubmissions.map((sub) => {
                   const myReview = sub.reviews.find((r) => r.reviewerId === userProfile.id);
                   return (
@@ -1022,7 +1063,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                     </div>
                   );
                 })
-              ))}
+              ) : null)}
           </div>
         </div>
       )}
