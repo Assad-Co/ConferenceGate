@@ -659,6 +659,24 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS sponsorship_payout_obligations (
+      id TEXT PRIMARY KEY,
+      deal_id TEXT NOT NULL UNIQUE REFERENCES sponsorship_deals(id),
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      provider TEXT NOT NULL,
+      payment_reference TEXT NOT NULL,
+      gross_amount REAL,
+      platform_fee_amount REAL NOT NULL DEFAULT 0,
+      payout_amount REAL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending','held','paid','refunded')),
+      payout_reference TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      paid_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sponsor_saved_opportunities_sponsor ON sponsor_saved_opportunities(sponsor_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsor_watch_alert_events_saved ON sponsor_watch_alert_events(saved_opportunity_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
@@ -673,6 +691,7 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_sponsorship_engagement_need ON sponsorship_engagement_events(need_id, event_type, created_at);
     CREATE INDEX IF NOT EXISTS idx_billing_provider_events_subject ON billing_provider_events(subject_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_payments_deal ON sponsorship_payments(deal_id, settled_at);
+    CREATE INDEX IF NOT EXISTS idx_sponsorship_payouts_organizer ON sponsorship_payout_obligations(organizer_id, status, created_at);
 
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
@@ -1140,6 +1159,23 @@ export interface SponsorshipDealUpdateRow {
   text: string;
   url: string | null;
   created_at: string;
+}
+
+export interface SponsorshipPayoutObligationRow {
+  id: string;
+  deal_id: string;
+  organizer_id: string;
+  provider: string;
+  payment_reference: string;
+  gross_amount: number | null;
+  platform_fee_amount: number;
+  payout_amount: number | null;
+  currency: string;
+  status: "pending" | "held" | "paid" | "refunded";
+  payout_reference: string | null;
+  created_at: string;
+  updated_at: string;
+  paid_at: string | null;
 }
 
 export interface SponsorRequestRow {
