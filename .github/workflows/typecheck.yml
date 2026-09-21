@@ -31,5 +31,7 @@ jobs:
         run: node --check scripts/checkProductionReadiness.mjs
       - name: Production build
         run: npm run build
+      - name: Billing webhook smoke test
+        run: node scripts/smokeBillingWebhooks.mjs
       - name: Built server smoke test
         run: node scripts/smokeBuiltServer.mjs
