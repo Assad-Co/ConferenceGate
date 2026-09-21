@@ -1279,6 +1279,9 @@ sponsorsRouter.get(
 sponsorsRouter.post(
   "/packages",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer", true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const body = req.body || {};
     if (typeof body.conferenceId !== "string" || !body.conferenceId) {
       return res.status(400).json({ error: "conferenceId is required" });
@@ -1293,10 +1296,10 @@ sponsorsRouter.post(
 
     const conference = await dbGet<CreatedConferenceRow>(
       "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
-      [body.conferenceId, req.userId!]
+      [body.conferenceId, accountId]
     );
     if (!conference) {
-      return res.status(404).json({ error: "You can only publish packages for conferences you created." });
+      return res.status(404).json({ error: "You can only publish packages for conferences in this organizer workspace." });
     }
     const conferenceData = JSON.parse(conference.data);
 
@@ -1312,7 +1315,7 @@ sponsorsRouter.post(
         id,
         body.conferenceId,
         conferenceData.title || conference.id,
-        req.userId!,
+        accountId,
         body.tier.trim(),
         price,
         JSON.stringify(Array.isArray(body.benefits) ? body.benefits : []),
@@ -1335,10 +1338,13 @@ sponsorsRouter.post(
 sponsorsRouter.post(
   "/packages/:id/notify-verified-sponsors",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer", true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const pkg = await dbGet<SponsorshipPackageRow>("SELECT * FROM sponsorship_packages WHERE id = ?", [
       req.params.id,
     ]);
-    if (!pkg || pkg.organizer_id !== req.userId) {
+    if (!pkg || pkg.organizer_id !== accountId) {
       return res.status(404).json({ error: "Package not found" });
     }
     const opportunityName =
@@ -1351,7 +1357,7 @@ sponsorsRouter.post(
        FROM sponsorship_applications sa
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
        WHERE sp.organizer_id = ? AND sa.status = 'Approved'`,
-      [req.userId!]
+      [accountId]
     );
 
     let notifiedCount = 0;
@@ -1360,11 +1366,12 @@ sponsorsRouter.post(
       // Mirrors src/utils/sponsorVerification.ts's isSponsorVerified.
       const verified = stats.reviewsCount === 0 || stats.rating >= 3.0;
       if (!verified) continue;
-      await createNotification(
+      await notifyPaidAccount(
         row.sponsor_id,
+        "sponsor",
         "sponsorship",
         `New Sponsorship Opportunity: ${opportunityName}`,
-        `${pkg.tier} package now available for $${pkg.price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
+        `${pkg.tier} package now available for ${pkg.price.toLocaleString()}. Apply in the Sponsor Marketplace before slots fill up.`
       );
       notifiedCount++;
     }
@@ -1378,6 +1385,9 @@ sponsorsRouter.post(
 sponsorsRouter.post(
   "/applications",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
     const body = req.body || {};
     if (typeof body.packageId !== "string" || !body.packageId) {
       return res.status(400).json({ error: "packageId is required" });
@@ -1391,7 +1401,7 @@ sponsorsRouter.post(
 
     const existing = await dbGet<SponsorshipApplicationRow>(
       "SELECT * FROM sponsorship_applications WHERE package_id = ? AND sponsor_id = ?",
-      [body.packageId, req.userId!]
+      [body.packageId, accountId]
     );
     if (existing) {
       return res.status(200).json({ application: existing, alreadyApplied: true });
@@ -1401,7 +1411,7 @@ sponsorsRouter.post(
     await dbRun("INSERT INTO sponsorship_applications (id, package_id, sponsor_id) VALUES (?, ?, ?)", [
       id,
       body.packageId,
-      req.userId!,
+      accountId,
     ]);
     const row = (await dbGet<SponsorshipApplicationRow>("SELECT * FROM sponsorship_applications WHERE id = ?", [
       id,
@@ -1415,13 +1425,15 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/applications/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
     const rows = await dbAll<SponsorshipApplicationRow & { tier: string; conference_title: string }>(
       `SELECT sa.*, sp.tier as tier, sp.conference_title as conference_title
        FROM sponsorship_applications sa
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
        WHERE sa.sponsor_id = ?
        ORDER BY sa.created_at DESC`,
-      [req.userId!]
+      [sponsorContext.accountId]
     );
     res.json({
       applications: rows.map((r) => ({
@@ -1475,6 +1487,8 @@ async function sponsorDerivedStats(sponsorId: string) {
 sponsorsRouter.get(
   "/applications/for-my-packages",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer");
+    if (!organizerContext) return;
     const rows = await dbAll<
       SponsorshipApplicationRow & { tier: string; conference_title: string; sponsor: UserRow }
     >(
@@ -1485,7 +1499,7 @@ sponsorsRouter.get(
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
        WHERE sp.organizer_id = ?
        ORDER BY sa.created_at DESC`,
-      [req.userId!]
+      [organizerContext.accountId]
     );
 
     const applicants = await Promise.all(
@@ -1519,6 +1533,8 @@ sponsorsRouter.get(
 sponsorsRouter.post(
   "/applications/:id/decide",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer", true);
+    if (!organizerContext) return;
     const status = req.body?.status;
     if (status !== "Approved" && status !== "Rejected") {
       return res.status(400).json({ error: "status must be 'Approved' or 'Rejected'" });
@@ -1534,7 +1550,7 @@ sponsorsRouter.post(
     const pkg = await dbGet<SponsorshipPackageRow>("SELECT * FROM sponsorship_packages WHERE id = ?", [
       application.package_id,
     ]);
-    if (!pkg || pkg.organizer_id !== req.userId) {
+    if (!pkg || pkg.organizer_id !== organizerContext.accountId) {
       return res.status(403).json({ error: "You can only review applicants for your own conferences." });
     }
 
@@ -1555,12 +1571,14 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/reviewable/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer");
+    if (!organizerContext) return;
     const rows = await dbAll<{ sponsor_id: string }>(
       `SELECT DISTINCT sa.sponsor_id as sponsor_id
        FROM sponsorship_applications sa
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
        WHERE sp.organizer_id = ? AND sa.status = 'Approved'`,
-      [req.userId!]
+      [organizerContext.accountId]
     );
     const sponsors = await Promise.all(
       rows.map(async (r) => {
@@ -1580,6 +1598,9 @@ sponsorsRouter.get(
 sponsorsRouter.post(
   "/reviews",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer", true);
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
     const body = req.body || {};
     if (typeof body.sponsorId !== "string" || !body.sponsorId) {
       return res.status(400).json({ error: "sponsorId is required" });
@@ -1598,7 +1619,7 @@ sponsorsRouter.post(
        JOIN sponsorship_packages sp ON sp.id = sa.package_id
        WHERE sp.organizer_id = ? AND sa.sponsor_id = ? AND sa.status = 'Approved'
        LIMIT 1`,
-      [req.userId!, body.sponsorId]
+      [accountId, body.sponsorId]
     );
     if (!eligible) {
       return res.status(403).json({ error: "You can only review sponsors you've approved for one of your conferences." });
@@ -1607,7 +1628,7 @@ sponsorsRouter.post(
     const id = `srev_${crypto.randomUUID()}`;
     await dbRun(
       "INSERT INTO sponsor_reviews (id, sponsor_id, organizer_id, conference_title, rating, comment) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, body.sponsorId, req.userId!, body.conferenceTitle.trim(), rating, body.comment || null]
+      [id, body.sponsorId, accountId, body.conferenceTitle.trim(), rating, body.comment || null]
     );
     const stats = await sponsorDerivedStats(body.sponsorId);
     res.status(201).json({ ok: true, ...stats });
@@ -1619,7 +1640,10 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/profile/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const stats = await sponsorDerivedStats(req.userId!);
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
+    const stats = await sponsorDerivedStats(accountId);
 
     const reviewRows = await dbAll<SponsorReviewRow & { organizer_name: string }>(
       `SELECT sr.*, u.name as organizer_name
@@ -1627,12 +1651,12 @@ sponsorsRouter.get(
        JOIN users u ON u.id = sr.organizer_id
        WHERE sr.sponsor_id = ?
        ORDER BY sr.created_at DESC`,
-      [req.userId!]
+      [accountId]
     );
 
     const leadsRow = (await dbGet<{ count: number }>(
       "SELECT COUNT(*) as count FROM conversations WHERE user_a = ? OR user_b = ?",
-      [req.userId!, req.userId!]
+      [accountId, accountId]
     ))!;
 
     res.json({
