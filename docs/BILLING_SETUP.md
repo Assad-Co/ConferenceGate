@@ -14,8 +14,13 @@ Set these in the Render service environment. Never commit their values.
 
 | Variable | Purpose |
 | --- | --- |
-| `ORGANIZER_CHECKOUT_URL` | Hosted checkout URL for Organizer Pro |
-| `SPONSOR_CHECKOUT_URL` | Hosted checkout URL for Sponsor Pro |
+| `BILLING_CHECKOUT_PROVIDER` | Set to `paddle` for server-created Paddle checkouts; otherwise hosted checkout URLs are used |
+| `ORGANIZER_CHECKOUT_URL` | Hosted Organizer Pro checkout URL when not using server-created Paddle checkout |
+| `SPONSOR_CHECKOUT_URL` | Hosted Sponsor Pro checkout URL when not using server-created Paddle checkout |
+| `PADDLE_API_KEY` | Server-side Paddle API key used only when `BILLING_CHECKOUT_PROVIDER=paddle` |
+| `PADDLE_ENV` | `sandbox` or `live`; defaults to live |
+| `PADDLE_ORGANIZER_PRICE_ID` | Recurring Paddle price ID for Organizer Pro |
+| `PADDLE_SPONSOR_PRICE_ID` | Recurring Paddle price ID for Sponsor Pro |
 | `BILLING_SYNC_SECRET` | Secret for the protected server-to-server normalization and payout-confirmation endpoints |
 | `SPONSORSHIP_PLATFORM_FEE_BPS` | Optional platform fee in basis points applied when a sponsor payment creates an organizer payout obligation; defaults to 0 |
 | `FASTSPRING_WEBHOOK_SECRET` | FastSpring HMAC SHA-256 webhook secret, if FastSpring is used |
@@ -53,6 +58,18 @@ For first-time account linking, the FastSpring account contact email should matc
 Webhook events are idempotent: the same FastSpring event ID is processed only once.
 
 ## Paddle
+
+For reliable first-purchase account linking, set:
+
+```text
+BILLING_CHECKOUT_PROVIDER=paddle
+PADDLE_API_KEY=<server-side Paddle API key>
+PADDLE_ENV=sandbox|live
+PADDLE_ORGANIZER_PRICE_ID=pri_...
+PADDLE_SPONSOR_PRICE_ID=pri_...
+```
+
+ConferenceGate then creates the checkout transaction server-side and stores `conferencegate_user_id` and the account role in Paddle `custom_data`. Paddle carries transaction custom data onto the resulting subscription, allowing verified subscription webhooks to activate the correct ConferenceGate account without relying on browser state.
 
 Webhook destination:
 
