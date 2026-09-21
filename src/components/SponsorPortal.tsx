@@ -656,7 +656,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               : 'hover:bg-slate-100 text-slate-700'
           }`}
         >
-          Sponsor Profile & Verification
+          Sponsor Profile & Reputation
           <StarRating rating={sponsorProfile.rating} size="w-3 h-3" />
         </button>
       </div>
