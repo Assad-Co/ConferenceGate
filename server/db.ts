@@ -566,6 +566,40 @@ export async function initDb(): Promise<void> {
       UNIQUE(request_id, organizer_id, conference_id)
     );
 
+    CREATE TABLE IF NOT EXISTS account_workspaces (
+      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL REFERENCES users(id),
+      account_role TEXT NOT NULL CHECK(account_role IN ('organizer','sponsor')),
+      name TEXT NOT NULL,
+      seat_limit INTEGER NOT NULL DEFAULT 10,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(owner_id, account_role)
+    );
+
+    CREATE TABLE IF NOT EXISTS account_workspace_members (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES account_workspaces(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      member_role TEXT NOT NULL DEFAULT 'member'
+        CHECK(member_role IN ('owner','admin','member','viewer')),
+      status TEXT NOT NULL DEFAULT 'active'
+        CHECK(status IN ('active','removed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(workspace_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS account_workspace_audit (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES account_workspaces(id),
+      actor_id TEXT NOT NULL REFERENCES users(id),
+      action TEXT NOT NULL,
+      target_user_id TEXT,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS sponsorship_engagement_events (
       id TEXT PRIMARY KEY,
       need_id TEXT NOT NULL REFERENCES sponsorship_needs(id),
@@ -583,6 +617,8 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deal_updates_deal ON sponsorship_deal_updates(deal_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsor_requests_status ON sponsor_requests(status, start_date, end_date);
     CREATE INDEX IF NOT EXISTS idx_sponsor_request_responses_request ON sponsor_request_responses(request_id, status);
+    CREATE INDEX IF NOT EXISTS idx_account_workspace_members_user ON account_workspace_members(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_account_workspace_audit_workspace ON account_workspace_audit(workspace_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_engagement_need ON sponsorship_engagement_events(need_id, event_type, created_at);
 
     CREATE TABLE IF NOT EXISTS posts (
@@ -1067,6 +1103,36 @@ export interface SponsorRequestResponseRow {
   status: "new" | "accepted" | "declined" | "withdrawn";
   created_at: string;
   updated_at: string;
+}
+
+export interface AccountWorkspaceRow {
+  id: string;
+  owner_id: string;
+  account_role: "organizer" | "sponsor";
+  name: string;
+  seat_limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountWorkspaceMemberRow {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  member_role: "owner" | "admin" | "member" | "viewer";
+  status: "active" | "removed";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountWorkspaceAuditRow {
+  id: string;
+  workspace_id: string;
+  actor_id: string;
+  action: string;
+  target_user_id: string | null;
+  details: string | null;
+  created_at: string;
 }
 
 export interface PostRow {
