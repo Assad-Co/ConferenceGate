@@ -166,6 +166,82 @@ billingRouter.post(
   })
 );
 
+// Provider-confirmed refund sync for a sponsorship Deal Room. A refund reverses the collected
+// payment. If the organizer payout already occurred, the payout obligation is held for manual
+// reconciliation instead of falsely representing it as automatically recovered.
+billingRouter.post(
+  "/deal-refund-sync",
+  asyncHandler(async (req, res: Response) => {
+    const expected = process.env.BILLING_SYNC_SECRET?.trim();
+    const supplied = String(req.header("x-billing-sync-secret") || "");
+    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+
+    const body = req.body || {};
+    const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
+    const eventId = typeof body.eventId === "string" ? body.eventId.trim() : "";
+    const dealId = typeof body.dealId === "string" ? body.dealId.trim() : "";
+    const refundReference =
+      typeof body.refundReference === "string" ? body.refundReference.trim() : "";
+    if (!provider || !eventId || !dealId || !refundReference || body.refunded !== true) {
+      return res.status(400).json({
+        error: "provider, eventId, dealId, refundReference and refunded=true are required",
+      });
+    }
+
+    const duplicate = await dbGet<{ id: string }>(
+      "SELECT id FROM billing_provider_events WHERE provider=? AND event_id=?",
+      [provider, eventId]
+    );
+    if (duplicate) return res.json({ ok: true, duplicate: true });
+
+    const payment = await dbGet<any>(
+      "SELECT * FROM sponsorship_payments WHERE deal_id=? ORDER BY settled_at DESC LIMIT 1",
+      [dealId]
+    );
+    if (!payment) return res.status(404).json({ error: "Settled sponsorship payment not found." });
+
+    const obligation = await dbGet<any>(
+      "SELECT * FROM sponsorship_payout_obligations WHERE deal_id=?",
+      [dealId]
+    );
+
+    await dbRun("UPDATE sponsorship_payments SET status='refunded' WHERE id=?", [payment.id]);
+
+    let payoutState: string | null = null;
+    if (obligation) {
+      payoutState = obligation.status === "paid" ? "held" : "refunded";
+      await dbRun(
+        "UPDATE sponsorship_payout_obligations SET status=?,updated_at=datetime('now') WHERE id=?",
+        [payoutState, obligation.id]
+      );
+    }
+
+    const deal = await dbGet<any>("SELECT * FROM sponsorship_deals WHERE id=?", [dealId]);
+    if (deal) {
+      await dbRun(
+        "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+        [
+          `sdu_${crypto.randomUUID()}`,
+          dealId,
+          deal.organizer_id,
+          "payment",
+          payoutState === "held"
+            ? `Sponsor payment refunded by ${provider}. Organizer payout was already paid and now requires reconciliation. Refund reference: ${refundReference}`
+            : `Sponsor payment refunded by ${provider}. Refund reference: ${refundReference}`,
+        ]
+      ).catch(() => {});
+    }
+
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    await dbRun(
+      "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
+      [`bpe_${crypto.randomUUID()}`, provider, eventId, "deal.payment.refunded", dealId, payloadHash]
+    );
+
+    res.json({ ok: true, duplicate: false, payoutStatus: payoutState });
+  })
+);
+
 // Provider-confirmed organizer payout sync. Sponsor payment and organizer payout are deliberately
 // separate states: a collected sponsorship payment never implies that the organizer has been paid.
 billingRouter.post(
