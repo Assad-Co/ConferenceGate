@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Briefcase,
+  Users,
   CheckCircle2,
   Sparkles,
   Star,
@@ -41,6 +42,7 @@ import {
   type SponsorRequestResponse,
 } from '../api/sponsors';
 import { useToast } from './Toast';
+import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
@@ -76,7 +78,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'requests' | 'deals' | 'preferences' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -513,6 +515,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Matching Preferences
+        </button>
+        <button
+          onClick={() => setActiveTab('workspace')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'workspace'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          Team & Access
         </button>
         <button
           onClick={() => setActiveTab('roi')}
@@ -1126,6 +1139,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </button>
           </form>
         </div>
+      )}
+
+      {/* Paid Sponsor Pro: Team & Access */}
+      {activeTab === 'workspace' && (
+        <WorkspaceTeamPanel accountLabel="Sponsor Pro" />
       )}
 
       {/* Sponsor Pro: real portfolio analytics */}
