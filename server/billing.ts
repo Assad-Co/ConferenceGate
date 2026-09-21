@@ -200,8 +200,8 @@ billingRouter.get(
 billingRouter.get(
   "/ledger/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [accountId]);
-    if (!row || !["organizer","sponsor"].includes(row.role)) {
+    const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!row || (row.role !== "organizer" && row.role !== "sponsor")) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
     const context = await resolvePaidAccountContext(req.userId!, row.role);
