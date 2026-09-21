@@ -20,6 +20,7 @@ import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
 import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
 import { paddleWebhookRouter } from "./server/paddleWebhook";
+import { resolvePaidAccountContext } from "./server/workspaceAccess";
 import { postsRouter } from "./server/posts";
 import {
   initDb,
@@ -66,7 +67,21 @@ async function startServer() {
   await initDiscoverySchema();
 
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
+
+  app.disable("x-powered-by");
+  if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+    next();
+  });
 
   // Provider webhooks must receive the exact raw request bytes for signature verification.
   // Mount them before the global JSON parser.
@@ -76,9 +91,15 @@ async function startServer() {
   app.use(express.json({ limit: "3mb" }));
   app.use(cookieParser());
 
-  // Health check
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", app: "Conference Gate" });
+  // Liveness + database readiness check. This endpoint exposes no secrets and is safe for
+  // Render health monitoring.
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await dbGet<{ ok: number }>("SELECT 1 as ok");
+      res.json({ status: "ok", app: "Conference Gate", database: "ready" });
+    } catch {
+      res.status(503).json({ status: "degraded", app: "Conference Gate", database: "unavailable" });
+    }
   });
 
   // Auth routes
@@ -216,9 +237,11 @@ async function startServer() {
     };
 
     if (user.role === "organizer") {
+      const paidContext = await resolvePaidAccountContext(userId, "organizer");
+      const organizerAccountId = paidContext?.accountId || userId;
       const created = await dbAll<CreatedConferenceRow>(
         "SELECT * FROM created_conferences WHERE organizer_id = ? ORDER BY created_at DESC",
-        [userId]
+        [organizerAccountId]
       );
       const conferences = created.map((conference) => {
         try {
@@ -231,18 +254,20 @@ async function startServer() {
         `SELECT COUNT(*) as count FROM sponsorship_applications sa
          JOIN sponsorship_packages sp ON sp.id = sa.package_id
          WHERE sp.organizer_id = ? AND sa.status = 'Pending'`,
-        [userId]
+        [organizerAccountId]
       ))!.count;
       return { ...sharedContext, conferencesCreated: conferences, pendingSponsorApplicants: pendingApplicants };
     }
 
     if (user.role === "sponsor") {
+      const paidContext = await resolvePaidAccountContext(userId, "sponsor");
+      const sponsorAccountId = paidContext?.accountId || userId;
       const applications = await dbAll<SponsorshipApplicationRow & { tier: string; conference_title: string }>(
         `SELECT sa.*, sp.tier as tier, sp.conference_title as conference_title
          FROM sponsorship_applications sa
          JOIN sponsorship_packages sp ON sp.id = sa.package_id
          WHERE sa.sponsor_id = ? ORDER BY sa.created_at DESC`,
-        [userId]
+        [sponsorAccountId]
       );
       return {
         ...sharedContext,
