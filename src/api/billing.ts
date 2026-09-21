@@ -44,12 +44,17 @@ export interface BillingLedgerPayment {
   payoutPaidAt: string | null;
 }
 
+export interface BillingCurrencyTotal {
+  currency: string;
+  amount: number;
+}
+
 export interface BillingLedger {
   summary: {
     settledPayments: number;
-    settledAmount: number;
-    payoutPaidAmount: number;
-    payoutPendingAmount: number;
+    currencyTotals: BillingCurrencyTotal[];
+    payoutPaidCurrencyTotals: BillingCurrencyTotal[];
+    payoutPendingCurrencyTotals: BillingCurrencyTotal[];
     payoutPendingCount: number;
   };
   payments: BillingLedgerPayment[];
