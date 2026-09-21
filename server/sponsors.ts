@@ -643,18 +643,18 @@ sponsorsRouter.get(
   "/deals/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!user || !["organizer","sponsor"].includes(user.role)) {
+    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    if (!["active","trialing"].includes(user.subscription_status || "")) {
-      return res.status(402).json({ error: "Paid workspace subscription required." });
-    }
+    const accountContext = await paidWorkspaceContext(req, res, user.role);
+    if (!accountContext) return;
+    const accountId = accountContext.accountId;
 
     const rows = await dbAll<SponsorshipDealRow>(
       user.role === "organizer"
         ? "SELECT * FROM sponsorship_deals WHERE organizer_id=? ORDER BY updated_at DESC"
         : "SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY updated_at DESC",
-      [req.userId!]
+      [accountId]
     );
     const deals = [];
     for (const row of rows) {
@@ -678,21 +678,21 @@ sponsorsRouter.patch(
   "/deals/:id",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!user || !["organizer","sponsor"].includes(user.role)) {
+    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    if (!["active","trialing"].includes(user.subscription_status || "")) {
-      return res.status(402).json({ error: "Paid workspace subscription required." });
-    }
+    const accountContext = await paidWorkspaceContext(req, res, user.role, true);
+    if (!accountContext) return;
+    const accountId = accountContext.accountId;
     const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
-    if (!deal || (deal.organizer_id !== req.userId && deal.sponsor_id !== req.userId)) {
+    if (!deal || (deal.organizer_id !== accountId && deal.sponsor_id !== accountId)) {
       return res.status(404).json({ error: "Deal not found." });
     }
 
     const body = req.body || {};
     const updates: string[] = [];
     const args: any[] = [];
-    const isOrganizerParty = deal.organizer_id === req.userId;
+    const isOrganizerParty = deal.organizer_id === accountId;
     const hasOrganizerOnlyFields =
       body.agreedAmount !== undefined ||
       body.currency !== undefined ||
@@ -785,8 +785,15 @@ sponsorsRouter.patch(
       "SELECT * FROM sponsorship_deal_updates WHERE deal_id=? ORDER BY created_at ASC",
       [deal.id]
     );
-    const otherId = req.userId === deal.organizer_id ? deal.sponsor_id : deal.organizer_id;
-    await createNotification(otherId, "sponsorship", "Sponsorship Deal Room updated", `${deal.opportunity_title} has new commercial terms or status.`);
+    const otherIsSponsor = accountId === deal.organizer_id;
+    const otherId = otherIsSponsor ? deal.sponsor_id : deal.organizer_id;
+    await notifyPaidAccount(
+      otherId,
+      otherIsSponsor ? "sponsor" : "organizer",
+      "sponsorship",
+      "Sponsorship Deal Room updated",
+      `${deal.opportunity_title} has new commercial terms or status.`
+    );
     res.json({ deal: toSponsorshipDealDTO(updated, updatesRows) });
   })
 );
@@ -794,8 +801,15 @@ sponsorsRouter.patch(
 sponsorsRouter.post(
   "/deals/:id/updates",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+    const accountContext = await paidWorkspaceContext(req, res, user.role, true);
+    if (!accountContext) return;
+    const accountId = accountContext.accountId;
     const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
-    if (!deal || (deal.organizer_id !== req.userId && deal.sponsor_id !== req.userId)) {
+    if (!deal || (deal.organizer_id !== accountId && deal.sponsor_id !== accountId)) {
       return res.status(404).json({ error: "Deal not found." });
     }
     const textValue = typeof req.body?.text === "string" ? req.body.text.trim() : "";
@@ -811,8 +825,15 @@ sponsorsRouter.post(
       [id, deal.id, req.userId!, kind, textValue, url || null]
     );
     await dbRun("UPDATE sponsorship_deals SET updated_at=datetime('now') WHERE id=?", [deal.id]);
-    const otherId = req.userId === deal.organizer_id ? deal.sponsor_id : deal.organizer_id;
-    await createNotification(otherId, "sponsorship", "New Deal Room update", `${deal.opportunity_title}: ${textValue.slice(0, 140)}`);
+    const otherIsSponsor = accountId === deal.organizer_id;
+    const otherId = otherIsSponsor ? deal.sponsor_id : deal.organizer_id;
+    await notifyPaidAccount(
+      otherId,
+      otherIsSponsor ? "sponsor" : "organizer",
+      "sponsorship",
+      "New Deal Room update",
+      `${deal.opportunity_title}: ${textValue.slice(0, 140)}`
+    );
     const row = (await dbGet<SponsorshipDealUpdateRow>("SELECT * FROM sponsorship_deal_updates WHERE id=?", [id]))!;
     res.status(201).json({
       update: {
@@ -830,11 +851,9 @@ sponsorsRouter.post(
 sponsorsRouter.get(
   "/needs/analytics",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const organizer = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!organizer || organizer.role !== "organizer") return res.status(403).json({ error: "Organizer account required." });
-    if (!["active","trialing"].includes(organizer.subscription_status || "")) {
-      return res.status(402).json({ error: "Organizer Pro subscription required." });
-    }
+    const organizerContext = await paidWorkspaceContext(req, res, "organizer");
+    if (!organizerContext) return;
+    const accountId = organizerContext.accountId;
 
     const rows = await dbAll<any>(
       `SELECT n.id,n.title,n.conference_id,n.conference_title,n.price_amount,n.price_on_request,
@@ -854,7 +873,7 @@ sponsorsRouter.get(
         WHERE n.organizer_id=?
         GROUP BY n.id
         ORDER BY n.created_at DESC`,
-      [req.userId!]
+      [accountId]
     );
     const needs = rows.map((row: any) => ({
       needId: row.id,
