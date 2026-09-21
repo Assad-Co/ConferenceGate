@@ -54,6 +54,9 @@ async function main() {
   // This is DB-only and gives the Organizer page cards before slower website enrichment runs.
   await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
   await runScript('scripts/enrichExternalSponsorships.mjs');
+  // Reconcile Sponsor Pro saved opportunities only after the stored sponsorship catalog has been
+  // refreshed. This is DB-only and never delays a customer page with live web work.
+  await runScript('scripts/refreshSponsorWatchlistAlerts.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
