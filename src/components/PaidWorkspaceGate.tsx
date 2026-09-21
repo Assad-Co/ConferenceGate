@@ -7,6 +7,8 @@ interface PaidWorkspaceGateProps {
   status?: string;
   plan?: string | null;
   onRefreshAccount?: () => void | Promise<void>;
+  isTeamSeat?: boolean;
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | null;
 }
 
 export const PaidWorkspaceGate: React.FC<PaidWorkspaceGateProps> = ({
@@ -14,10 +16,14 @@ export const PaidWorkspaceGate: React.FC<PaidWorkspaceGateProps> = ({
   status = 'required',
   plan,
   onRefreshAccount,
+  isTeamSeat = false,
+  workspaceRole = null,
 }) => {
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const label = role === 'organizer' ? 'Organizer Pro' : 'Sponsor Pro';
+  const needsReactivation = status === 'past_due' || status === 'canceled' || status === 'paused';
+  const actionLabel = needsReactivation ? `Reactivate ${label}` : `Subscribe to ${label}`;
 
   const openCheckout = async () => {
     setOpening(true);
@@ -47,9 +53,11 @@ export const PaidWorkspaceGate: React.FC<PaidWorkspaceGateProps> = ({
           </span>
           <h1 className="text-2xl font-extrabold text-slate-900 mt-3">{label}</h1>
           <p className="text-sm text-slate-600 mt-2 max-w-xl">
-            {role === 'organizer'
-              ? 'Create and operate conferences, recruit professionals, manage abstracts, publish sponsorship needs, communicate, and track analytics.'
-              : 'Access full sponsorship opportunities, personalized matching, organizer inquiries, saved opportunities, alerts, and sponsorship workflow.'}
+            {isTeamSeat
+              ? `This ${label} team seat inherits access from the workspace owner's subscription. The owner needs to reactivate the workspace before this seat can continue.`
+              : role === 'organizer'
+                ? 'Create and operate conferences, recruit professionals, manage abstracts, publish sponsorship needs, communicate, and track analytics.'
+                : 'Access full sponsorship opportunities, personalized matching, organizer inquiries, saved opportunities, alerts, and sponsorship workflow.'}
           </p>
         </div>
 
@@ -82,24 +90,27 @@ export const PaidWorkspaceGate: React.FC<PaidWorkspaceGateProps> = ({
           <div className="text-[11px] text-slate-500">
             Current status: <strong className="text-slate-800">{status}</strong>
             {plan ? <> · Plan: <strong className="text-slate-800">{plan}</strong></> : null}
+            {workspaceRole ? <> · Workspace role: <strong className="text-slate-800">{workspaceRole}</strong></> : null}
           </div>
 
           {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">{error}</div>}
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={openCheckout}
-              disabled={opening}
-              className="flex-1 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-              Subscribe to {label}
-            </button>
+            {!isTeamSeat && (
+              <button
+                onClick={openCheckout}
+                disabled={opening}
+                className="flex-1 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {opening ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                {actionLabel}
+              </button>
+            )}
             <button
               onClick={() => onRefreshAccount?.()}
-              className="px-5 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer"
+              className={`${isTeamSeat ? 'flex-1' : 'px-5'} py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer`}
             >
-              I completed payment — refresh
+              {isTeamSeat ? 'Refresh workspace access' : 'Payment completed — refresh access'}
             </button>
           </div>
         </div>
