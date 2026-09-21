@@ -279,16 +279,30 @@ billingRouter.get(
     }
     const accountId = context.accountId;
 
-    const payments = await dbGet<{ count: number; total: number | null }>(
+    const payments = await dbGet<{ count: number }>(
       row.role === "organizer"
-        ? `SELECT COUNT(*) as count, COALESCE(SUM(p.amount),0) as total
+        ? `SELECT COUNT(*) as count
              FROM sponsorship_payments p
              JOIN sponsorship_deals d ON d.id=p.deal_id
             WHERE d.organizer_id=? AND p.status='settled'`
-        : `SELECT COUNT(*) as count, COALESCE(SUM(p.amount),0) as total
+        : `SELECT COUNT(*) as count
              FROM sponsorship_payments p
              JOIN sponsorship_deals d ON d.id=p.deal_id
             WHERE d.sponsor_id=? AND p.status='settled'`,
+      [accountId]
+    );
+    const paymentCurrencyTotals = await dbAll<{ currency: string; amount: number | null }>(
+      row.role === "organizer"
+        ? `SELECT p.currency as currency, COALESCE(SUM(p.amount),0) as amount
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.organizer_id=? AND p.status='settled'
+            GROUP BY p.currency ORDER BY p.currency`
+        : `SELECT p.currency as currency, COALESCE(SUM(p.amount),0) as amount
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.sponsor_id=? AND p.status='settled'
+            GROUP BY p.currency ORDER BY p.currency`,
       [accountId]
     );
     const recent = await dbAll<any>(
@@ -307,23 +321,49 @@ billingRouter.get(
 
     const payoutSummary =
       row.role === "organizer"
-        ? await dbGet<{ paid_amount: number | null; pending_amount: number | null; pending_count: number }>(
-            `SELECT
-                COALESCE(SUM(CASE WHEN status='paid' THEN payout_amount ELSE 0 END),0) AS paid_amount,
-                COALESCE(SUM(CASE WHEN status IN ('pending','held') THEN payout_amount ELSE 0 END),0) AS pending_amount,
-                SUM(CASE WHEN status IN ('pending','held') THEN 1 ELSE 0 END) AS pending_count
+        ? await dbGet<{ pending_count: number }>(
+            `SELECT SUM(CASE WHEN status IN ('pending','held') THEN 1 ELSE 0 END) AS pending_count
                FROM sponsorship_payout_obligations
               WHERE organizer_id=?`,
             [accountId]
           )
         : undefined;
+    const payoutPaidCurrencyTotals =
+      row.role === "organizer"
+        ? await dbAll<{ currency: string; amount: number | null }>(
+            `SELECT currency, COALESCE(SUM(payout_amount),0) as amount
+               FROM sponsorship_payout_obligations
+              WHERE organizer_id=? AND status='paid'
+              GROUP BY currency ORDER BY currency`,
+            [accountId]
+          )
+        : [];
+    const payoutPendingCurrencyTotals =
+      row.role === "organizer"
+        ? await dbAll<{ currency: string; amount: number | null }>(
+            `SELECT currency, COALESCE(SUM(payout_amount),0) as amount
+               FROM sponsorship_payout_obligations
+              WHERE organizer_id=? AND status IN ('pending','held')
+              GROUP BY currency ORDER BY currency`,
+            [accountId]
+          )
+        : [];
 
     res.json({
       summary: {
         settledPayments: Number(payments?.count || 0),
-        settledAmount: Number(payments?.total || 0),
-        payoutPaidAmount: Number(payoutSummary?.paid_amount || 0),
-        payoutPendingAmount: Number(payoutSummary?.pending_amount || 0),
+        currencyTotals: paymentCurrencyTotals.map((item) => ({
+          currency: String(item.currency || "USD").toUpperCase(),
+          amount: Number(item.amount || 0),
+        })),
+        payoutPaidCurrencyTotals: payoutPaidCurrencyTotals.map((item) => ({
+          currency: String(item.currency || "USD").toUpperCase(),
+          amount: Number(item.amount || 0),
+        })),
+        payoutPendingCurrencyTotals: payoutPendingCurrencyTotals.map((item) => ({
+          currency: String(item.currency || "USD").toUpperCase(),
+          amount: Number(item.amount || 0),
+        })),
         payoutPendingCount: Number(payoutSummary?.pending_count || 0),
       },
       payments: recent.map((payment: any) => ({
