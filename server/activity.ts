@@ -1044,7 +1044,7 @@ activityRouter.post(
     if (!organizerContext) return;
     const invitation = await dbGet<ProfessionalInvitationRow>(
       "SELECT * FROM professional_invitations WHERE id = ? AND organizer_id = ?",
-      [req.params.id, req.userId!]
+      [req.params.id, organizerContext.accountId]
     );
     if (!invitation) return res.status(404).json({ error: "Invitation not found" });
     if (invitation.status !== "accepted") {
