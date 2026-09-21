@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { dbAll, dbGet, dbRun, UserRow } from "./db";
+import { resolvePaidAccountContext } from "./workspaceAccess";
 
 export const billingRouter = Router();
 
@@ -169,13 +170,29 @@ billingRouter.get(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
     if (!row) return res.status(404).json({ error: "Account not found" });
+    if (row.role === "professional") {
+      return res.json({
+        role: row.role,
+        status: "free",
+        plan: "professional_free",
+        provider: null,
+        periodEnd: null,
+        hasPaidAccess: true,
+        workspaceId: null,
+        workspaceRole: null,
+      });
+    }
+    const context = await resolvePaidAccountContext(req.userId!, row.role);
+    const billingOwner = context?.accountOwner || row;
     res.json({
       role: row.role,
-      status: row.role === "professional" ? "free" : row.subscription_status || "required",
-      plan: row.subscription_plan || (row.role === "professional" ? "professional_free" : null),
-      provider: row.subscription_provider || null,
-      periodEnd: row.subscription_period_end || null,
-      hasPaidAccess: hasPaidAccess(row),
+      status: billingOwner.subscription_status || "required",
+      plan: billingOwner.subscription_plan || null,
+      provider: billingOwner.subscription_provider || null,
+      periodEnd: billingOwner.subscription_period_end || null,
+      hasPaidAccess: Boolean(context?.paid),
+      workspaceId: context?.workspaceId || null,
+      workspaceRole: context?.workspaceRole || null,
     });
   })
 );
@@ -183,13 +200,15 @@ billingRouter.get(
 billingRouter.get(
   "/ledger/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [accountId]);
     if (!row || !["organizer","sponsor"].includes(row.role)) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    if (!hasPaidAccess(row)) {
+    const context = await resolvePaidAccountContext(req.userId!, row.role);
+    if (!context?.paid) {
       return res.status(402).json({ error: "Paid workspace subscription required." });
     }
+    const accountId = context.accountId;
 
     const payments = await dbGet<{ count: number; total: number | null }>(
       row.role === "organizer"
@@ -201,7 +220,7 @@ billingRouter.get(
              FROM sponsorship_payments p
              JOIN sponsorship_deals d ON d.id=p.deal_id
             WHERE d.sponsor_id=? AND p.status='settled'`,
-      [req.userId!]
+      [accountId]
     );
     const recent = await dbAll<any>(
       row.role === "organizer"
@@ -211,7 +230,7 @@ billingRouter.get(
         : `SELECT p.*,d.conference_title,d.opportunity_title
              FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
             WHERE d.sponsor_id=? ORDER BY p.settled_at DESC LIMIT 50`,
-      [req.userId!]
+      [accountId]
     );
 
     res.json({
@@ -243,8 +262,14 @@ billingRouter.get(
     if (row.role === "professional") {
       return res.status(400).json({ error: "Professional accounts are free and do not require checkout." });
     }
-    if (hasPaidAccess(row)) {
+    const context = await resolvePaidAccountContext(req.userId!, row.role);
+    if (context?.paid) {
       return res.json({ checkoutUrl: null, alreadyActive: true });
+    }
+    if (context?.workspaceId && context.accountId !== row.id) {
+      return res.status(409).json({
+        error: "This seat belongs to a team workspace. The workspace owner must reactivate the paid subscription.",
+      });
     }
 
     const checkoutUrl =
