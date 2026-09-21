@@ -16,7 +16,8 @@ Set these in the Render service environment. Never commit their values.
 | --- | --- |
 | `ORGANIZER_CHECKOUT_URL` | Hosted checkout URL for Organizer Pro |
 | `SPONSOR_CHECKOUT_URL` | Hosted checkout URL for Sponsor Pro |
-| `BILLING_SYNC_SECRET` | Secret for the protected server-to-server normalization endpoints |
+| `BILLING_SYNC_SECRET` | Secret for the protected server-to-server normalization and payout-confirmation endpoints |
+| `SPONSORSHIP_PLATFORM_FEE_BPS` | Optional platform fee in basis points applied when a sponsor payment creates an organizer payout obligation; defaults to 0 |
 | `FASTSPRING_WEBHOOK_SECRET` | FastSpring HMAC SHA-256 webhook secret, if FastSpring is used |
 | `PADDLE_WEBHOOK_SECRET` | Paddle notification-destination secret, if Paddle is used |
 | `PADDLE_WEBHOOK_TOLERANCE_SECONDS` | Optional signature timestamp tolerance; defaults to 5 seconds |
@@ -118,6 +119,41 @@ POST /api/billing/deal-payment-sync
 ```
 
 They must never be called directly from browser code.
+
+## Organizer payout obligations
+
+ConferenceGate treats sponsor collection and organizer payout as two different financial events.
+
+When a sponsorship Deal Room payment is verified, ConferenceGate creates a payout obligation for the organizer. The obligation stores the gross sponsor payment, optional platform fee, payout amount, currency, and payout status. It starts as `pending`.
+
+A collected sponsor payment **does not** mark the organizer payout as paid.
+
+A trusted payout adapter confirms an organizer payout through:
+
+```text
+POST /api/billing/payout-sync
+x-billing-sync-secret: <BILLING_SYNC_SECRET>
+```
+
+with a provider event ID, Deal Room ID, payout reference, and `paid=true`. That is the only path that changes a payout obligation to `paid`.
+
+The Organizer Payment Ledger displays Sponsor-Paid Amount, Payout Pending, and Organizer Paid Out separately and never combines different currencies into one total.
+
+## Production readiness check
+
+From the Render shell:
+
+```text
+npm run production:readiness
+```
+
+For a strict pass/fail check:
+
+```text
+npm run production:readiness:strict
+```
+
+The script prints only booleans/configuration status; it never prints secret values.
 
 ## Deployment validation
 
