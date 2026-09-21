@@ -43,6 +43,7 @@ import {
 } from '../api/sponsors';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
+import { BillingLedgerPanel } from './BillingLedgerPanel';
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
@@ -78,7 +79,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'payments' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -526,6 +527,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         >
           <Users className="w-3.5 h-3.5" />
           Team & Access
+        </button>
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'payments'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <DollarSign className="w-3.5 h-3.5" />
+          Payment Ledger
         </button>
         <button
           onClick={() => setActiveTab('roi')}
@@ -1144,6 +1156,10 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Paid Sponsor Pro: Team & Access */}
       {activeTab === 'workspace' && (
         <WorkspaceTeamPanel accountLabel="Sponsor Pro" />
+      )}
+
+      {activeTab === 'payments' && (
+        <BillingLedgerPanel perspective="sponsor" />
       )}
 
       {/* Sponsor Pro: real portfolio analytics */}
