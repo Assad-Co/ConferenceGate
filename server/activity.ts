@@ -890,7 +890,7 @@ activityRouter.delete(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     await dbRun(
       "DELETE FROM professional_opportunity_interests WHERE opportunity_id = ? AND professional_id = ?",
-      [req.params.id, organizerContext.accountId]
+      [req.params.id, req.userId!]
     );
     res.json({ interested: false });
   })
