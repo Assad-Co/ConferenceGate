@@ -32,6 +32,9 @@ export interface AuthUser {
   subscriptionProvider: string | null;
   subscriptionPeriodEnd: string | null;
   hasPaidAccess: boolean;
+  workspaceId: string | null;
+  workspaceRole: 'owner' | 'admin' | 'member' | 'viewer' | null;
+  workspaceOwnerId: string | null;
   reviewerAvailable: boolean;
   professionalExpertise: string[];
   technicalSpecialization: string[];
