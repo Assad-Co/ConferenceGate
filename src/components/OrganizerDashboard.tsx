@@ -51,6 +51,7 @@ import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
+import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import {
   sendBroadcast,
   fetchMyBroadcasts,
@@ -260,7 +261,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'communications' | 'analytics'
+    'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'communications' | 'workspace' | 'analytics'
   >('overview');
 
   const [professionalSearch, setProfessionalSearch] = useState({
@@ -1495,6 +1496,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length + externalSponsorshipOpportunities.length})` },
           { id: 'communications', label: 'Communications Hub' },
+          { id: 'workspace', label: 'Team & Access' },
           { id: 'analytics', label: 'Event Analytics' },
         ].map((tab) => (
           <button
@@ -3904,6 +3906,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Paid Organizer Pro: Team & Access */}
+      {activeTab === 'workspace' && (
+        <WorkspaceTeamPanel accountLabel="Organizer Pro" />
       )}
 
       {/* Tab 7: Communications Hub */}
