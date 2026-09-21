@@ -469,6 +469,21 @@ export async function initDb(): Promise<void> {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS sponsor_saved_opportunities (
+      id TEXT PRIMARY KEY,
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      source_type TEXT NOT NULL CHECK(source_type IN ('internal_need','package','external_catalog')),
+      source_id TEXT NOT NULL,
+      conference_id TEXT,
+      conference_title TEXT NOT NULL,
+      title TEXT NOT NULL,
+      snapshot TEXT NOT NULL DEFAULT '{}',
+      alert_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(sponsor_id, source_type, source_id)
+    );
+
     CREATE TABLE IF NOT EXISTS sponsorship_needs (
       id TEXT PRIMARY KEY,
       conference_id TEXT NOT NULL,
@@ -634,6 +649,7 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE INDEX IF NOT EXISTS idx_sponsor_saved_opportunities_sponsor ON sponsor_saved_opportunities(sponsor_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_needs_status ON sponsorship_needs(status, deadline);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_need_inquiries_need ON sponsorship_need_inquiries(need_id, status);
     CREATE INDEX IF NOT EXISTS idx_sponsorship_deals_organizer ON sponsorship_deals(organizer_id, status);
@@ -1035,6 +1051,20 @@ export interface SponsorPreferenceRow {
   budget_min: number | null;
   budget_max: number | null;
   alert_frequency: "instant" | "daily" | "weekly";
+  updated_at: string;
+}
+
+export interface SponsorSavedOpportunityRow {
+  id: string;
+  sponsor_id: string;
+  source_type: "internal_need" | "package" | "external_catalog";
+  source_id: string;
+  conference_id: string | null;
+  conference_title: string;
+  title: string;
+  snapshot: string;
+  alert_enabled: number;
+  created_at: string;
   updated_at: string;
 }
 
