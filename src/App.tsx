@@ -1580,6 +1580,12 @@ export function App() {
               role="organizer"
               status={authUser.subscriptionStatus}
               plan={authUser.subscriptionPlan}
+              workspaceRole={authUser.workspaceRole}
+              isTeamSeat={Boolean(
+                authUser.workspaceId &&
+                authUser.workspaceOwnerId &&
+                authUser.workspaceOwnerId !== authUser.id
+              )}
               onRefreshAccount={handleRefreshAccount}
             />
           )
@@ -1603,6 +1609,12 @@ export function App() {
               role="sponsor"
               status={authUser.subscriptionStatus}
               plan={authUser.subscriptionPlan}
+              workspaceRole={authUser.workspaceRole}
+              isTeamSeat={Boolean(
+                authUser.workspaceId &&
+                authUser.workspaceOwnerId &&
+                authUser.workspaceOwnerId !== authUser.id
+              )}
               onRefreshAccount={handleRefreshAccount}
             />
           )
