@@ -31,13 +31,13 @@ async function ensurePaidWorkspace(userId: string): Promise<{
   membership: AccountWorkspaceMemberRow;
 }> {
   const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
-  if (!user || !["organizer", "sponsor"].includes(user.role)) {
+  if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
     throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
   }
-  if (!["active", "trialing"].includes(user.subscription_status || "")) {
-    throw Object.assign(new Error("Paid workspace subscription required."), { status: 402 });
-  }
 
+  // Resolve an existing team membership before checking billing. A member seat inherits the
+  // workspace owner's paid subscription; requiring the member's personal account to be paid would
+  // defeat the purpose of a multi-seat account.
   let membership = await dbGet<AccountWorkspaceMemberRow>(
     `SELECT m.*
        FROM account_workspace_members m
@@ -48,38 +48,54 @@ async function ensurePaidWorkspace(userId: string): Promise<{
     [userId, user.role]
   );
 
-  if (!membership) {
-    let workspace = await dbGet<AccountWorkspaceRow>(
-      "SELECT * FROM account_workspaces WHERE owner_id=? AND account_role=?",
-      [userId, user.role]
+  if (membership) {
+    const workspace = await dbGet<AccountWorkspaceRow>(
+      "SELECT * FROM account_workspaces WHERE id=?",
+      [membership.workspace_id]
     );
     if (!workspace) {
-      const workspaceId = `ws_${crypto.randomUUID()}`;
-      const defaultName =
-        user.organization?.trim() ||
-        `${user.name}'s ${user.role === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
-      const seatLimit = Math.max(2, Math.min(1000, Number(process.env.WORKSPACE_SEAT_LIMIT || 10)));
-      await dbRun(
-        "INSERT INTO account_workspaces(id,owner_id,account_role,name,seat_limit) VALUES(?,?,?,?,?)",
-        [workspaceId, userId, user.role, defaultName, seatLimit]
-      );
-      workspace = (await dbGet<AccountWorkspaceRow>("SELECT * FROM account_workspaces WHERE id=?", [workspaceId]))!;
+      throw Object.assign(new Error("Workspace not found."), { status: 404 });
     }
-    const memberId = `wsm_${crypto.randomUUID()}`;
-    await dbRun(
-      "INSERT OR IGNORE INTO account_workspace_members(id,workspace_id,user_id,member_role,status) VALUES(?,?,?,'owner','active')",
-      [memberId, workspace.id, userId]
-    );
-    membership = (await dbGet<AccountWorkspaceMemberRow>(
-      "SELECT * FROM account_workspace_members WHERE workspace_id=? AND user_id=?",
-      [workspace.id, userId]
-    ))!;
+    const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [workspace.owner_id]);
+    if (!owner || !["active", "trialing"].includes(owner.subscription_status || "")) {
+      throw Object.assign(new Error("The workspace owner's paid subscription is not active."), { status: 402 });
+    }
+    return { user, workspace, membership };
   }
 
-  const workspace = (await dbGet<AccountWorkspaceRow>(
-    "SELECT * FROM account_workspaces WHERE id=?",
-    [membership.workspace_id]
+  // No team membership exists yet: this account can create its own workspace only if its personal
+  // Organizer/Sponsor subscription is active or trialing.
+  if (!["active", "trialing"].includes(user.subscription_status || "")) {
+    throw Object.assign(new Error("Paid workspace subscription required."), { status: 402 });
+  }
+
+  let workspace = await dbGet<AccountWorkspaceRow>(
+    "SELECT * FROM account_workspaces WHERE owner_id=? AND account_role=?",
+    [userId, user.role]
+  );
+  if (!workspace) {
+    const workspaceId = `ws_${crypto.randomUUID()}`;
+    const defaultName =
+      user.organization?.trim() ||
+      `${user.name}'s ${user.role === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
+    const seatLimit = Math.max(2, Math.min(1000, Number(process.env.WORKSPACE_SEAT_LIMIT || 10)));
+    await dbRun(
+      "INSERT INTO account_workspaces(id,owner_id,account_role,name,seat_limit) VALUES(?,?,?,?,?)",
+      [workspaceId, userId, user.role, defaultName, seatLimit]
+    );
+    workspace = (await dbGet<AccountWorkspaceRow>("SELECT * FROM account_workspaces WHERE id=?", [workspaceId]))!;
+  }
+
+  const memberId = `wsm_${crypto.randomUUID()}`;
+  await dbRun(
+    "INSERT OR IGNORE INTO account_workspace_members(id,workspace_id,user_id,member_role,status) VALUES(?,?,?,'owner','active')",
+    [memberId, workspace.id, userId]
+  );
+  membership = (await dbGet<AccountWorkspaceMemberRow>(
+    "SELECT * FROM account_workspace_members WHERE workspace_id=? AND user_id=?",
+    [workspace.id, userId]
   ))!;
+
   return { user, workspace, membership };
 }
 
