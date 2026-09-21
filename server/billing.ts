@@ -4,6 +4,7 @@ import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { resolvePaidAccountContext } from "./workspaceAccess";
+import { ensurePayoutObligation } from "./payouts";
 
 export const billingRouter = Router();
 
@@ -138,6 +139,8 @@ billingRouter.post(
       );
     }
 
+    await ensurePayoutObligation(deal, provider, paymentReference, amount, currency);
+
     await dbRun(
       "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'payment')",
       [`sev_${crypto.randomUUID()}`, deal.need_id, deal.sponsor_id]
@@ -158,6 +161,72 @@ billingRouter.post(
       "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
       [`bpe_${crypto.randomUUID()}`, provider, eventId, "deal.payment.settled", dealId, payloadHash]
     );
+
+    res.json({ ok: true, duplicate: false });
+  })
+);
+
+// Provider-confirmed organizer payout sync. Sponsor payment and organizer payout are deliberately
+// separate states: a collected sponsorship payment never implies that the organizer has been paid.
+billingRouter.post(
+  "/payout-sync",
+  asyncHandler(async (req, res: Response) => {
+    const expected = process.env.BILLING_SYNC_SECRET?.trim();
+    const supplied = String(req.header("x-billing-sync-secret") || "");
+    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+
+    const body = req.body || {};
+    const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
+    const eventId = typeof body.eventId === "string" ? body.eventId.trim() : "";
+    const dealId = typeof body.dealId === "string" ? body.dealId.trim() : "";
+    const payoutReference =
+      typeof body.payoutReference === "string" ? body.payoutReference.trim() : "";
+    if (!provider || !eventId || !dealId || !payoutReference || body.paid !== true) {
+      return res.status(400).json({
+        error: "provider, eventId, dealId, payoutReference and paid=true are required",
+      });
+    }
+
+    const duplicate = await dbGet<{ id: string }>(
+      "SELECT id FROM billing_provider_events WHERE provider=? AND event_id=?",
+      [provider, eventId]
+    );
+    if (duplicate) return res.json({ ok: true, duplicate: true });
+
+    const obligation = await dbGet<any>(
+      "SELECT * FROM sponsorship_payout_obligations WHERE deal_id=?",
+      [dealId]
+    );
+    if (!obligation) {
+      return res.status(404).json({ error: "Payout obligation not found for this deal." });
+    }
+    if (obligation.status === "paid") {
+      return res.json({ ok: true, duplicate: true });
+    }
+
+    await dbRun(
+      `UPDATE sponsorship_payout_obligations
+          SET status='paid',payout_reference=?,paid_at=datetime('now'),updated_at=datetime('now')
+        WHERE id=?`,
+      [payoutReference, obligation.id]
+    );
+
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    await dbRun(
+      "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
+      [`bpe_${crypto.randomUUID()}`, provider, eventId, "deal.payout.paid", dealId, payloadHash]
+    );
+
+    await dbRun(
+      "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
+      [
+        `sdu_${crypto.randomUUID()}`,
+        dealId,
+        obligation.organizer_id,
+        "payment",
+        `Organizer payout confirmed by ${provider}. Reference: ${payoutReference}`,
+      ]
+    ).catch(() => {});
 
     res.json({ ok: true, duplicate: false });
   })
@@ -224,8 +293,11 @@ billingRouter.get(
     );
     const recent = await dbAll<any>(
       row.role === "organizer"
-        ? `SELECT p.*,d.conference_title,d.opportunity_title
-             FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
+        ? `SELECT p.*,d.conference_title,d.opportunity_title,
+                  o.status as payout_status,o.payout_amount,o.platform_fee_amount,o.payout_reference,o.paid_at
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+             LEFT JOIN sponsorship_payout_obligations o ON o.deal_id=d.id
             WHERE d.organizer_id=? ORDER BY p.settled_at DESC LIMIT 50`
         : `SELECT p.*,d.conference_title,d.opportunity_title
              FROM sponsorship_payments p JOIN sponsorship_deals d ON d.id=p.deal_id
@@ -233,10 +305,26 @@ billingRouter.get(
       [accountId]
     );
 
+    const payoutSummary =
+      row.role === "organizer"
+        ? await dbGet<{ paid_amount: number | null; pending_amount: number | null; pending_count: number }>(
+            `SELECT
+                COALESCE(SUM(CASE WHEN status='paid' THEN payout_amount ELSE 0 END),0) AS paid_amount,
+                COALESCE(SUM(CASE WHEN status IN ('pending','held') THEN payout_amount ELSE 0 END),0) AS pending_amount,
+                SUM(CASE WHEN status IN ('pending','held') THEN 1 ELSE 0 END) AS pending_count
+               FROM sponsorship_payout_obligations
+              WHERE organizer_id=?`,
+            [accountId]
+          )
+        : undefined;
+
     res.json({
       summary: {
         settledPayments: Number(payments?.count || 0),
         settledAmount: Number(payments?.total || 0),
+        payoutPaidAmount: Number(payoutSummary?.paid_amount || 0),
+        payoutPendingAmount: Number(payoutSummary?.pending_amount || 0),
+        payoutPendingCount: Number(payoutSummary?.pending_count || 0),
       },
       payments: recent.map((payment: any) => ({
         id: payment.id,
@@ -249,6 +337,11 @@ billingRouter.get(
         currency: payment.currency,
         status: payment.status,
         settledAt: payment.settled_at,
+        payoutStatus: payment.payout_status || null,
+        payoutAmount: payment.payout_amount === null || payment.payout_amount === undefined ? null : Number(payment.payout_amount),
+        platformFeeAmount: payment.platform_fee_amount === null || payment.platform_fee_amount === undefined ? null : Number(payment.platform_fee_amount),
+        payoutReference: payment.payout_reference || null,
+        payoutPaidAt: payment.paid_at || null,
       })),
     });
   })
