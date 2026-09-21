@@ -115,11 +115,25 @@ async function startServer() {
   // Liveness + database readiness check. This endpoint exposes no secrets and is safe for
   // Render health monitoring.
   app.get("/api/health", async (_req, res) => {
+    const release =
+      process.env.RENDER_GIT_COMMIT?.trim() ||
+      process.env.GIT_COMMIT_SHA?.trim() ||
+      "local";
     try {
       await dbGet<{ ok: number }>("SELECT 1 as ok");
-      res.json({ status: "ok", app: "Conference Gate", database: "ready" });
+      res.json({
+        status: "ok",
+        app: "Conference Gate",
+        database: "ready",
+        release: release === "local" ? release : release.slice(0, 7),
+      });
     } catch {
-      res.status(503).json({ status: "degraded", app: "Conference Gate", database: "unavailable" });
+      res.status(503).json({
+        status: "degraded",
+        app: "Conference Gate",
+        database: "unavailable",
+        release: release === "local" ? release : release.slice(0, 7),
+      });
     }
   });
 
