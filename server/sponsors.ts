@@ -8,6 +8,7 @@ import {
   SponsorshipApplicationRow,
   SponsorReviewRow,
   SponsorPreferenceRow,
+  SponsorSavedOpportunityRow,
   SponsorshipNeedRow,
   SponsorshipNeedInquiryRow,
   SponsorshipDealRow,
@@ -165,6 +166,21 @@ function sponsorNeedMatch(
   return weight ? Math.round((weighted / weight) * 100) : 0;
 }
 
+function toSavedOpportunityDTO(row: SponsorSavedOpportunityRow) {
+  return {
+    id: row.id,
+    sourceType: row.source_type,
+    sourceId: row.source_id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    title: row.title,
+    snapshot: safeJson(row.snapshot, {}),
+    alertEnabled: Boolean(row.alert_enabled),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function toSponsorshipDealDTO(
   row: SponsorshipDealRow,
   updates: SponsorshipDealUpdateRow[] = [],
@@ -290,6 +306,169 @@ function toSponsorshipNeedDTO(row: SponsorshipNeedRow, matchScore?: number) {
     matchScore: matchScore ?? null,
   };
 }
+
+// Sponsor Pro shared watchlist. Saved items belong to the paid sponsor workspace, so every
+// active team seat sees the same shortlist and per-item alert preference.
+sponsorsRouter.get(
+  "/watchlist/mine",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
+    const rows = await dbAll<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE sponsor_id=? ORDER BY updated_at DESC",
+      [sponsorContext.accountId]
+    );
+    res.json({ items: rows.map(toSavedOpportunityDTO) });
+  })
+);
+
+sponsorsRouter.put(
+  "/watchlist",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
+    const sourceType =
+      req.body?.sourceType === "internal_need" ||
+      req.body?.sourceType === "package" ||
+      req.body?.sourceType === "external_catalog"
+        ? req.body.sourceType
+        : null;
+    const sourceId = typeof req.body?.sourceId === "string" ? req.body.sourceId.trim() : "";
+    if (!sourceType || !sourceId) {
+      return res.status(400).json({ error: "sourceType and sourceId are required." });
+    }
+
+    let conferenceId: string | null = null;
+    let conferenceTitle = "";
+    let title = "";
+    let snapshot: Record<string, unknown> = {};
+
+    if (sourceType === "internal_need") {
+      const need = await dbGet<SponsorshipNeedRow>(
+        "SELECT * FROM sponsorship_needs WHERE id=? AND status='active'",
+        [sourceId]
+      );
+      if (!need) return res.status(404).json({ error: "Sponsorship opportunity not found." });
+      const preference = await dbGet<SponsorPreferenceRow>(
+        "SELECT * FROM sponsor_preferences WHERE sponsor_id=?",
+        [accountId]
+      );
+      conferenceId = need.conference_id;
+      conferenceTitle = need.conference_title;
+      title = need.title;
+      snapshot = toSponsorshipNeedDTO(need, sponsorNeedMatch(preference, need));
+    } else if (sourceType === "package") {
+      const pkg = await dbGet<SponsorshipPackageRow>(
+        "SELECT * FROM sponsorship_packages WHERE id=?",
+        [sourceId]
+      );
+      if (!pkg) return res.status(404).json({ error: "Sponsorship package not found." });
+      const approvedCounts = await approvedCountsByPackage();
+      conferenceId = pkg.conference_id;
+      conferenceTitle = pkg.conference_title;
+      title = `${pkg.tier} Sponsorship`;
+      snapshot = toPackageDTO(pkg, approvedCounts);
+    } else {
+      const row = await dbGet<any>(
+        `SELECT event_id,conference_title,start_date,end_date,city,country,official_url,sponsor_url,
+                action_url,action_label,categories,packages,checked_at,status
+           FROM discovery_sponsorship_opportunities
+          WHERE event_id=? AND status='available'`,
+        [sourceId]
+      ).catch(() => undefined);
+      if (!row) return res.status(404).json({ error: "Stored external sponsorship opportunity not found." });
+      conferenceId = String(row.event_id);
+      conferenceTitle = String(row.conference_title || "");
+      title = "Official Sponsorship / Exhibitor Opportunity";
+      snapshot = {
+        conferenceId,
+        conferenceTitle,
+        startDate: row.start_date || null,
+        endDate: row.end_date || null,
+        city: row.city || null,
+        country: row.country || null,
+        officialUrl: row.official_url || null,
+        sponsorUrl: row.sponsor_url || null,
+        actionUrl: row.action_url || row.sponsor_url || row.official_url || null,
+        actionLabel: row.action_label || "Inquire Now",
+        categories: safeJson(row.categories, []),
+        checkedAt: row.checked_at || null,
+      };
+    }
+
+    const existing = await dbGet<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE sponsor_id=? AND source_type=? AND source_id=?",
+      [accountId, sourceType, sourceId]
+    );
+    if (existing) {
+      await dbRun(
+        `UPDATE sponsor_saved_opportunities
+            SET conference_id=?,conference_title=?,title=?,snapshot=?,updated_at=datetime('now')
+          WHERE id=?`,
+        [conferenceId, conferenceTitle, title, JSON.stringify(snapshot), existing.id]
+      );
+      const updated = (await dbGet<SponsorSavedOpportunityRow>(
+        "SELECT * FROM sponsor_saved_opportunities WHERE id=?",
+        [existing.id]
+      ))!;
+      return res.json({ item: toSavedOpportunityDTO(updated), alreadySaved: true });
+    }
+
+    const id = `ssave_${crypto.randomUUID()}`;
+    await dbRun(
+      `INSERT INTO sponsor_saved_opportunities(
+        id,sponsor_id,source_type,source_id,conference_id,conference_title,title,snapshot,alert_enabled
+      ) VALUES(?,?,?,?,?,?,?,?,1)`,
+      [id, accountId, sourceType, sourceId, conferenceId, conferenceTitle, title, JSON.stringify(snapshot)]
+    );
+    const created = (await dbGet<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE id=?",
+      [id]
+    ))!;
+    res.status(201).json({ item: toSavedOpportunityDTO(created), alreadySaved: false });
+  })
+);
+
+sponsorsRouter.patch(
+  "/watchlist/:id/alerts",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    if (typeof req.body?.alertEnabled !== "boolean") {
+      return res.status(400).json({ error: "alertEnabled must be true or false." });
+    }
+    const item = await dbGet<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE id=? AND sponsor_id=?",
+      [req.params.id, sponsorContext.accountId]
+    );
+    if (!item) return res.status(404).json({ error: "Saved opportunity not found." });
+    await dbRun(
+      "UPDATE sponsor_saved_opportunities SET alert_enabled=?,updated_at=datetime('now') WHERE id=?",
+      [req.body.alertEnabled ? 1 : 0, item.id]
+    );
+    const updated = (await dbGet<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE id=?",
+      [item.id]
+    ))!;
+    res.json({ item: toSavedOpportunityDTO(updated) });
+  })
+);
+
+sponsorsRouter.delete(
+  "/watchlist/:id",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor", true);
+    if (!sponsorContext) return;
+    const item = await dbGet<SponsorSavedOpportunityRow>(
+      "SELECT * FROM sponsor_saved_opportunities WHERE id=? AND sponsor_id=?",
+      [req.params.id, sponsorContext.accountId]
+    );
+    if (!item) return res.status(404).json({ error: "Saved opportunity not found." });
+    await dbRun("DELETE FROM sponsor_saved_opportunities WHERE id=?", [item.id]);
+    res.json({ ok: true });
+  })
+);
 
 // Sponsor Pro preference profile used for internal opportunity matching.
 sponsorsRouter.get(
