@@ -1086,13 +1086,24 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                     )}
 
                     <div className="grid grid-cols-[1fr_auto] gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab(isNeed ? 'matches' : 'marketplace')}
-                        className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
-                      >
-                        Open Opportunity
-                      </button>
+                      {item.sourceType === 'external_catalog' && typeof snapshot.actionUrl === 'string' ? (
+                        <a
+                          href={snapshot.actionUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold text-center"
+                        >
+                          Open Official Opportunity
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab(isNeed ? 'matches' : 'marketplace')}
+                          className="py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+                        >
+                          Open Opportunity
+                        </button>
+                      )}
                       <div className="flex gap-2">
                         <button
                           type="button"
