@@ -29,12 +29,16 @@ jobs:
         run: node --check scripts/refreshSponsorWatchlistAlerts.mjs
       - name: Production readiness script syntax
         run: node --check scripts/checkProductionReadiness.mjs
+      - name: Growth report syntax
+        run: node --check scripts/growthReport.mjs && node --check scripts/smokeGrowthReport.mjs
       - name: Production build
         run: npm run build
       - name: Billing webhook smoke test
         run: node scripts/smokeBillingWebhooks.mjs
       - name: Commercial lifecycle smoke test
         run: node scripts/smokeCommercialLifecycle.mjs
+      - name: Growth and revenue operations smoke test
+        run: node scripts/smokeGrowthReport.mjs
       - name: Workspace seat inheritance smoke test
         run: node scripts/smokeWorkspaceSeats.mjs
       - name: Built server smoke test
