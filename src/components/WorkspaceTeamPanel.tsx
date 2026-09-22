@@ -7,14 +7,20 @@ import {
   Loader2,
   Save,
   History,
+  CheckCircle2,
+  Circle,
+  Target,
+  RefreshCw,
 } from 'lucide-react';
 import {
   addWorkspaceMember,
   fetchMyWorkspace,
+  fetchWorkspaceActivation,
   removeWorkspaceMember,
   renameMyWorkspace,
   updateWorkspaceMemberRole,
   type AccountWorkspace,
+  type WorkspaceActivation,
   type WorkspaceMemberRole,
 } from '../api/workspaces';
 import { useToast } from './Toast';
@@ -33,7 +39,9 @@ const roleDescription: Record<WorkspaceMemberRole, string> = {
 export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountLabel }) => {
   const { showToast } = useToast();
   const [workspace, setWorkspace] = useState<AccountWorkspace | null>(null);
+  const [activation, setActivation] = useState<WorkspaceActivation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activationLoading, setActivationLoading] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -41,12 +49,25 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [email, setEmail] = useState('');
   const [memberRole, setMemberRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [error, setError] = useState<string | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const seatsUsed = workspace?.members.length || 0;
   const seatPercent = workspace ? Math.min(100, Math.round((seatsUsed / Math.max(1, workspace.seatLimit)) * 100)) : 0;
 
   const sortedAudit = useMemo(() => (workspace?.audit || []).slice(0, 20), [workspace]);
+
+  const refreshActivation = async () => {
+    setActivationLoading(true);
+    setActivationError(null);
+    try {
+      setActivation(await fetchWorkspaceActivation());
+    } catch (err: any) {
+      setActivationError(err?.message || 'Could not load activation progress.');
+    } finally {
+      setActivationLoading(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -55,6 +76,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       const data = await fetchMyWorkspace();
       setWorkspace(data);
       setWorkspaceName(data.name);
+      await refreshActivation();
     } catch (err: any) {
       setError(err?.message || 'Could not load team workspace.');
     } finally {
@@ -91,6 +113,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       const updated = await addWorkspaceMember(email.trim(), memberRole);
       setWorkspace(updated);
       setEmail('');
+      await refreshActivation();
       showToast({
         type: 'success',
         title: 'Team member added',
@@ -120,6 +143,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
     setError(null);
     try {
       setWorkspace(await removeWorkspaceMember(userId));
+      await refreshActivation();
     } catch (err: any) {
       setError(err?.message || 'Could not remove team member.');
     } finally {
@@ -148,6 +172,95 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
 
   return (
     <div className="space-y-6">
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5 text-blue-700" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">{accountLabel} · Activation</span>
+              <h2 className="text-lg font-bold text-slate-900 mt-0.5">Get to first commercial value</h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                These milestones update from real ConferenceGate activity in this shared workspace. Team setup is optional and does not reduce activation progress.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={refreshActivation}
+            disabled={activationLoading}
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-600 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 self-start"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${activationLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {activationError && (
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">{activationError}</div>
+        )}
+
+        {activation && (
+          <>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                <div
+                  className="h-full rounded-full bg-blue-700 transition-all"
+                  style={{ width: `${activation.progressPct}%` }}
+                />
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-sm font-extrabold text-slate-900">{activation.progressPct}%</div>
+                <div className="text-[9px] text-slate-400 font-bold uppercase">
+                  {activation.completedCount}/{activation.totalCount} core steps
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {activation.steps.map((step) => (
+                <div
+                  key={step.key}
+                  className={`p-4 rounded-2xl border ${step.complete ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {step.complete ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-slate-300 shrink-0 mt-0.5" />
+                    )}
+                    <div className="min-w-0">
+                      <div className={`text-xs font-bold ${step.complete ? 'text-emerald-900' : 'text-slate-900'}`}>
+                        {step.label}
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">{step.description}</p>
+                      {step.count > 0 && (
+                        <div className="text-[9px] font-bold text-slate-400 uppercase mt-2">Recorded: {step.count}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${activation.optional.complete ? 'bg-blue-50 border-blue-200' : 'bg-white border-dashed border-slate-300'}`}>
+              <div className="flex items-start gap-3">
+                {activation.optional.complete ? (
+                  <CheckCircle2 className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+                ) : (
+                  <UserPlus className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <div className="text-xs font-bold text-slate-900">{activation.optional.label} <span className="text-[9px] text-slate-400 uppercase">Optional</span></div>
+                  <p className="text-[10px] text-slate-500 mt-1">{activation.optional.description}</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
           <div>
