@@ -85,6 +85,12 @@ async function jsonRequest(path, { method = 'GET', cookie, body, token, billing 
 try {
   await waitForHealth();
 
+  const pageResponse = await fetch(base + '/growth.html');
+  const pageHtml = await pageResponse.text();
+  if (!pageResponse.ok || !pageHtml.includes('Growth Operations') || !pageHtml.includes('/api/admin/discovery/growth-dashboard')) {
+    throw new Error(`Built server did not serve the private growth dashboard page correctly: ${pageResponse.status}`);
+  }
+
   const unauth = await jsonRequest('/api/admin/discovery/growth-dashboard', { token: adminToken });
   if (unauth.response.status !== 401) {
     throw new Error(`Dashboard must require a signed-in session; got ${unauth.response.status}`);
@@ -167,6 +173,7 @@ try {
 
   console.log(JSON.stringify({
     growthDashboardSmoke: 'passed',
+    builtPageServed: true,
     accessControl: {
       sessionRequired: true,
       adminTokenRequired: true,
