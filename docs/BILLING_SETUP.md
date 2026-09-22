@@ -191,12 +191,20 @@ The script prints only booleans/configuration status; it never prints secret val
 
 ## Deployment validation
 
-Every push to `main` now runs:
+Every push to `main` now runs the application validation workflow:
 
 ```text
 npm ci --ignore-scripts --no-audit --no-fund
 npx tsc -p tsconfig.check.json --noEmit
 npm run build
+node scripts/smokeBillingWebhooks.mjs
+node scripts/smokeCommercialLifecycle.mjs
+node scripts/smokeWorkspaceSeats.mjs
+node scripts/smokeBuiltServer.mjs
 ```
 
-This is intentionally aligned with the production deployment path so a legacy patch script or dependency-lock mismatch cannot silently pass CI and fail only on Render.
+The workspace smoke test verifies inherited paid access, shared organizer data, viewer read-only enforcement, and revocation after seat removal.
+
+For the final Render/environment audit and release acceptance criteria, use `docs/PHASE5_PRODUCTION_CHECKLIST.md`.
+
+This validation path is intentionally close to production so a dependency-lock mismatch, billing regression, workspace permission regression, or built-server failure cannot silently pass CI and appear only on Render.
