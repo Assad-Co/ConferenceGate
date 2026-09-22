@@ -35,9 +35,6 @@ async function ensurePaidWorkspace(userId: string): Promise<{
     throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
   }
 
-  // Resolve an existing team membership before checking billing. A member seat inherits the
-  // workspace owner's paid subscription; requiring the member's personal account to be paid would
-  // defeat the purpose of a multi-seat account.
   let membership = await dbGet<AccountWorkspaceMemberRow>(
     `SELECT m.*
        FROM account_workspace_members m
@@ -63,8 +60,6 @@ async function ensurePaidWorkspace(userId: string): Promise<{
     return { user, workspace, membership };
   }
 
-  // No team membership exists yet: this account can create its own workspace only if its personal
-  // Organizer/Sponsor subscription is active or trialing.
   if (!["active", "trialing"].includes(user.subscription_status || "")) {
     throw Object.assign(new Error("Paid workspace subscription required."), { status: 402 });
   }
@@ -176,6 +171,81 @@ async function count(sql: string, args: any[] = []): Promise<number> {
   const row = await dbGet<{ count: number }>(sql, args);
   return Number(row?.count || 0);
 }
+
+function cleanAttribution(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, maxLength);
+}
+
+async function ensureAcquisitionSchema() {
+  await dbRun(`CREATE TABLE IF NOT EXISTS account_acquisition (
+    user_id TEXT PRIMARY KEY REFERENCES users(id),
+    role TEXT NOT NULL CHECK(role IN ('organizer','sponsor')),
+    source TEXT NOT NULL,
+    medium TEXT,
+    campaign TEXT,
+    content TEXT,
+    term TEXT,
+    referral_code TEXT,
+    landing_path TEXT,
+    recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+  await dbRun("CREATE INDEX IF NOT EXISTS idx_account_acquisition_source ON account_acquisition(source,role)");
+  await dbRun("CREATE INDEX IF NOT EXISTS idx_account_acquisition_campaign ON account_acquisition(campaign,role)");
+}
+
+// Explicit first-touch attribution only. The browser sends values only when the landing URL
+// explicitly contains UTM/referral parameters. ConferenceGate does not infer a source from IP,
+// browser fingerprint, document.referrer, or third-party identity. INSERT OR IGNORE makes the
+// first explicit touch immutable so later campaigns cannot overwrite acquisition history.
+workspacesRouter.post(
+  "/acquisition",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+
+    const source = cleanAttribution(req.body?.source, 80);
+    const medium = cleanAttribution(req.body?.medium, 80);
+    const campaign = cleanAttribution(req.body?.campaign, 120);
+    const content = cleanAttribution(req.body?.content, 120);
+    const term = cleanAttribution(req.body?.term, 120);
+    const referralCode = cleanAttribution(req.body?.referralCode, 120);
+    const rawLandingPath = cleanAttribution(req.body?.landingPath, 240);
+    const landingPath = rawLandingPath?.startsWith("/") ? rawLandingPath : null;
+
+    if (!source && !campaign && !referralCode) {
+      return res.status(400).json({ error: "Explicit source, campaign, or referralCode is required." });
+    }
+    const normalizedSource = source || (referralCode ? "referral" : "campaign");
+
+    await ensureAcquisitionSchema();
+    await dbRun(
+      `INSERT OR IGNORE INTO account_acquisition
+        (user_id,role,source,medium,campaign,content,term,referral_code,landing_path)
+       VALUES(?,?,?,?,?,?,?,?,?)`,
+      [user.id, user.role, normalizedSource, medium, campaign, content, term, referralCode, landingPath]
+    );
+    const record = await dbGet<any>("SELECT * FROM account_acquisition WHERE user_id=?", [user.id]);
+    res.status(201).json({
+      acquisition: record
+        ? {
+            source: record.source,
+            medium: record.medium,
+            campaign: record.campaign,
+            content: record.content,
+            term: record.term,
+            referralCode: record.referral_code,
+            landingPath: record.landing_path,
+            recordedAt: record.recorded_at,
+          }
+        : null,
+    });
+  })
+);
 
 async function activationDTO(context: {
   workspace: AccountWorkspaceRow;
@@ -335,9 +405,6 @@ async function activationDTO(context: {
   };
 }
 
-// First-party checkout instrumentation. The browser calls this only after the billing endpoint has
-// returned a usable checkout URL and immediately before navigation to the payment provider. We do
-// not store browser fingerprints, checkout URLs, IP-derived identities, or third-party analytics IDs.
 workspacesRouter.post(
   "/checkout-start",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
