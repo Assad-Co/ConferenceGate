@@ -167,13 +167,17 @@ async function roleFunnel(role) {
 async function workspaceAdoption() {
   const rows = await grouped(
     `SELECT w.account_role AS role,
-            COUNT(DISTINCT w.id) AS workspaces,
-            SUM(w.seat_limit) AS seat_capacity,
-            COUNT(m.id) AS active_seats,
-            SUM(CASE WHEN m.member_role <> 'owner' THEN 1 ELSE 0 END) AS team_seats
+            COUNT(*) AS workspaces,
+            COALESCE(SUM(w.seat_limit),0) AS seat_capacity,
+            COALESCE(SUM((
+              SELECT COUNT(*) FROM account_workspace_members m
+               WHERE m.workspace_id=w.id AND m.status='active'
+            )),0) AS active_seats,
+            COALESCE(SUM((
+              SELECT COUNT(*) FROM account_workspace_members m
+               WHERE m.workspace_id=w.id AND m.status='active' AND m.member_role <> 'owner'
+            )),0) AS team_seats
        FROM account_workspaces w
-       LEFT JOIN account_workspace_members m
-         ON m.workspace_id=w.id AND m.status='active'
       GROUP BY w.account_role`
   );
 
