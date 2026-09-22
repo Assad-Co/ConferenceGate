@@ -11,6 +11,8 @@ import {
   Circle,
   Target,
   RefreshCw,
+  ArrowRight,
+  Trophy,
 } from 'lucide-react';
 import {
   addWorkspaceMember,
@@ -56,6 +58,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const seatPercent = workspace ? Math.min(100, Math.round((seatsUsed / Math.max(1, workspace.seatLimit)) * 100)) : 0;
 
   const sortedAudit = useMemo(() => (workspace?.audit || []).slice(0, 20), [workspace]);
+  const nextActivationStep = activation?.steps.find((step) => !step.complete) || null;
 
   const refreshActivation = async () => {
     setActivationLoading(true);
@@ -217,6 +220,30 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
                 </div>
               </div>
             </div>
+
+            {nextActivationStep ? (
+              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <ArrowRight className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-[9px] uppercase font-extrabold tracking-wider text-blue-500">Next best action</div>
+                    <div className="text-sm font-bold text-blue-950 mt-0.5">{nextActivationStep.label}</div>
+                    <p className="text-[10px] text-blue-700 mt-1 max-w-2xl">{nextActivationStep.description}</p>
+                  </div>
+                </div>
+                <span className="px-3 py-1.5 rounded-full bg-white border border-blue-200 text-[10px] font-bold text-blue-700 shrink-0">
+                  Step {activation.completedCount + 1} of {activation.totalCount}
+                </span>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
+                <Trophy className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sm font-bold text-emerald-950">Core activation complete</div>
+                  <p className="text-[10px] text-emerald-700 mt-1">This workspace has completed every core commercial activation milestone.</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {activation.steps.map((step) => (
