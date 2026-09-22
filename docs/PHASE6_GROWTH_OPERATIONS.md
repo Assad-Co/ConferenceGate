@@ -1,6 +1,6 @@
 # Phase 6 — Launch Conversion & Revenue Operations
 
-Phase 6 starts after the paid Organizer/Sponsor foundation is production-ready. Its purpose is to measure whether real customers move from account creation to paid access, first value, commercial engagement, and realized sponsorship revenue.
+Phase 6 starts after the paid Organizer/Sponsor foundation is production-ready. Its purpose is to measure whether real customers move from account creation to paid access, first value, commercial engagement, retention activity, and realized sponsorship revenue.
 
 This phase deliberately reuses product data ConferenceGate already stores. It does not add hidden browser tracking, fingerprinting, or a second analytics database.
 
@@ -62,7 +62,7 @@ Checkout tracking is best-effort. Failure to record the analytics event never pr
 
 ## Phase 6.2 — Paid workspace activation checklist
 
-The Team & Access area in both Organizer Pro and Sponsor Pro now displays a shared activation card. Progress is derived from real server records and is shared across workspace seats.
+The Team & Access area in both Organizer Pro and Sponsor Pro displays a shared activation card. Progress is derived from real server records and is shared across workspace seats.
 
 ### Organizer Pro core steps
 
@@ -83,6 +83,30 @@ The Team & Access area in both Organizer Pro and Sponsor Pro now displays a shar
 Adding a teammate is shown as an optional milestone and is excluded from the activation percentage, so a successful solo customer is not penalized.
 
 Team seats inherit the owner workspace's activation state because the commercial records belong to the paid account workspace, not to the individual seat that happens to view them.
+
+## Phase 6.3 — Retention activity
+
+The growth report now calculates paid-workspace operational activity for Organizer Pro and Sponsor Pro over trailing 7-day, 30-day, and 90-day windows.
+
+For each account role it reports:
+
+- currently paid workspaces;
+- workspaces with operational activity in the last 7 days and the percentage of paid workspaces;
+- workspaces with operational activity in the last 30 days and the percentage of paid workspaces;
+- workspaces with operational activity in the last 90 days and the percentage of paid workspaces;
+- currently paid workspaces that have never recorded one of the covered operational actions.
+
+Organizer activity is derived from real records such as conference creation, sponsorship inventory, sponsorship Deal Rooms, organizer broadcasts, professional invitations, and workspace access changes. Sponsor activity is derived from sponsorship preferences, saved opportunities, inquiries, Deal Rooms, sponsor requests, and workspace access changes.
+
+These values are **operational activity retention snapshots**, not subscription-renewal retention and not classic cohort survival curves. ConferenceGate should not claim that a workspace was retained commercially merely because it performed an action.
+
+## Phase 6.3 — Next-best activation action
+
+The activation card now identifies the first incomplete core milestone as the workspace's **Next Best Action**. This is derived locally from the same ordered checklist; no behavioral profiling model is involved.
+
+Once all five core milestones are complete, the card switches to a core-activation-complete state rather than continuing to manufacture additional required steps.
+
+This guidance remains informational. It does not automatically message users or generate spam notifications.
 
 ## Workspace adoption
 
@@ -109,7 +133,7 @@ The report keeps financially different states separate:
 
 Currencies are never combined into a single misleading total.
 
-## Activation definitions
+## Activation and reporting definitions
 
 These are operational definitions, not marketing claims:
 
@@ -118,6 +142,7 @@ These are operational definitions, not marketing claims:
 - **Sponsor first value** — the sponsor account has preferences, a saved opportunity, or an inquiry.
 - **Checkout start** — ConferenceGate has received a usable checkout URL and recorded the provider navigation immediately before redirect.
 - **Checkout abandonment proxy** — checkout is at least 24 hours old and the account is currently not `active` or `trialing`.
+- **Active paid workspace** — a currently paid workspace whose owner account has one of the covered role-specific operational activities in the selected lookback window.
 - **Realized sponsorship revenue** — a provider-confirmed sponsorship payment remains `settled`; refunded payments are excluded.
 
 Team seats are measured as workspace adoption rather than separate paid subscriptions because they inherit the workspace owner's subscription.
@@ -132,13 +157,12 @@ node --check scripts/smokeGrowthReport.mjs
 node scripts/smokeGrowthReport.mjs
 ```
 
-The integration smoke test uses an isolated database and reproduces the Phase 6.2 flow: create unpaid Organizer and Sponsor accounts, obtain valid hosted checkout URLs, record checkout starts, activate both subscriptions through provider sync, perform real activation actions, read the paid-workspace activation APIs, run the growth report, and assert the checkout and activation counts.
+The integration smoke test uses an isolated database and reproduces the Phase 6.2/6.3 flow: create unpaid Organizer and Sponsor accounts, obtain valid hosted checkout URLs, record checkout starts, activate both subscriptions through provider sync, perform real activation actions, read the paid-workspace activation APIs, run the growth report including retention queries, and assert the core checkout and activation counts.
 
 ## Phase 6 next slices
 
-With checkout instrumentation and role-specific activation now implemented, the next slices are:
+With checkout instrumentation, role-specific activation, retention activity snapshots, and next-best-action guidance implemented, the next slices are:
 
-- cohort retention for 7/30/90-day active paid workspaces;
 - acquisition-source attribution only when a source is explicitly supplied (for example campaign/UTM), without fingerprinting;
-- recurring executive growth snapshot comparing movement against the prior period;
-- activation nudges that point users toward the next incomplete core step without sending spam.
+- recurring executive growth snapshots that compare movement against the prior period;
+- historical paid-conversion cohorts once the product has enough clean billing history to distinguish activation, cancellation, reactivation, and renewal without approximation.
