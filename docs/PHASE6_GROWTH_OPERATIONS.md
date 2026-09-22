@@ -41,6 +41,49 @@ The report measures:
 7. Deal Room reached.
 8. Provider-confirmed sponsorship payment realized.
 
+## Phase 6.2 — Checkout conversion
+
+ConferenceGate records a checkout start only after the billing API has successfully returned a usable provider checkout URL and immediately before the browser navigates away. The event is stored in the existing first-party billing event ledger.
+
+The checkout event stores the account ID already required by ConferenceGate, the provider name, the account role, and a hash of the small operational payload. It does **not** store browser fingerprints, checkout URLs, IP-derived identity, or third-party analytics identifiers.
+
+The growth report now includes, separately for Organizer and Sponsor accounts:
+
+- checkout starts in the trailing 30 days;
+- unique accounts that started checkout;
+- checkout-start accounts that are currently paid;
+- checkout-to-current-paid conversion percentage;
+- an abandonment proxy: accounts whose checkout start is at least 24 hours old and whose current subscription is not `active` or `trialing`;
+- checkout starts and unique accounts grouped by provider.
+
+The abandonment number is deliberately labeled a proxy because a later cancellation can make a previously converted account appear currently unpaid. It is an operational warning signal, not a historical attribution claim.
+
+Checkout tracking is best-effort. Failure to record the analytics event never prevents the customer from reaching the payment provider.
+
+## Phase 6.2 — Paid workspace activation checklist
+
+The Team & Access area in both Organizer Pro and Sponsor Pro now displays a shared activation card. Progress is derived from real server records and is shared across workspace seats.
+
+### Organizer Pro core steps
+
+1. Create the first conference.
+2. Publish a sponsorship need.
+3. Receive sponsor interest.
+4. Open a Deal Room.
+5. Complete a provider-confirmed sponsorship payment.
+
+### Sponsor Pro core steps
+
+1. Configure sponsorship preferences.
+2. Save a sponsorship opportunity.
+3. Send a sponsorship inquiry.
+4. Reach a Deal Room.
+5. Complete a provider-confirmed sponsorship payment.
+
+Adding a teammate is shown as an optional milestone and is excluded from the activation percentage, so a successful solo customer is not penalized.
+
+Team seats inherit the owner workspace's activation state because the commercial records belong to the paid account workspace, not to the individual seat that happens to view them.
+
 ## Workspace adoption
 
 For Organizer and Sponsor workspaces separately, the report measures:
@@ -73,6 +116,8 @@ These are operational definitions, not marketing claims:
 - **Paid subscription** — the paid account owner's `subscription_status` is `active` or `trialing`.
 - **Organizer first value** — the organizer account has created at least one conference.
 - **Sponsor first value** — the sponsor account has preferences, a saved opportunity, or an inquiry.
+- **Checkout start** — ConferenceGate has received a usable checkout URL and recorded the provider navigation immediately before redirect.
+- **Checkout abandonment proxy** — checkout is at least 24 hours old and the account is currently not `active` or `trialing`.
 - **Realized sponsorship revenue** — a provider-confirmed sponsorship payment remains `settled`; refunded payments are excluded.
 
 Team seats are measured as workspace adoption rather than separate paid subscriptions because they inherit the workspace owner's subscription.
@@ -87,14 +132,13 @@ node --check scripts/smokeGrowthReport.mjs
 node scripts/smokeGrowthReport.mjs
 ```
 
-The integration smoke test builds an isolated test database, creates one paid Organizer and one paid Sponsor, creates Organizer first value and sponsorship inventory, configures Sponsor first value, sends a real inquiry, runs the growth report against that same isolated database, and asserts the resulting funnel counts.
+The integration smoke test uses an isolated database and reproduces the Phase 6.2 flow: create unpaid Organizer and Sponsor accounts, obtain valid hosted checkout URLs, record checkout starts, activate both subscriptions through provider sync, perform real activation actions, read the paid-workspace activation APIs, run the growth report, and assert the checkout and activation counts.
 
 ## Phase 6 next slices
 
-After this baseline is stable, the next slices are:
+With checkout instrumentation and role-specific activation now implemented, the next slices are:
 
-- checkout-start and checkout-abandonment instrumentation using first-party server events;
-- role-specific activation checklist inside Organizer Pro and Sponsor Pro;
-- cohort retention (7/30/90-day active paid workspaces);
+- cohort retention for 7/30/90-day active paid workspaces;
 - acquisition-source attribution only when a source is explicitly supplied (for example campaign/UTM), without fingerprinting;
-- recurring executive growth snapshot comparing movement against the prior period.
+- recurring executive growth snapshot comparing movement against the prior period;
+- activation nudges that point users toward the next incomplete core step without sending spam.
