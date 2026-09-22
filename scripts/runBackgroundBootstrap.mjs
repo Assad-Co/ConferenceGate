@@ -30,6 +30,10 @@ async function main() {
   console.log(`[background-bootstrap] server-first startup; maintenance begins in ${START_DELAY_MS}ms`);
   await sleep(START_DELAY_MS);
 
+  // Growth schema is DB-only and fast. It installs explicit acquisition storage plus the
+  // forward-looking subscription-status history trigger after the server has initialized users.
+  await runScript('scripts/ensureGrowthSchema.mjs');
+
   // Fast DB-only reconciliation first: make the complete AAPG set and its reliable local
   // logo visible within seconds of a deploy, before slower imports and network image work.
   await runScript('scripts/syncAapgOfficialUpcoming.mjs');
