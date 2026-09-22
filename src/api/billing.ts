@@ -1,3 +1,5 @@
+import { recordCheckoutStart } from './workspaces';
+
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Billing request failed');
@@ -20,11 +22,20 @@ export async function fetchBillingStatus(): Promise<BillingStatus> {
   return parseResponse(res);
 }
 
-export async function fetchCheckoutUrl(): Promise<{ checkoutUrl: string | null; alreadyActive: boolean }> {
+export async function fetchCheckoutUrl(): Promise<{
+  checkoutUrl: string | null;
+  alreadyActive: boolean;
+  provider?: string | null;
+}> {
   const res = await fetch('/api/billing/checkout', { credentials: 'include' });
-  return parseResponse(res);
+  const data = await parseResponse(res);
+  // This is intentionally best-effort instrumentation: a tracking failure must never block a
+  // customer from reaching a checkout that the billing service successfully created.
+  if (data.checkoutUrl && !data.alreadyActive) {
+    await recordCheckoutStart(data.provider || 'hosted').catch(() => {});
+  }
+  return data;
 }
-
 
 export interface BillingLedgerPayment {
   id: string;
