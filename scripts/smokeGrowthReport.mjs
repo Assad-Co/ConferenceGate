@@ -16,6 +16,9 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     NODE_ENV: 'test',
     TEST_DATABASE_PATH: dbPath,
     BILLING_SYNC_SECRET: billingSecret,
+    BILLING_CHECKOUT_PROVIDER: 'hosted',
+    ORGANIZER_CHECKOUT_URL: 'https://checkout.example.test/organizer',
+    SPONSOR_CHECKOUT_URL: 'https://checkout.example.test/sponsor',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -78,6 +81,18 @@ async function signup(role, email) {
   return { user: data.user, cookie };
 }
 
+async function startCheckout(account, expectedSuffix) {
+  const checkout = await request('/api/billing/checkout', { cookie: account.cookie });
+  if (!checkout.checkoutUrl?.endsWith(expectedSuffix) || checkout.provider !== 'hosted') {
+    throw new Error('Hosted checkout response is incorrect: ' + JSON.stringify(checkout));
+  }
+  await request('/api/workspaces/checkout-start', {
+    method: 'POST',
+    cookie: account.cookie,
+    body: { provider: checkout.provider },
+  });
+}
+
 async function activate(userId, role) {
   await request('/api/billing/provider-sync', {
     method: 'POST',
@@ -124,6 +139,12 @@ try {
 
   const organizer = await signup('organizer', 'growth-smoke-organizer@example.com');
   const sponsor = await signup('sponsor', 'growth-smoke-sponsor@example.com');
+
+  // Mirror the browser flow: the billing endpoint must first return a usable URL, then the
+  // first-party checkout-start endpoint records the provider navigation.
+  await startCheckout(organizer, '/organizer');
+  await startCheckout(sponsor, '/sponsor');
+
   await activate(organizer.user.id, 'organizer');
   await activate(sponsor.user.id, 'sponsor');
 
@@ -169,11 +190,26 @@ try {
     },
   });
 
+  await request('/api/sponsors/watchlist', {
+    method: 'PUT',
+    cookie: sponsor.cookie,
+    body: { sourceType: 'internal_need', sourceId: needResult.need.id },
+  });
+
   await request(`/api/sponsors/needs/${needResult.need.id}/inquiries`, {
     method: 'POST',
     cookie: sponsor.cookie,
     body: { message: 'Growth smoke inquiry', budget: 5000 },
   });
+
+  const organizerActivation = await request('/api/workspaces/activation', { cookie: organizer.cookie });
+  const sponsorActivation = await request('/api/workspaces/activation', { cookie: sponsor.cookie });
+  if (organizerActivation?.activation?.completedCount !== 3 || organizerActivation?.activation?.totalCount !== 5) {
+    throw new Error('Organizer activation checklist is incorrect: ' + JSON.stringify(organizerActivation));
+  }
+  if (sponsorActivation?.activation?.completedCount !== 3 || sponsorActivation?.activation?.totalCount !== 5) {
+    throw new Error('Sponsor activation checklist is incorrect: ' + JSON.stringify(sponsorActivation));
+  }
 
   const report = await runGrowthReport();
   if (report?.organizer?.signups !== 1 || report?.organizer?.paidSubscriptions !== 1) {
@@ -188,9 +224,20 @@ try {
   if (report?.sponsor?.firstValueActivated !== 1 || report?.sponsor?.sentSponsorInquiry !== 1) {
     throw new Error('Sponsor activation funnel is incorrect: ' + JSON.stringify(report?.sponsor));
   }
+  if (report?.checkout?.byRole?.organizer?.starts30d !== 1 || report?.checkout?.byRole?.organizer?.currentlyPaidAccounts !== 1) {
+    throw new Error('Organizer checkout funnel is incorrect: ' + JSON.stringify(report?.checkout));
+  }
+  if (report?.checkout?.byRole?.sponsor?.starts30d !== 1 || report?.checkout?.byRole?.sponsor?.currentlyPaidAccounts !== 1) {
+    throw new Error('Sponsor checkout funnel is incorrect: ' + JSON.stringify(report?.checkout));
+  }
 
   console.log(JSON.stringify({
     growthReportSmoke: 'passed',
+    phase62: {
+      checkoutTracking: true,
+      organizerActivation: `${organizerActivation.activation.completedCount}/${organizerActivation.activation.totalCount}`,
+      sponsorActivation: `${sponsorActivation.activation.completedCount}/${sponsorActivation.activation.totalCount}`,
+    },
     organizer: {
       signups: report.organizer.signups,
       paid: report.organizer.paidSubscriptions,
