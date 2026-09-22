@@ -35,5 +35,7 @@ jobs:
         run: node scripts/smokeBillingWebhooks.mjs
       - name: Commercial lifecycle smoke test
         run: node scripts/smokeCommercialLifecycle.mjs
+      - name: Workspace seat inheritance smoke test
+        run: node scripts/smokeWorkspaceSeats.mjs
       - name: Built server smoke test
         run: node scripts/smokeBuiltServer.mjs
