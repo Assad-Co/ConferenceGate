@@ -68,6 +68,61 @@ export interface SignupPayload {
   linkedinUrl?: string;
 }
 
+interface ExplicitAcquisition {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  content?: string;
+  term?: string;
+  referralCode?: string;
+  landingPath?: string;
+}
+
+const ACQUISITION_SESSION_KEY = 'cg_explicit_acquisition';
+
+function readExplicitAcquisition(): ExplicitAcquisition | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const current: ExplicitAcquisition = {
+      source: params.get('utm_source') || undefined,
+      medium: params.get('utm_medium') || undefined,
+      campaign: params.get('utm_campaign') || undefined,
+      content: params.get('utm_content') || undefined,
+      term: params.get('utm_term') || undefined,
+      referralCode: params.get('ref') || params.get('referral') || undefined,
+      landingPath: window.location.pathname || '/',
+    };
+    const hasExplicit = Boolean(current.source || current.campaign || current.referralCode);
+    if (hasExplicit) {
+      window.sessionStorage.setItem(ACQUISITION_SESSION_KEY, JSON.stringify(current));
+      return current;
+    }
+    const stored = window.sessionStorage.getItem(ACQUISITION_SESSION_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function recordPaidAcquisition(user: AuthUser): Promise<void> {
+  if (user.role !== 'organizer' && user.role !== 'sponsor') return;
+  const acquisition = readExplicitAcquisition();
+  if (!acquisition) return;
+  try {
+    await fetch('/api/workspaces/acquisition', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(acquisition),
+    });
+  } catch {
+    // Attribution is deliberately best-effort and must never block account creation.
+  }
+}
+
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -84,6 +139,7 @@ export async function signup(payload: SignupPayload): Promise<AuthUser> {
     body: JSON.stringify(payload),
   });
   const data = await parseResponse(res);
+  await recordPaidAcquisition(data.user);
   return data.user;
 }
 
@@ -129,6 +185,7 @@ export async function googleAuth(credential: string, role?: AuthRole): Promise<A
   if (data.needsRole) {
     return { needsRole: true, google: data.google };
   }
+  if (role) await recordPaidAcquisition(data.user);
   return data.user;
 }
 
@@ -189,9 +246,6 @@ export interface PendingLinkedInProfile {
   avatar: string | null;
 }
 
-/** Reads back the verified LinkedIn identity stashed server-side after the OAuth redirect, for a
- * brand-new account that still needs to pick a role. Returns null if there's no pending sign-in
- * (nothing in progress, or it expired). */
 export async function fetchPendingLinkedInProfile(): Promise<PendingLinkedInProfile | null> {
   const res = await fetch('/api/auth/linkedin/pending', { credentials: 'include' });
   if (res.status === 404) return null;
