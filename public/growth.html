@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Conference Gate — Growth Operations</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:#f8fafc; color:#0f172a; }
+    header { position:sticky; top:0; z-index:10; background:#eff6ff; border-bottom:1px solid #dbeafe; }
+    .head { max-width:1220px; margin:auto; min-height:64px; padding:9px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+    .brand img { height:44px; width:auto; }
+    .brand h1 { font-size:16px; margin:0; }
+    .brand p { margin:2px 0 0; font-size:11px; color:#64748b; }
+    .actions { display:flex; gap:8px; align-items:center; }
+    button { border:0; border-radius:10px; padding:9px 13px; font-weight:700; cursor:pointer; background:#172554; color:white; }
+    button.secondary { background:white; color:#1e3a8a; border:1px solid #bfdbfe; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    main { max-width:1220px; margin:auto; padding:24px 20px 48px; }
+    .auth { max-width:620px; margin:70px auto; background:white; border:1px solid #e2e8f0; border-radius:18px; padding:24px; box-shadow:0 12px 30px rgba(15,23,42,.07); }
+    .auth h2 { margin:0 0 6px; font-size:22px; }
+    .auth p { color:#64748b; font-size:13px; line-height:1.55; }
+    .auth-row { display:flex; gap:8px; margin-top:16px; }
+    input { flex:1; min-width:0; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; }
+    .notice { padding:11px 13px; border-radius:10px; font-size:12px; margin-top:12px; display:none; }
+    .notice.error { display:block; background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; }
+    .notice.info { display:block; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+    #dashboard { display:none; }
+    .title-row { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; }
+    .title-row h2 { margin:0; font-size:26px; }
+    .muted { color:#64748b; font-size:12px; }
+    .grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:12px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:16px; padding:16px; box-shadow:0 3px 12px rgba(15,23,42,.035); }
+    .span-3 { grid-column:span 3; } .span-4 { grid-column:span 4; } .span-6 { grid-column:span 6; } .span-12 { grid-column:span 12; }
+    .card h3 { margin:0 0 4px; font-size:13px; color:#334155; }
+    .metric { font-size:28px; font-weight:800; line-height:1.1; margin:7px 0 3px; }
+    .small { font-size:11px; color:#64748b; }
+    .section { margin-top:22px; }
+    .section-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+    .section-head h2 { font-size:17px; margin:0; }
+    .badge { display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:999px; font-size:10px; font-weight:800; }
+    .ok { background:#ecfdf5; color:#047857; } .warn { background:#fff7ed; color:#c2410c; } .bad { background:#fff1f2; color:#be123c; }
+    .status-list { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .status-item { border:1px solid #e2e8f0; border-radius:12px; padding:10px; }
+    .status-item b { display:block; font-size:11px; color:#475569; margin-bottom:4px; }
+    .status-item span { font-size:12px; font-weight:700; word-break:break-word; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th, td { padding:9px 8px; border-bottom:1px solid #eef2f7; text-align:left; vertical-align:top; }
+    th { color:#64748b; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+    tr:last-child td { border-bottom:0; }
+    .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .role { text-transform:capitalize; }
+    .bar { height:7px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:8px; }
+    .bar > span { display:block; height:100%; background:#1d4ed8; border-radius:999px; }
+    .movement { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:9px; font-size:12px; }
+    .delta-up { color:#047857; font-weight:800; } .delta-down { color:#be123c; font-weight:800; } .delta-flat { color:#64748b; font-weight:800; }
+    .empty { color:#94a3b8; font-style:italic; padding:10px 0; }
+    footer { color:#94a3b8; font-size:10px; margin-top:28px; text-align:center; }
+    @media (max-width:900px){ .span-3{grid-column:span 6}.span-4{grid-column:span 6}.span-6{grid-column:span 12}.status-list{grid-template-columns:1fr 1fr} }
+    @media (max-width:600px){ .head{padding:8px 12px}.brand p{display:none}.actions span{display:none} main{padding:18px 12px}.span-3,.span-4{grid-column:span 12}.status-list{grid-template-columns:1fr}.auth-row{flex-direction:column}.title-row{align-items:start;flex-direction:column} }
+  </style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div class="brand">
+      <img src="/conference-gate-logo.png" alt="Conference Gate" />
+      <div><h1>Growth Operations</h1><p>Private executive launch and marketplace dashboard</p></div>
+    </div>
+    <div class="actions" id="topActions" style="display:none">
+      <button class="secondary" id="refreshButton">Refresh</button>
+      <button id="lockButton"><span>Lock dashboard</span></button>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="auth" id="authPanel">
+    <h2>Operator access</h2>
+    <p>Sign in to Conference Gate first, then enter the existing <b>DISCOVERY_ADMIN_TOKEN</b>. The token is used only for this tab session and is not saved to local storage.</p>
+    <div class="auth-row">
+      <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Admin token" aria-label="Admin token" />
+      <button id="loadButton">Load dashboard</button>
+    </div>
+    <div id="notice" class="notice"></div>
+  </section>
+
+  <section id="dashboard">
+    <div class="title-row">
+      <div><h2>Executive Growth Dashboard</h2><div class="muted" id="generatedAt"></div></div>
+      <div id="releaseBadge" class="badge ok"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Production Readiness</h2><span class="muted">Evidence from the process serving this page</span></div>
+      <div class="card"><div class="status-list" id="deploymentStatus"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Paid Account Growth</h2><span class="muted">Organizer Pro + Sponsor Pro</span></div>
+      <div class="grid" id="growthCards"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Signup Movement</h2><span class="muted">Current period vs immediately preceding non-overlapping period</span></div>
+      <div class="grid" id="movementCards"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Paid Workspace Activity</h2><span class="muted">Operational activity, not renewal retention</span></div>
+      <div class="grid" id="retentionCards"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Acquisition</h2><span class="muted">Explicit first-touch UTM/referral only</span></div>
+      <div class="grid">
+        <div class="card span-4" id="acquisitionCoverage"></div>
+        <div class="card span-8" style="grid-column:span 8"><div style="overflow:auto"><table><thead><tr><th>Source</th><th>Role</th><th class="num">Signups</th></tr></thead><tbody id="sourcesTable"></tbody></table></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Sponsorship Marketplace</h2><span class="muted">Financial currencies remain separate</span></div>
+      <div class="grid">
+        <div class="card span-6"><h3>Deal pipeline</h3><div style="overflow:auto"><table><thead><tr><th>Status</th><th class="num">Deals</th></tr></thead><tbody id="dealsTable"></tbody></table></div></div>
+        <div class="card span-6"><h3>Organizer payout obligations</h3><div style="overflow:auto"><table><thead><tr><th>Status</th><th>Currency</th><th class="num">Count</th><th class="num">Amount</th></tr></thead><tbody id="payoutsTable"></tbody></table></div></div>
+        <div class="card span-4"><h3>Settled sponsorship revenue</h3><div id="settledRevenue"></div></div>
+        <div class="card span-4"><h3>Refunded sponsorship payments</h3><div id="refundedRevenue"></div></div>
+        <div class="card span-4"><h3>Platform fee revenue</h3><div id="feeRevenue"></div></div>
+      </div>
+    </div>
+    <footer>Conference Gate operator dashboard · private administrative surface</footer>
+  </section>
+</main>
+<script>
+(() => {
+  let adminToken = '';
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const fmt = (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const pct = (v) => v === null || v === undefined ? '—' : `${fmt(v)}%`;
+  const status = (value) => `<span class="badge ${value ? 'ok' : 'bad'}">${value ? 'Ready' : 'Needs attention'}</span>`;
+  const emptyRow = (cols, text='No data yet') => `<tr><td colspan="${cols}" class="empty">${esc(text)}</td></tr>`;
+
+  function setNotice(message, kind='error') {
+    const el = $('notice');
+    el.className = `notice ${kind}`;
+    el.textContent = message;
+  }
+  function clearNotice(){ const el=$('notice'); el.className='notice'; el.textContent=''; }
+
+  function delta(current, prior) {
+    current = Number(current || 0); prior = Number(prior || 0);
+    const diff = current - prior;
+    if (!diff) return '<span class="delta-flat">No change</span>';
+    const cls = diff > 0 ? 'delta-up' : 'delta-down';
+    return `<span class="${cls}">${diff > 0 ? '+' : ''}${fmt(diff)}</span>`;
+  }
+
+  function moneyList(rows, includePayments=false) {
+    if (!rows || !rows.length) return '<div class="empty">No confirmed amounts yet</div>';
+    return rows.map((row) => `<div class="movement"><span>${esc(row.currency)}</span><b>${fmt(row.amount)}${includePayments ? ` · ${fmt(row.payments)} payment${Number(row.payments)===1?'':'s'}` : ''}</b></div>`).join('');
+  }
+
+  function render(data) {
+    const d = data.deployment || {};
+    $('generatedAt').textContent = `Generated ${new Date(data.generatedAt).toLocaleString()}`;
+    $('releaseBadge').textContent = `Release ${d.release || 'unknown'}`;
+    const deployment = [
+      ['Database connection', true, 'ready'],
+      ['Persistent Turso database', d.persistentDatabase, d.persistentDatabase ? 'configured' : 'local / ephemeral risk'],
+      ['Public base URL', d.publicBaseUrlConfigured, d.publicBaseUrlConfigured ? 'configured' : 'not configured'],
+      ['Growth history schema', d.growthSchemaReady, d.growthSchemaReady ? 'ready' : 'not installed'],
+      ['Paddle webhook + API', d.paddleConfigured, d.paddleConfigured ? 'configured' : 'not fully configured'],
+      ['FastSpring webhook', d.fastSpringWebhookConfigured, d.fastSpringWebhookConfigured ? 'configured' : 'not configured'],
+    ];
+    $('deploymentStatus').innerHTML = deployment.map(([label, ok, detail]) => `<div class="status-item"><b>${esc(label)}</b>${status(Boolean(ok))}<span style="display:block;margin-top:5px">${esc(detail)}</span></div>`).join('');
+
+    const roles = [['Organizer', data.organizer || {}], ['Sponsor', data.sponsor || {}]];
+    $('growthCards').innerHTML = roles.flatMap(([label, r]) => [
+      `<div class="card span-3"><h3>${label} signups</h3><div class="metric">${fmt(r.signups)}</div><div class="small">${fmt(r.signups7d)} last 7d · ${fmt(r.signups30d)} last 30d</div></div>`,
+      `<div class="card span-3"><h3>${label} paid</h3><div class="metric">${fmt(r.paid)}</div><div class="small">${pct(r.currentPaidConversionPct)} current paid conversion</div><div class="bar"><span style="width:${Math.min(100,Number(r.currentPaidConversionPct||0))}%"></span></div></div>`,
+      `<div class="card span-3"><h3>${label} activated</h3><div class="metric">${fmt(r.activated)}</div><div class="small">${pct(r.activationPct)} reached first operational value</div></div>`,
+      `<div class="card span-3"><h3>${label} checkout starts</h3><div class="metric">${fmt(r.checkoutStarts30d)}</div><div class="small">${fmt(r.checkoutAccounts30d)} unique accounts · last 30d</div></div>`
+    ]).join('');
+
+    const m = data.movement || {};
+    $('movementCards').innerHTML = ['organizer','sponsor'].map((role) => {
+      const r = m[role] || {};
+      return `<div class="card span-6"><h3 class="role">${esc(role)} signups</h3><div class="movement"><span>Last 7 days <b>${fmt(r.current7d)}</b> vs prior <b>${fmt(r.prior7d)}</b></span>${delta(r.current7d,r.prior7d)}</div><div class="movement"><span>Last 30 days <b>${fmt(r.current30d)}</b> vs prior <b>${fmt(r.prior30d)}</b></span>${delta(r.current30d,r.prior30d)}</div></div>`;
+    }).join('');
+
+    const ret = data.retention || {};
+    $('retentionCards').innerHTML = ['organizer','sponsor'].map((role) => {
+      const r = ret[role] || {};
+      return `<div class="card span-6"><h3 class="role">${esc(role)} paid workspaces</h3><div class="metric">${fmt(r.paidWorkspaces)}</div><div class="movement"><span>7-day active</span><b>${fmt(r.active7d)} · ${pct(r.active7dPct)}</b></div><div class="movement"><span>30-day active</span><b>${fmt(r.active30d)} · ${pct(r.active30dPct)}</b></div><div class="movement"><span>90-day active</span><b>${fmt(r.active90d)} · ${pct(r.active90dPct)}</b></div></div>`;
+    }).join('');
+
+    const acq = data.acquisition || {};
+    $('acquisitionCoverage').innerHTML = `<h3>Attribution coverage</h3><div class="metric">${pct(acq.coveragePct)}</div><div class="small">${fmt(acq.attributedSignups)} attributed of ${fmt(acq.paidRoleSignups)} Organizer/Sponsor signups</div><div class="bar"><span style="width:${Math.min(100,Number(acq.coveragePct||0))}%"></span></div>`;
+    $('sourcesTable').innerHTML = acq.topSources?.length ? acq.topSources.map((row) => `<tr><td>${esc(row.source)}</td><td class="role">${esc(row.role)}</td><td class="num">${fmt(row.signups)}</td></tr>`).join('') : emptyRow(3);
+
+    const market = data.marketplace || {};
+    $('dealsTable').innerHTML = market.dealStates?.length ? market.dealStates.map((row) => `<tr><td>${esc(row.status).replaceAll('_',' ')}</td><td class="num">${fmt(row.count)}</td></tr>`).join('') : emptyRow(2);
+    $('payoutsTable').innerHTML = market.payouts?.length ? market.payouts.map((row) => `<tr><td>${esc(row.status)}</td><td>${esc(row.currency)}</td><td class="num">${fmt(row.count)}</td><td class="num">${fmt(row.amount)}</td></tr>`).join('') : emptyRow(4);
+    $('settledRevenue').innerHTML = moneyList(market.settledRevenue, true);
+    $('refundedRevenue').innerHTML = moneyList(market.refundedRevenue, true);
+    $('feeRevenue').innerHTML = moneyList(market.platformFeeRevenue, false);
+  }
+
+  async function loadDashboard() {
+    const token = adminToken || $('tokenInput').value.trim();
+    if (!token) { setNotice('Enter the admin token.'); return; }
+    $('loadButton').disabled = true;
+    $('refreshButton').disabled = true;
+    clearNotice();
+    try {
+      const res = await fetch('/api/admin/discovery/growth-dashboard', {
+        credentials: 'include',
+        headers: { 'x-discovery-admin-token': token }
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Sign in to Conference Gate in this browser first, then reload this page.');
+        if (res.status === 403) throw new Error('The admin token is not valid.');
+        if (res.status === 503) throw new Error(body.error || 'Administrative dashboard access is not configured on this deployment.');
+        throw new Error(body.error || `Dashboard request failed (${res.status}).`);
+      }
+      adminToken = token;
+      $('tokenInput').value = '';
+      render(body.dashboard || {});
+      $('authPanel').style.display = 'none';
+      $('dashboard').style.display = 'block';
+      $('topActions').style.display = 'flex';
+    } catch (error) {
+      setNotice(error?.message || 'Could not load the dashboard.');
+      $('authPanel').style.display = 'block';
+      $('dashboard').style.display = 'none';
+      $('topActions').style.display = 'none';
+    } finally {
+      $('loadButton').disabled = false;
+      $('refreshButton').disabled = false;
+    }
+  }
+
+  function lock() {
+    adminToken = '';
+    $('tokenInput').value = '';
+    $('dashboard').style.display = 'none';
+    $('topActions').style.display = 'none';
+    $('authPanel').style.display = 'block';
+    setNotice('Dashboard locked. The token was cleared from page memory.', 'info');
+  }
+
+  $('loadButton').addEventListener('click', loadDashboard);
+  $('tokenInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadDashboard(); });
+  $('refreshButton').addEventListener('click', loadDashboard);
+  $('lockButton').addEventListener('click', lock);
+})();
+</script>
+</body>
+</html>
