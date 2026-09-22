@@ -78,6 +78,28 @@ try {
           'status_change'
         );
       END;
+
+      CREATE TRIGGER IF NOT EXISTS trg_users_subscription_period_history
+      AFTER UPDATE OF subscription_period_end ON users
+      WHEN NEW.role IN ('organizer','sponsor')
+       AND NEW.subscription_status IN ('active','trialing')
+       AND COALESCE(OLD.subscription_period_end,'') <> COALESCE(NEW.subscription_period_end,'')
+       AND COALESCE(OLD.subscription_status,'') = COALESCE(NEW.subscription_status,'')
+      BEGIN
+        INSERT INTO subscription_status_history(
+          id,user_id,role,from_status,to_status,provider,plan,period_end,reason
+        ) VALUES(
+          'gsh_' || lower(hex(randomblob(16))),
+          NEW.id,
+          NEW.role,
+          OLD.subscription_status,
+          NEW.subscription_status,
+          NEW.subscription_provider,
+          NEW.subscription_plan,
+          NEW.subscription_period_end,
+          'period_end_changed'
+        );
+      END;
     `);
 
     await db.execute(`
