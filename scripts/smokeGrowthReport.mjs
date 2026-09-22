@@ -1,0 +1,217 @@
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+
+const port = Number(process.env.GROWTH_SMOKE_PORT || 3114);
+const dbPath = process.env.GROWTH_SMOKE_DB || '/tmp/conferencegate-growth-smoke.db';
+const billingSecret = 'growth-smoke-secret';
+
+for (const suffix of ['', '-wal', '-shm']) {
+  try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
+}
+
+const child = spawn(process.execPath, ['dist/server.cjs'], {
+  env: {
+    ...process.env,
+    PORT: String(port),
+    NODE_ENV: 'test',
+    TEST_DATABASE_PATH: dbPath,
+    BILLING_SYNC_SECRET: billingSecret,
+  },
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+
+let stdout = '';
+let stderr = '';
+child.stdout.on('data', (chunk) => { stdout += String(chunk); });
+child.stderr.on('data', (chunk) => { stderr += String(chunk); });
+
+const base = `http://127.0.0.1:${port}`;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForHealth() {
+  const deadline = Date.now() + 25000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error('Server exited early.\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr);
+    }
+    try {
+      const response = await fetch(base + '/api/health');
+      if (response.ok) return;
+    } catch {}
+    await sleep(300);
+  }
+  throw new Error('Timed out waiting for server health.\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr);
+}
+
+async function request(path, { method = 'GET', cookie, body, billing = false } = {}) {
+  const headers = {};
+  if (cookie) headers.cookie = cookie;
+  if (billing) headers['x-billing-sync-secret'] = billingSecret;
+  if (body !== undefined) headers['content-type'] = 'application/json';
+  const response = await fetch(base + path, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`${method} ${path}: ${response.status} ${JSON.stringify(data)}`);
+  return data;
+}
+
+async function signup(role, email) {
+  const response = await fetch(base + '/api/auth/signup', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      role,
+      name: role === 'organizer' ? 'Growth Smoke Organizer' : 'Growth Smoke Sponsor',
+      email,
+      password: 'GrowthSmoke123!',
+      organization: role === 'organizer' ? 'Growth Smoke Events' : 'Growth Smoke Brand',
+    }),
+  });
+  const data = await response.json();
+  const cookie = response.headers.get('set-cookie')?.split(';')[0];
+  if (!response.ok || !data?.user?.id || !cookie) {
+    throw new Error(`Signup failed: ${response.status} ${JSON.stringify(data)}`);
+  }
+  return { user: data.user, cookie };
+}
+
+async function activate(userId, role) {
+  await request('/api/billing/provider-sync', {
+    method: 'POST',
+    billing: true,
+    body: {
+      provider: 'growth-smoke',
+      eventId: `activate_${role}_1`,
+      eventType: 'subscription.activated',
+      userId,
+      status: 'active',
+      plan: `${role}_pro_growth_smoke`,
+      customerRef: `growth_customer_${role}`,
+    },
+  });
+}
+
+async function runGrowthReport() {
+  return new Promise((resolve, reject) => {
+    const report = spawn(process.execPath, ['scripts/growthReport.mjs', '--compact'], {
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        TEST_DATABASE_PATH: dbPath,
+        TURSO_DATABASE_URL: '',
+        TURSO_AUTH_TOKEN: '',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let out = '';
+    let err = '';
+    report.stdout.on('data', (chunk) => { out += String(chunk); });
+    report.stderr.on('data', (chunk) => { err += String(chunk); });
+    report.once('error', reject);
+    report.once('exit', (code) => {
+      if (code !== 0) return reject(new Error(`Growth report exited ${code}: ${err}`));
+      try { resolve(JSON.parse(out)); }
+      catch (error) { reject(new Error(`Growth report did not return JSON: ${out}\n${err}\n${error}`)); }
+    });
+  });
+}
+
+try {
+  await waitForHealth();
+
+  const organizer = await signup('organizer', 'growth-smoke-organizer@example.com');
+  const sponsor = await signup('sponsor', 'growth-smoke-sponsor@example.com');
+  await activate(organizer.user.id, 'organizer');
+  await activate(sponsor.user.id, 'sponsor');
+
+  const conferenceId = 'conf_growth_smoke_2027';
+  await request('/api/activity/conferences', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: {
+      id: conferenceId,
+      title: 'Growth Smoke Conference 2027',
+      dates: { start: '2027-04-10', end: '2027-04-11' },
+      location: { city: 'Test City', country: 'Test Country' },
+    },
+  });
+
+  const needResult = await request('/api/sponsors/needs', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: {
+      conferenceId,
+      title: 'Growth Smoke Sponsorship',
+      categories: ['Energy'],
+      targetSectors: ['Energy'],
+      regions: ['Middle East'],
+      opportunityTypes: ['Technical Session'],
+      priceOnRequest: false,
+      priceAmount: 5000,
+      totalSlots: 1,
+    },
+  });
+
+  await request('/api/sponsors/preferences/mine', {
+    method: 'PUT',
+    cookie: sponsor.cookie,
+    body: {
+      sectors: ['Energy'],
+      categories: ['Energy'],
+      regions: ['Middle East'],
+      opportunityTypes: ['Technical Session'],
+      budgetMin: 1000,
+      budgetMax: 10000,
+      alertFrequency: 'instant',
+    },
+  });
+
+  await request(`/api/sponsors/needs/${needResult.need.id}/inquiries`, {
+    method: 'POST',
+    cookie: sponsor.cookie,
+    body: { message: 'Growth smoke inquiry', budget: 5000 },
+  });
+
+  const report = await runGrowthReport();
+  if (report?.organizer?.signups !== 1 || report?.organizer?.paidSubscriptions !== 1) {
+    throw new Error('Organizer signup/paid funnel is incorrect: ' + JSON.stringify(report?.organizer));
+  }
+  if (report?.organizer?.firstValueActivated !== 1 || report?.organizer?.publishedSponsorshipInventory !== 1) {
+    throw new Error('Organizer activation funnel is incorrect: ' + JSON.stringify(report?.organizer));
+  }
+  if (report?.sponsor?.signups !== 1 || report?.sponsor?.paidSubscriptions !== 1) {
+    throw new Error('Sponsor signup/paid funnel is incorrect: ' + JSON.stringify(report?.sponsor));
+  }
+  if (report?.sponsor?.firstValueActivated !== 1 || report?.sponsor?.sentSponsorInquiry !== 1) {
+    throw new Error('Sponsor activation funnel is incorrect: ' + JSON.stringify(report?.sponsor));
+  }
+
+  console.log(JSON.stringify({
+    growthReportSmoke: 'passed',
+    organizer: {
+      signups: report.organizer.signups,
+      paid: report.organizer.paidSubscriptions,
+      firstValue: report.organizer.firstValueActivated,
+      sponsorshipInventory: report.organizer.publishedSponsorshipInventory,
+    },
+    sponsor: {
+      signups: report.sponsor.signups,
+      paid: report.sponsor.paidSubscriptions,
+      firstValue: report.sponsor.firstValueActivated,
+      inquiry: report.sponsor.sentSponsorInquiry,
+    },
+  }));
+} finally {
+  child.kill('SIGTERM');
+  await Promise.race([
+    new Promise((resolve) => child.once('exit', resolve)),
+    sleep(3000),
+  ]);
+  if (child.exitCode === null) child.kill('SIGKILL');
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
+  }
+}
