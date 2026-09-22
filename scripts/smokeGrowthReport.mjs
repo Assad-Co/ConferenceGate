@@ -30,6 +30,13 @@ child.stderr.on('data', (chunk) => { stderr += String(chunk); });
 
 const base = `http://127.0.0.1:${port}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const testEnv = () => ({
+  ...process.env,
+  NODE_ENV: 'test',
+  TEST_DATABASE_PATH: dbPath,
+  TURSO_DATABASE_URL: '',
+  TURSO_AUTH_TOKEN: '',
+});
 
 async function waitForHealth() {
   const deadline = Date.now() + 25000;
@@ -107,18 +114,19 @@ async function startCheckout(account, expectedSuffix) {
   });
 }
 
-async function activate(userId, role) {
+async function activate(userId, role, eventId = `activate_${role}_1`, status = 'active', periodEnd = '2026-10-22T00:00:00Z') {
   await request('/api/billing/provider-sync', {
     method: 'POST',
     billing: true,
     body: {
       provider: 'growth-smoke',
-      eventId: `activate_${role}_1`,
-      eventType: 'subscription.activated',
+      eventId,
+      eventType: status === 'active' ? 'subscription.activated' : `subscription.${status}`,
       userId,
-      status: 'active',
+      status,
       plan: `${role}_pro_growth_smoke`,
       customerRef: `growth_customer_${role}`,
+      periodEnd,
     },
   });
 }
@@ -126,13 +134,7 @@ async function activate(userId, role) {
 async function runJsonScript(script) {
   return new Promise((resolve, reject) => {
     const report = spawn(process.execPath, [script, '--compact'], {
-      env: {
-        ...process.env,
-        NODE_ENV: 'test',
-        TEST_DATABASE_PATH: dbPath,
-        TURSO_DATABASE_URL: '',
-        TURSO_AUTH_TOKEN: '',
-      },
+      env: testEnv(),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let out = '';
@@ -150,6 +152,8 @@ async function runJsonScript(script) {
 
 try {
   await waitForHealth();
+  const schema = await runJsonScript('scripts/ensureGrowthSchema.mjs');
+  if (schema?.growthSchema !== 'ready') throw new Error('Growth schema did not initialize: ' + JSON.stringify(schema));
 
   const organizer = await signup('organizer', 'growth-smoke-organizer@example.com');
   const sponsor = await signup('sponsor', 'growth-smoke-sponsor@example.com');
@@ -173,6 +177,10 @@ try {
 
   await activate(organizer.user.id, 'organizer');
   await activate(sponsor.user.id, 'sponsor');
+  // Exercise real status-history transitions: cancel/reactivate organizer and extend sponsor period.
+  await activate(organizer.user.id, 'organizer', 'cancel_organizer_1', 'canceled', '2026-10-22T00:00:00Z');
+  await activate(organizer.user.id, 'organizer', 'reactivate_organizer_1', 'active', '2026-11-22T00:00:00Z');
+  await activate(sponsor.user.id, 'sponsor', 'renew_sponsor_1', 'active', '2026-11-22T00:00:00Z');
 
   const conferenceId = 'conf_growth_smoke_2027';
   await request('/api/activity/conferences', {
@@ -268,6 +276,17 @@ try {
   if (!cohortReport?.cohorts?.some((row) => row.role === 'organizer' && row.currentPaidConversionPct === 100)) {
     throw new Error('Organizer cohort conversion missing: ' + JSON.stringify(cohortReport?.cohorts));
   }
+  if (!cohortReport?.subscriptionHistory?.available || !cohortReport.subscriptionHistory.instrumentedSince) {
+    throw new Error('Subscription history instrumentation missing: ' + JSON.stringify(cohortReport?.subscriptionHistory));
+  }
+  const organizerTransitions = cohortReport.subscriptionHistory.transitions30d.find((row) => row.role === 'organizer');
+  const sponsorTransitions = cohortReport.subscriptionHistory.transitions30d.find((row) => row.role === 'sponsor');
+  if (!organizerTransitions || organizerTransitions.cancellations < 1 || organizerTransitions.reactivations < 1) {
+    throw new Error('Organizer subscription transitions are incorrect: ' + JSON.stringify(organizerTransitions));
+  }
+  if (!sponsorTransitions || sponsorTransitions.periodEndChanges < 1) {
+    throw new Error('Sponsor period extension signal is missing: ' + JSON.stringify(sponsorTransitions));
+  }
   if (executive?.movement?.organizerSignups?.current7d !== 1 || executive?.movement?.sponsorSignups?.current7d !== 1) {
     throw new Error('Executive signup movement is incorrect: ' + JSON.stringify(executive?.movement));
   }
@@ -282,10 +301,7 @@ try {
       organizerActivation: `${organizerActivation.activation.completedCount}/${organizerActivation.activation.totalCount}`,
       sponsorActivation: `${sponsorActivation.activation.completedCount}/${sponsorActivation.activation.totalCount}`,
     },
-    phase63: {
-      retention: true,
-      nextBestAction: true,
-    },
+    phase63: { retention: true, nextBestAction: true },
     phase64: {
       explicitFirstTouchAttribution: true,
       acquisitionCoveragePct: cohortReport.acquisitionCoverage.coveragePct,
@@ -293,8 +309,9 @@ try {
     },
     phase65: {
       signupCohorts: true,
-      organizerCurrentPaidConversionPct: cohortReport.cohorts.find((row) => row.role === 'organizer')?.currentPaidConversionPct,
-      sponsorCurrentPaidConversionPct: cohortReport.cohorts.find((row) => row.role === 'sponsor')?.currentPaidConversionPct,
+      cleanSubscriptionHistoryFromInstrumentationStart: true,
+      cancellationsAndReactivations: true,
+      renewalPeriodSignals: true,
     },
   }));
 } finally {
