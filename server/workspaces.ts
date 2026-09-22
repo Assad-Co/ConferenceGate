@@ -172,6 +172,208 @@ async function workspaceDTO(context: {
   };
 }
 
+async function count(sql: string, args: any[] = []): Promise<number> {
+  const row = await dbGet<{ count: number }>(sql, args);
+  return Number(row?.count || 0);
+}
+
+async function activationDTO(context: {
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}) {
+  const accountId = context.workspace.owner_id;
+  const role = context.workspace.account_role;
+  const teamMembers = await count(
+    "SELECT COUNT(*) as count FROM account_workspace_members WHERE workspace_id=? AND status='active' AND member_role<>'owner'",
+    [context.workspace.id]
+  );
+
+  if (role === "organizer") {
+    const [conferences, needs, inquiries, deals, payments] = await Promise.all([
+      count("SELECT COUNT(*) as count FROM created_conferences WHERE organizer_id=?", [accountId]),
+      count("SELECT COUNT(*) as count FROM sponsorship_needs WHERE organizer_id=?", [accountId]),
+      count(
+        `SELECT COUNT(*) as count
+           FROM sponsorship_need_inquiries i
+           JOIN sponsorship_needs n ON n.id=i.need_id
+          WHERE n.organizer_id=?`,
+        [accountId]
+      ),
+      count("SELECT COUNT(*) as count FROM sponsorship_deals WHERE organizer_id=?", [accountId]),
+      count(
+        `SELECT COUNT(*) as count
+           FROM sponsorship_payments p
+           JOIN sponsorship_deals d ON d.id=p.deal_id
+          WHERE d.organizer_id=? AND p.status='settled'`,
+        [accountId]
+      ),
+    ]);
+    const steps = [
+      {
+        key: "create_conference",
+        label: "Create your first conference",
+        description: "Use Conference Wizard to create the conference workspace sponsors and professionals will engage with.",
+        complete: conferences > 0,
+        count: conferences,
+      },
+      {
+        key: "publish_sponsorship_need",
+        label: "Publish a sponsorship need",
+        description: "Tell matched sponsors what the conference needs, the opportunity type, benefits, and budget or price.",
+        complete: needs > 0,
+        count: needs,
+      },
+      {
+        key: "receive_sponsor_inquiry",
+        label: "Receive sponsor interest",
+        description: "A Sponsor Pro workspace has submitted an inquiry against your sponsorship inventory.",
+        complete: inquiries > 0,
+        count: inquiries,
+      },
+      {
+        key: "reach_deal_room",
+        label: "Open a Deal Room",
+        description: "Move a qualified sponsor inquiry into the shared commercial workflow.",
+        complete: deals > 0,
+        count: deals,
+      },
+      {
+        key: "confirm_sponsor_payment",
+        label: "Complete a sponsorship payment",
+        description: "A sponsorship payment has been confirmed by the configured payment-provider integration.",
+        complete: payments > 0,
+        count: payments,
+      },
+    ];
+    const completedCount = steps.filter((step) => step.complete).length;
+    return {
+      role,
+      accountId,
+      workspaceId: context.workspace.id,
+      workspaceRole: context.membership.member_role,
+      completedCount,
+      totalCount: steps.length,
+      progressPct: Math.round((completedCount / steps.length) * 100),
+      steps,
+      optional: {
+        key: "add_team_member",
+        label: "Add a teammate",
+        description: "Optional: share the paid workspace with an admin, member, or viewer seat.",
+        complete: teamMembers > 0,
+        count: teamMembers,
+      },
+    };
+  }
+
+  const [preferences, saved, inquiries, deals, payments] = await Promise.all([
+    count("SELECT COUNT(*) as count FROM sponsor_preferences WHERE sponsor_id=?", [accountId]),
+    count("SELECT COUNT(*) as count FROM sponsor_saved_opportunities WHERE sponsor_id=?", [accountId]),
+    count("SELECT COUNT(*) as count FROM sponsorship_need_inquiries WHERE sponsor_id=?", [accountId]),
+    count("SELECT COUNT(*) as count FROM sponsorship_deals WHERE sponsor_id=?", [accountId]),
+    count(
+      `SELECT COUNT(*) as count
+         FROM sponsorship_payments p
+         JOIN sponsorship_deals d ON d.id=p.deal_id
+        WHERE d.sponsor_id=? AND p.status='settled'`,
+      [accountId]
+    ),
+  ]);
+  const steps = [
+    {
+      key: "configure_preferences",
+      label: "Set sponsorship preferences",
+      description: "Choose sectors, categories, regions, opportunity types, budget range, and alert frequency.",
+      complete: preferences > 0,
+      count: preferences,
+    },
+    {
+      key: "save_opportunity",
+      label: "Save an opportunity",
+      description: "Build a shared Sponsor Pro watchlist and enable alerts for opportunities you want to follow.",
+      complete: saved > 0,
+      count: saved,
+    },
+    {
+      key: "send_inquiry",
+      label: "Send a sponsorship inquiry",
+      description: "Contact an organizer through an active ConferenceGate sponsorship need.",
+      complete: inquiries > 0,
+      count: inquiries,
+    },
+    {
+      key: "reach_deal_room",
+      label: "Reach a Deal Room",
+      description: "Advance an organizer conversation into the shared sponsorship commercial workflow.",
+      complete: deals > 0,
+      count: deals,
+    },
+    {
+      key: "confirm_sponsor_payment",
+      label: "Complete a sponsorship payment",
+      description: "A sponsorship payment has been confirmed by the configured payment-provider integration.",
+      complete: payments > 0,
+      count: payments,
+    },
+  ];
+  const completedCount = steps.filter((step) => step.complete).length;
+  return {
+    role,
+    accountId,
+    workspaceId: context.workspace.id,
+    workspaceRole: context.membership.member_role,
+    completedCount,
+    totalCount: steps.length,
+    progressPct: Math.round((completedCount / steps.length) * 100),
+    steps,
+    optional: {
+      key: "add_team_member",
+      label: "Add a teammate",
+      description: "Optional: share the paid workspace with an admin, member, or viewer seat.",
+      complete: teamMembers > 0,
+      count: teamMembers,
+    },
+  };
+}
+
+// First-party checkout instrumentation. The browser calls this only after the billing endpoint has
+// returned a usable checkout URL and immediately before navigation to the payment provider. We do
+// not store browser fingerprints, checkout URLs, IP-derived identities, or third-party analytics IDs.
+workspacesRouter.post(
+  "/checkout-start",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
+    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+      return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    }
+    const rawProvider = typeof req.body?.provider === "string" ? req.body.provider.trim().toLowerCase() : "hosted";
+    const provider = /^[a-z0-9_-]{1,40}$/.test(rawProvider) ? rawProvider : "hosted";
+    const eventId = `checkout_${crypto.randomUUID()}`;
+    const eventPayload = {
+      role: user.role,
+      provider,
+      subscriptionStatus: user.subscription_status || "required",
+    };
+    const payloadHash = crypto.createHash("sha256").update(JSON.stringify(eventPayload)).digest("hex");
+    await dbRun(
+      "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
+      [`bpe_${crypto.randomUUID()}`, provider, eventId, "subscription.checkout.started", user.id, payloadHash]
+    );
+    res.status(201).json({ ok: true });
+  })
+);
+
+workspacesRouter.get(
+  "/activation",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      res.json({ activation: await activationDTO(context) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load activation checklist." });
+    }
+  })
+);
+
 workspacesRouter.get(
   "/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
