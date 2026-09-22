@@ -13,6 +13,7 @@ import { Router, type NextFunction, type Response } from "express";
 import { asyncHandler } from "../asyncHandler";
 import { requireAuth, type AuthedRequest } from "../auth";
 import { dbAll, dbGet, dbRun } from "../db";
+import { buildGrowthDashboard } from "../growthDashboard";
 import { buildQualityReport, exportEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -254,6 +255,17 @@ discoveryRouter.get(
       [status]
     );
     res.json({ items: rows });
+  })
+);
+
+// Private operator dashboard. Company-wide signups, conversion, revenue, payout and deployment
+// readiness are deliberately protected by the same signed-in-session + admin-token boundary as
+// other sensitive discovery operations; normal Organizer/Sponsor customers cannot access them.
+discoveryRouter.get(
+  "/growth-dashboard",
+  ...adminOnly,
+  asyncHandler(async (_req: AuthedRequest, res: Response) => {
+    res.json({ dashboard: await buildGrowthDashboard() });
   })
 );
 
