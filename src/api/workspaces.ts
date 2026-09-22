@@ -40,10 +40,46 @@ export interface AccountWorkspace {
   audit: WorkspaceAuditItem[];
 }
 
+export interface ActivationStep {
+  key: string;
+  label: string;
+  description: string;
+  complete: boolean;
+  count: number;
+}
+
+export interface WorkspaceActivation {
+  role: 'organizer' | 'sponsor';
+  accountId: string;
+  workspaceId: string;
+  workspaceRole: WorkspaceMemberRole;
+  completedCount: number;
+  totalCount: number;
+  progressPct: number;
+  steps: ActivationStep[];
+  optional: ActivationStep;
+}
+
 export async function fetchMyWorkspace(): Promise<AccountWorkspace> {
   const res = await fetch('/api/workspaces/mine', { credentials: 'include' });
   const data = await parseResponse(res);
   return data.workspace;
+}
+
+export async function fetchWorkspaceActivation(): Promise<WorkspaceActivation> {
+  const res = await fetch('/api/workspaces/activation', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.activation;
+}
+
+export async function recordCheckoutStart(provider?: string | null): Promise<void> {
+  const res = await fetch('/api/workspaces/checkout-start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ provider: provider || 'hosted' }),
+  });
+  await parseResponse(res);
 }
 
 export async function renameMyWorkspace(name: string): Promise<AccountWorkspace> {
