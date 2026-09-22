@@ -81,6 +81,20 @@ async function signup(role, email) {
   return { user: data.user, cookie };
 }
 
+async function recordAcquisition(account, source, campaign) {
+  return request('/api/workspaces/acquisition', {
+    method: 'POST',
+    cookie: account.cookie,
+    body: {
+      source,
+      medium: 'paid-social',
+      campaign,
+      content: 'growth-smoke',
+      landingPath: '/join',
+    },
+  });
+}
+
 async function startCheckout(account, expectedSuffix) {
   const checkout = await request('/api/billing/checkout', { cookie: account.cookie });
   if (!checkout.checkoutUrl?.endsWith(expectedSuffix) || checkout.provider !== 'hosted') {
@@ -109,9 +123,9 @@ async function activate(userId, role) {
   });
 }
 
-async function runGrowthReport() {
+async function runJsonScript(script) {
   return new Promise((resolve, reject) => {
-    const report = spawn(process.execPath, ['scripts/growthReport.mjs', '--compact'], {
+    const report = spawn(process.execPath, [script, '--compact'], {
       env: {
         ...process.env,
         NODE_ENV: 'test',
@@ -127,9 +141,9 @@ async function runGrowthReport() {
     report.stderr.on('data', (chunk) => { err += String(chunk); });
     report.once('error', reject);
     report.once('exit', (code) => {
-      if (code !== 0) return reject(new Error(`Growth report exited ${code}: ${err}`));
+      if (code !== 0) return reject(new Error(`${script} exited ${code}: ${err}`));
       try { resolve(JSON.parse(out)); }
-      catch (error) { reject(new Error(`Growth report did not return JSON: ${out}\n${err}\n${error}`)); }
+      catch (error) { reject(new Error(`${script} did not return JSON: ${out}\n${err}\n${error}`)); }
     });
   });
 }
@@ -140,8 +154,20 @@ try {
   const organizer = await signup('organizer', 'growth-smoke-organizer@example.com');
   const sponsor = await signup('sponsor', 'growth-smoke-sponsor@example.com');
 
-  // Mirror the browser flow: the billing endpoint must first return a usable URL, then the
-  // first-party checkout-start endpoint records the provider navigation.
+  const organizerAcquisition = await recordAcquisition(organizer, 'linkedin', 'organizer-launch');
+  await recordAcquisition(organizer, 'should-not-overwrite', 'later-campaign');
+  const sponsorAcquisition = await recordAcquisition(sponsor, 'industry-newsletter', 'sponsor-launch');
+  if (organizerAcquisition?.acquisition?.source !== 'linkedin') {
+    throw new Error('Organizer acquisition was not recorded.');
+  }
+  const organizerAcquisitionAfterRetry = await recordAcquisition(organizer, 'another-source', 'another-campaign');
+  if (organizerAcquisitionAfterRetry?.acquisition?.source !== 'linkedin') {
+    throw new Error('First-touch acquisition was overwritten.');
+  }
+  if (sponsorAcquisition?.acquisition?.source !== 'industry-newsletter') {
+    throw new Error('Sponsor acquisition was not recorded.');
+  }
+
   await startCheckout(organizer, '/organizer');
   await startCheckout(sponsor, '/sponsor');
 
@@ -211,7 +237,10 @@ try {
     throw new Error('Sponsor activation checklist is incorrect: ' + JSON.stringify(sponsorActivation));
   }
 
-  const report = await runGrowthReport();
+  const report = await runJsonScript('scripts/growthReport.mjs');
+  const cohortReport = await runJsonScript('scripts/growthCohortReport.mjs');
+  const executive = await runJsonScript('scripts/executiveGrowthSnapshot.mjs');
+
   if (report?.organizer?.signups !== 1 || report?.organizer?.paidSubscriptions !== 1) {
     throw new Error('Organizer signup/paid funnel is incorrect: ' + JSON.stringify(report?.organizer));
   }
@@ -230,6 +259,21 @@ try {
   if (report?.checkout?.byRole?.sponsor?.starts30d !== 1 || report?.checkout?.byRole?.sponsor?.currentlyPaidAccounts !== 1) {
     throw new Error('Sponsor checkout funnel is incorrect: ' + JSON.stringify(report?.checkout));
   }
+  if (cohortReport?.acquisitionCoverage?.attributedSignups !== 2 || cohortReport?.acquisitionCoverage?.coveragePct !== 100) {
+    throw new Error('Acquisition coverage is incorrect: ' + JSON.stringify(cohortReport?.acquisitionCoverage));
+  }
+  if (!cohortReport?.acquisition?.some((row) => row.source === 'linkedin' && row.role === 'organizer')) {
+    throw new Error('Organizer acquisition source missing: ' + JSON.stringify(cohortReport?.acquisition));
+  }
+  if (!cohortReport?.cohorts?.some((row) => row.role === 'organizer' && row.currentPaidConversionPct === 100)) {
+    throw new Error('Organizer cohort conversion missing: ' + JSON.stringify(cohortReport?.cohorts));
+  }
+  if (executive?.movement?.organizerSignups?.current7d !== 1 || executive?.movement?.sponsorSignups?.current7d !== 1) {
+    throw new Error('Executive signup movement is incorrect: ' + JSON.stringify(executive?.movement));
+  }
+  if (executive?.currentState?.acquisitionCoverage?.coveragePct !== 100) {
+    throw new Error('Executive acquisition coverage is incorrect: ' + JSON.stringify(executive?.currentState));
+  }
 
   console.log(JSON.stringify({
     growthReportSmoke: 'passed',
@@ -238,17 +282,19 @@ try {
       organizerActivation: `${organizerActivation.activation.completedCount}/${organizerActivation.activation.totalCount}`,
       sponsorActivation: `${sponsorActivation.activation.completedCount}/${sponsorActivation.activation.totalCount}`,
     },
-    organizer: {
-      signups: report.organizer.signups,
-      paid: report.organizer.paidSubscriptions,
-      firstValue: report.organizer.firstValueActivated,
-      sponsorshipInventory: report.organizer.publishedSponsorshipInventory,
+    phase63: {
+      retention: true,
+      nextBestAction: true,
     },
-    sponsor: {
-      signups: report.sponsor.signups,
-      paid: report.sponsor.paidSubscriptions,
-      firstValue: report.sponsor.firstValueActivated,
-      inquiry: report.sponsor.sentSponsorInquiry,
+    phase64: {
+      explicitFirstTouchAttribution: true,
+      acquisitionCoveragePct: cohortReport.acquisitionCoverage.coveragePct,
+      executiveMovement: true,
+    },
+    phase65: {
+      signupCohorts: true,
+      organizerCurrentPaidConversionPct: cohortReport.cohorts.find((row) => row.role === 'organizer')?.currentPaidConversionPct,
+      sponsorCurrentPaidConversionPct: cohortReport.cohorts.find((row) => row.role === 'sponsor')?.currentPaidConversionPct,
     },
   }));
 } finally {
