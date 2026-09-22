@@ -164,6 +164,82 @@ async function roleFunnel(role) {
   };
 }
 
+async function checkoutOperations() {
+  const providerRows = await grouped(
+    `SELECT u.role AS role,
+            e.provider AS provider,
+            COUNT(*) AS starts,
+            COUNT(DISTINCT e.subject_id) AS accounts
+       FROM billing_provider_events e
+       JOIN users u ON u.id=e.subject_id
+      WHERE e.event_type='subscription.checkout.started'
+        AND e.created_at >= datetime('now','-30 days')
+        AND u.role IN ('organizer','sponsor')
+      GROUP BY u.role,e.provider
+      ORDER BY u.role,e.provider`
+  );
+
+  const byRole = {};
+  for (const role of ['organizer', 'sponsor']) {
+    const starts30d = await scalar(
+      `SELECT COUNT(*) AS value
+         FROM billing_provider_events e
+         JOIN users u ON u.id=e.subject_id
+        WHERE e.event_type='subscription.checkout.started'
+          AND e.created_at >= datetime('now','-30 days')
+          AND u.role=?`,
+      [role]
+    );
+    const uniqueAccounts30d = await scalar(
+      `SELECT COUNT(DISTINCT e.subject_id) AS value
+         FROM billing_provider_events e
+         JOIN users u ON u.id=e.subject_id
+        WHERE e.event_type='subscription.checkout.started'
+          AND e.created_at >= datetime('now','-30 days')
+          AND u.role=?`,
+      [role]
+    );
+    const currentlyPaidAccounts = await scalar(
+      `SELECT COUNT(DISTINCT e.subject_id) AS value
+         FROM billing_provider_events e
+         JOIN users u ON u.id=e.subject_id
+        WHERE e.event_type='subscription.checkout.started'
+          AND e.created_at >= datetime('now','-30 days')
+          AND u.role=?
+          AND u.subscription_status IN ('active','trialing')`,
+      [role]
+    );
+    const unconvertedAfter24h = await scalar(
+      `SELECT COUNT(DISTINCT e.subject_id) AS value
+         FROM billing_provider_events e
+         JOIN users u ON u.id=e.subject_id
+        WHERE e.event_type='subscription.checkout.started'
+          AND e.created_at >= datetime('now','-30 days')
+          AND e.created_at <= datetime('now','-24 hours')
+          AND u.role=?
+          AND u.subscription_status NOT IN ('active','trialing')`,
+      [role]
+    );
+    byRole[role] = {
+      starts30d,
+      uniqueAccounts30d,
+      currentlyPaidAccounts,
+      unconvertedAfter24h,
+      checkoutToCurrentPaidPct: rate(currentlyPaidAccounts, uniqueAccounts30d),
+    };
+  }
+
+  return {
+    byRole,
+    byProvider30d: providerRows.map((row) => ({
+      role: String(row.role),
+      provider: String(row.provider),
+      starts: numberValue(row.starts),
+      accounts: numberValue(row.accounts),
+    })),
+  };
+}
+
 async function workspaceAdoption() {
   const rows = await grouped(
     `SELECT w.account_role AS role,
@@ -263,9 +339,10 @@ async function marketplaceRevenue() {
 }
 
 try {
-  const [organizer, sponsor, workspaces, marketplace] = await Promise.all([
+  const [organizer, sponsor, checkout, workspaces, marketplace] = await Promise.all([
     roleFunnel('organizer'),
     roleFunnel('sponsor'),
+    checkoutOperations(),
     workspaceAdoption(),
     marketplaceRevenue(),
   ]);
@@ -277,10 +354,13 @@ try {
       paidSubscription: "subscription_status is active or trialing on the paid account owner",
       organizerFirstValue: 'organizer account has created at least one conference',
       sponsorFirstValue: 'sponsor account has preferences, a saved opportunity, or a sponsorship inquiry',
+      checkoutStart: 'ConferenceGate received a usable checkout URL and recorded the event immediately before provider navigation',
+      checkoutAbandonmentProxy: 'a checkout-start account whose checkout is at least 24 hours old and whose current subscription is not active or trialing',
       realizedRevenue: 'provider-confirmed sponsorship payments that remain settled; refunds are excluded',
     },
     organizer,
     sponsor,
+    checkout,
     workspaces,
     marketplace,
   };
