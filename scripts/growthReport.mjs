@@ -240,6 +240,87 @@ async function checkoutOperations() {
   };
 }
 
+async function retentionOperations() {
+  const rows = await grouped(
+    `WITH activity(account_id,role,activity_at) AS (
+       SELECT organizer_id,'organizer',created_at FROM created_conferences
+       UNION ALL SELECT organizer_id,'organizer',updated_at FROM sponsorship_needs
+       UNION ALL SELECT organizer_id,'organizer',updated_at FROM sponsorship_deals
+       UNION ALL SELECT organizer_id,'organizer',created_at FROM organizer_broadcasts
+       UNION ALL SELECT organizer_id,'organizer',created_at FROM professional_invitations
+       UNION ALL SELECT sponsor_id,'sponsor',updated_at FROM sponsor_preferences
+       UNION ALL SELECT sponsor_id,'sponsor',updated_at FROM sponsor_saved_opportunities
+       UNION ALL SELECT sponsor_id,'sponsor',updated_at FROM sponsorship_need_inquiries
+       UNION ALL SELECT sponsor_id,'sponsor',updated_at FROM sponsorship_deals
+       UNION ALL SELECT sponsor_id,'sponsor',updated_at FROM sponsor_requests
+       UNION ALL
+       SELECT w.owner_id,w.account_role,a.created_at
+         FROM account_workspace_audit a
+         JOIN account_workspaces w ON w.id=a.workspace_id
+     ), last_activity AS (
+       SELECT account_id,role,MAX(activity_at) AS last_active_at
+         FROM activity
+        WHERE activity_at IS NOT NULL
+        GROUP BY account_id,role
+     )
+     SELECT w.account_role AS role,
+            COUNT(*) AS paid_workspaces,
+            SUM(CASE WHEN la.last_active_at >= datetime('now','-7 days') THEN 1 ELSE 0 END) AS active_7d,
+            SUM(CASE WHEN la.last_active_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS active_30d,
+            SUM(CASE WHEN la.last_active_at >= datetime('now','-90 days') THEN 1 ELSE 0 END) AS active_90d,
+            SUM(CASE WHEN la.last_active_at IS NULL THEN 1 ELSE 0 END) AS never_operationally_active
+       FROM account_workspaces w
+       JOIN users u ON u.id=w.owner_id
+       LEFT JOIN last_activity la ON la.account_id=w.owner_id AND la.role=w.account_role
+      WHERE u.subscription_status IN ('active','trialing')
+      GROUP BY w.account_role
+      ORDER BY w.account_role`
+  );
+
+  const result = {
+    organizer: {
+      paidWorkspaces: 0,
+      active7d: 0,
+      active30d: 0,
+      active90d: 0,
+      neverOperationallyActive: 0,
+      active7dPct: null,
+      active30dPct: null,
+      active90dPct: null,
+    },
+    sponsor: {
+      paidWorkspaces: 0,
+      active7d: 0,
+      active30d: 0,
+      active90d: 0,
+      neverOperationallyActive: 0,
+      active7dPct: null,
+      active30dPct: null,
+      active90dPct: null,
+    },
+  };
+
+  for (const row of rows) {
+    const role = String(row.role);
+    if (role !== 'organizer' && role !== 'sponsor') continue;
+    const paidWorkspaces = numberValue(row.paid_workspaces);
+    const active7d = numberValue(row.active_7d);
+    const active30d = numberValue(row.active_30d);
+    const active90d = numberValue(row.active_90d);
+    result[role] = {
+      paidWorkspaces,
+      active7d,
+      active30d,
+      active90d,
+      neverOperationallyActive: numberValue(row.never_operationally_active),
+      active7dPct: rate(active7d, paidWorkspaces),
+      active30dPct: rate(active30d, paidWorkspaces),
+      active90dPct: rate(active90d, paidWorkspaces),
+    };
+  }
+  return result;
+}
+
 async function workspaceAdoption() {
   const rows = await grouped(
     `SELECT w.account_role AS role,
@@ -339,10 +420,11 @@ async function marketplaceRevenue() {
 }
 
 try {
-  const [organizer, sponsor, checkout, workspaces, marketplace] = await Promise.all([
+  const [organizer, sponsor, checkout, retention, workspaces, marketplace] = await Promise.all([
     roleFunnel('organizer'),
     roleFunnel('sponsor'),
     checkoutOperations(),
+    retentionOperations(),
     workspaceAdoption(),
     marketplaceRevenue(),
   ]);
@@ -356,11 +438,13 @@ try {
       sponsorFirstValue: 'sponsor account has preferences, a saved opportunity, or a sponsorship inquiry',
       checkoutStart: 'ConferenceGate received a usable checkout URL and recorded the event immediately before provider navigation',
       checkoutAbandonmentProxy: 'a checkout-start account whose checkout is at least 24 hours old and whose current subscription is not active or trialing',
+      activePaidWorkspace: 'a currently paid workspace whose owner account has recorded role-specific operational activity in the selected lookback window',
       realizedRevenue: 'provider-confirmed sponsorship payments that remain settled; refunds are excluded',
     },
     organizer,
     sponsor,
     checkout,
+    retention,
     workspaces,
     marketplace,
   };
