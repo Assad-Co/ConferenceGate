@@ -1,70 +1,83 @@
 # Phase 6 — Launch Conversion & Revenue Operations
 
-Phase 6 starts after the paid Organizer/Sponsor foundation is production-ready. Its purpose is to measure whether real customers move from account creation to paid access, first value, commercial engagement, retention activity, and realized sponsorship revenue.
+Phase 6 measures whether real Organizer and Sponsor customers move from account creation to paid access, first value, commercial engagement, repeat operational activity, and realized sponsorship revenue.
 
-This phase deliberately reuses product data ConferenceGate already stores. It does not add hidden browser tracking, fingerprinting, or a second analytics database.
+ConferenceGate deliberately uses first-party product records already required to operate the service. It does not add browser fingerprinting, inferred identity, IP-derived acquisition attribution, or a third-party analytics database.
 
-## Operating command
-
-Run against the production service environment:
+## Operating commands
 
 ```text
+npm run growth:schema
 npm run growth:report
+npm run growth:cohorts
+npm run growth:executive
+npm run growth:executive:json
 ```
 
-The report is read-only. With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` configured, it reads the production Turso database. Without Turso it reads the local development database. Tests are forced onto an explicit isolated `TEST_DATABASE_PATH` and refuse production Turso credentials.
+- `growth:schema` installs the additive growth tables/triggers used for explicit acquisition attribution and forward-looking subscription history.
+- `growth:report` is the operational funnel, checkout, retention, workspace, and revenue report.
+- `growth:cohorts` reports signup cohorts, current paid conversion, acquisition-source cohorts, and instrumented subscription transitions.
+- `growth:executive` prints a concise Markdown executive snapshot comparing the current 7/30-day windows with the immediately preceding non-overlapping periods.
+- `growth:executive:json` returns the same executive snapshot as JSON.
 
-## Organizer funnel
+With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` configured, reports read production Turso. Tests are forced onto an explicit isolated `TEST_DATABASE_PATH` and refuse production Turso credentials.
 
-The report measures:
+## Phase 6.1 — Core paid funnel and revenue operations
 
-1. Organizer account signups, including trailing 7-day and 30-day counts.
-2. Current direct paid subscriptions (`active` or `trialing`).
-3. First-value activation: the paid account owner has created at least one conference.
-4. Commercial inventory: at least one sponsorship need has been published.
-5. Sponsor interest received: an inquiry exists against the organizer's sponsorship inventory.
+### Organizer funnel
+
+1. Organizer signup.
+2. Current paid subscription (`active` or `trialing`).
+3. First value: at least one created conference.
+4. Sponsorship inventory published.
+5. Sponsor interest received.
 6. Deal Room reached.
 7. Provider-confirmed sponsorship payment realized.
 
-It calculates conversion percentages between each meaningful stage where a denominator exists.
+### Sponsor funnel
 
-## Sponsor funnel
-
-The report measures:
-
-1. Sponsor account signups, including trailing 7-day and 30-day counts.
-2. Current direct paid subscriptions (`active` or `trialing`).
-3. First-value activation: the paid sponsor account has configured preferences, saved an opportunity, or sent an inquiry.
+1. Sponsor signup.
+2. Current paid subscription (`active` or `trialing`).
+3. First value: sponsorship preferences, a saved opportunity, or a sponsorship inquiry.
 4. Preference-profile adoption.
 5. Watchlist adoption.
 6. Sponsorship inquiry sent.
 7. Deal Room reached.
 8. Provider-confirmed sponsorship payment realized.
 
+### Revenue operations
+
+The report keeps financially different states separate:
+
+- Deal Rooms by current status.
+- Provider-confirmed settled sponsorship revenue by currency.
+- Refunded payments by currency.
+- Realized platform-fee revenue by currency, excluding refunded payments.
+- Organizer payout obligations by `pending`, `held`, `paid`, or `refunded`.
+- 30-day sponsorship engagement events.
+
+Currencies are never combined into a misleading cross-currency total.
+
 ## Phase 6.2 — Checkout conversion
 
-ConferenceGate records a checkout start only after the billing API has successfully returned a usable provider checkout URL and immediately before the browser navigates away. The event is stored in the existing first-party billing event ledger.
+ConferenceGate records a checkout start only after the billing API has returned a usable provider checkout URL and immediately before provider navigation.
 
-The checkout event stores the account ID already required by ConferenceGate, the provider name, the account role, and a hash of the small operational payload. It does **not** store browser fingerprints, checkout URLs, IP-derived identity, or third-party analytics identifiers.
+The first-party event stores the existing ConferenceGate account ID, provider, role, and a hash of the small operational payload. It does not store checkout URLs, browser fingerprints, IP-derived identities, or external analytics IDs.
 
-The growth report now includes, separately for Organizer and Sponsor accounts:
+For Organizer and Sponsor accounts separately, the report includes:
 
-- checkout starts in the trailing 30 days;
-- unique accounts that started checkout;
+- trailing-30-day checkout starts;
+- unique checkout-start accounts;
 - checkout-start accounts that are currently paid;
-- checkout-to-current-paid conversion percentage;
-- an abandonment proxy: accounts whose checkout start is at least 24 hours old and whose current subscription is not `active` or `trialing`;
-- checkout starts and unique accounts grouped by provider.
+- checkout-to-current-paid percentage;
+- a 24-hour unconverted-checkout proxy;
+- provider-level checkout-start counts.
 
-The abandonment number is deliberately labeled a proxy because a later cancellation can make a previously converted account appear currently unpaid. It is an operational warning signal, not a historical attribution claim.
-
-Checkout tracking is best-effort. Failure to record the analytics event never prevents the customer from reaching the payment provider.
+The abandonment figure is deliberately a proxy: a later cancellation can make a formerly converted account currently unpaid. Tracking is best-effort and can never block checkout.
 
 ## Phase 6.2 — Paid workspace activation checklist
 
-The Team & Access area in both Organizer Pro and Sponsor Pro displays a shared activation card. Progress is derived from real server records and is shared across workspace seats.
-
-### Organizer Pro core steps
+Organizer Pro core milestones:
 
 1. Create the first conference.
 2. Publish a sponsorship need.
@@ -72,7 +85,7 @@ The Team & Access area in both Organizer Pro and Sponsor Pro displays a shared a
 4. Open a Deal Room.
 5. Complete a provider-confirmed sponsorship payment.
 
-### Sponsor Pro core steps
+Sponsor Pro core milestones:
 
 1. Configure sponsorship preferences.
 2. Save a sponsorship opportunity.
@@ -80,89 +93,153 @@ The Team & Access area in both Organizer Pro and Sponsor Pro displays a shared a
 4. Reach a Deal Room.
 5. Complete a provider-confirmed sponsorship payment.
 
-Adding a teammate is shown as an optional milestone and is excluded from the activation percentage, so a successful solo customer is not penalized.
-
-Team seats inherit the owner workspace's activation state because the commercial records belong to the paid account workspace, not to the individual seat that happens to view them.
+Adding a teammate is optional and excluded from the percentage. Workspace seats share the account owner's commercial activation state.
 
 ## Phase 6.3 — Retention activity
 
-The growth report now calculates paid-workspace operational activity for Organizer Pro and Sponsor Pro over trailing 7-day, 30-day, and 90-day windows.
+The growth report calculates currently paid workspace operational activity over trailing 7-, 30-, and 90-day windows.
 
-For each account role it reports:
+For Organizer and Sponsor workspaces it reports:
 
 - currently paid workspaces;
-- workspaces with operational activity in the last 7 days and the percentage of paid workspaces;
-- workspaces with operational activity in the last 30 days and the percentage of paid workspaces;
-- workspaces with operational activity in the last 90 days and the percentage of paid workspaces;
-- currently paid workspaces that have never recorded one of the covered operational actions.
+- active workspaces in each lookback window and the corresponding percentage;
+- currently paid workspaces with no covered operational activity yet.
 
-Organizer activity is derived from real records such as conference creation, sponsorship inventory, sponsorship Deal Rooms, organizer broadcasts, professional invitations, and workspace access changes. Sponsor activity is derived from sponsorship preferences, saved opportunities, inquiries, Deal Rooms, sponsor requests, and workspace access changes.
+Organizer activity is derived from records such as conference creation, sponsorship inventory, Deal Rooms, broadcasts, professional invitations, and workspace changes. Sponsor activity is derived from preferences, saved opportunities, inquiries, Deal Rooms, sponsor requests, and workspace changes.
 
-These values are **operational activity retention snapshots**, not subscription-renewal retention and not classic cohort survival curves. ConferenceGate should not claim that a workspace was retained commercially merely because it performed an action.
+These are operational activity snapshots, not subscription-renewal retention.
 
-## Phase 6.3 — Next-best activation action
+## Phase 6.3 — Next Best Action
 
-The activation card now identifies the first incomplete core milestone as the workspace's **Next Best Action**. This is derived locally from the same ordered checklist; no behavioral profiling model is involved.
+The activation card highlights the first incomplete core milestone as the workspace's Next Best Action. It uses only the ordered checklist state; there is no behavioral profiling model.
 
-Once all five core milestones are complete, the card switches to a core-activation-complete state rather than continuing to manufacture additional required steps.
+After all five core milestones are complete, the workspace is shown as core-activation complete rather than being given artificial additional requirements.
 
-This guidance remains informational. It does not automatically message users or generate spam notifications.
+## Phase 6.4 — Explicit acquisition attribution
+
+Attribution is first-touch and explicit-only.
+
+ConferenceGate reads these parameters when a paid account is created:
+
+- `utm_source`
+- `utm_medium`
+- `utm_campaign`
+- `utm_content`
+- `utm_term`
+- `ref` or `referral`
+
+The values are kept temporarily in the browser session only when one of those explicit acquisition signals exists. After Organizer/Sponsor account creation, the first explicit record is stored in `account_acquisition`. Later campaigns cannot overwrite it.
+
+ConferenceGate does **not** infer acquisition source from `document.referrer`, IP address, device/browser fingerprint, geography, or identity-provider metadata. Accounts without an explicit source remain unattributed.
+
+The cohort report shows:
+
+- paid-role signups with explicit attribution;
+- acquisition coverage percentage;
+- source / medium / campaign cohorts;
+- current paid conversion by acquisition cohort.
+
+## Phase 6.4 — Executive growth snapshot
+
+The executive report compares current periods with immediately preceding non-overlapping periods:
+
+- current 7 days vs prior 7 days;
+- current 30 days vs prior 30 days.
+
+It includes:
+
+- Organizer and Sponsor signup movement;
+- checkout-account movement;
+- sponsorship inquiry movement;
+- Deal Room creation movement;
+- settled payment movement;
+- settled sponsorship revenue movement by currency;
+- top explicit acquisition sources;
+- recent signup cohorts;
+- 24-hour unconverted checkout follow-up counts;
+- paid workspaces that have never become operationally active;
+- pending or held organizer payout obligations.
+
+This allows the same command to be run repeatedly for a consistent executive review without requiring a separate analytics vendor.
+
+## Phase 6.5 — Signup and paid-conversion cohorts
+
+The cohort report groups Organizer/Sponsor accounts by signup month and shows:
+
+- signups;
+- current paid accounts;
+- first-value activated accounts;
+- paid-and-activated accounts;
+- current paid conversion percentage;
+- first-value activation percentage;
+- paid activation percentage.
+
+`currentPaidConversionPct` is explicitly a **current-state measure by signup cohort**. It is not presented as historical renewal retention.
+
+## Phase 6.5 — Clean subscription transition history
+
+`growth:schema` installs forward-looking subscription instrumentation:
+
+- `subscription_status_history` stores paid-account status transitions;
+- activation, cancellation, past-due, and reactivation transitions are captured when `subscription_status` changes;
+- a paid `subscription_period_end` change is stored separately as `period_end_changed`, which is a renewal/period-extension signal rather than proof of a new charge;
+- `growth_schema_meta.subscription_history_started_at` records when clean history began.
+
+Accounts that were already `active`, `trialing`, `past_due`, or `canceled` when the schema was installed receive one `baseline_observed_state` record. This preserves their known state without inventing the date on which that state originally began.
+
+The cohort report therefore exposes both:
+
+- all observed paid states, including baseline accounts; and
+- instrumented paid transitions that occurred after clean history started.
+
+Cancellation/reactivation and period-end signals can be analyzed reliably from the instrumentation start date forward. Earlier lifecycle history remains unknown unless supplied by an authoritative payment-provider export.
 
 ## Workspace adoption
 
-For Organizer and Sponsor workspaces separately, the report measures:
+For Organizer and Sponsor workspaces separately, ConferenceGate measures:
 
 - number of workspaces;
 - active seats;
 - added team seats excluding the owner;
-- total configured seat capacity;
-- current seat-utilization percentage.
+- total seat capacity;
+- seat-utilization percentage.
 
-Workspace capacity is aggregated once per workspace, so adding team members does not inflate the denominator.
+Capacity is counted once per workspace so team seats do not inflate the denominator.
 
-## Revenue operations
+## Reporting definitions
 
-The report keeps financially different states separate:
+- **Paid subscription** — account-owner `subscription_status` is `active` or `trialing`.
+- **Organizer first value** — organizer has created at least one conference.
+- **Sponsor first value** — sponsor has preferences, a saved opportunity, or an inquiry.
+- **Checkout start** — a usable checkout URL was returned and provider navigation was recorded immediately before redirect.
+- **Checkout abandonment proxy** — checkout start is at least 24 hours old and the account is currently not paid.
+- **Active paid workspace** — a currently paid workspace with covered role-specific operational activity in the chosen lookback window.
+- **Realized sponsorship revenue** — provider-confirmed sponsorship payment remains `settled`; refunds are excluded.
+- **Explicit acquisition** — first supplied UTM/referral information only; missing values are not inferred.
+- **Baseline observed subscription state** — state known at instrumentation start; historical transition date unknown.
+- **Period-end change** — renewal/period-extension signal; not independent proof of a renewal charge.
 
-- Deal Rooms by current deal status.
-- Provider-confirmed settled sponsorship revenue by currency.
-- Refunded sponsorship payments by currency.
-- Realized platform-fee revenue by currency, excluding refunded payments.
-- Organizer payout obligations by status and currency (`pending`, `held`, `paid`, `refunded`).
-- Existing 30-day sponsorship engagement events: listing views, inquiries, negotiating, won, contract, and payment.
-
-Currencies are never combined into a single misleading total.
-
-## Activation and reporting definitions
-
-These are operational definitions, not marketing claims:
-
-- **Paid subscription** — the paid account owner's `subscription_status` is `active` or `trialing`.
-- **Organizer first value** — the organizer account has created at least one conference.
-- **Sponsor first value** — the sponsor account has preferences, a saved opportunity, or an inquiry.
-- **Checkout start** — ConferenceGate has received a usable checkout URL and recorded the provider navigation immediately before redirect.
-- **Checkout abandonment proxy** — checkout is at least 24 hours old and the account is currently not `active` or `trialing`.
-- **Active paid workspace** — a currently paid workspace whose owner account has one of the covered role-specific operational activities in the selected lookback window.
-- **Realized sponsorship revenue** — a provider-confirmed sponsorship payment remains `settled`; refunded payments are excluded.
-
-Team seats are measured as workspace adoption rather than separate paid subscriptions because they inherit the workspace owner's subscription.
+Team seats are workspace adoption, not separate paid subscriptions.
 
 ## Validation
 
-Every push to `main` runs:
+Every `main` push runs the growth integration smoke test as part of Application Validation. The smoke flow uses an isolated database and now covers all Phase 6 slices:
 
-```text
-node --check scripts/growthReport.mjs
-node --check scripts/smokeGrowthReport.mjs
-node scripts/smokeGrowthReport.mjs
-```
+1. Initialize the growth schema and subscription-history triggers.
+2. Create unpaid Organizer and Sponsor accounts.
+3. Store explicit first-touch acquisition and verify later touches cannot overwrite it.
+4. Obtain valid hosted checkout URLs and record checkout starts.
+5. Activate subscriptions through provider sync.
+6. Exercise cancellation/reactivation and paid-period extension history.
+7. Perform real Organizer/Sponsor activation actions.
+8. Validate activation checklists and retention queries.
+9. Run the main growth report.
+10. Run acquisition/cohort reporting.
+11. Run the executive period-over-period snapshot.
+12. Assert attribution coverage, cohort conversion, transition history, and executive movement.
 
-The integration smoke test uses an isolated database and reproduces the Phase 6.2/6.3 flow: create unpaid Organizer and Sponsor accounts, obtain valid hosted checkout URLs, record checkout starts, activate both subscriptions through provider sync, perform real activation actions, read the paid-workspace activation APIs, run the growth report including retention queries, and assert the core checkout and activation counts.
+## Phase 6 status
 
-## Phase 6 next slices
+**Phase 6.1 through Phase 6.5 are implemented.**
 
-With checkout instrumentation, role-specific activation, retention activity snapshots, and next-best-action guidance implemented, the next slices are:
-
-- acquisition-source attribution only when a source is explicitly supplied (for example campaign/UTM), without fingerprinting;
-- recurring executive growth snapshots that compare movement against the prior period;
-- historical paid-conversion cohorts once the product has enough clean billing history to distinguish activation, cancellation, reactivation, and renewal without approximation.
+The growth system now covers the full planned sequence: core funnel and revenue operations, checkout conversion, activation guidance, paid-workspace activity retention, explicit acquisition attribution, executive period comparisons, signup cohorts, and clean forward-looking subscription lifecycle history.
