@@ -10,10 +10,11 @@
 // not something to leave reachable by accident.
 
 import { Router, type NextFunction, type Response } from "express";
+import crypto from "crypto";
 import { asyncHandler } from "../asyncHandler";
 import { requireAuth, type AuthedRequest } from "../auth";
 import { dbAll, dbGet, dbRun } from "../db";
-import { buildGrowthDashboard } from "../growthDashboard";
+import { buildGrowthDashboard, buildLaunchCohort } from "../growthDashboard";
 import { buildQualityReport, exportEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -266,6 +267,94 @@ discoveryRouter.get(
   ...adminOnly,
   asyncHandler(async (_req: AuthedRequest, res: Response) => {
     res.json({ dashboard: await buildGrowthDashboard() });
+  })
+);
+
+// Phase 7.8 first-customer cohort management. Membership is explicit and private to operators:
+// accounts are added by exact email, and ordinary customers cannot enumerate the cohort.
+discoveryRouter.get(
+  "/launch-cohort",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const cohort =
+      typeof req.query.cohort === "string" && req.query.cohort.trim()
+        ? req.query.cohort.trim().slice(0, 80)
+        : "first_customer_launch";
+    res.json({ launchCohort: await buildLaunchCohort(cohort) });
+  })
+);
+
+discoveryRouter.post(
+  "/launch-cohort/members",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    if (!email) return res.status(400).json({ error: "email is required." });
+
+    const user = await dbGet<any>("SELECT id,email,name,organization,role FROM users WHERE lower(email)=?", [email]);
+    if (!user) return res.status(404).json({ error: "ConferenceGate account not found for that email." });
+    if (user.role !== "organizer" && user.role !== "sponsor") {
+      return res.status(400).json({ error: "Launch cohort supports Organizer and Sponsor accounts only." });
+    }
+
+    const cohort =
+      typeof req.body?.cohort === "string" && req.body.cohort.trim()
+        ? req.body.cohort.trim().slice(0, 80)
+        : "first_customer_launch";
+    const segment =
+      typeof req.body?.segment === "string" && req.body.segment.trim()
+        ? req.body.segment.trim().slice(0, 120)
+        : null;
+    const note =
+      typeof req.body?.note === "string" && req.body.note.trim()
+        ? req.body.note.trim().slice(0, 500)
+        : null;
+
+    const existing = await dbGet<any>(
+      "SELECT id FROM launch_cohort_members WHERE cohort=? AND user_id=?",
+      [cohort, user.id]
+    );
+    if (!existing) {
+      await dbRun(
+        "INSERT INTO launch_cohort_members(id,cohort,user_id,role,segment,note) VALUES(?,?,?,?,?,?)",
+        [`lcm_${crypto.randomUUID()}`, cohort, user.id, user.role, segment, note]
+      );
+    } else {
+      await dbRun(
+        "UPDATE launch_cohort_members SET segment=?,note=? WHERE id=?",
+        [segment, note, existing.id]
+      );
+    }
+
+    res.status(existing ? 200 : 201).json({
+      member: {
+        userId: String(user.id),
+        email: String(user.email),
+        name: String(user.name || ""),
+        organization: user.organization ? String(user.organization) : null,
+        role: String(user.role),
+        cohort,
+        segment,
+        note,
+      },
+      launchCohort: await buildLaunchCohort(cohort),
+    });
+  })
+);
+
+discoveryRouter.delete(
+  "/launch-cohort/members/:userId",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const cohort =
+      typeof req.query.cohort === "string" && req.query.cohort.trim()
+        ? req.query.cohort.trim().slice(0, 80)
+        : "first_customer_launch";
+    await dbRun("DELETE FROM launch_cohort_members WHERE cohort=? AND user_id=?", [
+      cohort,
+      req.params.userId,
+    ]);
+    res.json({ ok: true, launchCohort: await buildLaunchCohort(cohort) });
   })
 );
 
