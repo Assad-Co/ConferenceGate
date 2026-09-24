@@ -499,6 +499,23 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_launch_cohort_members_cohort_role
       ON launch_cohort_members(cohort, role, created_at);
 
+    -- Phase 8 marketplace automation. One row tracks the last time a specific actionable
+    -- condition was surfaced to an account, preventing notification spam while keeping the
+    -- action queue itself live and deterministic.
+    CREATE TABLE IF NOT EXISTS marketplace_nudge_events (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES users(id),
+      role TEXT NOT NULL CHECK(role IN ('organizer','sponsor')),
+      action_key TEXT NOT NULL,
+      entity_key TEXT NOT NULL DEFAULT 'account',
+      summary TEXT NOT NULL,
+      notified_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(account_id, role, action_key, entity_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_marketplace_nudge_events_account
+      ON marketplace_nudge_events(account_id, role, notified_at);
+
     CREATE TABLE IF NOT EXISTS sponsorship_needs (
       id TEXT PRIMARY KEY,
       conference_id TEXT NOT NULL,
