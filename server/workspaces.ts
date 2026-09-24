@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import crypto from "crypto";
 import { asyncHandler } from "./asyncHandler";
 import { AuthedRequest, requireAuth } from "./auth";
+import { isOwnerPreviewEmail } from "./ownerPreview";
 import { discoveryFetch, isHtmlLike } from "./discovery/httpClient";
 import { extractStructuredEvents } from "./discovery/structuredData";
 import { extractFromHtml } from "./discovery/htmlExtract";
@@ -63,7 +64,7 @@ async function ensurePaidWorkspace(userId: string): Promise<{
     return { user, workspace, membership };
   }
 
-  if (!["active", "trialing"].includes(user.subscription_status || "")) {
+  if (!["active", "trialing"].includes(user.subscription_status || "") && !isOwnerPreviewEmail(user.email)) {
     throw Object.assign(new Error("Paid workspace subscription required."), { status: 402 });
   }
 
