@@ -122,11 +122,36 @@ function overlapRatio(a: string[], b: string[]): number | null {
   return overlap / Math.max(1, Math.min(aa.size, bb.size));
 }
 
-function sponsorNeedMatch(
+interface SponsorNeedMatchDetail {
+  score: number;
+  reasons: string[];
+  breakdown: {
+    sector: number | null;
+    category: number | null;
+    region: number | null;
+    opportunityType: number | null;
+    budget: number | null;
+  };
+}
+
+function matchingValues(a: string[], b: string[]): string[] {
+  if (!a.length || !b.length) return [];
+  const bSet = new Set(b.map((item) => item.toLowerCase()));
+  return a.filter((item) => bSet.has(item.toLowerCase()));
+}
+
+function sponsorNeedMatchDetail(
   preference: SponsorPreferenceRow | undefined,
   need: SponsorshipNeedRow
-): number {
-  if (!preference) return 0;
+): SponsorNeedMatchDetail {
+  if (!preference) {
+    return {
+      score: 0,
+      reasons: ["Complete Matching Preferences to enable personalized ranking."],
+      breakdown: { sector: null, category: null, region: null, opportunityType: null, budget: null },
+    };
+  }
+
   const sectors = safeJson(preference.sectors, []);
   const categories = safeJson(preference.categories, []);
   const regions = safeJson(preference.regions, []);
@@ -139,19 +164,24 @@ function sponsorNeedMatch(
   const sector = overlapRatio(sectors, needSectors);
   const category = overlapRatio(categories, needCategories);
   const region = overlapRatio(regions, needRegions);
-  const type = overlapRatio(types, needTypes);
+  const opportunityType = overlapRatio(types, needTypes);
 
   let weighted = 0;
   let weight = 0;
-  for (const [value, w] of [[sector, 0.35], [category, 0.3], [region, 0.15], [type, 0.2]] as Array<[number | null, number]>) {
+  for (const [value, w] of [
+    [sector, 0.35],
+    [category, 0.3],
+    [region, 0.15],
+    [opportunityType, 0.2],
+  ] as Array<[number | null, number]>) {
     if (value === null) continue;
     weighted += value * w;
     weight += w;
   }
 
-  let budgetScore: number | null = null;
+  let budget: number | null = null;
   if (need.price_amount !== null && preference.budget_max !== null) {
-    budgetScore =
+    budget =
       need.price_amount <= preference.budget_max &&
       (preference.budget_min === null || need.price_amount >= preference.budget_min)
         ? 1
@@ -159,11 +189,44 @@ function sponsorNeedMatch(
           ? 0.5
           : 0;
   }
-  if (budgetScore !== null) {
-    weighted += budgetScore * 0.2;
+  if (budget !== null) {
+    weighted += budget * 0.2;
     weight += 0.2;
   }
-  return weight ? Math.round((weighted / weight) * 100) : 0;
+
+  const reasons: string[] = [];
+  const matchedSectors = matchingValues(sectors, needSectors);
+  const matchedCategories = matchingValues(categories, needCategories);
+  const matchedRegions = matchingValues(regions, needRegions);
+  const matchedTypes = matchingValues(types, needTypes);
+
+  if (matchedSectors.length) reasons.push(`Sector match: ${matchedSectors.slice(0, 2).join(", ")}`);
+  if (matchedCategories.length) reasons.push(`Category match: ${matchedCategories.slice(0, 2).join(", ")}`);
+  if (matchedRegions.length) reasons.push(`Region match: ${matchedRegions.slice(0, 2).join(", ")}`);
+  if (matchedTypes.length) reasons.push(`Opportunity type: ${matchedTypes.slice(0, 2).join(", ")}`);
+  if (budget === 1) reasons.push("Published price is within your budget range.");
+  else if (budget === 0.5) reasons.push("Published price is slightly above your preferred budget.");
+  else if (budget === 0) reasons.push("Published price is above your current budget range.");
+  if (!reasons.length) reasons.push("No explicit preference overlap yet; ranked from available criteria.");
+
+  return {
+    score: weight ? Math.round((weighted / weight) * 100) : 0,
+    reasons: reasons.slice(0, 4),
+    breakdown: {
+      sector: sector === null ? null : Math.round(sector * 100),
+      category: category === null ? null : Math.round(category * 100),
+      region: region === null ? null : Math.round(region * 100),
+      opportunityType: opportunityType === null ? null : Math.round(opportunityType * 100),
+      budget: budget === null ? null : Math.round(budget * 100),
+    },
+  };
+}
+
+function sponsorNeedMatch(
+  preference: SponsorPreferenceRow | undefined,
+  need: SponsorshipNeedRow
+): number {
+  return sponsorNeedMatchDetail(preference, need).score;
 }
 
 function toSavedOpportunityDTO(row: SponsorSavedOpportunityRow) {
@@ -284,7 +347,11 @@ async function ensureDealForInquiry(
   return dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [id]);
 }
 
-function toSponsorshipNeedDTO(row: SponsorshipNeedRow, matchScore?: number) {
+function toSponsorshipNeedDTO(
+  row: SponsorshipNeedRow,
+  match?: number | SponsorNeedMatchDetail
+) {
+  const matchScore = typeof match === "number" ? match : match?.score;
   return {
     id: row.id,
     conferenceId: row.conference_id,
@@ -304,6 +371,8 @@ function toSponsorshipNeedDTO(row: SponsorshipNeedRow, matchScore?: number) {
     status: row.status,
     createdAt: row.created_at,
     matchScore: matchScore ?? null,
+    matchReasons: typeof match === "object" && match ? match.reasons : [],
+    matchBreakdown: typeof match === "object" && match ? match.breakdown : null,
   };
 }
 
@@ -673,15 +742,15 @@ sponsorsRouter.get(
         ORDER BY created_at DESC`
     );
     const ranked = rows
-      .map((row) => ({ row, score: sponsorNeedMatch(preference, row) }))
-      .sort((a, b) => b.score - a.score || b.row.created_at.localeCompare(a.row.created_at));
+      .map((row) => ({ row, match: sponsorNeedMatchDetail(preference, row) }))
+      .sort((a, b) => b.match.score - a.match.score || b.row.created_at.localeCompare(a.row.created_at));
     for (const { row } of ranked.slice(0, 100)) {
       await dbRun(
         "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'listing_view')",
         [`sev_${crypto.randomUUID()}`, row.id, accountId]
       ).catch(() => {});
     }
-    res.json({ needs: ranked.map(({ row, score }) => toSponsorshipNeedDTO(row, score)) });
+    res.json({ needs: ranked.map(({ row, match }) => toSponsorshipNeedDTO(row, match)) });
   })
 );
 
