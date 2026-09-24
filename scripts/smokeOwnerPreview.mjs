@@ -80,6 +80,22 @@ async function signup(email, name) {
 try {
   await waitForHealth();
 
+  const missingOwner = await jsonRequest('/api/auth/login', {
+    method: 'POST',
+    body: { email: ownerEmail, password: 'NotUsedBeforeSignup123!' },
+  });
+  if (
+    missingOwner.response.status !== 409 ||
+    missingOwner.data?.code !== 'OWNER_ACCOUNT_NOT_INITIALIZED'
+  ) {
+    throw new Error(
+      'Missing owner account must be identified for secure onboarding: ' +
+        missingOwner.response.status +
+        ' ' +
+        JSON.stringify(missingOwner.data)
+    );
+  }
+
   const owner = await signup(ownerEmail, 'Owner Preview Smoke');
   if (!owner.data.user.ownerPreview || !owner.data.user.hasPaidAccess) {
     throw new Error('Owner preview account did not receive preview access: ' + JSON.stringify(owner.data.user));
