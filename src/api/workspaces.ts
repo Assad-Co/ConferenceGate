@@ -129,3 +129,32 @@ export async function removeWorkspaceMember(userId: string): Promise<AccountWork
   const data = await parseResponse(res);
   return data.workspace;
 }
+
+
+export interface OrganizerConferenceImportDraft {
+  sourceUrl: string;
+  title: string | null;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  location: string | null;
+  topics: string[];
+  bannerUrl: string | null;
+  format: 'Physical' | 'Online' | 'Hybrid' | null;
+  priceRange: string | null;
+  organizer: string | null;
+  confidence: number;
+  extractedFields: string[];
+}
+
+export async function importOrganizerConferenceFromOfficialUrl(
+  url: string
+): Promise<{ draft: OrganizerConferenceImportDraft; note: string }> {
+  const res = await fetch('/api/workspaces/organizer/import-conference', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ url }),
+  });
+  return parseResponse(res);
+}
