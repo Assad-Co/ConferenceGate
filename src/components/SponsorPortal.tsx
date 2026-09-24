@@ -794,6 +794,21 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                       ))}
                     </div>
 
+                    {need.matchReasons?.length > 0 && (
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                        <div className="text-[9px] uppercase font-extrabold tracking-wider text-emerald-700 mb-1.5">
+                          Why this matches
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {need.matchReasons.map((reason) => (
+                            <span key={reason} className="text-[10px] text-emerald-800 bg-white/80 border border-emerald-100 rounded-lg px-2 py-1">
+                              {reason}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {need.benefits.length > 0 && (
                       <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
                         {need.benefits.slice(0, 4).join(' · ')}
