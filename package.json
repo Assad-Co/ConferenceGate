@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "sh -c 'node scripts/runBackgroundBootstrap.mjs & exec node dist/server.cjs'",
+    "start": "node scripts/prepareLocalDatabase.mjs && sh -c 'unset TURSO_DATABASE_URL TURSO_AUTH_TOKEN; node scripts/runBackgroundBootstrap.mjs & exec node dist/server.cjs'",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "postinstall": "node scripts/installBrowser.mjs",
@@ -45,7 +45,9 @@
     "growth:executive": "node scripts/executiveGrowthSnapshot.mjs --markdown",
     "growth:executive:json": "node scripts/executiveGrowthSnapshot.mjs",
     "production:readiness": "node scripts/checkProductionReadiness.mjs",
-    "production:readiness:strict": "node scripts/checkProductionReadiness.mjs --strict"
+    "production:readiness:strict": "node scripts/checkProductionReadiness.mjs --strict",
+    "database:prepare": "node scripts/prepareLocalDatabase.mjs",
+    "database:migrate-from-turso": "node scripts/migrateTursoToSqlite.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
