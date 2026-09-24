@@ -53,6 +53,7 @@ import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { BillingLedgerPanel } from './BillingLedgerPanel';
+import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
   fetchMyBroadcasts,
@@ -626,17 +627,25 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   const [invitedReviewerIds, setInvitedReviewerIds] = useState<Record<string, boolean>>({});
   const [invitingReviewerId, setInvitingReviewerId] = useState<string | null>(null);
 
-  // Wizard State
+  // Wizard State — blank by default so a real organizer never publishes demo facts accidentally.
   const [newConfTitle, setNewConfTitle] = useState('');
-  const [newConfIndustry, setNewConfIndustry] = useState('Energy & Geosciences');
-  const [newConfStartDate, setNewConfStartDate] = useState('2026-10-15');
-  const [newConfEndDate, setNewConfEndDate] = useState('2026-10-18');
-  const [newConfLocation, setNewConfLocation] = useState('Paris, France');
-  const [newConfTracks, setNewConfTracks] = useState('Track 1: Subsurface AI, Track 2: Carbon Storage');
+  const [newConfDescription, setNewConfDescription] = useState('');
+  const [newConfIndustry, setNewConfIndustry] = useState('');
+  const [newConfStartDate, setNewConfStartDate] = useState('');
+  const [newConfEndDate, setNewConfEndDate] = useState('');
+  const [newConfLocation, setNewConfLocation] = useState('');
+  const [newConfTracks, setNewConfTracks] = useState('');
   const [newConfBanner, setNewConfBanner] = useState('');
-  const [newConfMainThemes, setNewConfMainThemes] = useState('Subsurface AI, Net Zero Solutions');
+  const [newConfMainThemes, setNewConfMainThemes] = useState('');
+  const [newConfFormat, setNewConfFormat] = useState<Conference['format'] | ''>('');
+  const [newConfPriceRange, setNewConfPriceRange] = useState('');
+  const [newConfOfficialWebsite, setNewConfOfficialWebsite] = useState('');
   const [newConfSubmissionGuidelines, setNewConfSubmissionGuidelines] = useState('');
   const [wizardPublished, setWizardPublished] = useState(false);
+  const [officialImportUrl, setOfficialImportUrl] = useState('');
+  const [officialImportLoading, setOfficialImportLoading] = useState(false);
+  const [officialImportMessage, setOfficialImportMessage] = useState<string | null>(null);
+  const [officialImportDraft, setOfficialImportDraft] = useState<OrganizerConferenceImportDraft | null>(null);
 
   const [committeeDraft, setCommitteeDraft] = useState({
     name: '',
@@ -1365,34 +1374,74 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       }));
   };
 
+  const handleOfficialConferenceImport = async () => {
+    const url = officialImportUrl.trim();
+    if (!url || officialImportLoading) return;
+    setOfficialImportLoading(true);
+    setOfficialImportMessage(null);
+    try {
+      const { draft, note } = await importOrganizerConferenceFromOfficialUrl(url);
+      setOfficialImportDraft(draft);
+      setNewConfOfficialWebsite(draft.sourceUrl || url);
+      if (draft.title) setNewConfTitle(draft.title);
+      if (draft.description) setNewConfDescription(draft.description);
+      if (draft.startDate) setNewConfStartDate(draft.startDate);
+      if (draft.endDate) setNewConfEndDate(draft.endDate);
+      if (draft.location) setNewConfLocation(draft.location);
+      if (draft.topics?.length) {
+        const topics = draft.topics.join(', ');
+        setNewConfMainThemes(topics);
+        setNewConfTracks(topics);
+      }
+      if (draft.bannerUrl) setNewConfBanner(draft.bannerUrl);
+      if (draft.format) setNewConfFormat(draft.format);
+      if (draft.priceRange) setNewConfPriceRange(draft.priceRange);
+      setOfficialImportMessage(`${note} ${draft.extractedFields.length} field group${draft.extractedFields.length === 1 ? '' : 's'} found.`);
+    } catch (error) {
+      setOfficialImportDraft(null);
+      setOfficialImportMessage(error instanceof Error ? error.message : 'Could not import the official conference page.');
+    } finally {
+      setOfficialImportLoading(false);
+    }
+  };
+
   const handleWizardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newConfFormat || !newConfIndustry) {
+      showToast({
+        type: 'info',
+        title: 'Complete conference basics',
+        message: 'Select the conference industry and format before publishing.',
+      });
+      return;
+    }
     const locationParts = newConfLocation.split(',').map((s) => s.trim());
-    const city = locationParts[0] || 'TBD';
-    const countryRaw = locationParts[1] || 'TBD';
+    const city = locationParts[0] || '';
+    const countryRaw = locationParts.slice(1).join(', ').trim();
     const venueMatch = countryRaw.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
     const country = venueMatch ? venueMatch[1].trim() : countryRaw;
-    const venue = venueMatch ? venueMatch[2].trim() : 'Venue TBD';
+    const venue = venueMatch ? venueMatch[2].trim() : '';
     try {
       const createdConference = await onCreateConference({
-      title: newConfTitle || 'International Energy & Subsurface Congress 2026',
+      title: newConfTitle.trim(),
       organizerName,
       organizerLogo,
+      officialWebsite: newConfOfficialWebsite.trim() || undefined,
       // Left empty when the organizer supplied nothing: the card renders the conference's
       // initials rather than a stock photograph of somebody else's event.
       banner: newConfBanner.trim(),
       logo: '',
-      description: 'Newly created international congress focusing on energy transition, geosciences, and subsurface AI.',
+      description: newConfDescription.trim(),
       industry: newConfIndustry,
-      topics: ['Energy', 'Geosciences', 'Subsurface AI'],
-      tracks: newConfTracks.split(',').map((t) => t.trim()),
+      topics: newConfMainThemes.split(',').map((t) => t.trim()).filter(Boolean),
+      tracks: newConfTracks.split(',').map((t) => t.trim()).filter(Boolean),
       location: { city, country, venue },
       dates: { start: newConfStartDate, end: newConfEndDate },
-      format: 'Hybrid',
-      priceRange: '$300 - $900',
+      format: newConfFormat,
+      priceRange: newConfPriceRange.trim(),
       registrationPackages: [],
-      earlyBirdDeadline: '2026-08-30',
-      abstractDeadline: '2026-07-31',
+      earlyBirdDeadline: '',
+      abstractDeadline: '',
       cfpStatus: 'Open',
       attendeeCount: 0,
       mainThemes: newConfMainThemes.split(',').map((t) => t.trim()).filter(Boolean),
@@ -1419,8 +1468,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       })),
       sponsors: [],
       exhibitors: [],
-      accommodation: 'Partner Hotel Paris ($150/night).',
-      travelInfo: 'Charles de Gaulle Airport (CDG).',
+      accommodation: '',
+      travelInfo: '',
       communityPosts: 0,
       });
 
@@ -1637,6 +1686,43 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <span className="text-xs text-slate-400 font-semibold">Fast Setup Engine</span>
           </div>
 
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Fastest start</div>
+              <h3 className="font-bold text-sm text-slate-900">Import from the official conference page</h3>
+              <p className="text-[11px] text-slate-600 mt-1">
+                ConferenceGate reads the public official page and prefills only facts it can extract. Nothing is published until you review the wizard and submit it.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="url"
+                value={officialImportUrl}
+                onChange={(e) => setOfficialImportUrl(e.target.value)}
+                placeholder="https://official-conference-site.org/2027"
+                className="flex-1 p-3 bg-white border border-blue-200 rounded-xl font-medium"
+              />
+              <button
+                type="button"
+                onClick={handleOfficialConferenceImport}
+                disabled={officialImportLoading || !officialImportUrl.trim()}
+                className="px-4 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl disabled:opacity-50 cursor-pointer"
+              >
+                {officialImportLoading ? 'Importing…' : 'Import & Prefill'}
+              </button>
+            </div>
+            {officialImportMessage && (
+              <div className={`text-[11px] font-semibold ${officialImportDraft ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {officialImportMessage}
+              </div>
+            )}
+            {officialImportDraft && (
+              <div className="text-[10px] text-slate-500">
+                Source: {officialImportDraft.sourceUrl} · confidence {Math.round((officialImportDraft.confidence || 0) * 100)}%
+              </div>
+            )}
+          </div>
+
           <form onSubmit={handleWizardSubmit} className="space-y-6 text-xs text-slate-800">
             {/* Step 1: Basic Information */}
             <div className="space-y-4">
@@ -1654,12 +1740,36 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-bold uppercase text-[10px] text-slate-500">Industry / Sector</label>
+                <label className="font-bold uppercase text-[10px] text-slate-500">Official Website</label>
+                <input
+                  type="url"
+                  value={newConfOfficialWebsite}
+                  onChange={(e) => setNewConfOfficialWebsite(e.target.value)}
+                  placeholder="https://official-conference-site.org"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold uppercase text-[10px] text-slate-500">Conference Description</label>
+                <textarea
+                  rows={3}
+                  value={newConfDescription}
+                  onChange={(e) => setNewConfDescription(e.target.value)}
+                  placeholder="Use the organizer's factual conference overview."
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold uppercase text-[10px] text-slate-500">Industry / Sector *</label>
                 <select
+                  required
                   value={newConfIndustry}
                   onChange={(e) => setNewConfIndustry(e.target.value)}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 >
+                  <option value="" disabled>Select industry</option>
                   <option value="Energy & Geosciences">Energy & Geosciences</option>
                   <option value="Artificial Intelligence">Artificial Intelligence & Tech</option>
                   <option value="Petroleum & Mining">Petroleum & Mining</option>
@@ -1676,6 +1786,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   <label className="font-bold uppercase text-[10px] text-slate-500">Start Date</label>
                   <input
                     type="date"
+                    required
                     value={newConfStartDate}
                     onChange={(e) => setNewConfStartDate(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -1685,6 +1796,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   <label className="font-bold uppercase text-[10px] text-slate-500">End Date</label>
                   <input
                     type="date"
+                    required
                     value={newConfEndDate}
                     onChange={(e) => setNewConfEndDate(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -1696,11 +1808,39 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 <label className="font-bold uppercase text-[10px] text-slate-500">Venue & City</label>
                 <input
                   type="text"
+                  required
                   value={newConfLocation}
                   onChange={(e) => setNewConfLocation(e.target.value)}
                   placeholder="Paris, France (Palais des Congrès)"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-bold uppercase text-[10px] text-slate-500">Format *</label>
+                  <select
+                    required
+                    value={newConfFormat}
+                    onChange={(e) => setNewConfFormat(e.target.value as Conference['format'])}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    <option value="" disabled>Select format</option>
+                    <option value="Physical">Physical / In-person</option>
+                    <option value="Online">Online</option>
+                    <option value="Hybrid">Hybrid</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold uppercase text-[10px] text-slate-500">Price / Fee Range</label>
+                  <input
+                    type="text"
+                    value={newConfPriceRange}
+                    onChange={(e) => setNewConfPriceRange(e.target.value)}
+                    placeholder="e.g. USD 450–900"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  />
+                </div>
               </div>
             </div>
 
