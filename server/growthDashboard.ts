@@ -138,9 +138,17 @@ async function retention() {
 
 async function acquisition() {
   if (!(await tableExists("account_acquisition"))) {
-    return { coveragePct: null, attributedSignups: 0, paidRoleSignups: 0, topSources: [] };
+    return {
+      coveragePct: null,
+      attributedSignups: 0,
+      paidRoleSignups: 0,
+      topSources: [],
+      organizerSources: [],
+      organizerCampaigns: [],
+    };
   }
-  const [paidRoleSignups, attributedSignups, topSources] = await Promise.all([
+
+  const [paidRoleSignups, attributedSignups, topSources, organizerSources, organizerCampaigns] = await Promise.all([
     scalar("SELECT COUNT(*) AS value FROM users WHERE role IN ('organizer','sponsor')"),
     scalar("SELECT COUNT(*) AS value FROM account_acquisition"),
     dbAll<any>(
@@ -150,12 +158,81 @@ async function acquisition() {
         ORDER BY signups DESC,source ASC
         LIMIT 12`
     ),
+    dbAll<any>(
+      `SELECT a.source AS source,
+              COALESCE(a.medium,'') AS medium,
+              COUNT(*) AS signups,
+              SUM(CASE WHEN u.subscription_status IN ('active','trialing') THEN 1 ELSE 0 END) AS paid,
+              SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM created_conferences c WHERE c.organizer_id=u.id
+                  ) THEN 1 ELSE 0 END) AS activated,
+              SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM sponsorship_needs n WHERE n.organizer_id=u.id
+                  ) THEN 1 ELSE 0 END) AS sponsorship_inventory
+         FROM account_acquisition a
+         JOIN users u ON u.id=a.user_id
+        WHERE a.role='organizer'
+        GROUP BY a.source,COALESCE(a.medium,'')
+        ORDER BY signups DESC,paid DESC,activated DESC,a.source ASC
+        LIMIT 20`
+    ),
+    dbAll<any>(
+      `SELECT COALESCE(NULLIF(a.campaign,''),'(no campaign)') AS campaign,
+              a.source AS source,
+              COUNT(*) AS signups,
+              SUM(CASE WHEN u.subscription_status IN ('active','trialing') THEN 1 ELSE 0 END) AS paid,
+              SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM created_conferences c WHERE c.organizer_id=u.id
+                  ) THEN 1 ELSE 0 END) AS activated
+         FROM account_acquisition a
+         JOIN users u ON u.id=a.user_id
+        WHERE a.role='organizer'
+        GROUP BY COALESCE(NULLIF(a.campaign,''),'(no campaign)'),a.source
+        ORDER BY signups DESC,paid DESC,activated DESC,campaign ASC
+        LIMIT 20`
+    ),
   ]);
+
   return {
     paidRoleSignups,
     attributedSignups,
     coveragePct: pct(attributedSignups, paidRoleSignups),
-    topSources: topSources.map((row) => ({ source: String(row.source), role: String(row.role), signups: n(row.signups) })),
+    topSources: topSources.map((row) => ({
+      source: String(row.source),
+      role: String(row.role),
+      signups: n(row.signups),
+    })),
+    organizerSources: organizerSources.map((row) => {
+      const signups = n(row.signups);
+      const paid = n(row.paid);
+      const activated = n(row.activated);
+      const sponsorshipInventory = n(row.sponsorship_inventory);
+      return {
+        source: String(row.source),
+        medium: String(row.medium || "") || null,
+        signups,
+        paid,
+        activated,
+        sponsorshipInventory,
+        signupToPaidPct: pct(paid, signups),
+        signupToActivatedPct: pct(activated, signups),
+        activatedToInventoryPct: pct(sponsorshipInventory, activated),
+      };
+    }),
+    organizerCampaigns: organizerCampaigns.map((row) => {
+      const signups = n(row.signups);
+      const paid = n(row.paid);
+      const activated = n(row.activated);
+      return {
+        campaign: String(row.campaign),
+        source: String(row.source),
+        signups,
+        paid,
+        activated,
+        signupToPaidPct: pct(paid, signups),
+        signupToActivatedPct: pct(activated, signups),
+      };
+    }),
   };
 }
 
