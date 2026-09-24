@@ -61,6 +61,9 @@ async function main() {
   // Reconcile Sponsor Pro saved opportunities only after the stored sponsorship catalog has been
   // refreshed. This is DB-only and never delays a customer page with live web work.
   await runScript('scripts/refreshSponsorWatchlistAlerts.mjs');
+  // Phase 8 deterministic marketplace nudges: only measurable blockers, rate-limited per
+  // account/action/entity so repeated deploys cannot flood customer notifications.
+  await runScript('scripts/refreshMarketplaceActionAlerts.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
