@@ -22,9 +22,22 @@ import { AuthedRequest, requireAuth } from "./auth";
 import { asyncHandler } from "./asyncHandler";
 import { createNotification } from "./activity";
 import { resolvePaidAccountContext, canOperateWorkspace, type PaidAccountRole } from "./workspaceAccess";
+import { isOwnerPreviewEmail } from "./ownerPreview";
 
 export const sponsorsRouter = Router();
 sponsorsRouter.use(requireAuth);
+
+function effectivePaidRoleForRequest(req: AuthedRequest, user: UserRow): PaidAccountRole | null {
+  const requested =
+    req.query?.as === "organizer" || req.query?.as === "sponsor"
+      ? (req.query.as as PaidAccountRole)
+      : null;
+
+  if (requested && isOwnerPreviewEmail(user.email)) return requested;
+  return user.role === "organizer" || user.role === "sponsor"
+    ? (user.role as PaidAccountRole)
+    : null;
+}
 
 async function paidWorkspaceContext(
   req: AuthedRequest,
@@ -891,15 +904,17 @@ sponsorsRouter.get(
   "/deals/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+    if (!user) return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    const effectiveRole = effectivePaidRoleForRequest(req, user);
+    if (!effectiveRole) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    const accountContext = await paidWorkspaceContext(req, res, user.role);
+    const accountContext = await paidWorkspaceContext(req, res, effectiveRole);
     if (!accountContext) return;
     const accountId = accountContext.accountId;
 
     const rows = await dbAll<SponsorshipDealRow>(
-      user.role === "organizer"
+      effectiveRole === "organizer"
         ? "SELECT * FROM sponsorship_deals WHERE organizer_id=? ORDER BY updated_at DESC"
         : "SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY updated_at DESC",
       [accountId]
@@ -910,7 +925,7 @@ sponsorsRouter.get(
         "SELECT * FROM sponsorship_deal_updates WHERE deal_id=? ORDER BY created_at ASC",
         [row.id]
       );
-      const counterpartId = user.role === "organizer" ? row.sponsor_id : row.organizer_id;
+      const counterpartId = effectiveRole === "organizer" ? row.sponsor_id : row.organizer_id;
       const counterpart = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [counterpartId]);
       deals.push(toSponsorshipDealDTO(
         row,
@@ -926,10 +941,12 @@ sponsorsRouter.patch(
   "/deals/:id",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+    if (!user) return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    const effectiveRole = effectivePaidRoleForRequest(req, user);
+    if (!effectiveRole) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    const accountContext = await paidWorkspaceContext(req, res, user.role, true);
+    const accountContext = await paidWorkspaceContext(req, res, effectiveRole, true);
     if (!accountContext) return;
     const accountId = accountContext.accountId;
     const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
@@ -1050,10 +1067,12 @@ sponsorsRouter.post(
   "/deals/:id/updates",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+    if (!user) return res.status(403).json({ error: "Organizer or Sponsor account required." });
+    const effectiveRole = effectivePaidRoleForRequest(req, user);
+    if (!effectiveRole) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    const accountContext = await paidWorkspaceContext(req, res, user.role, true);
+    const accountContext = await paidWorkspaceContext(req, res, effectiveRole, true);
     if (!accountContext) return;
     const accountId = accountContext.accountId;
     const deal = await dbGet<SponsorshipDealRow>("SELECT * FROM sponsorship_deals WHERE id=?", [req.params.id]);
