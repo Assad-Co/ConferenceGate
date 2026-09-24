@@ -18,6 +18,7 @@ import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
+import { marketplaceIntelligenceRouter } from "./server/marketplaceIntelligence";
 import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
 import { paddleWebhookRouter } from "./server/paddleWebhook";
 import { resolvePaidAccountContext } from "./server/workspaceAccess";
@@ -163,6 +164,9 @@ async function startServer() {
 
   // Paid organizer/sponsor team workspaces, seats, roles, and audit trail
   app.use("/api/workspaces", workspacesRouter);
+
+  // Phase 8 marketplace intelligence: deterministic account action queues from real marketplace state.
+  app.use("/api/marketplace-intelligence", marketplaceIntelligenceRouter);
 
   // Real community feed: posts, reactions, comments, reposts, saves
   app.use("/api/posts", postsRouter);
