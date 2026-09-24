@@ -2,6 +2,9 @@ import { Router, Response } from "express";
 import crypto from "crypto";
 import { asyncHandler } from "./asyncHandler";
 import { AuthedRequest, requireAuth } from "./auth";
+import { discoveryFetch, isHtmlLike } from "./discovery/httpClient";
+import { extractStructuredEvents } from "./discovery/structuredData";
+import { extractFromHtml } from "./discovery/htmlExtract";
 import {
   dbAll,
   dbGet,
@@ -243,6 +246,102 @@ workspacesRouter.post(
             recordedAt: record.recorded_at,
           }
         : null,
+    });
+  })
+);
+
+function normalizeImportDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const iso = /\b(20\d{2}-\d{2}-\d{2})\b/.exec(value)?.[1];
+  if (iso) return iso;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : null;
+}
+
+function normalizeImportFormat(value: string | null | undefined): "Physical" | "Online" | "Hybrid" | null {
+  const text = String(value || "").toLowerCase();
+  if (!text) return null;
+  if (text.includes("hybrid") || text.includes("mixed")) return "Hybrid";
+  if (text.includes("online") || text.includes("virtual") || text.includes("remote")) return "Online";
+  if (text.includes("in-person") || text.includes("in person") || text.includes("onsite") || text.includes("on-site") || text.includes("offline") || text.includes("physical")) return "Physical";
+  return null;
+}
+
+function importLocation(city: string | null, country: string | null, venue: string | null, fallback: string | null): string | null {
+  if (city && country) return venue ? `${city}, ${country} (${venue})` : `${city}, ${country}`;
+  return fallback || [city, country].filter(Boolean).join(", ") || null;
+}
+
+// Paid Organizer Pro helper: fetch one organizer-supplied official conference page, extract only
+// facts the page itself exposes, and return a reviewable wizard draft. This never auto-publishes.
+// discoveryFetch applies the same SSRF guard, redirect revalidation, timeout, response-size cap,
+// and polite per-domain limits as the discovery engine.
+workspacesRouter.post(
+  "/organizer/import-conference",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const context = await ensurePaidWorkspace(req.userId!);
+    if (context.workspace.account_role !== "organizer") {
+      return res.status(403).json({ error: "Organizer Pro workspace required." });
+    }
+
+    const submitted = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+    if (!submitted || submitted.length > 2000) {
+      return res.status(400).json({ error: "Provide the official conference URL." });
+    }
+    let url: URL;
+    try {
+      url = new URL(submitted);
+    } catch {
+      return res.status(400).json({ error: "Provide a valid http(s) conference URL." });
+    }
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return res.status(400).json({ error: "Only http(s) conference URLs are supported." });
+    }
+
+    const fetched = await discoveryFetch(url.href, { timeoutMs: 12000, maxBytes: 1_500_000 });
+    if (!fetched.ok) {
+      const blocked = fetched.error?.includes("url_guard");
+      return res.status(blocked ? 400 : 422).json({
+        error: blocked
+          ? "That URL cannot be fetched safely. Use the public official conference page."
+          : "Conference Gate could not read that page. Check the official URL and try again.",
+      });
+    }
+    if (!isHtmlLike(fetched)) {
+      return res.status(415).json({ error: "The official URL must resolve to an HTML conference page." });
+    }
+
+    const structured = extractStructuredEvents(fetched.body, fetched.finalUrl);
+    const seed = structured.events[0] || null;
+    const raw = extractFromHtml(fetched.body, fetched.finalUrl, { seed });
+    const topics = (raw.topics || []).map((topic) => String(topic).trim()).filter(Boolean).slice(0, 20);
+    const filled = [
+      raw.title && "title",
+      (raw.startDateText || raw.datesText) && "dates",
+      (raw.city || raw.country || raw.locationText) && "location",
+      raw.description && "description",
+      topics.length && "topics",
+      raw.imageUrl && "image",
+      raw.formatText && "format",
+    ].filter(Boolean);
+
+    res.json({
+      draft: {
+        sourceUrl: fetched.finalUrl,
+        title: raw.title,
+        description: raw.description,
+        startDate: normalizeImportDate(raw.startDateText || raw.datesText),
+        endDate: normalizeImportDate(raw.endDateText) || normalizeImportDate(raw.startDateText || raw.datesText),
+        location: importLocation(raw.city, raw.country, raw.venue, raw.locationText),
+        topics,
+        bannerUrl: raw.imageUrl,
+        format: normalizeImportFormat(raw.formatText),
+        priceRange: raw.price ? [raw.currency, raw.price].filter(Boolean).join(" ") : null,
+        organizer: raw.organizer,
+        confidence: raw.confidence,
+        extractedFields: filled,
+      },
+      note: "Imported fields are a draft from the supplied official page. Review every field before publishing.",
     });
   })
 );
