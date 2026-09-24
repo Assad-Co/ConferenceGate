@@ -392,8 +392,9 @@ export interface SponsorshipDeal {
   updates: SponsorshipDealUpdate[];
 }
 
-export async function fetchMySponsorshipDeals(): Promise<SponsorshipDeal[]> {
-  const res = await fetch('/api/sponsors/deals/mine', { credentials: 'include' });
+export async function fetchMySponsorshipDeals(asRole?: 'organizer' | 'sponsor'): Promise<SponsorshipDeal[]> {
+  const query = asRole ? `?as=${asRole}` : '';
+  const res = await fetch('/api/sponsors/deals/mine' + query, { credentials: 'include' });
   const data = await parseResponse(res);
   return data.deals;
 }
@@ -408,9 +409,11 @@ export async function updateSponsorshipDeal(
     contractUrl?: string | null;
     invoiceUrl?: string | null;
     status?: 'negotiating' | 'agreement_reached' | 'contract_pending' | 'payment_pending' | 'delivering' | 'completed' | 'canceled';
-  }
+  },
+  asRole?: 'organizer' | 'sponsor'
 ): Promise<SponsorshipDeal> {
-  const res = await fetch(`/api/sponsors/deals/${dealId}`, {
+  const query = asRole ? `?as=${asRole}` : '';
+  const res = await fetch(`/api/sponsors/deals/${dealId}${query}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -426,9 +429,11 @@ export async function addSponsorshipDealUpdate(
     kind?: 'note' | 'proposal' | 'contract' | 'invoice' | 'deliverable';
     text: string;
     url?: string;
-  }
+  },
+  asRole?: 'organizer' | 'sponsor'
 ): Promise<SponsorshipDealUpdate> {
-  const res = await fetch(`/api/sponsors/deals/${dealId}/updates`, {
+  const query = asRole ? `?as=${asRole}` : '';
+  const res = await fetch(`/api/sponsors/deals/${dealId}/updates${query}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
