@@ -27,6 +27,7 @@ export interface AuthUser {
   avatar: string | null;
   identityVerified: boolean;
   identityVerificationMethod: 'LinkedIn' | 'Google' | null;
+  ownerPreview: boolean;
   subscriptionStatus: 'free' | 'required' | 'trialing' | 'active' | 'past_due' | 'canceled' | string;
   subscriptionPlan: string | null;
   subscriptionProvider: string | null;
@@ -124,9 +125,24 @@ async function recordPaidAcquisition(user: AuthUser): Promise<void> {
 }
 
 async function parseResponse(res: Response) {
-  const data = await res.json().catch(() => ({}));
+  const raw = await res.text().catch(() => '');
+  let data: any = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = {};
+    }
+  }
   if (!res.ok) {
-    throw new Error(data.error || 'Something went wrong. Please try again.');
+    if (data?.error) throw new Error(String(data.error));
+    if (res.status >= 500) {
+      throw new Error(`Conference Gate service is temporarily unavailable (HTTP ${res.status}). Please try again shortly.`);
+    }
+    if (res.status === 404) {
+      throw new Error('This Conference Gate API route is not available on the current deployment.');
+    }
+    throw new Error(`Conference Gate request failed (HTTP ${res.status}). Please try again.`);
   }
   return data;
 }
@@ -144,12 +160,17 @@ export async function signup(payload: SignupPayload): Promise<AuthUser> {
 }
 
 export async function login(email: string, password: string): Promise<AuthUser> {
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ email, password }),
-  });
+  let res: Response;
+  try {
+    res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error('Cannot reach the Conference Gate login service. Check the deployment and try again.');
+  }
   const data = await parseResponse(res);
   return data.user;
 }
