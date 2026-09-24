@@ -267,6 +267,14 @@ export interface SponsorshipNeed {
   status: 'active' | 'closed';
   createdAt: string;
   matchScore: number | null;
+  matchReasons: string[];
+  matchBreakdown: {
+    sector: number | null;
+    category: number | null;
+    region: number | null;
+    opportunityType: number | null;
+    budget: number | null;
+  } | null;
 }
 
 export interface CreateSponsorshipNeedPayload {
@@ -564,6 +572,35 @@ export async function fetchSponsorshipNeedAnalytics(): Promise<SponsorshipNeedAn
   return parseResponse(res);
 }
 
+
+export interface SponsorLaunchpad {
+  companyProfileReady: boolean;
+  preferencesReady: boolean;
+  preferenceGroupsCompleted: number;
+  alertFrequency: 'instant' | 'daily' | 'weekly';
+  meaningfulMatches: number;
+  highMatches: number;
+  savedOpportunities: number;
+  watchAlertsEnabled: number;
+  inquiriesSent: number;
+  dealRooms: number;
+  paidDeals: number;
+  sponsorRequests: number;
+  organizerResponses: number;
+  unreadSponsorshipAlerts: number;
+  nextAction: {
+    key: string;
+    label: string;
+    description: string;
+    targetTab: 'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'roi' | 'profile';
+  };
+}
+
+export async function fetchSponsorLaunchpad(): Promise<SponsorLaunchpad> {
+  const res = await fetch('/api/sponsors/launchpad', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.launchpad;
+}
 
 export interface SponsorPortfolioAnalytics {
   meaningfulMatches: number;
