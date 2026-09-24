@@ -1,6 +1,6 @@
 # Phase 7 — Production Launch & Marketplace Growth
 
-Phase 7 moves ConferenceGate from a production-ready paid platform into live operating mode. The first two slices are production verification and a private executive growth dashboard.
+Phase 7 moves ConferenceGate from a production-ready paid platform into live operating mode. The first three slices cover production verification, a private executive growth dashboard, and a measurable Organizer acquisition/activation engine.
 
 ## Phase 7.1 — Live Production Verification
 
@@ -118,6 +118,79 @@ No source is guessed for unattributed accounts.
 
 Different currencies are never combined into a single financial total.
 
+## Phase 7.3 — Organizer Acquisition Engine
+
+Phase 7.3 turns Organizer acquisition into a measurable path from an explicit campaign touch to useful paid-product activity:
+
+```text
+explicit source/campaign → Organizer signup → paid access → first conference → sponsorship inventory
+```
+
+### Privacy-safe acquisition attribution
+
+ConferenceGate continues to use explicit first-touch attribution only. Organizer/Sponsor acquisition can be supplied by `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, or an explicit referral code.
+
+- the first explicit touch is stored with `INSERT OR IGNORE` and cannot be overwritten by later campaigns;
+- ordinary password signup, Google role-completion, and LinkedIn role-completion all preserve the explicit acquisition touch;
+- no source is inferred from IP address, browser/device fingerprint, geography, `document.referrer`, or identity-provider metadata;
+- unattributed accounts stay unattributed.
+
+### Organizer source and campaign funnel
+
+The private Growth Operations dashboard now reports Organizer acquisition by source/medium and campaign, including:
+
+- attributed Organizer signups;
+- currently paid Organizer accounts;
+- first-conference activation;
+- organizers that have published sponsorship inventory;
+- signup-to-paid conversion;
+- signup-to-first-conference conversion;
+- first-conference-to-sponsorship-inventory conversion.
+
+Counts use account-level existence checks so multiple conferences or sponsorship needs do not inflate one Organizer account into multiple conversions.
+
+### Import from official conference URL
+
+Organizer Pro now includes an **Import from the official conference page** action at the top of the existing Conference Wizard.
+
+The organizer supplies the public official URL. ConferenceGate then:
+
+1. validates that the input is HTTP(S);
+2. fetches it through the same SSRF-protected discovery client used by the conference discovery engine;
+3. revalidates every redirect;
+4. applies request timeouts and a response-size cap;
+5. uses structured event data first and deterministic HTML extraction to fill gaps;
+6. returns a reviewable draft only.
+
+The import can prefill factual fields such as title, description, dates, location, topics, banner image, format, price text and official website when the page actually exposes them. Missing information remains missing.
+
+The import endpoint never auto-publishes a conference. The organizer must review the wizard and explicitly submit it.
+
+### Factual Wizard defaults
+
+The Organizer Conference Wizard no longer seeds a new real account with demo conference facts such as Paris, a made-up hotel, airport guidance, generic Subsurface-AI topics, arbitrary fees, arbitrary deadlines, or a forced Hybrid format.
+
+The organizer must explicitly select/confirm required basics such as industry, dates, location and format. Imported values remain editable before publication. Optional facts stay blank when the organizer has not supplied them.
+
+### Existing activation handoff
+
+The established Organizer Pro activation path remains intact:
+
+- publishing the first conference records first-value activation;
+- the wizard then opens Sponsorship Needs and carries the new conference ID/category/location context into the sponsorship setup;
+- Organizer Pro already provides Professional Network search and invitations for technical-committee members, chairs and speakers;
+- the Technical Committee and Sponsorship areas continue using the shared paid workspace.
+
+### Phase 7.3 validation
+
+The private growth-dashboard smoke test additionally verifies that:
+
+- first-touch acquisition attribution cannot be overwritten by a later campaign;
+- source-level Organizer signup → paid → first conference → sponsorship-inventory metrics resolve correctly;
+- campaign-level Organizer conversion resolves correctly;
+- a private/loopback URL is rejected by the official-URL import boundary;
+- the same dashboard remains protected by signed-in session + admin token.
+
 ## Security validation
 
 `scripts/smokeGrowthDashboard.mjs` verifies that:
@@ -144,9 +217,8 @@ Different currencies are never combined into a single financial total.
 
 ## Next Phase 7 slices
 
-After 7.1/7.2 are verified on the live Render process, continue in this order:
+After the completed 7.3 repository slice is deployed and verified on the live Render process, continue in this order:
 
-- **7.3 Organizer Acquisition Engine** — organizer landing/conversion flow, import-from-official-URL, wizard activation, sponsorship setup and professional discovery.
 - **7.4 Sponsor Acquisition Engine** — company profile, preferences, relevant opportunities, watchlist and commercial activation.
 - **7.5 Marketplace Matching** — sponsor/conference relevance matching using explicit business criteria and actual product data.
 - **7.6 Notifications** — useful, rate-controlled marketplace alerts and action-required notifications.
