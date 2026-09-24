@@ -224,14 +224,11 @@ async function notify(db, sponsorId, title, message) {
 }
 
 async function main() {
-  const localPath = path.join(process.cwd(), 'data', 'app.db');
+  const localPath = path.resolve(
+    process.env.DATABASE_PATH?.trim() || path.join(process.cwd(), 'data', 'app.db')
+  );
   fs.mkdirSync(path.dirname(localPath), { recursive: true });
-  const db = process.env.TURSO_DATABASE_URL?.trim()
-    ? createClient({
-        url: process.env.TURSO_DATABASE_URL.trim(),
-        authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
-      })
-    : createClient({ url: 'file:' + localPath });
+  const db = createClient({ url: 'file:' + localPath });
 
   try {
     await ensureTables(db);
