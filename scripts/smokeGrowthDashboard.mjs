@@ -98,6 +98,39 @@ try {
 
   const organizer = await signupOrganizer();
 
+  const firstTouch = await jsonRequest('/api/workspaces/acquisition', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: {
+      source: 'linkedin',
+      medium: 'paid_social',
+      campaign: 'organizer_launch',
+      content: 'launch_ad_a',
+      landingPath: '/?utm_source=linkedin&utm_campaign=organizer_launch',
+    },
+  });
+  if (!firstTouch.response.ok || firstTouch.data?.acquisition?.source !== 'linkedin') {
+    throw new Error('Could not record organizer acquisition first touch: ' + JSON.stringify(firstTouch.data));
+  }
+
+  const secondTouch = await jsonRequest('/api/workspaces/acquisition', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: {
+      source: 'overwritten_source',
+      medium: 'email',
+      campaign: 'overwritten_campaign',
+      landingPath: '/later-campaign',
+    },
+  });
+  if (
+    !secondTouch.response.ok ||
+    secondTouch.data?.acquisition?.source !== 'linkedin' ||
+    secondTouch.data?.acquisition?.campaign !== 'organizer_launch'
+  ) {
+    throw new Error('Acquisition attribution must remain immutable first-touch: ' + JSON.stringify(secondTouch.data));
+  }
+
   const withoutToken = await jsonRequest('/api/admin/discovery/growth-dashboard', { cookie: organizer.cookie });
   if (withoutToken.response.status !== 403) {
     throw new Error(`Dashboard must require admin token; got ${withoutToken.response.status}`);
@@ -133,6 +166,15 @@ try {
     throw new Error(`Could not create paid workspace: ${workspace.response.status} ${JSON.stringify(workspace.data)}`);
   }
 
+  const unsafeImport = await jsonRequest('/api/workspaces/organizer/import-conference', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: { url: 'http://127.0.0.1:12345/private-conference' },
+  });
+  if (unsafeImport.response.status !== 400) {
+    throw new Error(`Official URL import must block private/unsafe URLs; got ${unsafeImport.response.status} ${JSON.stringify(unsafeImport.data)}`);
+  }
+
   const conference = await jsonRequest('/api/activity/conferences', {
     method: 'POST',
     cookie: organizer.cookie,
@@ -145,6 +187,25 @@ try {
   });
   if (!conference.response.ok) {
     throw new Error(`Could not create conference: ${conference.response.status} ${JSON.stringify(conference.data)}`);
+  }
+
+  const need = await jsonRequest('/api/sponsors/needs', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    body: {
+      conferenceId: 'conf_growth_dashboard_smoke',
+      title: 'Dashboard Smoke Sponsorship',
+      categories: ['Energy'],
+      targetSectors: ['Energy'],
+      regions: ['Middle East'],
+      opportunityTypes: ['Technical Session'],
+      priceOnRequest: false,
+      priceAmount: 5000,
+      totalSlots: 1,
+    },
+  });
+  if (!need.response.ok || !need.data?.need?.id) {
+    throw new Error(`Could not create organizer sponsorship inventory: ${need.response.status} ${JSON.stringify(need.data)}`);
   }
 
   const allowed = await jsonRequest('/api/admin/discovery/growth-dashboard', {
@@ -166,6 +227,36 @@ try {
     throw new Error('Paid workspace retention summary is incorrect: ' + JSON.stringify(dashboard?.retention));
   }
 
+  if (dashboard.acquisition?.coveragePct !== 100) {
+    throw new Error('Acquisition coverage is incorrect: ' + JSON.stringify(dashboard?.acquisition));
+  }
+  const sourceFunnel = dashboard.acquisition?.organizerSources?.find((row) => row.source === 'linkedin');
+  if (
+    !sourceFunnel ||
+    sourceFunnel.signups !== 1 ||
+    sourceFunnel.paid !== 1 ||
+    sourceFunnel.activated !== 1 ||
+    sourceFunnel.sponsorshipInventory !== 1 ||
+    sourceFunnel.signupToPaidPct !== 100 ||
+    sourceFunnel.signupToActivatedPct !== 100
+  ) {
+    throw new Error('Organizer source acquisition funnel is incorrect: ' + JSON.stringify(sourceFunnel));
+  }
+  const campaignFunnel = dashboard.acquisition?.organizerCampaigns?.find(
+    (row) => row.campaign === 'organizer_launch' && row.source === 'linkedin'
+  );
+  if (
+    !campaignFunnel ||
+    campaignFunnel.signups !== 1 ||
+    campaignFunnel.paid !== 1 ||
+    campaignFunnel.activated !== 1
+  ) {
+    throw new Error('Organizer campaign acquisition funnel is incorrect: ' + JSON.stringify(campaignFunnel));
+  }
+  if (dashboard.acquisition?.organizerCampaigns?.some((row) => row.campaign === 'overwritten_campaign')) {
+    throw new Error('A later campaign overwrote immutable first-touch attribution.');
+  }
+
   const serialized = JSON.stringify(allowed.data);
   if (serialized.includes(adminToken) || serialized.includes(billingSecret)) {
     throw new Error('Dashboard response leaked an administrative secret.');
@@ -185,6 +276,15 @@ try {
       paid: dashboard.organizer.paid,
       activated: dashboard.organizer.activated,
       paidWorkspaces: dashboard.retention.organizer.paidWorkspaces,
+    },
+    acquisition: {
+      firstTouchImmutable: true,
+      source: sourceFunnel.source,
+      campaign: campaignFunnel.campaign,
+      sponsorshipInventory: sourceFunnel.sponsorshipInventory,
+    },
+    officialUrlImport: {
+      unsafePrivateUrlBlocked: true,
     },
   }));
 } finally {
