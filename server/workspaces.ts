@@ -399,68 +399,98 @@ workspacesRouter.post(
     const attempts: Array<{ route: string; ok: boolean; detail: string }> = [];
     const candidates: Array<{ route: string; sourceUrl: string; raw: RawEventExtraction }> = [];
 
-    const fetched = await discoveryFetch(url.href, { timeoutMs: 12000, maxBytes: 1_500_000 });
-    if (fetched.ok && isHtmlLike(fetched)) {
-      const raw = extractImportFromHtml(fetched.body, fetched.finalUrl);
-      candidates.push({ route: "direct_http", sourceUrl: fetched.finalUrl, raw });
-      attempts.push({
-        route: "direct_http",
-        ok: true,
-        detail: `HTTP ${fetched.status}; extracted ${importExtractionScore(raw)} field groups`,
-      });
-    } else {
+    let fetched: Awaited<ReturnType<typeof discoveryFetch>> | null = null;
+    try {
+      fetched = await discoveryFetch(url.href, { timeoutMs: 12000, maxBytes: 1_500_000 });
+      if (fetched.ok && isHtmlLike(fetched)) {
+        try {
+          const raw = extractImportFromHtml(fetched.body, fetched.finalUrl);
+          candidates.push({ route: "direct_http", sourceUrl: fetched.finalUrl, raw });
+          attempts.push({
+            route: "direct_http",
+            ok: true,
+            detail: `HTTP ${fetched.status}; extracted ${importExtractionScore(raw)} field groups`,
+          });
+        } catch (error: any) {
+          attempts.push({
+            route: "direct_http",
+            ok: false,
+            detail: `extractor_error:${String(error?.message || error).slice(0, 120)}`,
+          });
+        }
+      } else {
+        attempts.push({
+          route: "direct_http",
+          ok: false,
+          detail: fetched.error || `HTTP ${fetched.status || "unknown"}`,
+        });
+      }
+    } catch (error: any) {
       attempts.push({
         route: "direct_http",
         ok: false,
-        detail: fetched.error || `HTTP ${fetched.status || "unknown"}`,
+        detail: `transport_error:${String(error?.message || error).slice(0, 120)}`,
       });
     }
 
-    // Event platforms such as WildApricot often need JavaScript or reject non-browser TLS
-    // fingerprints. Render installs Chromium at build time, so try a real rendered page before
-    // giving up on an organizer-supplied official URL.
-    const browserTarget = fetched.ok ? fetched.finalUrl : url.href;
+    // Hosted readable-page fallback is tried before Chromium for event platforms such as
+    // WildApricot. It is faster on Render and works even when the origin blocks Render's IP/TLS.
     const directBest = candidates[0]?.raw;
-    if (!directBest || importExtractionScore(directBest) < 3) {
-      const rendered = await fetchRenderedHtml(browserTarget);
-      if (rendered) {
-        const raw = extractImportFromHtml(rendered, browserTarget);
-        candidates.push({ route: "rendered_browser", sourceUrl: browserTarget, raw });
-        attempts.push({
-          route: "rendered_browser",
-          ok: true,
-          detail: `extracted ${importExtractionScore(raw)} field groups`,
-        });
-      } else {
-        attempts.push({
-          route: "rendered_browser",
-          ok: false,
-          detail: isBrowserRenderingUnavailable() ? "browser unavailable on host" : "page could not be rendered",
-        });
-      }
-    }
-
-    // Hosted readable-page fallback. This is particularly useful when the origin blocks Render's
-    // server IP but a public reader can access the same official page. The URL was SSRF-checked
-    // above before it is sent to the reader.
-    const bestBeforeReader = candidates
-      .slice()
-      .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
-    if ((!bestBeforeReader || importExtractionScore(bestBeforeReader.raw) < 3) && isJinaConfigured()) {
+    if ((!directBest || importExtractionScore(directBest) < 3) && isJinaConfigured()) {
       const reader = await jinaReadPageDetailed(url.href);
       if (reader.markdown) {
-        const raw = extractImportFromReaderMarkdown(reader.markdown, url.href);
-        candidates.push({ route: "readable_page", sourceUrl: url.href, raw });
-        attempts.push({
-          route: "readable_page",
-          ok: true,
-          detail: `extracted ${importExtractionScore(raw)} field groups`,
-        });
+        try {
+          const raw = extractImportFromReaderMarkdown(reader.markdown, url.href);
+          candidates.push({ route: "readable_page", sourceUrl: url.href, raw });
+          attempts.push({
+            route: "readable_page",
+            ok: true,
+            detail: `extracted ${importExtractionScore(raw)} field groups`,
+          });
+        } catch (error: any) {
+          attempts.push({
+            route: "readable_page",
+            ok: false,
+            detail: `extractor_error:${String(error?.message || error).slice(0, 120)}`,
+          });
+        }
       } else {
         attempts.push({
           route: "readable_page",
           ok: false,
           detail: reader.error || `HTTP ${reader.httpStatus || "unknown"}`,
+        });
+      }
+    }
+
+    // Browser is the final fallback for pages that require client-side rendering.
+    const bestBeforeBrowser = candidates
+      .slice()
+      .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
+    const browserTarget = fetched?.ok ? fetched.finalUrl : url.href;
+    if (!bestBeforeBrowser || importExtractionScore(bestBeforeBrowser.raw) < 3) {
+      const rendered = await fetchRenderedHtml(browserTarget);
+      if (rendered) {
+        try {
+          const raw = extractImportFromHtml(rendered, browserTarget);
+          candidates.push({ route: "rendered_browser", sourceUrl: browserTarget, raw });
+          attempts.push({
+            route: "rendered_browser",
+            ok: true,
+            detail: `extracted ${importExtractionScore(raw)} field groups`,
+          });
+        } catch (error: any) {
+          attempts.push({
+            route: "rendered_browser",
+            ok: false,
+            detail: `extractor_error:${String(error?.message || error).slice(0, 120)}`,
+          });
+        }
+      } else {
+        attempts.push({
+          route: "rendered_browser",
+          ok: false,
+          detail: isBrowserRenderingUnavailable() ? "browser unavailable on host" : "page could not be rendered",
         });
       }
     }
