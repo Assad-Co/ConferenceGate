@@ -141,6 +141,15 @@
     </div>
 
     <div class="section">
+      <div class="section-head"><h2>Marketplace Intelligence</h2><span class="muted">Deterministic bottlenecks from real sponsorship activity</span></div>
+      <div class="grid" id="marketplaceIntelligenceCards"></div>
+      <div class="card" style="margin-top:12px">
+        <h3>Current bottlenecks</h3>
+        <div id="marketplaceBottlenecks" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-head"><h2>Revenue Optimization</h2><span class="muted">Only active/configured revenue levers are counted</span></div>
       <div class="grid" id="revenueOptimizationCards"></div>
       <div class="card" style="margin-top:12px">
@@ -250,6 +259,23 @@
     $('settledRevenue').innerHTML = moneyList(market.settledRevenue, true);
     $('refundedRevenue').innerHTML = moneyList(market.refundedRevenue, true);
     $('feeRevenue').innerHTML = moneyList(market.platformFeeRevenue, false);
+
+    const intelligence = data.marketplaceIntelligence || {};
+    $('marketplaceIntelligenceCards').innerHTML = [
+      `<div class="card span-3"><h3>Active inventory</h3><div class="metric">${fmt(intelligence.activeInventory)}</div><div class="small">${pct(intelligence.inventoryViewCoveragePct)} have Sponsor views</div></div>`,
+      `<div class="card span-3"><h3>Inquiry coverage</h3><div class="metric">${pct(intelligence.inventoryInquiryCoveragePct)}</div><div class="small">${fmt(intelligence.inventoryWithInquiries)} opportunities received an inquiry</div></div>`,
+      `<div class="card span-3"><h3>Quiet inventory</h3><div class="metric">${fmt(intelligence.quietInventory7d)}</div><div class="small">7+ days with zero Sponsor views</div></div>`,
+      `<div class="card span-3"><h3>Stalled Deal Rooms</h3><div class="metric">${fmt(intelligence.stalledDeals7d)}</div><div class="small">${pct(intelligence.stalledDealPct)} of active Deal Rooms · no update 7+ days</div></div>`,
+      `<div class="card span-3"><h3>High intent / no inquiry</h3><div class="metric">${fmt(intelligence.highIntentNoInquiry)}</div><div class="small">3+ distinct viewers, zero inquiries</div></div>`,
+      `<div class="card span-3"><h3>Open inquiries</h3><div class="metric">${fmt(intelligence.openInquiries)}</div><div class="small">New, contacted or negotiating</div></div>`,
+      `<div class="card span-3"><h3>Settled payments</h3><div class="metric">${fmt(intelligence.settledPayments30d)}</div><div class="small">Provider-confirmed · trailing 30 days</div></div>`,
+      `<div class="card span-3"><h3>Paid marketplace accounts</h3><div class="metric">${fmt((intelligence.paidOrganizers||0)+(intelligence.paidSponsors||0))}</div><div class="small">${fmt(intelligence.paidOrganizers)} organizers · ${fmt(intelligence.paidSponsors)} sponsors</div></div>`,
+    ].join('');
+    $('marketplaceBottlenecks').innerHTML = intelligence.bottlenecks?.length
+      ? intelligence.bottlenecks.map((item) =>
+          `<div class="movement"><span><b>${esc(item.message)}</b><br><span class="small">${esc(item.key).replaceAll('_',' ')}</span></span><span class="badge ${item.severity === 'high' ? 'bad' : 'warn'}">${fmt(item.count)}</span></div>`
+        ).join('')
+      : '<div class="empty">No measured marketplace bottleneck is currently above the defined thresholds.</div>';
 
     const rev = data.revenueOptimization || {};
     const organizerPro = rev.organizerPro || {};
