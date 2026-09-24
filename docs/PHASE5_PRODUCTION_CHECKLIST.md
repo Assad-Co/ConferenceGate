@@ -10,7 +10,7 @@ This checklist closes the ConferenceGate paid Organizer/Sponsor workspace and sp
 - Start command: `npm start`.
 - Health check path: `/api/health`.
 - Let Render provide `PORT`; do not hard-code it.
-- Keep the web service and discovery worker on the same Turso database.
+- Keep the web service and discovery worker on the same persistent SQLite file.
 
 After deployment, `GET /api/health` must return HTTP 200 with:
 
@@ -22,8 +22,9 @@ After deployment, `GET /api/health` must return HTTP 200 with:
 
 These must be configured in the Render web service:
 
-- `TURSO_DATABASE_URL`
-- `TURSO_AUTH_TOKEN`
+- `DATABASE_BACKEND=sqlite`
+- `DATABASE_PATH=/var/data/conferencegate.db`
+- a Render persistent disk mounted at `/var/data`
 - `BILLING_SYNC_SECRET`
 - `PUBLIC_BASE_URL=https://conferencegate.onrender.com`
 - `APP_BASE_URL=https://conferencegate.onrender.com`
@@ -118,7 +119,7 @@ The command must exit successfully and report `ready: true`.
 
 It validates:
 
-- persistent Turso configuration;
+- persistent SQLite path configuration;
 - checkout-provider requirements;
 - at least one signed subscription webhook provider;
 - valid HTTPS checkout/base URLs;
