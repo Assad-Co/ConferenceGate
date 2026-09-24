@@ -483,6 +483,22 @@ export async function initDb(): Promise<void> {
       UNIQUE(saved_opportunity_id, fingerprint)
     );
 
+    -- Explicit operator-managed launch cohort. Membership is opt-in by account/email through the
+    -- private admin API; no customer is silently enrolled and no sensitive profile data is copied.
+    CREATE TABLE IF NOT EXISTS launch_cohort_members (
+      id TEXT PRIMARY KEY,
+      cohort TEXT NOT NULL DEFAULT 'first_customer_launch',
+      user_id TEXT NOT NULL REFERENCES users(id),
+      role TEXT NOT NULL CHECK(role IN ('organizer','sponsor')),
+      segment TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(cohort, user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_launch_cohort_members_cohort_role
+      ON launch_cohort_members(cohort, role, created_at);
+
     CREATE TABLE IF NOT EXISTS sponsorship_needs (
       id TEXT PRIMARY KEY,
       conference_id TEXT NOT NULL,
