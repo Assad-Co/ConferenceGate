@@ -24,6 +24,8 @@ import { resolvePaidAccountContext } from "./server/workspaceAccess";
 import { postsRouter } from "./server/posts";
 import {
   initDb,
+  databaseBackend,
+  databasePathConfigured,
   dbGet,
   dbAll,
   dbRun,
@@ -125,6 +127,8 @@ async function startServer() {
         status: "ok",
         app: "Conference Gate",
         database: "ready",
+        databaseBackend,
+        databasePersistentPathConfigured: databasePathConfigured,
         release: release === "local" ? release : release.slice(0, 7),
       });
     } catch {
@@ -132,6 +136,8 @@ async function startServer() {
         status: "degraded",
         app: "Conference Gate",
         database: "unavailable",
+        databaseBackend,
+        databasePersistentPathConfigured: databasePathConfigured,
         release: release === "local" ? release : release.slice(0, 7),
       });
     }
