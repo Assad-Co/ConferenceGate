@@ -267,6 +267,219 @@ async function marketplace() {
   };
 }
 
+async function revenueOptimization() {
+  const [
+    paidOrganizers,
+    paidSponsors,
+    workspacesWithAddedSeats,
+    addedTeamSeats,
+    settledDeals,
+    checkoutStarts30d,
+  ] = await Promise.all([
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role='organizer' AND subscription_status IN ('active','trialing')"),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role='sponsor' AND subscription_status IN ('active','trialing')"),
+    scalar(
+      `SELECT COUNT(DISTINCT w.id) AS value
+         FROM account_workspaces w
+         JOIN account_workspace_members m ON m.workspace_id=w.id
+        WHERE m.status='active' AND m.member_role<>'owner'`
+    ),
+    scalar(
+      `SELECT COUNT(*) AS value
+         FROM account_workspace_members
+        WHERE status='active' AND member_role<>'owner'`
+    ),
+    scalar("SELECT COUNT(*) AS value FROM sponsorship_payments WHERE status='settled'"),
+    scalar(
+      `SELECT COUNT(*) AS value
+         FROM billing_provider_events
+        WHERE event_type='subscription.checkout.started'
+          AND created_at >= datetime('now','-30 days')`
+    ),
+  ]);
+
+  const checkoutProvider = (process.env.BILLING_CHECKOUT_PROVIDER || "hosted").trim().toLowerCase();
+  const organizerCheckoutConfigured =
+    checkoutProvider === "paddle"
+      ? Boolean(process.env.PADDLE_API_KEY?.trim() && process.env.PADDLE_ORGANIZER_PRICE_ID?.trim())
+      : Boolean(process.env.ORGANIZER_CHECKOUT_URL?.trim());
+  const sponsorCheckoutConfigured =
+    checkoutProvider === "paddle"
+      ? Boolean(process.env.PADDLE_API_KEY?.trim() && process.env.PADDLE_SPONSOR_PRICE_ID?.trim())
+      : Boolean(process.env.SPONSOR_CHECKOUT_URL?.trim());
+  const platformFeeBps = Math.max(0, Math.min(10000, n(process.env.SPONSORSHIP_PLATFORM_FEE_BPS || 0)));
+  const seatLimit = Math.max(1, n(process.env.WORKSPACE_SEAT_LIMIT || 10));
+
+  return {
+    organizerPro: {
+      checkoutConfigured: organizerCheckoutConfigured,
+      paidAccounts: paidOrganizers,
+    },
+    sponsorPro: {
+      checkoutConfigured: sponsorCheckoutConfigured,
+      paidAccounts: paidSponsors,
+    },
+    checkoutStarts30d,
+    platformFeeBps,
+    platformFeePct: Math.round((platformFeeBps / 100) * 100) / 100,
+    teamSeats: {
+      workspaceSeatLimit: seatLimit,
+      workspacesWithAddedSeats,
+      addedTeamSeats,
+    },
+    settledSponsorshipDeals: settledDeals,
+    experimentalAddOns: [
+      { key: "featured_conference", enabled: false, label: "Featured conference placement" },
+      { key: "featured_sponsorship", enabled: false, label: "Featured sponsorship opportunity" },
+      { key: "premium_matching", enabled: false, label: "Premium sponsor matching" },
+    ],
+  };
+}
+
+export async function buildLaunchCohort(cohort = "first_customer_launch") {
+  if (!(await tableExists("launch_cohort_members"))) {
+    return {
+      cohort,
+      targets: { organizers: 10, sponsorsMin: 20, sponsorsMax: 50 },
+      totalMembers: 0,
+      organizer: {
+        members: 0, paid: 0, activated: 0, marketplaceExposure: 0, inquiries: 0, deals: 0, payments: 0,
+      },
+      sponsor: {
+        members: 0, paid: 0, activated: 0, marketplaceExposure: 0, inquiries: 0, deals: 0, payments: 0,
+      },
+      members: [],
+    };
+  }
+
+  const rows = await dbAll<any>(
+    `SELECT l.id,l.cohort,l.user_id,l.role,l.segment,l.note,l.created_at,
+            u.email,u.name,u.organization,u.subscription_status
+       FROM launch_cohort_members l
+       JOIN users u ON u.id=l.user_id
+      WHERE l.cohort=?
+      ORDER BY l.role,l.created_at`,
+    [cohort]
+  );
+
+  const summaries: Record<"organizer" | "sponsor", any> = {
+    organizer: { members: 0, paid: 0, activated: 0, marketplaceExposure: 0, inquiries: 0, deals: 0, payments: 0 },
+    sponsor: { members: 0, paid: 0, activated: 0, marketplaceExposure: 0, inquiries: 0, deals: 0, payments: 0 },
+  };
+
+  const members = [];
+  for (const row of rows) {
+    const role = row.role === "sponsor" ? "sponsor" : "organizer";
+    const userId = String(row.user_id);
+    const paid = ["active", "trialing"].includes(String(row.subscription_status || ""));
+
+    let activated = false;
+    let marketplaceExposure = false;
+    let inquiries = false;
+    let deals = false;
+    let payments = false;
+
+    if (role === "organizer") {
+      [activated, marketplaceExposure, inquiries, deals, payments] = await Promise.all([
+        dbGet<{ ok: number }>("SELECT 1 AS ok FROM created_conferences WHERE organizer_id=? LIMIT 1", [userId]).then(Boolean),
+        dbGet<{ ok: number }>(
+          `SELECT 1 AS ok
+             FROM sponsorship_engagement_events e
+             JOIN sponsorship_needs n ON n.id=e.need_id
+            WHERE n.organizer_id=? AND e.event_type='listing_view'
+            LIMIT 1`,
+          [userId]
+        ).then(Boolean),
+        dbGet<{ ok: number }>(
+          `SELECT 1 AS ok
+             FROM sponsorship_need_inquiries i
+             JOIN sponsorship_needs n ON n.id=i.need_id
+            WHERE n.organizer_id=? LIMIT 1`,
+          [userId]
+        ).then(Boolean),
+        dbGet<{ ok: number }>("SELECT 1 AS ok FROM sponsorship_deals WHERE organizer_id=? LIMIT 1", [userId]).then(Boolean),
+        dbGet<{ ok: number }>(
+          `SELECT 1 AS ok
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.organizer_id=? AND p.status='settled' LIMIT 1`,
+          [userId]
+        ).then(Boolean),
+      ]);
+    } else {
+      [activated, marketplaceExposure, inquiries, deals, payments] = await Promise.all([
+        dbGet<{ ok: number }>(
+          `SELECT 1 AS ok
+             WHERE EXISTS(SELECT 1 FROM sponsor_preferences WHERE sponsor_id=?)
+                OR EXISTS(SELECT 1 FROM sponsor_saved_opportunities WHERE sponsor_id=?)
+                OR EXISTS(SELECT 1 FROM sponsorship_need_inquiries WHERE sponsor_id=?)
+             LIMIT 1`,
+          [userId, userId, userId]
+        ).then(Boolean),
+        dbGet<{ ok: number }>(
+          "SELECT 1 AS ok FROM sponsorship_engagement_events WHERE sponsor_id=? AND event_type='listing_view' LIMIT 1",
+          [userId]
+        ).then(Boolean),
+        dbGet<{ ok: number }>("SELECT 1 AS ok FROM sponsorship_need_inquiries WHERE sponsor_id=? LIMIT 1", [userId]).then(Boolean),
+        dbGet<{ ok: number }>("SELECT 1 AS ok FROM sponsorship_deals WHERE sponsor_id=? LIMIT 1", [userId]).then(Boolean),
+        dbGet<{ ok: number }>(
+          `SELECT 1 AS ok
+             FROM sponsorship_payments p
+             JOIN sponsorship_deals d ON d.id=p.deal_id
+            WHERE d.sponsor_id=? AND p.status='settled' LIMIT 1`,
+          [userId]
+        ).then(Boolean),
+      ]);
+    }
+
+    const summary = summaries[role];
+    summary.members += 1;
+    if (paid) summary.paid += 1;
+    if (activated) summary.activated += 1;
+    if (marketplaceExposure) summary.marketplaceExposure += 1;
+    if (inquiries) summary.inquiries += 1;
+    if (deals) summary.deals += 1;
+    if (payments) summary.payments += 1;
+
+    members.push({
+      id: String(row.id),
+      userId,
+      role,
+      email: String(row.email || ""),
+      name: String(row.name || ""),
+      organization: row.organization ? String(row.organization) : null,
+      segment: row.segment ? String(row.segment) : null,
+      note: row.note ? String(row.note) : null,
+      createdAt: String(row.created_at),
+      paid,
+      activated,
+      marketplaceExposure,
+      inquiries,
+      deals,
+      payments,
+    });
+  }
+
+  for (const role of ["organizer", "sponsor"] as const) {
+    const summary = summaries[role];
+    summary.paidPct = pct(summary.paid, summary.members);
+    summary.activationPct = pct(summary.activated, summary.members);
+    summary.exposurePct = pct(summary.marketplaceExposure, summary.members);
+    summary.inquiryPct = pct(summary.inquiries, summary.members);
+    summary.dealPct = pct(summary.deals, summary.members);
+    summary.paymentPct = pct(summary.payments, summary.members);
+  }
+
+  return {
+    cohort,
+    targets: { organizers: 10, sponsorsMin: 20, sponsorsMax: 50 },
+    totalMembers: rows.length,
+    organizer: summaries.organizer,
+    sponsor: summaries.sponsor,
+    members,
+  };
+}
+
 async function movement() {
   const labels = ["organizer", "sponsor"] as const;
   const result: Record<string, any> = {};
@@ -283,13 +496,24 @@ async function movement() {
 }
 
 export async function buildGrowthDashboard() {
-  const [organizer, sponsor, retentionState, acquisitionState, marketplaceState, movementState] = await Promise.all([
+  const [
+    organizer,
+    sponsor,
+    retentionState,
+    acquisitionState,
+    marketplaceState,
+    movementState,
+    revenueOptimizationState,
+    launchCohortState,
+  ] = await Promise.all([
     roleSummary("organizer"),
     roleSummary("sponsor"),
     retention(),
     acquisition(),
     marketplace(),
     movement(),
+    revenueOptimization(),
+    buildLaunchCohort(),
   ]);
 
   const release = process.env.RENDER_GIT_COMMIT?.trim() || process.env.GIT_COMMIT_SHA?.trim() || "local";
@@ -303,7 +527,7 @@ export async function buildGrowthDashboard() {
     deployment: {
       release: release === "local" ? release : release.slice(0, 12),
       database: "ready",
-      persistentDatabase: Boolean(process.env.TURSO_DATABASE_URL?.trim()),
+      persistentDatabase: Boolean(process.env.DATABASE_PATH?.trim()),
       publicBaseUrlConfigured: Boolean(process.env.PUBLIC_BASE_URL?.trim()),
       checkoutProvider: (process.env.BILLING_CHECKOUT_PROVIDER || "hosted").toLowerCase(),
       paddleConfigured: Boolean(process.env.PADDLE_API_KEY && process.env.PADDLE_WEBHOOK_SECRET),
@@ -317,5 +541,7 @@ export async function buildGrowthDashboard() {
     retention: retentionState,
     acquisition: acquisitionState,
     marketplace: marketplaceState,
+    revenueOptimization: revenueOptimizationState,
+    launchCohort: launchCohortState,
   };
 }
