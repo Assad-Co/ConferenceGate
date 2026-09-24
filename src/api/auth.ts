@@ -135,14 +135,20 @@ async function parseResponse(res: Response) {
     }
   }
   if (!res.ok) {
-    if (data?.error) throw new Error(String(data.error));
+    const makeError = (message: string) => {
+      const error = new Error(message) as Error & { code?: string; status?: number };
+      if (data?.code) error.code = String(data.code);
+      error.status = res.status;
+      return error;
+    };
+    if (data?.error) throw makeError(String(data.error));
     if (res.status >= 500) {
-      throw new Error(`Conference Gate service is temporarily unavailable (HTTP ${res.status}). Please try again shortly.`);
+      throw makeError(`Conference Gate service is temporarily unavailable (HTTP ${res.status}). Please try again shortly.`);
     }
     if (res.status === 404) {
-      throw new Error('This Conference Gate API route is not available on the current deployment.');
+      throw makeError('This Conference Gate API route is not available on the current deployment.');
     }
-    throw new Error(`Conference Gate request failed (HTTP ${res.status}). Please try again.`);
+    throw makeError(`Conference Gate request failed (HTTP ${res.status}). Please try again.`);
   }
   return data;
 }
