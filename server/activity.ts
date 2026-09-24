@@ -629,11 +629,15 @@ activityRouter.get(
       }
     }
 
-    const professionals = await dbAll<UserRow>(
+    const professionalCandidates = await dbAll<UserRow>(
       `SELECT * FROM users
         WHERE role = 'professional'
+           OR email IS NOT NULL
         ORDER BY created_at DESC
         LIMIT 500`
+    );
+    const professionals = professionalCandidates.filter(
+      (professional) => professional.role === "professional" || isOwnerPreviewEmail(professional.email)
     );
     const queryTokens = tokenSet([q, ...conferenceTerms]);
 
