@@ -1,4 +1,5 @@
 import { dbGet, UserRow } from "./db";
+import { isOwnerPreviewEmail } from "./ownerPreview";
 
 export type PaidAccountRole = "organizer" | "sponsor";
 export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
@@ -10,6 +11,8 @@ export interface PaidAccountContext {
   workspaceId: string | null;
   workspaceRole: WorkspaceRole;
   paid: boolean;
+  ownerPreview: boolean;
+  effectiveRole: PaidAccountRole;
 }
 
 export async function resolvePaidAccountContext(
@@ -17,8 +20,17 @@ export async function resolvePaidAccountContext(
   expectedRole?: PaidAccountRole
 ): Promise<PaidAccountContext | null> {
   const actor = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
-  if (!actor || !["organizer", "sponsor"].includes(actor.role)) return null;
-  if (expectedRole && actor.role !== expectedRole) return null;
+  if (!actor) return null;
+
+  const ownerPreview = isOwnerPreviewEmail(actor.email);
+  const actorPaidRole =
+    actor.role === "organizer" || actor.role === "sponsor"
+      ? (actor.role as PaidAccountRole)
+      : null;
+  if (!actorPaidRole && !ownerPreview) return null;
+  if (expectedRole && actorPaidRole !== expectedRole && !ownerPreview) return null;
+
+  const effectiveRole: PaidAccountRole = expectedRole || actorPaidRole || "organizer";
 
   const membership = await dbGet<{
     workspace_id: string;
@@ -32,7 +44,7 @@ export async function resolvePaidAccountContext(
       WHERE m.user_id=? AND m.status='active' AND w.account_role=?
       ORDER BY CASE WHEN m.member_role='owner' THEN 0 ELSE 1 END, m.created_at ASC
       LIMIT 1`,
-    [userId, actor.role]
+    [userId, effectiveRole]
   ).catch(() => undefined);
 
   const accountId = membership?.owner_id || actor.id;
@@ -48,8 +60,11 @@ export async function resolvePaidAccountContext(
     workspaceId: membership?.workspace_id || null,
     workspaceRole: membership?.member_role || "owner",
     paid:
+      ownerPreview ||
       accountOwner.subscription_status === "active" ||
       accountOwner.subscription_status === "trialing",
+    ownerPreview,
+    effectiveRole,
   };
 }
 
