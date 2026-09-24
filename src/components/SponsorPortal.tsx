@@ -37,6 +37,7 @@ import {
   fetchMySponsorRequestResponses,
   decideSponsorRequestResponse,
   fetchSponsorPortfolioAnalytics,
+  fetchSponsorLaunchpad,
   fetchSponsorWatchlist,
   saveSponsorOpportunity,
   setSponsorWatchAlert,
@@ -44,6 +45,7 @@ import {
   type SponsorSavedOpportunity,
   type ExternalSponsorshipOpportunity,
   type SponsorPortfolioAnalytics,
+  type SponsorLaunchpad,
   type SponsorPreferences,
   type SponsorshipNeed,
   type SponsorshipDeal,
@@ -125,6 +127,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [sponsorRequests, setSponsorRequests] = useState<SponsorRequest[]>([]);
   const [sponsorRequestResponses, setSponsorRequestResponses] = useState<SponsorRequestResponse[]>([]);
   const [requestSaving, setRequestSaving] = useState(false);
+  const [sponsorLaunchpad, setSponsorLaunchpad] = useState<SponsorLaunchpad | null>(null);
   const [sponsorAnalytics, setSponsorAnalytics] = useState<SponsorPortfolioAnalytics>({
     meaningfulMatches: 0,
     highMatches: 0,
@@ -160,14 +163,15 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const loadSponsorMatching = async () => {
     setSponsorDataLoading(true);
     try {
-      const [pref, needs, deals, requests, responses, analytics, watchlist] = await Promise.all([
+      const [pref, needs, deals, requests, responses, analytics, watchlist, launchpad] = await Promise.all([
         fetchMySponsorPreferences(),
         fetchMatchedSponsorshipNeeds(),
-        fetchMySponsorshipDeals(),
+        fetchMySponsorshipDeals('sponsor'),
         fetchMySponsorRequests(),
         fetchMySponsorRequestResponses(),
         fetchSponsorPortfolioAnalytics(),
         fetchSponsorWatchlist(),
+        fetchSponsorLaunchpad(),
       ]);
       setPreferences(pref);
       setPreferenceDraft({
@@ -185,6 +189,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       setSponsorRequestResponses(responses);
       setSponsorAnalytics(analytics);
       setSavedOpportunities(watchlist);
+      setSponsorLaunchpad(launchpad);
     } catch {
       setMatchedNeeds([]);
     } finally {
