@@ -111,6 +111,39 @@ try {
     );
   }
 
+  const professionalPreferences = await jsonRequest('/api/auth/me/professional-preferences', {
+    method: 'PATCH',
+    cookie: owner.cookie,
+    body: {
+      professionalExpertise: ['Petroleum Geochemistry'],
+      technicalSpecialization: ['Organic Geochemistry'],
+      researchInterests: ['Source rock evaluation'],
+      preferredRegions: ['Middle East'],
+      committeeAvailable: true,
+      sessionChairAvailable: true,
+      speakerAvailable: true,
+      reviewerMaxLoad: 5,
+    },
+  });
+  if (
+    !professionalPreferences.response.ok ||
+    !professionalPreferences.data?.user?.ownerPreview ||
+    !professionalPreferences.data?.user?.professionalExpertise?.includes('Petroleum Geochemistry')
+  ) {
+    throw new Error(
+      `Owner preview could not use Professional profile APIs: ${professionalPreferences.response.status} ${JSON.stringify(professionalPreferences.data)}`
+    );
+  }
+
+  const professionalOpportunities = await jsonRequest('/api/activity/professional-opportunities', {
+    cookie: owner.cookie,
+  });
+  if (!professionalOpportunities.response.ok || !Array.isArray(professionalOpportunities.data?.opportunities)) {
+    throw new Error(
+      `Owner preview could not open Professional opportunities: ${professionalOpportunities.response.status} ${JSON.stringify(professionalOpportunities.data)}`
+    );
+  }
+
   const billingStatus = await jsonRequest('/api/billing/status', { cookie: owner.cookie });
   if (!billingStatus.response.ok || billingStatus.data?.hasPaidAccess !== true) {
     throw new Error('Owner preview billing access state is incorrect: ' + JSON.stringify(billingStatus.data));
@@ -141,6 +174,8 @@ try {
       authenticated: true,
       ownerPreview: true,
       sponsorApiReadable: true,
+      professionalContextReadable: true,
+      professionalPreferencesWritable: true,
       hasPaidAccess: true,
       subscriptionStatus: owner.data.user.subscriptionStatus,
     },
