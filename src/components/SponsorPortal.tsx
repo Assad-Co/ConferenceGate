@@ -1457,11 +1457,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       )}
 
       {/* Paid Sponsor Pro: Team & Access */}
-      {activeTab === 'workspace' && (
+      {!ownerPreview && activeTab === 'workspace' && (
         <WorkspaceTeamPanel accountLabel="Sponsor Pro" />
       )}
 
-      {activeTab === 'payments' && (
+      {!ownerPreview && activeTab === 'payments' && (
         <BillingLedgerPanel perspective="sponsor" />
       )}
 
