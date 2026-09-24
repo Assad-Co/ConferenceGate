@@ -217,6 +217,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       const saved = await updateMySponsorPreferences(payload);
       setPreferences(saved);
       setMatchedNeeds(await fetchMatchedSponsorshipNeeds());
+      setSponsorLaunchpad(await fetchSponsorLaunchpad());
       showToast({
         type: 'success',
         title: 'Sponsor matching updated',
@@ -238,6 +239,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         budget: need.priceAmount,
       });
       setInquiredNeedIds((prev) => ({ ...prev, [need.id]: true }));
+      setSponsorLaunchpad(await fetchSponsorLaunchpad());
       showToast({
         type: 'success',
         title: 'Inquiry sent',
@@ -256,7 +258,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   ) => {
     setDealUpdatingId(deal.id);
     try {
-      const updated = await updateSponsorshipDeal(deal.id, { status });
+      const updated = await updateSponsorshipDeal(deal.id, { status }, 'sponsor');
       setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
     } catch (error: any) {
       showToast({ type: 'info', title: 'Could not update Deal Room', message: error?.message || 'Please try again.' });
@@ -270,7 +272,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     if (!text) return;
     setDealUpdatingId(deal.id);
     try {
-      const update = await addSponsorshipDealUpdate(deal.id, { text });
+      const update = await addSponsorshipDealUpdate(deal.id, { text }, 'sponsor');
       setSponsorshipDeals((prev) =>
         prev.map((item) => item.id === deal.id ? { ...item, updates: [...item.updates, update] } : item)
       );
@@ -300,6 +302,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         endDate: requestDraft.endDate || undefined,
       });
       setSponsorRequests((prev) => [request, ...prev]);
+      setSponsorLaunchpad(await fetchSponsorLaunchpad());
       setRequestDraft({
         title: '', description: '', categories: '', regions: '', opportunityTypes: '',
         budgetMin: '', budgetMax: '', targetAudience: '', startDate: '', endDate: '',
