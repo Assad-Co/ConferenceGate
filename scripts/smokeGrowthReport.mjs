@@ -224,6 +224,26 @@ try {
     },
   });
 
+  const matchedBeforeInquiry = await request('/api/sponsors/needs/matched', { cookie: sponsor.cookie });
+  const matchedNeed = matchedBeforeInquiry?.needs?.find((item) => item.id === needResult.need.id);
+  if (
+    !matchedNeed ||
+    matchedNeed.matchScore < 70 ||
+    !Array.isArray(matchedNeed.matchReasons) ||
+    !matchedNeed.matchReasons.some((reason) => reason.includes('Sector match')) ||
+    !matchedNeed.matchBreakdown
+  ) {
+    throw new Error('Explainable Sponsor Pro matching is incorrect: ' + JSON.stringify(matchedNeed));
+  }
+
+  const launchpadBeforeInquiry = await request('/api/sponsors/launchpad', { cookie: sponsor.cookie });
+  if (
+    !launchpadBeforeInquiry?.launchpad?.preferencesReady ||
+    launchpadBeforeInquiry.launchpad.meaningfulMatches < 1
+  ) {
+    throw new Error('Sponsor Launchpad readiness is incorrect: ' + JSON.stringify(launchpadBeforeInquiry));
+  }
+
   await request('/api/sponsors/watchlist', {
     method: 'PUT',
     cookie: sponsor.cookie,
@@ -235,6 +255,14 @@ try {
     cookie: sponsor.cookie,
     body: { message: 'Growth smoke inquiry', budget: 5000 },
   });
+
+  const launchpadAfterInquiry = await request('/api/sponsors/launchpad', { cookie: sponsor.cookie });
+  if (
+    launchpadAfterInquiry?.launchpad?.savedOpportunities !== 1 ||
+    launchpadAfterInquiry?.launchpad?.inquiriesSent !== 1
+  ) {
+    throw new Error('Sponsor Launchpad did not advance after inquiry: ' + JSON.stringify(launchpadAfterInquiry));
+  }
 
   const organizerActivation = await request('/api/workspaces/activation', { cookie: organizer.cookie });
   const sponsorActivation = await request('/api/workspaces/activation', { cookie: sponsor.cookie });
@@ -312,6 +340,15 @@ try {
       cleanSubscriptionHistoryFromInstrumentationStart: true,
       cancellationsAndReactivations: true,
       renewalPeriodSignals: true,
+    },
+    phase74: {
+      sponsorLaunchpad: true,
+      nextBestAction: launchpadAfterInquiry.launchpad.nextAction.key,
+    },
+    phase75: {
+      explainableMatching: true,
+      matchScore: matchedNeed.matchScore,
+      matchReasons: matchedNeed.matchReasons,
     },
   }));
 } finally {
