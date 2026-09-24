@@ -260,5 +260,6 @@ export async function completeLinkedInSignup(role: AuthRole): Promise<AuthUser> 
     body: JSON.stringify({ role }),
   });
   const data = await parseResponse(res);
+  await recordPaidAcquisition(data.user);
   return data.user;
 }
