@@ -366,7 +366,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       const [needs, inquiries, deals, sponsorRequests, sponsorAnalytics] = await Promise.all([
         fetchMySponsorshipNeeds(),
         fetchMySponsorshipNeedInquiries(),
-        fetchMySponsorshipDeals(),
+        fetchMySponsorshipDeals('organizer'),
         fetchSponsorRequestBoard(),
         fetchSponsorshipNeedAnalytics(),
       ]);
@@ -439,7 +439,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         prev.map((item) => item.id === inquiryId ? { ...item, status } : item)
       );
       if (status === 'negotiating' || status === 'won' || status === 'lost') {
-        setSponsorshipDeals(await fetchMySponsorshipDeals());
+        setSponsorshipDeals(await fetchMySponsorshipDeals('organizer'));
       }
       setSponsorshipAnalytics(await fetchSponsorshipNeedAnalytics());
     } catch (error: any) {
@@ -471,7 +471,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         deliverables: draft.deliverables.split(',').map((item) => item.trim()).filter(Boolean),
         contractUrl: draft.contractUrl || null,
         invoiceUrl: draft.invoiceUrl || null,
-      });
+      }, 'organizer');
       setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
       setDealDrafts((prev) => {
         const next = { ...prev };
@@ -492,7 +492,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   ) => {
     setSavingDealId(deal.id);
     try {
-      const updated = await updateSponsorshipDeal(deal.id, { status });
+      const updated = await updateSponsorshipDeal(deal.id, { status }, 'organizer');
       setSponsorshipDeals((prev) => prev.map((item) => item.id === updated.id ? updated : item));
       setSponsorshipAnalytics(await fetchSponsorshipNeedAnalytics());
     } catch (error: any) {
@@ -507,7 +507,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     if (!draft.updateText.trim()) return;
     setSavingDealId(deal.id);
     try {
-      const update = await addSponsorshipDealUpdate(deal.id, { text: draft.updateText.trim() });
+      const update = await addSponsorshipDealUpdate(deal.id, { text: draft.updateText.trim() }, 'organizer');
       setSponsorshipDeals((prev) =>
         prev.map((item) => item.id === deal.id ? { ...item, updates: [...item.updates, update] } : item)
       );
