@@ -3,49 +3,54 @@ import path from "path";
 import fs from "fs";
 
 const IS_TEST = process.env.NODE_ENV === "test";
+const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
+const DATABASE_BACKEND = (process.env.DATABASE_BACKEND?.trim().toLowerCase() || "sqlite") as "sqlite" | "turso";
+const DATABASE_PATH = process.env.DATABASE_PATH?.trim() || undefined;
 const TURSO_URL = process.env.TURSO_DATABASE_URL?.trim() || undefined;
 const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
-const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
 
-// Defence in depth: the test runner removes production credentials, but the database module also
-// refuses them before constructing a client. A broken runner or an ad-hoc NODE_ENV=test command
-// therefore fails before the first query, rather than writing fixtures into Turso.
-if (IS_TEST && (TURSO_URL || TURSO_AUTH_TOKEN)) {
-  throw new Error(
-    "Refusing to start tests with TURSO_DATABASE_URL or TURSO_AUTH_TOKEN set. " +
-      "Tests must use an isolated TEST_DATABASE_PATH."
-  );
-}
 if (IS_TEST && !TEST_DATABASE_PATH) {
   throw new Error("NODE_ENV=test requires an explicit TEST_DATABASE_PATH.");
+}
+if (!IS_TEST && DATABASE_BACKEND !== "sqlite" && DATABASE_BACKEND !== "turso") {
+  throw new Error("DATABASE_BACKEND must be sqlite or turso.");
+}
+if (!IS_TEST && DATABASE_BACKEND === "turso" && !TURSO_URL) {
+  throw new Error("DATABASE_BACKEND=turso requires TURSO_DATABASE_URL.");
 }
 
 const localDatabasePath = TEST_DATABASE_PATH
   ? path.resolve(TEST_DATABASE_PATH)
-  : path.join(process.cwd(), "data", "app.db");
+  : DATABASE_PATH
+    ? path.resolve(DATABASE_PATH)
+    : path.join(process.cwd(), "data", "app.db");
 const DATA_DIR = path.dirname(localDatabasePath);
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+export const databaseBackend = IS_TEST ? "sqlite-test" : DATABASE_BACKEND;
+export const databasePathConfigured = Boolean(TEST_DATABASE_PATH || DATABASE_PATH);
+
 export const db: Client = IS_TEST
   ? createClient({ url: `file:${localDatabasePath}` })
-  : TURSO_URL
-    ? createClient({ url: TURSO_URL, authToken: TURSO_AUTH_TOKEN })
+  : DATABASE_BACKEND === "turso"
+    ? createClient({ url: TURSO_URL!, authToken: TURSO_AUTH_TOKEN })
     : createClient({ url: `file:${localDatabasePath}` });
+
+if (!IS_TEST && DATABASE_BACKEND === "sqlite") {
+  console.log(
+    `[db] SQLite backend active at ${localDatabasePath}` +
+      (DATABASE_PATH ? "" : " (DATABASE_PATH not set; filesystem persistence depends on the host)")
+  );
+}
+if (!IS_TEST && DATABASE_BACKEND === "turso") {
+  console.warn("[db] Legacy Turso backend explicitly enabled. SQLite is the default production backend.");
+}
 
 /** Close the client explicitly in bounded jobs and integration tests. */
 export function closeDb(): void {
   db.close();
-}
-
-if (!TURSO_URL && !IS_TEST) {
-  console.warn(
-    "[db] TURSO_DATABASE_URL is not set — using a local SQLite file. On hosts without a persistent " +
-      "disk (e.g. a default Render web service), this file resets on every restart or redeploy, wiping " +
-      "all data. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN (e.g. from a free Turso database) in " +
-      "production so data survives restarts."
-  );
 }
 
 /** Fetch a single row, or undefined if none matched. */
