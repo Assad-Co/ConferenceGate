@@ -4,6 +4,13 @@ import path from 'node:path';
 const cwd = process.cwd();
 const aliasPath = path.join(cwd, 'data', 'app.db');
 const configured = process.env.DATABASE_PATH?.trim();
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction && !configured) {
+  throw new Error(
+    'ConferenceGate production requires DATABASE_PATH on a persistent disk. ' +
+    'On Render, attach a disk at /var/data and set DATABASE_PATH=/var/data/conferencegate.db.'
+  );
+}
 const targetPath = path.resolve(configured || aliasPath);
 
 fs.mkdirSync(path.dirname(targetPath), { recursive: true });
