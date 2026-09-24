@@ -1,6 +1,16 @@
 async function parseResponse(res: Response) {
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Workspace request failed');
+  if (!res.ok) {
+    const error = new Error(data.error || `Workspace request failed (HTTP ${res.status})`) as Error & {
+      code?: string;
+      attempts?: Array<{ route: string; ok: boolean; detail: string }>;
+      status?: number;
+    };
+    error.code = data.code ? String(data.code) : undefined;
+    error.attempts = Array.isArray(data.attempts) ? data.attempts : undefined;
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }
 
@@ -147,14 +157,34 @@ export interface OrganizerConferenceImportDraft {
   extractedFields: string[];
 }
 
+export interface OrganizerConferenceImportAttempt {
+  route: 'direct_http' | 'rendered_browser' | 'readable_page' | string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface OrganizerConferenceImportResult {
+  draft: OrganizerConferenceImportDraft;
+  method: string;
+  attempts: OrganizerConferenceImportAttempt[];
+  note: string;
+}
+
 export async function importOrganizerConferenceFromOfficialUrl(
   url: string
-): Promise<{ draft: OrganizerConferenceImportDraft; note: string }> {
-  const res = await fetch('/api/workspaces/organizer/import-conference', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ url }),
-  });
+): Promise<OrganizerConferenceImportResult> {
+  let res: Response;
+  try {
+    res = await fetch('/api/workspaces/organizer/import-conference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ url }),
+    });
+  } catch {
+    throw new Error(
+      'ConferenceGate could not reach the import service. Check the current deployment and try again.'
+    );
+  }
   return parseResponse(res);
 }
