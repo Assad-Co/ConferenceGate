@@ -45,6 +45,7 @@ interface NavbarProps {
   onOpenSponsorAlerts?: () => void;
   accountEmail?: string;
   accountRole?: 'professional' | 'organizer' | 'sponsor';
+  ownerPreview?: boolean;
   onLogout?: () => void;
 }
 
@@ -71,6 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSponsorAlerts,
   accountEmail,
   accountRole,
+  ownerPreview = false,
   onLogout,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +109,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const switchableRoles: Array<'professional' | 'reviewer' | 'organizer' | 'sponsor'> =
-    accountRole === 'organizer'
+    ownerPreview
+      ? ['organizer', 'sponsor']
+      : accountRole === 'organizer'
       ? ['organizer']
       : accountRole === 'sponsor'
       ? ['sponsor']
@@ -245,7 +249,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={toggleRoleMenu}
                 className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-200/80 cursor-pointer"
               >
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 mr-1">Role:</span>
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 mr-1">{ownerPreview ? 'Preview:' : 'Role:'}</span>
                 <span className="capitalize text-blue-700 font-bold">{role}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
@@ -256,7 +260,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50"
                 >
                   <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Switch Active Context
+                    {ownerPreview ? 'Owner Preview Context' : 'Switch Active Context'}
                   </div>
                   {switchableRoles.includes('professional') && (
                     <button
