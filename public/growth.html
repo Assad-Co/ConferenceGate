@@ -118,6 +118,14 @@
       <div class="grid">
         <div class="card span-4" id="acquisitionCoverage"></div>
         <div class="card span-8" style="grid-column:span 8"><div style="overflow:auto"><table><thead><tr><th>Source</th><th>Role</th><th class="num">Signups</th></tr></thead><tbody id="sourcesTable"></tbody></table></div></div>
+        <div class="card span-12">
+          <h3>Organizer source → paid → first conference → sponsorship inventory</h3>
+          <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>Source</th><th>Medium</th><th class="num">Signups</th><th class="num">Paid</th><th class="num">First conference</th><th class="num">Sponsorship setup</th><th class="num">Signup→Paid</th><th class="num">Signup→Activated</th></tr></thead><tbody id="organizerSourcesTable"></tbody></table></div>
+        </div>
+        <div class="card span-12">
+          <h3>Organizer campaign performance</h3>
+          <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>Campaign</th><th>Source</th><th class="num">Signups</th><th class="num">Paid</th><th class="num">First conference</th><th class="num">Signup→Paid</th><th class="num">Signup→Activated</th></tr></thead><tbody id="organizerCampaignsTable"></tbody></table></div>
+        </div>
       </div>
     </div>
 
@@ -201,6 +209,8 @@
     const acq = data.acquisition || {};
     $('acquisitionCoverage').innerHTML = `<h3>Attribution coverage</h3><div class="metric">${pct(acq.coveragePct)}</div><div class="small">${fmt(acq.attributedSignups)} attributed of ${fmt(acq.paidRoleSignups)} Organizer/Sponsor signups</div><div class="bar"><span style="width:${Math.min(100,Number(acq.coveragePct||0))}%"></span></div>`;
     $('sourcesTable').innerHTML = acq.topSources?.length ? acq.topSources.map((row) => `<tr><td>${esc(row.source)}</td><td class="role">${esc(row.role)}</td><td class="num">${fmt(row.signups)}</td></tr>`).join('') : emptyRow(3);
+    $('organizerSourcesTable').innerHTML = acq.organizerSources?.length ? acq.organizerSources.map((row) => `<tr><td>${esc(row.source)}</td><td>${esc(row.medium || '—')}</td><td class="num">${fmt(row.signups)}</td><td class="num">${fmt(row.paid)}</td><td class="num">${fmt(row.activated)}</td><td class="num">${fmt(row.sponsorshipInventory)}</td><td class="num">${pct(row.signupToPaidPct)}</td><td class="num">${pct(row.signupToActivatedPct)}</td></tr>`).join('') : emptyRow(8, 'No attributed Organizer signups yet');
+    $('organizerCampaignsTable').innerHTML = acq.organizerCampaigns?.length ? acq.organizerCampaigns.map((row) => `<tr><td>${esc(row.campaign)}</td><td>${esc(row.source)}</td><td class="num">${fmt(row.signups)}</td><td class="num">${fmt(row.paid)}</td><td class="num">${fmt(row.activated)}</td><td class="num">${pct(row.signupToPaidPct)}</td><td class="num">${pct(row.signupToActivatedPct)}</td></tr>`).join('') : emptyRow(7, 'No attributed Organizer campaigns yet');
 
     const market = data.marketplace || {};
     $('dealsTable').innerHTML = market.dealStates?.length ? market.dealStates.map((row) => `<tr><td>${esc(row.status).replaceAll('_',' ')}</td><td class="num">${fmt(row.count)}</td></tr>`).join('') : emptyRow(2);
