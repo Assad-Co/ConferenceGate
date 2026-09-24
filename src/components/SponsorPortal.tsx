@@ -55,6 +55,7 @@ import {
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { BillingLedgerPanel } from './BillingLedgerPanel';
+import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
@@ -603,6 +604,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           </div>
         </div>
       )}
+
+      <MarketplaceActionQueue
+        role="sponsor"
+        onNavigate={(target) => {
+          const allowed = new Set(['matches','marketplace','saved','requests','deals','preferences','roi','profile']);
+          setActiveTab((allowed.has(target) ? target : 'matches') as any);
+        }}
+      />
 
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
