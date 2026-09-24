@@ -66,6 +66,7 @@ interface SponsorPortalProps {
   onMarkAlertRead?: (id: string) => void;
   onMarkAllAlertsRead?: () => void;
   onApplyForSponsorship?: (packageId: string) => void;
+  ownerPreview?: boolean;
 }
 
 const StarRating: React.FC<{ rating: number; size?: string }> = ({ rating, size = 'w-3.5 h-3.5' }) => (
@@ -89,6 +90,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onMarkAlertRead = (_id: string) => {},
   onMarkAllAlertsRead = () => {},
   onApplyForSponsorship = (_packageId: string) => {},
+  ownerPreview = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'payments' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
