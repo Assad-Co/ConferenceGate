@@ -1359,6 +1359,172 @@ sponsorsRouter.patch(
   })
 );
 
+// Phase 7.4/7.6 Sponsor Launchpad: one compact view of acquisition/activation progress,
+// actionable marketplace state, and alert readiness. All counts are account-level and come from
+// existing real product records; no synthetic milestones are created.
+sponsorsRouter.get(
+  "/launchpad",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const sponsorContext = await paidWorkspaceContext(req, res, "sponsor");
+    if (!sponsorContext) return;
+    const accountId = sponsorContext.accountId;
+    const sponsor = sponsorContext.accountOwner;
+
+    const preference = await dbGet<SponsorPreferenceRow>(
+      "SELECT * FROM sponsor_preferences WHERE sponsor_id=?",
+      [accountId]
+    );
+    const activeNeeds = await dbAll<SponsorshipNeedRow>(
+      `SELECT * FROM sponsorship_needs
+        WHERE status='active'
+          AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))`
+    );
+    const matchDetails = activeNeeds.map((need) => sponsorNeedMatchDetail(preference, need));
+    const meaningfulMatches = matchDetails.filter((match) => match.score >= 45).length;
+    const highMatches = matchDetails.filter((match) => match.score >= 70).length;
+
+    const [
+      savedRow,
+      alertRow,
+      inquiryRow,
+      dealRow,
+      paidDealRow,
+      requestRow,
+      responseRow,
+      unreadRow,
+    ] = await Promise.all([
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsor_saved_opportunities WHERE sponsor_id=?",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsor_saved_opportunities WHERE sponsor_id=? AND alert_enabled=1",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsorship_need_inquiries WHERE sponsor_id=?",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsorship_deals WHERE sponsor_id=?",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsorship_deals WHERE sponsor_id=? AND status IN ('paid','delivering','completed')",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sponsor_requests WHERE sponsor_id=? AND status='active'",
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        `SELECT COUNT(*) as count
+           FROM sponsor_request_responses rr
+           JOIN sponsor_requests r ON r.id=rr.request_id
+          WHERE r.sponsor_id=?`,
+        [accountId]
+      ),
+      dbGet<{ count: number }>(
+        "SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND read=0 AND type='sponsorship'",
+        [accountId]
+      ),
+    ]);
+
+    const saved = Number(savedRow?.count || 0);
+    const alertsEnabled = Number(alertRow?.count || 0);
+    const inquiries = Number(inquiryRow?.count || 0);
+    const deals = Number(dealRow?.count || 0);
+    const paidDeals = Number(paidDealRow?.count || 0);
+    const sponsorRequests = Number(requestRow?.count || 0);
+    const organizerResponses = Number(responseRow?.count || 0);
+    const unreadAlerts = Number(unreadRow?.count || 0);
+
+    const prefLists = preference
+      ? [
+          safeJson(preference.sectors, []),
+          safeJson(preference.categories, []),
+          safeJson(preference.regions, []),
+          safeJson(preference.opportunity_types, []),
+        ]
+      : [[], [], [], []];
+    const preferenceGroupsCompleted = prefLists.filter((items) => items.length > 0).length;
+    const companyProfileReady = Boolean((sponsor.organization || "").trim());
+    const preferencesReady = preferenceGroupsCompleted >= 2;
+    const alertFrequency = preference?.alert_frequency || "instant";
+
+    let nextAction = {
+      key: "monitor_marketplace",
+      label: "Monitor new opportunities",
+      description: "Your core Sponsor Pro activation path is complete. Keep preferences and alerts current.",
+      targetTab: "matches",
+    };
+
+    if (!companyProfileReady) {
+      nextAction = {
+        key: "complete_company_profile",
+        label: "Complete company profile",
+        description: "Add your company name so organizers know who is evaluating their opportunities.",
+        targetTab: "profile",
+      };
+    } else if (!preferencesReady) {
+      nextAction = {
+        key: "configure_preferences",
+        label: "Configure matching preferences",
+        description: "Choose at least two preference groups so ConferenceGate can rank relevant opportunities.",
+        targetTab: "preferences",
+      };
+    } else if (meaningfulMatches > 0 && saved === 0 && inquiries === 0) {
+      nextAction = {
+        key: "review_matches",
+        label: "Review matched opportunities",
+        description: `${meaningfulMatches} opportunity${meaningfulMatches === 1 ? "" : "ies"} currently match your preferences.`,
+        targetTab: "matches",
+      };
+    } else if (saved > 0 && inquiries === 0) {
+      nextAction = {
+        key: "contact_organizer",
+        label: "Send your first inquiry",
+        description: "Turn a saved opportunity into a real organizer conversation.",
+        targetTab: "saved",
+      };
+    } else if (inquiries > 0 && deals === 0) {
+      nextAction = {
+        key: "advance_inquiry",
+        label: "Advance an inquiry to Deal Room",
+        description: "Follow active organizer responses and move a qualified opportunity into negotiation.",
+        targetTab: "matches",
+      };
+    } else if (deals > 0 && paidDeals === 0) {
+      nextAction = {
+        key: "advance_deal",
+        label: "Advance active Deal Rooms",
+        description: "Review commercial terms, deliverables, contract and payment status.",
+        targetTab: "deals",
+      };
+    }
+
+    res.json({
+      launchpad: {
+        companyProfileReady,
+        preferencesReady,
+        preferenceGroupsCompleted,
+        alertFrequency,
+        meaningfulMatches,
+        highMatches,
+        savedOpportunities: saved,
+        watchAlertsEnabled: alertsEnabled,
+        inquiriesSent: inquiries,
+        dealRooms: deals,
+        paidDeals,
+        sponsorRequests,
+        organizerResponses,
+        unreadSponsorshipAlerts: unreadAlerts,
+        nextAction,
+      },
+    });
+  })
+);
+
 // Sponsor Pro portfolio analytics from real internal marketplace activity only.
 sponsorsRouter.get(
   "/analytics/mine",
