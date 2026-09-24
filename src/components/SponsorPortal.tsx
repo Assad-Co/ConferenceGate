@@ -545,6 +545,13 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       </div>
 
+      {ownerPreview && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          <span className="font-extrabold">Owner Preview:</span>{' '}
+          Sponsor Pro is open for product review on this owner account. Your stored account role and payment records are unchanged.
+        </div>
+      )}
+
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         <button
@@ -618,28 +625,32 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Matching Preferences
         </button>
-        <button
-          onClick={() => setActiveTab('workspace')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'workspace'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Team & Access
-        </button>
-        <button
-          onClick={() => setActiveTab('payments')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'payments'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <DollarSign className="w-3.5 h-3.5" />
-          Payment Ledger
-        </button>
+        {!ownerPreview && (
+          <>
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'workspace'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Team & Access
+            </button>
+            <button
+              onClick={() => setActiveTab('payments')}
+              className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'payments'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'hover:bg-slate-100 text-slate-700'
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              Payment Ledger
+            </button>
+          </>
+        )}
         <button
           onClick={() => setActiveTab('roi')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
