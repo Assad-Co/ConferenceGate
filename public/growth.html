@@ -139,6 +139,38 @@
         <div class="card span-4"><h3>Platform fee revenue</h3><div id="feeRevenue"></div></div>
       </div>
     </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Revenue Optimization</h2><span class="muted">Only active/configured revenue levers are counted</span></div>
+      <div class="grid" id="revenueOptimizationCards"></div>
+      <div class="card" style="margin-top:12px">
+        <h3>Future add-ons</h3>
+        <div class="small" style="margin:6px 0 10px">These remain disabled until a real product SKU and billing path exist.</div>
+        <div id="futureAddOns"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>First Customer Launch Cohort</h2><span class="muted">Explicitly enrolled Organizer/Sponsor accounts only</span></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="auth-row">
+          <input id="cohortEmail" type="email" placeholder="Customer account email" aria-label="Customer account email" />
+          <input id="cohortSegment" type="text" placeholder="Segment (optional)" aria-label="Cohort segment" />
+          <button id="addCohortButton">Add to launch cohort</button>
+        </div>
+        <div class="small" id="cohortTargets" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr><th>Role</th><th class="num">Members</th><th class="num">Paid</th><th class="num">Activated</th><th class="num">Marketplace exposure</th><th class="num">Inquiries</th><th class="num">Deal Rooms</th><th class="num">Payments</th></tr>
+            </thead>
+            <tbody id="launchCohortTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <footer>Conference Gate operator dashboard · private administrative surface</footer>
   </section>
 </main>
@@ -178,7 +210,7 @@
     $('releaseBadge').textContent = `Release ${d.release || 'unknown'}`;
     const deployment = [
       ['Database connection', true, 'ready'],
-      ['Persistent Turso database', d.persistentDatabase, d.persistentDatabase ? 'configured' : 'local / ephemeral risk'],
+      ['Persistent SQLite path', d.persistentDatabase, d.persistentDatabase ? 'DATABASE_PATH configured' : 'temporary local SQLite / redeploy risk'],
       ['Public base URL', d.publicBaseUrlConfigured, d.publicBaseUrlConfigured ? 'configured' : 'not configured'],
       ['Growth history schema', d.growthSchemaReady, d.growthSchemaReady ? 'ready' : 'not installed'],
       ['Paddle webhook + API', d.paddleConfigured, d.paddleConfigured ? 'configured' : 'not fully configured'],
@@ -218,6 +250,57 @@
     $('settledRevenue').innerHTML = moneyList(market.settledRevenue, true);
     $('refundedRevenue').innerHTML = moneyList(market.refundedRevenue, true);
     $('feeRevenue').innerHTML = moneyList(market.platformFeeRevenue, false);
+
+    const rev = data.revenueOptimization || {};
+    const organizerPro = rev.organizerPro || {};
+    const sponsorPro = rev.sponsorPro || {};
+    const seats = rev.teamSeats || {};
+    $('revenueOptimizationCards').innerHTML = [
+      `<div class="card span-3"><h3>Organizer Pro</h3><div class="metric">${fmt(organizerPro.paidAccounts)}</div><div class="small">${organizerPro.checkoutConfigured ? 'Checkout configured' : 'Checkout not configured'}</div></div>`,
+      `<div class="card span-3"><h3>Sponsor Pro</h3><div class="metric">${fmt(sponsorPro.paidAccounts)}</div><div class="small">${sponsorPro.checkoutConfigured ? 'Checkout configured' : 'Checkout not configured'}</div></div>`,
+      `<div class="card span-3"><h3>Platform fee</h3><div class="metric">${fmt(rev.platformFeeBps)} bps</div><div class="small">${Number(rev.platformFeeBps||0) > 0 ? pct(rev.platformFeePct) + ' configured' : 'Not configured'}</div></div>`,
+      `<div class="card span-3"><h3>Team adoption</h3><div class="metric">${fmt(seats.addedTeamSeats)}</div><div class="small">${fmt(seats.workspacesWithAddedSeats)} workspaces · seat cap ${fmt(seats.workspaceSeatLimit)}</div></div>`,
+    ].join('');
+    $('futureAddOns').innerHTML = (rev.experimentalAddOns || []).map((item) =>
+      `<div class="movement"><span>${esc(item.label)}</span>${status(Boolean(item.enabled))}</div>`
+    ).join('') || '<div class="empty">No experimental add-ons listed</div>';
+
+    const cohort = data.launchCohort || {};
+    const targets = cohort.targets || {};
+    $('cohortTargets').textContent = `Operating target: ${fmt(targets.organizers)} organizers + ${fmt(targets.sponsorsMin)}–${fmt(targets.sponsorsMax)} sponsors · currently ${fmt(cohort.totalMembers)} enrolled`;
+    $('launchCohortTable').innerHTML = ['organizer','sponsor'].map((role) => {
+      const row = cohort[role] || {};
+      return `<tr><td class="role">${esc(role)}</td><td class="num">${fmt(row.members)}</td><td class="num">${fmt(row.paid)} · ${pct(row.paidPct)}</td><td class="num">${fmt(row.activated)} · ${pct(row.activationPct)}</td><td class="num">${fmt(row.marketplaceExposure)} · ${pct(row.exposurePct)}</td><td class="num">${fmt(row.inquiries)} · ${pct(row.inquiryPct)}</td><td class="num">${fmt(row.deals)} · ${pct(row.dealPct)}</td><td class="num">${fmt(row.payments)} · ${pct(row.paymentPct)}</td></tr>`;
+    }).join('');
+  }
+
+  async function addCohortMember() {
+    const email = $('cohortEmail').value.trim();
+    const segment = $('cohortSegment').value.trim();
+    if (!email) { setNotice('Enter a customer account email.'); return; }
+    if (!adminToken) { setNotice('Unlock the dashboard first.'); return; }
+    $('addCohortButton').disabled = true;
+    clearNotice();
+    try {
+      const res = await fetch('/api/admin/discovery/launch-cohort/members', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'content-type': 'application/json',
+          'x-discovery-admin-token': adminToken,
+        },
+        body: JSON.stringify({ email, segment: segment || undefined }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Could not add cohort member (${res.status}).`);
+      $('cohortEmail').value = '';
+      $('cohortSegment').value = '';
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not add cohort member.');
+    } finally {
+      $('addCohortButton').disabled = false;
+    }
   }
 
   async function loadDashboard() {
@@ -265,6 +348,7 @@
   }
 
   $('loadButton').addEventListener('click', loadDashboard);
+  $('addCohortButton').addEventListener('click', addCohortMember);
   $('tokenInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadDashboard(); });
   $('refreshButton').addEventListener('click', loadDashboard);
   $('lockButton').addEventListener('click', lock);
