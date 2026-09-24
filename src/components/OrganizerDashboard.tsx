@@ -53,6 +53,7 @@ import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { BillingLedgerPanel } from './BillingLedgerPanel';
+import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -1544,6 +1545,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      <MarketplaceActionQueue
+        role="organizer"
+        onNavigate={(target) => {
+          if (target === 'conference_wizard') setActiveTab('wizard');
+          else if (target === 'sponsorship') setActiveTab('sponsors');
+          else setActiveTab('overview');
+        }}
+      />
 
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
