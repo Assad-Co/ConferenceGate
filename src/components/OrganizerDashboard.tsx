@@ -1397,9 +1397,18 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       if (draft.format) setNewConfFormat(draft.format);
       if (draft.priceRange) setNewConfPriceRange(draft.priceRange);
       setOfficialImportMessage(`${note} ${draft.extractedFields.length} field group${draft.extractedFields.length === 1 ? '' : 's'} found.`);
-    } catch (error) {
+    } catch (error: any) {
       setOfficialImportDraft(null);
-      setOfficialImportMessage(error instanceof Error ? error.message : 'Could not import the official conference page.');
+      const attempts = Array.isArray(error?.attempts)
+        ? error.attempts
+            .map((attempt: any) => `${attempt.route}: ${attempt.ok ? 'ok' : attempt.detail}`)
+            .join(' · ')
+        : '';
+      setOfficialImportMessage(
+        `${error instanceof Error ? error.message : 'Could not import the official conference page.'}${
+          attempts ? ` Routes tried: ${attempts}` : ''
+        }`
+      );
     } finally {
       setOfficialImportLoading(false);
     }
