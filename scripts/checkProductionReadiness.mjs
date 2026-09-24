@@ -1,8 +1,9 @@
 const checkoutProvider = (process.env.BILLING_CHECKOUT_PROVIDER || 'hosted').trim().toLowerCase();
 
+const databaseBackend = (process.env.DATABASE_BACKEND || 'sqlite').trim().toLowerCase();
+const databasePath = process.env.DATABASE_PATH?.trim() || '';
+
 const coreRequired = [
-  'TURSO_DATABASE_URL',
-  'TURSO_AUTH_TOKEN',
   'BILLING_SYNC_SECRET',
 ];
 
@@ -49,6 +50,13 @@ function validHttpsUrl(value) {
 }
 
 const invalid = [];
+if (!['sqlite', 'turso'].includes(databaseBackend)) {
+  invalid.push('DATABASE_BACKEND must be sqlite or turso.');
+}
+if (databaseBackend === 'turso') {
+  if (!process.env.TURSO_DATABASE_URL?.trim()) invalid.push('DATABASE_BACKEND=turso requires TURSO_DATABASE_URL.');
+  if (!process.env.TURSO_AUTH_TOKEN?.trim()) invalid.push('DATABASE_BACKEND=turso requires TURSO_AUTH_TOKEN.');
+}
 if (!['hosted', 'paddle'].includes(checkoutProvider)) {
   invalid.push('BILLING_CHECKOUT_PROVIDER must be hosted or paddle.');
 }
@@ -96,8 +104,16 @@ if (
   invalid.push('PADDLE_WEBHOOK_TOLERANCE_SECONDS must be greater than 0 and at most 300.');
 }
 
+const persistentDatabaseReady =
+  databaseBackend === 'sqlite'
+    ? Boolean(databasePath)
+    : Boolean(process.env.TURSO_DATABASE_URL?.trim() && process.env.TURSO_AUTH_TOKEN?.trim());
+
 const report = {
   mode: process.env.NODE_ENV || 'development',
+  databaseBackend,
+  databasePersistentPathConfigured: databaseBackend === 'sqlite' ? Boolean(databasePath) : null,
+  legacyTursoConfigured: Boolean(process.env.TURSO_DATABASE_URL?.trim() || process.env.TURSO_AUTH_TOKEN?.trim()),
   checkoutProvider,
   required: Object.fromEntries(required.map((name) => [name, Boolean(process.env[name]?.trim())])),
   billingProviders: enabledBillingProviders,
@@ -107,6 +123,7 @@ const report = {
   paddleWebhookToleranceSeconds: webhookToleranceSeconds,
   ready:
     missingRequired.length === 0 &&
+    persistentDatabaseReady &&
     enabledBillingProviders.length > 0 &&
     invalid.length === 0,
   warnings: [],
@@ -114,6 +131,12 @@ const report = {
 
 if (missingRequired.length) {
   report.warnings.push('Missing required production configuration: ' + missingRequired.join(', '));
+}
+if (databaseBackend === 'sqlite' && !databasePath) {
+  report.warnings.push('DATABASE_PATH is not set; SQLite will use an ephemeral local file on hosts without a persistent disk.');
+}
+if (databaseBackend === 'sqlite' && report.legacyTursoConfigured) {
+  report.warnings.push('Legacy Turso credentials are still present but are ignored by the SQLite runtime.');
 }
 if (enabledBillingProviders.length === 0) {
   report.warnings.push('No verified subscription webhook provider is configured.');
