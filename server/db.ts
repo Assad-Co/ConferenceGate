@@ -3,20 +3,12 @@ import path from "path";
 import fs from "fs";
 
 const IS_TEST = process.env.NODE_ENV === "test";
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
 const DATABASE_PATH = process.env.DATABASE_PATH?.trim() || undefined;
 
 if (IS_TEST && !TEST_DATABASE_PATH) {
   throw new Error("NODE_ENV=test requires an explicit TEST_DATABASE_PATH.");
 }
-if (IS_PRODUCTION && !DATABASE_PATH) {
-  throw new Error(
-    "ConferenceGate production requires DATABASE_PATH on a persistent disk. " +
-      "On Render, attach a persistent disk at /var/data and set DATABASE_PATH=/var/data/conferencegate.db."
-  );
-}
-
 const localDatabasePath = TEST_DATABASE_PATH
   ? path.resolve(TEST_DATABASE_PATH)
   : DATABASE_PATH
@@ -34,7 +26,10 @@ export const databaseFilePath = localDatabasePath;
 export const db: Client = createClient({ url: `file:${localDatabasePath}` });
 
 if (!IS_TEST) {
-  console.log(`[db] SQLite backend active at ${localDatabasePath}`);
+  console.log(
+    `[db] SQLite backend active at ${localDatabasePath}` +
+      (DATABASE_PATH ? " (persistent path configured)" : " (temporary local storage; configure DATABASE_PATH for persistence)")
+  );
 }
 
 /** Close the client explicitly in bounded jobs and integration tests. */
