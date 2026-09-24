@@ -3,7 +3,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Gauge, Sparkles } from 'lucide-r
 import {
   fetchMarketplaceActions,
   type MarketplaceAction,
-  type MarketplaceActionQueue,
+  type MarketplaceActionQueue as MarketplaceActionQueueData,
 } from '../api/marketplaceIntelligence';
 
 interface MarketplaceActionQueueProps {
@@ -22,7 +22,7 @@ export const MarketplaceActionQueue: React.FC<MarketplaceActionQueueProps> = ({
   role,
   onNavigate,
 }) => {
-  const [queue, setQueue] = useState<MarketplaceActionQueue | null>(null);
+  const [queue, setQueue] = useState<MarketplaceActionQueueData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
