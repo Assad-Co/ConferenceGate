@@ -25,12 +25,12 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
-      - name: Sponsor watch worker syntax
-        run: node --check scripts/refreshSponsorWatchlistAlerts.mjs
+      - name: Sponsor and marketplace alert worker syntax
+        run: node --check scripts/refreshSponsorWatchlistAlerts.mjs && node --check scripts/refreshMarketplaceActionAlerts.mjs
       - name: Production readiness script syntax
         run: node --check scripts/checkProductionReadiness.mjs && node --check scripts/prepareLocalDatabase.mjs && node --check scripts/migrateTursoToSqlite.mjs && node --check scripts/smokeSqliteBackend.mjs && node --check scripts/smokeEphemeralSqliteBackend.mjs
-      - name: Growth report syntax
-        run: node --check scripts/growthReport.mjs && node --check scripts/growthCohortReport.mjs && node --check scripts/executiveGrowthSnapshot.mjs && node --check scripts/ensureGrowthSchema.mjs && node --check scripts/smokeGrowthReport.mjs && node --check scripts/smokeGrowthDashboard.mjs && node --check scripts/smokeOwnerPreview.mjs
+      - name: Growth and marketplace intelligence syntax
+        run: node --check scripts/growthReport.mjs && node --check scripts/growthCohortReport.mjs && node --check scripts/executiveGrowthSnapshot.mjs && node --check scripts/ensureGrowthSchema.mjs && node --check scripts/smokeGrowthReport.mjs && node --check scripts/smokeGrowthDashboard.mjs && node --check scripts/smokeOwnerPreview.mjs && node --check scripts/smokeMarketplaceIntelligence.mjs
       - name: Production build
         run: npm run build
       - name: SQLite backend smoke test
@@ -45,6 +45,8 @@ jobs:
         run: node scripts/smokeGrowthReport.mjs
       - name: Private growth dashboard smoke test
         run: node scripts/smokeGrowthDashboard.mjs
+      - name: Marketplace intelligence smoke test
+        run: node scripts/smokeMarketplaceIntelligence.mjs
       - name: Owner preview access smoke test
         run: node scripts/smokeOwnerPreview.mjs
       - name: Workspace seat inheritance smoke test
