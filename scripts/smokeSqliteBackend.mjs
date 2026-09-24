@@ -13,7 +13,6 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     ...process.env,
     PORT: String(port),
     NODE_ENV: 'production',
-    DATABASE_BACKEND: 'sqlite',
     DATABASE_PATH: dbPath,
     // Deliberately unusable legacy values. SQLite startup must ignore them completely.
     TURSO_DATABASE_URL: 'libsql://blocked-legacy.invalid',
