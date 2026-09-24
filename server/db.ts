@@ -3,20 +3,18 @@ import path from "path";
 import fs from "fs";
 
 const IS_TEST = process.env.NODE_ENV === "test";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
-const DATABASE_BACKEND = (process.env.DATABASE_BACKEND?.trim().toLowerCase() || "sqlite") as "sqlite" | "turso";
 const DATABASE_PATH = process.env.DATABASE_PATH?.trim() || undefined;
-const TURSO_URL = process.env.TURSO_DATABASE_URL?.trim() || undefined;
-const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
 
 if (IS_TEST && !TEST_DATABASE_PATH) {
   throw new Error("NODE_ENV=test requires an explicit TEST_DATABASE_PATH.");
 }
-if (!IS_TEST && DATABASE_BACKEND !== "sqlite" && DATABASE_BACKEND !== "turso") {
-  throw new Error("DATABASE_BACKEND must be sqlite or turso.");
-}
-if (!IS_TEST && DATABASE_BACKEND === "turso" && !TURSO_URL) {
-  throw new Error("DATABASE_BACKEND=turso requires TURSO_DATABASE_URL.");
+if (IS_PRODUCTION && !DATABASE_PATH) {
+  throw new Error(
+    "ConferenceGate production requires DATABASE_PATH on a persistent disk. " +
+      "On Render, attach a persistent disk at /var/data and set DATABASE_PATH=/var/data/conferencegate.db."
+  );
 }
 
 const localDatabasePath = TEST_DATABASE_PATH
@@ -29,23 +27,14 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-export const databaseBackend = IS_TEST ? "sqlite-test" : DATABASE_BACKEND;
+export const databaseBackend = IS_TEST ? "sqlite-test" : "sqlite";
 export const databasePathConfigured = Boolean(TEST_DATABASE_PATH || DATABASE_PATH);
+export const databaseFilePath = localDatabasePath;
 
-export const db: Client = IS_TEST
-  ? createClient({ url: `file:${localDatabasePath}` })
-  : DATABASE_BACKEND === "turso"
-    ? createClient({ url: TURSO_URL!, authToken: TURSO_AUTH_TOKEN })
-    : createClient({ url: `file:${localDatabasePath}` });
+export const db: Client = createClient({ url: `file:${localDatabasePath}` });
 
-if (!IS_TEST && DATABASE_BACKEND === "sqlite") {
-  console.log(
-    `[db] SQLite backend active at ${localDatabasePath}` +
-      (DATABASE_PATH ? "" : " (DATABASE_PATH not set; filesystem persistence depends on the host)")
-  );
-}
-if (!IS_TEST && DATABASE_BACKEND === "turso") {
-  console.warn("[db] Legacy Turso backend explicitly enabled. SQLite is the default production backend.");
+if (!IS_TEST) {
+  console.log(`[db] SQLite backend active at ${localDatabasePath}`);
 }
 
 /** Close the client explicitly in bounded jobs and integration tests. */
