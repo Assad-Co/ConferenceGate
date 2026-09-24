@@ -560,6 +560,50 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       )}
 
+      {sponsorLaunchpad && (
+        <div className="rounded-3xl border border-blue-100 bg-white shadow-xs p-5 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="max-w-2xl">
+              <div className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600">Sponsor Launchpad</div>
+              <h2 className="text-lg font-extrabold text-slate-900 mt-1">{sponsorLaunchpad.nextAction.label}</h2>
+              <p className="text-xs text-slate-500 mt-1">{sponsorLaunchpad.nextAction.description}</p>
+              <button
+                type="button"
+                onClick={() => setActiveTab(sponsorLaunchpad.nextAction.targetTab)}
+                className="mt-3 px-4 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer"
+              >
+                Continue Next Action
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0 lg:min-w-[460px]">
+              {[
+                ['Matches', sponsorLaunchpad.meaningfulMatches],
+                ['Saved', sponsorLaunchpad.savedOpportunities],
+                ['Inquiries', sponsorLaunchpad.inquiriesSent],
+                ['Deal Rooms', sponsorLaunchpad.dealRooms],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-2xl bg-slate-50 border border-slate-100 px-3 py-3">
+                  <div className="text-[9px] uppercase font-bold text-slate-400">{label}</div>
+                  <div className="text-xl font-extrabold text-slate-900">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-4 text-[10px] font-bold">
+            <span className={sponsorLaunchpad.companyProfileReady ? 'text-emerald-700' : 'text-amber-700'}>
+              {sponsorLaunchpad.companyProfileReady ? '✓' : '○'} Company profile
+            </span>
+            <span className={sponsorLaunchpad.preferencesReady ? 'text-emerald-700' : 'text-amber-700'}>
+              {sponsorLaunchpad.preferencesReady ? '✓' : '○'} Matching preferences
+            </span>
+            <span className={sponsorLaunchpad.watchAlertsEnabled > 0 ? 'text-emerald-700' : 'text-slate-500'}>
+              {sponsorLaunchpad.watchAlertsEnabled > 0 ? '✓' : '○'} Watch alerts
+            </span>
+            <span className="text-slate-500">Alert cadence: {sponsorLaunchpad.alertFrequency}</span>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Sub-Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         <button
