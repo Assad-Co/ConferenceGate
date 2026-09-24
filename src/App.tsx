@@ -416,21 +416,21 @@ export function App() {
         setConferences([...created, ...sampleConferences.filter((c) => !createdIds.has(c.id))]);
       })
       .catch(() => {});
-    if (authUser.role === 'organizer') {
+    if (authUser.role === 'organizer' || authUser.ownerPreview) {
       fetchOrganizerActivityFeed().then(setOrganizerActivityFeed).catch(() => {});
       fetchMyCreatedConferences().then(setMyConferences).catch(() => {});
       fetchApplicantsForMyPackages().then(setPackageApplicants).catch(() => {});
       fetchReviewableSponsors().then(setReviewableSponsorsReal).catch(() => {});
       fetchExternalSponsorshipOpportunities().then(setExternalSponsorshipOpportunities).catch(() => {});
     }
-    if (authUser.role === 'sponsor') {
+    if (authUser.role === 'sponsor' || authUser.ownerPreview) {
       fetchMySponsorApplications().then(setMyApplications).catch(() => {});
       fetchMySponsorProfile().then(setMySponsorProfileStats).catch(() => {});
     }
-    if (authUser.role === 'organizer' || authUser.role === 'sponsor') {
+    if (authUser.role === 'organizer' || authUser.role === 'sponsor' || authUser.ownerPreview) {
       fetchSponsorshipPackages().then(setSponsorshipPackagesReal).catch(() => {});
     }
-  }, [authUser?.id, authUser?.role]);
+  }, [authUser?.id, authUser?.role, authUser?.ownerPreview]);
 
   const handleToggleSaveConference = async (conferenceId: string) => {
     try {
@@ -706,22 +706,25 @@ export function App() {
     setReadSponsorNotificationIds(new Set(sponsorNotifications.map((n) => n.id)));
 
   // Real, role-specific notifications wherever they're displayed (Navbar bell + Profile page).
+  // Owner preview follows the currently selected Organizer/Sponsor context without changing the
+  // stored account role.
+  const displayedRole = authUser?.ownerPreview ? activeRole : AUTH_ROLE_TO_USER_ROLE[authUser?.role || 'professional'];
   const displayedNotifications =
-    authUser?.role === 'organizer'
+    displayedRole === 'Organizer'
       ? organizerNotifications
-      : authUser?.role === 'sponsor'
+      : displayedRole === 'Sponsor'
       ? sponsorNotifications
       : notifications;
   const displayedOnMarkNotificationRead =
-    authUser?.role === 'organizer'
+    displayedRole === 'Organizer'
       ? handleMarkOrganizerNotificationRead
-      : authUser?.role === 'sponsor'
+      : displayedRole === 'Sponsor'
       ? handleMarkSponsorNotificationRead
       : handleMarkNotificationRead;
   const displayedOnMarkAllNotificationsRead =
-    authUser?.role === 'organizer'
+    displayedRole === 'Organizer'
       ? handleMarkAllOrganizerNotificationsRead
-      : authUser?.role === 'sponsor'
+      : displayedRole === 'Sponsor'
       ? handleMarkAllSponsorNotificationsRead
       : handleMarkAllNotificationsRead;
 
@@ -912,7 +915,14 @@ export function App() {
         maxLoad: user.reviewerMaxLoad || 5,
       },
     }));
-    if (mappedRole === 'Organizer') {
+    if (user.ownerPreview) {
+      setOrganizerNameOverride(user.organization || user.name);
+      setOrganizerLogoOverride(avatar);
+      setSponsorNameOverride(user.organization || user.name);
+      setSponsorLogoOverride(avatar);
+      setActiveRole('Sponsor');
+      setActiveTab('sponsor');
+    } else if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.organization || user.name);
       setOrganizerLogoOverride(avatar);
       setActiveTab('organizer');
@@ -1426,6 +1436,7 @@ export function App() {
         onOpenSponsorAlerts={() => setActiveTab('sponsor')}
         accountEmail={authUser.email}
         accountRole={authUser.role}
+        ownerPreview={authUser.ownerPreview}
         onLogout={handleLogout}
         onOpenMessages={handleOpenMessages}
         unreadMessageCount={totalUnreadMessages}
@@ -1547,7 +1558,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'organizer' && authUser.role === 'organizer' && (
+        {activeTab === 'organizer' && (authUser.role === 'organizer' || authUser.ownerPreview) && (
           authUser.hasPaidAccess ? (
           <OrganizerDashboard
             conferences={myConferences}
@@ -1591,7 +1602,7 @@ export function App() {
           )
         )}
 
-        {activeTab === 'sponsor' && authUser.role === 'sponsor' && (
+        {activeTab === 'sponsor' && (authUser.role === 'sponsor' || authUser.ownerPreview) && (
           authUser.hasPaidAccess ? (
           <SponsorPortal
             sponsorshipPackages={sponsorshipPackagesReal}
@@ -1603,6 +1614,7 @@ export function App() {
             onMarkAlertRead={handleMarkSponsorNotificationRead}
             onMarkAllAlertsRead={handleMarkAllSponsorNotificationsRead}
             onApplyForSponsorship={handleApplyForSponsorship}
+            ownerPreview={authUser.ownerPreview}
           />
           ) : (
             <PaidWorkspaceGate
