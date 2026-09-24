@@ -119,6 +119,20 @@ try {
   const organizer = await signupOrganizer();
   const sponsor = await signupSponsor();
 
+  const sponsorFirstTouch = await jsonRequest('/api/workspaces/acquisition', {
+    method: 'POST',
+    cookie: sponsor.cookie,
+    body: {
+      source: 'launch_partner',
+      medium: 'direct_outreach',
+      campaign: 'first_customer_launch',
+      landingPath: '/join',
+    },
+  });
+  if (!sponsorFirstTouch.response.ok || sponsorFirstTouch.data?.acquisition?.source !== 'launch_partner') {
+    throw new Error('Could not record sponsor acquisition first touch: ' + JSON.stringify(sponsorFirstTouch.data));
+  }
+
   const firstTouch = await jsonRequest('/api/workspaces/acquisition', {
     method: 'POST',
     cookie: organizer.cookie,
