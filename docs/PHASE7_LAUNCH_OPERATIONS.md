@@ -1,6 +1,6 @@
 # Phase 7 — Production Launch & Marketplace Growth
 
-Phase 7 moves ConferenceGate from a production-ready paid platform into live operating mode. The first three slices cover production verification, a private executive growth dashboard, and a measurable Organizer acquisition/activation engine.
+Phase 7 moves ConferenceGate from a production-ready paid platform into live operating mode. The repository now covers production verification, executive growth operations, Organizer/Sponsor acquisition, explainable matching, notifications, revenue operations, and an explicit first-customer launch cohort.
 
 ## Phase 7.1 — Live Production Verification
 
@@ -25,7 +25,7 @@ The private operator dashboard reports evidence from the process that serves the
 
 - release commit from `RENDER_GIT_COMMIT` / `GIT_COMMIT_SHA`;
 - database connectivity;
-- whether `TURSO_DATABASE_URL` is configured for persistent storage;
+- whether `DATABASE_PATH` is configured for persistent SQLite storage;
 - whether `PUBLIC_BASE_URL` is configured;
 - configured checkout-provider mode;
 - Paddle API/webhook readiness as a boolean (never the secret values);
@@ -160,7 +160,10 @@ The organizer supplies the public official URL. ConferenceGate then:
 3. revalidates every redirect;
 4. applies request timeouts and a response-size cap;
 5. uses structured event data first and deterministic HTML extraction to fill gaps;
-6. returns a reviewable draft only.
+6. if the origin is JavaScript-dependent or blocks normal server requests, tries the installed rendered-browser path;
+7. if the page is still weak/unreadable, tries the configured/public readable-page fallback;
+8. records which import routes were attempted so the Organizer sees an actionable diagnostic rather than a generic error;
+9. returns a reviewable draft only.
 
 The import can prefill factual fields such as title, description, dates, location, topics, banner image, format, price text and official website when the page actually exposes them. Missing information remains missing.
 
@@ -209,18 +212,91 @@ The private growth-dashboard smoke test additionally verifies that:
 3. Open `/growth.html`.
 4. Enter the `DISCOVERY_ADMIN_TOKEN` configured on the Render service.
 5. Confirm the release identifier matches the intended `main` commit.
-6. Confirm persistent Turso database = ready/configured.
+6. Confirm persistent SQLite path = ready/configured. If it is not configured, the site can run on temporary local SQLite but data is at redeploy/restart risk.
 7. Confirm the intended billing provider is configured.
 8. Confirm growth history schema = ready.
 9. Review paid conversion, activation, retention/activity, acquisition, Deal Rooms, revenue and payout state.
 10. Use **Lock dashboard** before leaving the operator device.
 
-## Next Phase 7 slices
+## Phase 7.4 — Sponsor Acquisition Engine
 
-After the completed 7.3 repository slice is deployed and verified on the live Render process, continue in this order:
+Sponsor Pro is organized around a real activation path rather than disconnected screens:
 
-- **7.4 Sponsor Acquisition Engine** — company profile, preferences, relevant opportunities, watchlist and commercial activation.
-- **7.5 Marketplace Matching** — sponsor/conference relevance matching using explicit business criteria and actual product data.
-- **7.6 Notifications** — useful, rate-controlled marketplace alerts and action-required notifications.
-- **7.7 Revenue Optimization** — featured inventory, premium matching, team-seat upgrades and transparent transaction/platform-fee experiments.
-- **7.8 First Customer Launch** — onboard a small real cohort, measure the full visitor → signup → paid → activation → match → inquiry → deal → payment funnel, and iterate from observed behavior.
+```text
+company identity → matching preferences → relevant opportunities → watchlist → inquiry → Deal Room → paid sponsorship
+```
+
+The Sponsor Launchpad summarizes real account state and provides one **Next Best Action**. It uses persisted company/profile data, preferences, opportunity matches, saved opportunities, inquiries, Deal Rooms, payments, Sponsor Requests, organizer responses, and unread sponsorship notifications. It does not manufacture completion flags.
+
+For owner-preview sessions, Sponsor Deal Rooms explicitly use Sponsor context without changing the account's stored Organizer role or creating billing state.
+
+## Phase 7.5 — Explainable Marketplace Matching
+
+Internal sponsorship needs are ranked from explicit business criteria already stored in ConferenceGate:
+
+- target sector;
+- conference/category relevance;
+- region;
+- sponsorship opportunity type;
+- published price vs Sponsor budget range.
+
+The existing weighted score is now accompanied by a structured breakdown and short human-readable reasons such as sector/category/region overlap and budget fit. Missing preference dimensions are omitted rather than treated as negative evidence.
+
+The Match UI shows **Why this matches** so Sponsors can evaluate the recommendation instead of relying on an opaque percentage.
+
+## Phase 7.6 — Rate-Controlled Notifications
+
+Sponsor watchlist alerts remain workspace-shared and respect the Sponsor's configured cadence:
+
+- `instant`;
+- `daily` (minimum 24-hour delivery interval);
+- `weekly` (minimum 168-hour delivery interval).
+
+Changes are fingerprinted in `sponsor_watch_alert_events` so the same snapshot is not re-notified. Instant changes create notifications immediately; daily/weekly changes are grouped into digests. Alerts reach the Sponsor owner and active paid workspace seats.
+
+The watch-alert worker now uses the same SQLite database path as the live application; Turso is not used by the notification runtime.
+
+## Phase 7.7 — Revenue Optimization Operations
+
+The private Growth Operations dashboard reports only revenue levers that have an actual implementation/configuration path:
+
+- Organizer Pro checkout readiness and paid accounts;
+- Sponsor Pro checkout readiness and paid accounts;
+- subscription checkout starts over the trailing 30 days;
+- configured sponsorship platform fee in basis points;
+- paid workspace team-seat adoption and current seat cap;
+- provider-confirmed settled sponsorship Deal Rooms.
+
+Potential future add-ons such as featured conferences, featured sponsorship inventory, and premium matching are shown as **disabled** until a real product SKU and billing path exist. The dashboard does not count hypothetical revenue as launched revenue.
+
+## Phase 7.8 — First Customer Launch
+
+A private admin-managed `first_customer_launch` cohort lets the operator enroll selected existing Organizer/Sponsor accounts by exact email. Membership is explicit; ConferenceGate does not silently select customers.
+
+Operating target:
+
+- 10 Organizer accounts;
+- 20–50 Sponsor accounts.
+
+For each role, the cohort reports account-level counts and conversion percentages for:
+
+```text
+member → paid → activated → marketplace exposure → inquiry → Deal Room → settled payment
+```
+
+Definitions are based on actual ConferenceGate records:
+
+- Organizer activation = at least one created conference;
+- Sponsor activation = preferences, saved opportunity, or sponsorship inquiry;
+- marketplace exposure = at least one recorded internal sponsorship listing view tied to that account/party;
+- inquiry = at least one sponsorship inquiry;
+- Deal Room = at least one sponsorship deal;
+- payment = at least one provider-confirmed settled sponsorship payment.
+
+The private cohort API is protected by the same signed-in session + `DISCOVERY_ADMIN_TOKEN` boundary as the executive dashboard. Operators can add or remove members without exposing the cohort to customers.
+
+## Phase 7 completion state
+
+Repository implementation for Phases **7.1–7.8** is complete when the final Application Validation workflow is green on the final commit.
+
+Live launch remains an operating activity rather than a code claim. Before calling the marketplace commercially launched, verify the deployed release, persistent SQLite configuration, intended billing provider, real Organizer/Sponsor cohort membership, and observed funnel movement from actual customers.
