@@ -7,6 +7,7 @@ import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
 import { copyLinkedInAvatarToDataUrl } from "./linkedinAvatar";
 import { resolvePaidAccountContext } from "./workspaceAccess";
+import { isOwnerPreviewEmail } from "./ownerPreview";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -213,10 +214,13 @@ async function findKeynoteSpeakerMatches(row: UserRow): Promise<KeynoteSpeakerId
 
 async function toPublicUser(row: UserRow) {
   const keynoteSpeakerMatches = await findKeynoteSpeakerMatches(row);
+  const ownerPreview = isOwnerPreviewEmail(row.email);
   const paidContext =
     row.role === "organizer" || row.role === "sponsor"
       ? await resolvePaidAccountContext(row.id, row.role)
-      : null;
+      : ownerPreview
+        ? await resolvePaidAccountContext(row.id)
+        : null;
   const billingOwner = paidContext?.accountOwner || row;
   return {
     id: row.id,
@@ -233,11 +237,18 @@ async function toPublicUser(row: UserRow) {
     avatar: row.avatar,
     identityVerified: Boolean(row.linkedin_id || row.google_id),
     identityVerificationMethod: row.linkedin_id ? "LinkedIn" : row.google_id ? "Google" : null,
-    subscriptionStatus: row.role === "professional" ? "free" : (billingOwner.subscription_status || "required"),
-    subscriptionPlan: billingOwner.subscription_plan || (row.role === "professional" ? "professional_free" : null),
-    subscriptionProvider: billingOwner.subscription_provider || null,
+    ownerPreview,
+    subscriptionStatus: ownerPreview
+      ? "owner_preview"
+      : row.role === "professional"
+        ? "free"
+        : (billingOwner.subscription_status || "required"),
+    subscriptionPlan: ownerPreview
+      ? "owner_preview"
+      : billingOwner.subscription_plan || (row.role === "professional" ? "professional_free" : null),
+    subscriptionProvider: ownerPreview ? "owner_preview" : (billingOwner.subscription_provider || null),
     subscriptionPeriodEnd: billingOwner.subscription_period_end || null,
-    hasPaidAccess: row.role === "professional" || Boolean(paidContext?.paid),
+    hasPaidAccess: ownerPreview || row.role === "professional" || Boolean(paidContext?.paid),
     workspaceId: paidContext?.workspaceId || null,
     workspaceRole: paidContext?.workspaceRole || null,
     workspaceOwnerId: paidContext?.accountId || null,
