@@ -22,9 +22,9 @@ After deployment, `GET /api/health` must return HTTP 200 with:
 
 These must be configured in the Render web service:
 
-- `DATABASE_BACKEND=sqlite`
 - `DATABASE_PATH=/var/data/conferencegate.db`
 - a Render persistent disk mounted at `/var/data`
+- Turso is not part of the production runtime; remove `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` after any one-time recovery is complete
 - `BILLING_SYNC_SECRET`
 - `PUBLIC_BASE_URL=https://conferencegate.onrender.com`
 - `APP_BASE_URL=https://conferencegate.onrender.com`
