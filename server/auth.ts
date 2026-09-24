@@ -385,6 +385,12 @@ authRouter.post("/login", authRateLimit, asyncHandler(async (req, res) => {
   const normalizedEmail = email.trim().toLowerCase();
   const row = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   if (!row) {
+    if (isOwnerPreviewEmail(normalizedEmail)) {
+      return res.status(409).json({
+        code: "OWNER_ACCOUNT_NOT_INITIALIZED",
+        error: "Your ConferenceGate owner account needs to be created once on the new database.",
+      });
+    }
     return res.status(401).json({ error: "Invalid email or password" });
   }
   if (!row.password_hash) {
