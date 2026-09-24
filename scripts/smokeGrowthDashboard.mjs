@@ -67,6 +67,26 @@ async function signupOrganizer() {
   return { user: body.user, cookie };
 }
 
+async function signupSponsor() {
+  const response = await fetch(base + '/api/auth/signup', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      role: 'sponsor',
+      name: 'Dashboard Smoke Sponsor',
+      email: 'growth-dashboard-sponsor@example.com',
+      password: 'GrowthDashboard123!',
+      organization: 'Dashboard Smoke Brand',
+    }),
+  });
+  const body = await response.json();
+  const cookie = response.headers.get('set-cookie')?.split(';')[0];
+  if (!response.ok || !body?.user?.id || !cookie) {
+    throw new Error(`Sponsor signup failed: ${response.status} ${JSON.stringify(body)}`);
+  }
+  return { user: body.user, cookie };
+}
+
 async function jsonRequest(path, { method = 'GET', cookie, body, token, billing = false } = {}) {
   const headers = {};
   if (cookie) headers.cookie = cookie;
@@ -97,6 +117,7 @@ try {
   }
 
   const organizer = await signupOrganizer();
+  const sponsor = await signupSponsor();
 
   const firstTouch = await jsonRequest('/api/workspaces/acquisition', {
     method: 'POST',
@@ -208,6 +229,30 @@ try {
     throw new Error(`Could not create organizer sponsorship inventory: ${need.response.status} ${JSON.stringify(need.data)}`);
   }
 
+  const addOrganizerCohort = await jsonRequest('/api/admin/discovery/launch-cohort/members', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    token: adminToken,
+    body: { email: organizer.user.email, segment: 'pilot-organizer' },
+  });
+  if (!addOrganizerCohort.response.ok || addOrganizerCohort.data?.launchCohort?.organizer?.members !== 1) {
+    throw new Error('Could not enroll organizer launch cohort member: ' + JSON.stringify(addOrganizerCohort.data));
+  }
+
+  const addSponsorCohort = await jsonRequest('/api/admin/discovery/launch-cohort/members', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    token: adminToken,
+    body: { email: sponsor.user.email, segment: 'pilot-sponsor' },
+  });
+  if (
+    !addSponsorCohort.response.ok ||
+    addSponsorCohort.data?.launchCohort?.organizer?.members !== 1 ||
+    addSponsorCohort.data?.launchCohort?.sponsor?.members !== 1
+  ) {
+    throw new Error('Could not enroll sponsor launch cohort member: ' + JSON.stringify(addSponsorCohort.data));
+  }
+
   const allowed = await jsonRequest('/api/admin/discovery/growth-dashboard', {
     cookie: organizer.cookie,
     token: adminToken,
@@ -257,6 +302,32 @@ try {
     throw new Error('A later campaign overwrote immutable first-touch attribution.');
   }
 
+  if (
+    dashboard.launchCohort?.totalMembers !== 2 ||
+    dashboard.launchCohort?.organizer?.members !== 1 ||
+    dashboard.launchCohort?.organizer?.paid !== 1 ||
+    dashboard.launchCohort?.organizer?.activated !== 1 ||
+    dashboard.launchCohort?.sponsor?.members !== 1
+  ) {
+    throw new Error('First-customer launch cohort is incorrect: ' + JSON.stringify(dashboard.launchCohort));
+  }
+  if (
+    dashboard.revenueOptimization?.organizerPro?.paidAccounts !== 1 ||
+    dashboard.revenueOptimization?.sponsorPro?.paidAccounts !== 0 ||
+    !Array.isArray(dashboard.revenueOptimization?.experimentalAddOns) ||
+    dashboard.revenueOptimization.experimentalAddOns.some((item) => item.enabled)
+  ) {
+    throw new Error('Revenue optimization state is incorrect: ' + JSON.stringify(dashboard.revenueOptimization));
+  }
+
+  const cohortRead = await jsonRequest('/api/admin/discovery/launch-cohort', {
+    cookie: organizer.cookie,
+    token: adminToken,
+  });
+  if (!cohortRead.response.ok || cohortRead.data?.launchCohort?.totalMembers !== 2) {
+    throw new Error('Launch cohort private read API is incorrect: ' + JSON.stringify(cohortRead.data));
+  }
+
   const serialized = JSON.stringify(allowed.data);
   if (serialized.includes(adminToken) || serialized.includes(billingSecret)) {
     throw new Error('Dashboard response leaked an administrative secret.');
@@ -285,6 +356,20 @@ try {
     },
     officialUrlImport: {
       unsafePrivateUrlBlocked: true,
+    },
+    phase77: {
+      revenueOptimization: true,
+      paidOrganizerAccounts: dashboard.revenueOptimization.organizerPro.paidAccounts,
+      experimentalAddOnsRemainDisabled: true,
+    },
+    phase78: {
+      firstCustomerLaunchCohort: true,
+      members: dashboard.launchCohort.totalMembers,
+      organizerTarget: dashboard.launchCohort.targets.organizers,
+      sponsorTargetRange: [
+        dashboard.launchCohort.targets.sponsorsMin,
+        dashboard.launchCohort.targets.sponsorsMax,
+      ],
     },
   }));
 } finally {
