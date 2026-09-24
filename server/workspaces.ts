@@ -6,6 +6,10 @@ import { isOwnerPreviewEmail } from "./ownerPreview";
 import { discoveryFetch, isHtmlLike } from "./discovery/httpClient";
 import { extractStructuredEvents } from "./discovery/structuredData";
 import { extractFromHtml } from "./discovery/htmlExtract";
+import { fetchRenderedHtml, isBrowserRenderingUnavailable } from "./browserFetch";
+import { jinaReadPageDetailed, isJinaConfigured } from "./jinaReader";
+import { isSafeExternalUrl } from "./urlSafety";
+import { emptyRawExtraction, type RawEventExtraction } from "./discovery/types";
 import {
   dbAll,
   dbGet,
@@ -273,6 +277,92 @@ function importLocation(city: string | null, country: string | null, venue: stri
   return fallback || [city, country].filter(Boolean).join(", ") || null;
 }
 
+function importExtractionScore(raw: RawEventExtraction): number {
+  return [
+    raw.title,
+    raw.startDateText || raw.datesText,
+    raw.city || raw.country || raw.locationText,
+    raw.description,
+    raw.topics?.length ? "topics" : null,
+    raw.imageUrl,
+    raw.formatText,
+    raw.price,
+    raw.organizer,
+  ].filter(Boolean).length;
+}
+
+function extractImportFromReaderMarkdown(markdown: string, sourceUrl: string): RawEventExtraction {
+  const raw = emptyRawExtraction("derived");
+  const normalized = markdown.replace(/\r/g, "");
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.replace(/^#{1,6}\s+/, "").replace(/^[-*]\s+/, "").trim())
+    .filter(Boolean);
+
+  const titleHeader = lines.find((line) => /^Title:\s*/i.test(line));
+  const markdownContentIndex = lines.findIndex((line) => /^Markdown Content:?$/i.test(line));
+  const bodyLines = markdownContentIndex >= 0 ? lines.slice(markdownContentIndex + 1) : lines;
+
+  raw.title =
+    titleHeader?.replace(/^Title:\s*/i, "").trim() ||
+    bodyLines.find((line) =>
+      line.length >= 5 &&
+      line.length <= 180 &&
+      !/^(URL Source|Published Time|Markdown Content|Location|Date|When|Where|Register|Registration):/i.test(line)
+    ) ||
+    null;
+
+  const dateLine = bodyLines.find((line) =>
+    /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:\s*[-–]\s*\d{1,2})?,?\s+20\d{2}\b/i.test(line) ||
+    /\b20\d{2}-\d{2}-\d{2}\b/.test(line)
+  );
+  raw.datesText = dateLine || null;
+  raw.startDateText = dateLine || null;
+
+  const locationLine = bodyLines.find((line) => /^(?:Location|Where|Venue):\s*\S/i.test(line));
+  raw.locationText = locationLine?.replace(/^(?:Location|Where|Venue):\s*/i, "").trim() || null;
+
+  const organizerLine = bodyLines.find((line) => /^Organizer:\s*\S/i.test(line));
+  raw.organizer = organizerLine?.replace(/^Organizer:\s*/i, "").trim() || null;
+
+  const descriptionLines = bodyLines
+    .filter((line) =>
+      line.length >= 40 &&
+      line.length <= 600 &&
+      !/^(?:URL Source|Published Time|Location|Where|Venue|Organizer|Register|Registration|Date|When):/i.test(line)
+    )
+    .slice(0, 3);
+  raw.description = descriptionLines.length ? descriptionLines.join(" ") : null;
+
+  const formatLine = bodyLines.find((line) => /\b(hybrid|virtual|online|in[- ]person|onsite|on-site)\b/i.test(line));
+  raw.formatText = formatLine || null;
+
+  const priceMatch = normalized.match(/(?:USD\s*)?\$\s?([0-9][0-9,]*(?:\.\d{2})?)/i);
+  if (priceMatch) {
+    raw.price = priceMatch[1].replaceAll(",", "");
+    raw.currency = "USD";
+  }
+
+  raw.officialUrl = sourceUrl;
+  raw.filledFields = [
+    raw.title && "title",
+    raw.datesText && "datesText",
+    raw.locationText && "locationText",
+    raw.description && "description",
+    raw.organizer && "organizer",
+    raw.formatText && "formatText",
+    raw.price && "price",
+  ].filter(Boolean) as string[];
+  raw.confidence = Math.min(0.72, 0.28 + raw.filledFields.length * 0.07);
+  return raw;
+}
+
+function extractImportFromHtml(html: string, sourceUrl: string): RawEventExtraction {
+  const structured = extractStructuredEvents(html, sourceUrl);
+  const seed = structured.events[0] || null;
+  return extractFromHtml(html, sourceUrl, { seed });
+}
+
 // Paid Organizer Pro helper: fetch one organizer-supplied official conference page, extract only
 // facts the page itself exposes, and return a reviewable wizard draft. This never auto-publishes.
 // discoveryFetch applies the same SSRF guard, redirect revalidation, timeout, response-size cap,
@@ -299,22 +389,98 @@ workspacesRouter.post(
       return res.status(400).json({ error: "Only http(s) conference URLs are supported." });
     }
 
-    const fetched = await discoveryFetch(url.href, { timeoutMs: 12000, maxBytes: 1_500_000 });
-    if (!fetched.ok) {
-      const blocked = fetched.error?.includes("url_guard");
-      return res.status(blocked ? 400 : 422).json({
-        error: blocked
-          ? "That URL cannot be fetched safely. Use the public official conference page."
-          : "Conference Gate could not read that page. Check the official URL and try again.",
+    if (!(await isSafeExternalUrl(url.href))) {
+      return res.status(400).json({
+        code: "IMPORT_URL_BLOCKED",
+        error: "That URL cannot be fetched safely. Use the public official conference page.",
       });
     }
-    if (!isHtmlLike(fetched)) {
-      return res.status(415).json({ error: "The official URL must resolve to an HTML conference page." });
+
+    const attempts: Array<{ route: string; ok: boolean; detail: string }> = [];
+    const candidates: Array<{ route: string; sourceUrl: string; raw: RawEventExtraction }> = [];
+
+    const fetched = await discoveryFetch(url.href, { timeoutMs: 12000, maxBytes: 1_500_000 });
+    if (fetched.ok && isHtmlLike(fetched)) {
+      const raw = extractImportFromHtml(fetched.body, fetched.finalUrl);
+      candidates.push({ route: "direct_http", sourceUrl: fetched.finalUrl, raw });
+      attempts.push({
+        route: "direct_http",
+        ok: true,
+        detail: `HTTP ${fetched.status}; extracted ${importExtractionScore(raw)} field groups`,
+      });
+    } else {
+      attempts.push({
+        route: "direct_http",
+        ok: false,
+        detail: fetched.error || `HTTP ${fetched.status || "unknown"}`,
+      });
     }
 
-    const structured = extractStructuredEvents(fetched.body, fetched.finalUrl);
-    const seed = structured.events[0] || null;
-    const raw = extractFromHtml(fetched.body, fetched.finalUrl, { seed });
+    // Event platforms such as WildApricot often need JavaScript or reject non-browser TLS
+    // fingerprints. Render installs Chromium at build time, so try a real rendered page before
+    // giving up on an organizer-supplied official URL.
+    const browserTarget = fetched.ok ? fetched.finalUrl : url.href;
+    const directBest = candidates[0]?.raw;
+    if (!directBest || importExtractionScore(directBest) < 3) {
+      const rendered = await fetchRenderedHtml(browserTarget);
+      if (rendered) {
+        const raw = extractImportFromHtml(rendered, browserTarget);
+        candidates.push({ route: "rendered_browser", sourceUrl: browserTarget, raw });
+        attempts.push({
+          route: "rendered_browser",
+          ok: true,
+          detail: `extracted ${importExtractionScore(raw)} field groups`,
+        });
+      } else {
+        attempts.push({
+          route: "rendered_browser",
+          ok: false,
+          detail: isBrowserRenderingUnavailable() ? "browser unavailable on host" : "page could not be rendered",
+        });
+      }
+    }
+
+    // Hosted readable-page fallback. This is particularly useful when the origin blocks Render's
+    // server IP but a public reader can access the same official page. The URL was SSRF-checked
+    // above before it is sent to the reader.
+    const bestBeforeReader = candidates
+      .slice()
+      .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
+    if ((!bestBeforeReader || importExtractionScore(bestBeforeReader.raw) < 3) && isJinaConfigured()) {
+      const reader = await jinaReadPageDetailed(url.href);
+      if (reader.markdown) {
+        const raw = extractImportFromReaderMarkdown(reader.markdown, url.href);
+        candidates.push({ route: "readable_page", sourceUrl: url.href, raw });
+        attempts.push({
+          route: "readable_page",
+          ok: true,
+          detail: `extracted ${importExtractionScore(raw)} field groups`,
+        });
+      } else {
+        attempts.push({
+          route: "readable_page",
+          ok: false,
+          detail: reader.error || `HTTP ${reader.httpStatus || "unknown"}`,
+        });
+      }
+    }
+
+    const best = candidates
+      .slice()
+      .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
+
+    if (!best || importExtractionScore(best.raw) === 0) {
+      return res.status(422).json({
+        code: "IMPORT_PAGE_UNREADABLE",
+        error:
+          "ConferenceGate could not extract conference details from this page. " +
+          "The page may be blocking automated readers or may require a login. You can still enter the details manually.",
+        attempts,
+      });
+    }
+
+    const raw = best.raw;
+    const sourceUrl = best.sourceUrl;
     const topics = (raw.topics || []).map((topic) => String(topic).trim()).filter(Boolean).slice(0, 20);
     const filled = [
       raw.title && "title",
@@ -324,11 +490,13 @@ workspacesRouter.post(
       topics.length && "topics",
       raw.imageUrl && "image",
       raw.formatText && "format",
+      raw.price && "price",
+      raw.organizer && "organizer",
     ].filter(Boolean);
 
     res.json({
       draft: {
-        sourceUrl: fetched.finalUrl,
+        sourceUrl,
         title: raw.title,
         description: raw.description,
         startDate: normalizeImportDate(raw.startDateText || raw.datesText),
@@ -342,7 +510,11 @@ workspacesRouter.post(
         confidence: raw.confidence,
         extractedFields: filled,
       },
-      note: "Imported fields are a draft from the supplied official page. Review every field before publishing.",
+      method: best.route,
+      attempts,
+      note:
+        "Imported fields are a draft from the supplied official page. Review every field before publishing." +
+        (best.route === "direct_http" ? "" : ` Import fallback used: ${best.route}.`),
     });
   })
 );
