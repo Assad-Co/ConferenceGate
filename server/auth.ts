@@ -405,6 +405,127 @@ authRouter.post("/login", authRateLimit, asyncHandler(async (req, res) => {
   res.json({ user: await toPublicUser(row) });
 }));
 
+
+function configuredOwnerPasswordResetTokenMatches(candidate: unknown): boolean {
+  const configured = process.env.OWNER_PASSWORD_RESET_TOKEN?.trim();
+  if (!configured || configured.length < 32 || typeof candidate !== "string" || !candidate) return false;
+  const expected = crypto.createHash("sha256").update(configured).digest();
+  const actual = crypto.createHash("sha256").update(candidate).digest();
+  return crypto.timingSafeEqual(expected, actual);
+}
+
+function ownerPasswordResetUseKey(token: string): string {
+  const digest = crypto.createHash("sha256").update(token).digest("hex");
+  return `owner_password_reset_used_\${digest.slice(0, 40)}`;
+}
+
+// Emergency one-time owner recovery. The secret token is supplied only through Render's
+// environment and is placed in the browser URL fragment, so it is not sent in GET request logs.
+// A successful reset marks that token as used in the database and signs the owner in immediately.
+authRouter.get("/owner-password-reset", (_req, res) => {
+  if (!process.env.OWNER_PASSWORD_RESET_TOKEN?.trim()) {
+    return res.status(404).send("Password recovery is not enabled.");
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ConferenceGate Owner Password Recovery</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;padding:40px;color:#172554}
+.card{max-width:460px;margin:6vh auto;background:#fff;padding:32px;border-radius:18px;box-shadow:0 12px 40px rgba(15,23,42,.12)}
+h1{font-size:24px;margin:0 0 10px}.note{color:#64748b;line-height:1.5;margin-bottom:24px}
+label{display:block;font-weight:700;margin:14px 0 7px}input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+button{width:100%;margin-top:22px;padding:13px;border:0;border-radius:999px;background:#1e40af;color:white;font-size:16px;font-weight:700;cursor:pointer}
+#status{margin-top:16px;line-height:1.4}.error{color:#b91c1c}.ok{color:#166534}
+</style>
+</head>
+<body><div class="card">
+<h1>Reset ConferenceGate password</h1>
+<p class="note">This one-time recovery keeps the existing owner account and all profile data. Enter a new password below.</p>
+<form id="resetForm">
+<label for="password">New password</label><input id="password" type="password" minlength="8" autocomplete="new-password" required />
+<label for="confirm">Confirm password</label><input id="confirm" type="password" minlength="8" autocomplete="new-password" required />
+<button type="submit">Reset password and sign in</button>
+</form>
+<div id="status"></div>
+</div>
+<script>
+const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+const token = params.get("token") || "";
+history.replaceState(null, "", location.pathname);
+const form = document.getElementById("resetForm");
+const status = document.getElementById("status");
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  status.className = "";
+  status.textContent = "";
+  const password = document.getElementById("password").value;
+  const confirm = document.getElementById("confirm").value;
+  if (!token) { status.className = "error"; status.textContent = "Recovery token is missing."; return; }
+  if (password.length < 8) { status.className = "error"; status.textContent = "Password must be at least 8 characters."; return; }
+  if (password !== confirm) { status.className = "error"; status.textContent = "Passwords do not match."; return; }
+  const button = form.querySelector("button");
+  button.disabled = true;
+  button.textContent = "Resetting…";
+  try {
+    const response = await fetch("/api/auth/owner-password-reset", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({token, newPassword: password})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Password reset failed.");
+    status.className = "ok";
+    status.textContent = "Password reset complete. Signing you in…";
+    setTimeout(() => location.href = "/", 800);
+  } catch (error) {
+    status.className = "error";
+    status.textContent = error instanceof Error ? error.message : "Password reset failed.";
+    button.disabled = false;
+    button.textContent = "Reset password and sign in";
+  }
+});
+</script>
+</body></html>`);
+});
+
+authRouter.post("/owner-password-reset", authRateLimit, asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (!configuredOwnerPasswordResetTokenMatches(token)) {
+    return res.status(403).json({ error: "This password recovery link is invalid." });
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters." });
+  }
+
+  const useKey = ownerPasswordResetUseKey(token);
+  const alreadyUsed = await dbGet<{ value: string }>("SELECT value FROM app_secrets WHERE key = ?", [useKey]);
+  if (alreadyUsed) {
+    return res.status(410).json({ error: "This password recovery link has already been used." });
+  }
+
+  const users = await dbAll<UserRow>("SELECT * FROM users");
+  const ownerRows = users.filter((candidate) => isOwnerPreviewEmail(candidate.email));
+  if (ownerRows.length !== 1) {
+    return res.status(409).json({ error: "The owner account could not be uniquely identified. Recovery stopped without changing any account." });
+  }
+
+  const owner = ownerRows[0];
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  await dbRun("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, owner.id]);
+  await dbRun("INSERT INTO app_secrets (key, value) VALUES (?, ?)", [useKey, new Date().toISOString()]);
+
+  const refreshed = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [owner.id]))!;
+  const sessionToken = signToken(refreshed.id);
+  setSessionCookie(res, sessionToken);
+  console.warn("[auth] One-time owner password recovery completed successfully.");
+  res.json({ ok: true, user: await toPublicUser(refreshed) });
+}));
+
 authRouter.post("/logout", (_req, res) => {
   res.clearCookie(COOKIE_NAME, { path: "/" });
   res.json({ ok: true });
