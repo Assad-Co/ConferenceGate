@@ -56,6 +56,11 @@ import { BillingLedgerPanel } from './BillingLedgerPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
+  fetchProfessionalRecoveryStatus,
+  recoverLocalProfessionalProfile,
+  type ProfessionalRecoveryStatus,
+} from '../api/linkedinProfile';
+import {
   sendBroadcast,
   fetchMyBroadcasts,
   OrganizerBroadcast,
@@ -113,6 +118,7 @@ interface OrganizerDashboardProps {
   onCreateConference: (newConf: Partial<Conference>) => Conference | Promise<Conference>;
   onInviteToCommittee?: (reviewerName: string, conferenceTitle: string) => void;
   onAddNotification?: (notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => void;
+  ownerPreview?: boolean;
 }
 
 const CHART_HEX = {
@@ -262,10 +268,53 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onCreateConference,
   onInviteToCommittee = (_reviewerName: string, _conferenceTitle: string) => {},
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
+  ownerPreview = false,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'communications' | 'workspace' | 'payments' | 'analytics'
   >('overview');
+
+  const [professionalRecoveryStatus, setProfessionalRecoveryStatus] = useState<ProfessionalRecoveryStatus | null>(null);
+  const [professionalRecovering, setProfessionalRecovering] = useState(false);
+  const [professionalRecoveryError, setProfessionalRecoveryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ownerPreview) {
+      setProfessionalRecoveryStatus(null);
+      return;
+    }
+    let cancelled = false;
+    fetchProfessionalRecoveryStatus()
+      .then((status) => {
+        if (!cancelled) setProfessionalRecoveryStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setProfessionalRecoveryStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerPreview]);
+
+  const handleRestoreOriginalProfessional = async () => {
+    if (!professionalRecoveryStatus?.localLegacy.recoverable) return;
+    const restoreCredentials = professionalRecoveryStatus.localLegacy.candidate?.originalCredentialsRecoverable
+      ? window.confirm(
+          'Restore the original Professional profile and old sign-in password? Organizer/Sponsor owner access, billing, and workspaces will remain available.'
+        )
+      : false;
+
+    setProfessionalRecovering(true);
+    setProfessionalRecoveryError(null);
+    try {
+      await recoverLocalProfessionalProfile(restoreCredentials);
+      window.location.reload();
+    } catch (error: any) {
+      setProfessionalRecoveryError(error?.message || 'Could not restore the original Professional account.');
+    } finally {
+      setProfessionalRecovering(false);
+    }
+  };
 
   const [professionalSearch, setProfessionalSearch] = useState({
     conferenceId: '',
@@ -1545,6 +1594,67 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {ownerPreview && professionalRecoveryStatus && (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] uppercase tracking-wider font-extrabold text-amber-700">
+                Original Professional Account
+              </div>
+              {professionalRecoveryStatus.localLegacy.recoverable ? (
+                <>
+                  <h2 className="text-base font-extrabold text-amber-950 mt-1">
+                    Your legacy Professional profile is ready to restore
+                  </h2>
+                  <p className="text-xs text-amber-800 mt-1 max-w-3xl">
+                    ConferenceGate found one real legacy Professional account. Restoring it will make Professional
+                    your primary identity again and bring back the stored profile evidence while keeping this
+                    Organizer/Sponsor owner access.
+                  </p>
+                  <div className="text-[11px] text-amber-800 mt-2">
+                    {professionalRecoveryStatus.localLegacy.candidate?.fullName || 'Legacy Professional'} ·{' '}
+                    {professionalRecoveryStatus.localLegacy.candidate?.counts.publications || 0} publications ·{' '}
+                    {professionalRecoveryStatus.localLegacy.candidate?.counts.patents || 0} patents ·{' '}
+                    {professionalRecoveryStatus.localLegacy.candidate?.originalCredentialsRecoverable
+                      ? 'old password available'
+                      : 'old password not stored locally'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRestoreOriginalProfessional}
+                    disabled={professionalRecovering}
+                    className="mt-3 px-4 py-2.5 rounded-xl bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    {professionalRecovering ? 'Restoring…' : 'Restore Original Professional Account'}
+                  </button>
+                  {professionalRecoveryError && (
+                    <p className="text-xs text-rose-700 mt-2">{professionalRecoveryError}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className="text-base font-extrabold text-amber-950 mt-1">
+                    Professional profile recovery is still pending
+                  </h2>
+                  <p className="text-xs text-amber-800 mt-1 max-w-3xl">
+                    The replacement owner account will not be shown as your Professional profile. No unique local
+                    legacy Professional record is available yet.
+                    {professionalRecoveryStatus.tursoRecoveryConfigured
+                      ? ' The legacy Turso recovery source is configured.'
+                      : ' The old Turso source is not connected to this deployment.'}
+                  </p>
+                  <p className="text-[11px] text-amber-700 mt-2">
+                    Your original Professional photo, papers, conference history, committee roles and credentials
+                    should be recovered from the legacy account rather than replaced with zero-value placeholders.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <MarketplaceActionQueue
         role="organizer"
