@@ -33,6 +33,8 @@ jobs:
         run: node --check scripts/growthReport.mjs && node --check scripts/growthCohortReport.mjs && node --check scripts/executiveGrowthSnapshot.mjs && node --check scripts/ensureGrowthSchema.mjs && node --check scripts/smokeGrowthReport.mjs && node --check scripts/smokeGrowthDashboard.mjs && node --check scripts/smokeOwnerPreview.mjs && node --check scripts/smokeMarketplaceIntelligence.mjs
       - name: Production build
         run: npm run build
+      - name: Discover catalogue recovery test
+        run: npx tsx --test server/discovery/tests/storedSearchDiscover.test.ts
       - name: SQLite backend smoke test
         run: node scripts/smokeSqliteBackend.mjs
       - name: Temporary SQLite startup smoke test
