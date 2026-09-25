@@ -268,6 +268,7 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
             u.email AS account_email,
             u.name AS account_name,
             u.role AS account_role,
+            u.avatar AS legacy_avatar,
             CASE WHEN u.password_hash IS NOT NULL AND TRIM(u.password_hash)<>'' THEN 1 ELSE 0 END AS credential_recoverable
        FROM linkedin_profile_enrichment l
        JOIN users u ON u.id=l.user_id
@@ -287,24 +288,137 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
 
   const uniqueCandidate = candidates.length === 1 ? candidates[0] : null;
   let avatarRepaired = false;
-  if (user.role === "professional" && currentProfile?.photo_url) {
-    const markerKey = `owner_linkedin_avatar_restored_v1_${userId}`;
+  let legacyLinkedInActivityRestored = false;
+
+  // The legacy Professional shadow keeps the user's original ConferenceGate avatar. Prefer an
+  // already-owned image data URL from that account over stale organization/conference logos.
+  if (user.role === "professional") {
+    const markerKey = `owner_linkedin_avatar_restored_v3_${userId}`;
     const alreadyRepaired = await dbGet<{ value: string }>(
       "SELECT value FROM app_secrets WHERE key = ?",
       [markerKey],
     );
     if (!alreadyRepaired) {
-      const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
-      const ownedPhoto = await copyLinkedInAvatarToDataUrl(currentProfile.photo_url);
-      const restoredPhoto = ownedPhoto || currentProfile.photo_url;
+      const legacyAvatar =
+        typeof uniqueCandidate?.legacy_avatar === "string" && uniqueCandidate.legacy_avatar.trim()
+          ? uniqueCandidate.legacy_avatar.trim()
+          : null;
+      let restoredPhoto =
+        legacyAvatar?.startsWith("data:image/") ? legacyAvatar : null;
+
+      if (!restoredPhoto && currentProfile?.photo_url) {
+        const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+        restoredPhoto = await copyLinkedInAvatarToDataUrl(currentProfile.photo_url);
+      }
+      if (!restoredPhoto && legacyAvatar) restoredPhoto = legacyAvatar;
+      if (!restoredPhoto && currentProfile?.photo_url) restoredPhoto = currentProfile.photo_url;
+
       if (restoredPhoto) {
         await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [restoredPhoto, userId]);
-        await dbRun(
-          "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
-          [markerKey, new Date().toISOString()],
-        );
         user.avatar = restoredPhoto;
         avatarRepaired = true;
+      }
+      await dbRun(
+        "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+        [markerKey, new Date().toISOString()],
+      );
+    }
+
+    // Restore the rest of the old Professional activity rows once. This is additive and keeps
+    // the current account/password/billing/workspaces intact.
+    if (uniqueCandidate) {
+      const activityRestoreMarker = `owner_legacy_profile_activity_restored_v1_${userId}`;
+      const alreadyRestoredActivity = await dbGet<{ value: string }>(
+        "SELECT value FROM app_secrets WHERE key = ?",
+        [activityRestoreMarker],
+      );
+      if (!alreadyRestoredActivity) {
+        const { randomUUID } = await import("crypto");
+        const copySpecs = [
+          ["external_paper_matches", "user_id"],
+          ["self_reported_attendance", "user_id"],
+          ["self_reported_committee_positions", "user_id"],
+          ["conference_registrations", "user_id"],
+          ["review_volunteers", "reviewer_id"],
+          ["professional_opportunity_interests", "professional_id"],
+          ["professional_invitations", "professional_id"],
+          ["submission_reviews", "reviewer_id"],
+          ["submission_reviewer_assignments", "reviewer_id"],
+        ] as const;
+
+        for (const [table, key] of copySpecs) {
+          const exists = await dbGet<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+            [table],
+          );
+          if (!exists) continue;
+          const cols = await dbAll<{ name: string }>(`PRAGMA table_info("${table}")`);
+          const names = cols.map((row) => String(row.name));
+          if (!names.includes(key)) continue;
+          const rows = await dbAll<any>(
+            `SELECT * FROM "${table}" WHERE "${key}"=?`,
+            [String(uniqueCandidate.user_id)],
+          );
+          if (!rows.length) continue;
+          const columnSql = names.map((name) => `"${name.replaceAll('"','""')}"`).join(",");
+          const placeholders = names.map(() => "?").join(",");
+          for (const row of rows) {
+            const args = names.map((name) => {
+              if (name === key) return userId;
+              if (name === "id") return `recovered_${randomUUID()}`;
+              return row[name] ?? null;
+            });
+            try {
+              await dbRun(
+                `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
+                args,
+              );
+            } catch {
+              // A dependent row may require a related object that was intentionally not copied.
+            }
+          }
+        }
+        await dbRun(
+          "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+          [activityRestoreMarker, new Date().toISOString()],
+        );
+      }
+    }
+
+    // Older LinkedIn conference/post extraction may still be attached to the legacy Professional
+    // shadow. Restore it to the active account when the active account has no stored activity.
+    if (uniqueCandidate) {
+      const activityTable = await dbGet<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='linkedin_conference_activity' LIMIT 1",
+      );
+      if (activityTable) {
+        const currentActivity = await dbGet<any>(
+          "SELECT * FROM linkedin_conference_activity WHERE user_id = ?",
+          [userId],
+        );
+        const legacyActivity = await dbGet<any>(
+          "SELECT * FROM linkedin_conference_activity WHERE user_id = ?",
+          [String(uniqueCandidate.user_id)],
+        );
+        if (!currentActivity && legacyActivity) {
+          await dbRun(
+            `INSERT OR REPLACE INTO linkedin_conference_activity (
+              user_id, linkedin_url, conference_activity, calls_for_papers, raw_posts,
+              source_actor, consented_at, fetched_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              userId,
+              legacyActivity.linkedin_url,
+              legacyActivity.conference_activity,
+              legacyActivity.calls_for_papers,
+              legacyActivity.raw_posts,
+              legacyActivity.source_actor,
+              legacyActivity.consented_at,
+              legacyActivity.fetched_at,
+            ],
+          );
+          legacyLinkedInActivityRestored = true;
+        }
       }
     }
   }
@@ -313,6 +427,7 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
   res.json({
     ownerRecovery: true,
     avatarRepaired,
+    legacyLinkedInActivityRestored,
     current: {
       profilePresent: Boolean(currentProfile),
       avatarPresent: Boolean(user.avatar),

@@ -2,6 +2,7 @@ export interface LinkedInConferenceSignal {
   id: string;
   kind: 'PAST_CONFERENCE' | 'UPCOMING_CONFERENCE' | 'CONFERENCE_ROLE' | 'PAPER_ABSTRACT' | 'CONFERENCE_MENTION';
   label: string;
+  conferenceName?: string | null;
   role: string | null;
   year: number | null;
   sourceUrl: string | null;
