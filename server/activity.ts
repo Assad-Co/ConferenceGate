@@ -33,7 +33,6 @@ import { searchDblpConferencePapers } from "./dblp";
 import { searchOpenAlexConferencePapers } from "./openalex";
 import { searchWebForConferenceFacts } from "./braveSearch";
 import { resolvePaidAccountContext, canOperateWorkspace } from "./workspaceAccess";
-import { isOwnerPreviewEmail } from "./ownerPreview";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -630,15 +629,11 @@ activityRouter.get(
       }
     }
 
-    const professionalCandidates = await dbAll<UserRow>(
+    const professionals = await dbAll<UserRow>(
       `SELECT * FROM users
         WHERE role = 'professional'
-           OR email IS NOT NULL
         ORDER BY created_at DESC
         LIMIT 500`
-    );
-    const professionals = professionalCandidates.filter(
-      (professional) => professional.role === "professional" || isOwnerPreviewEmail(professional.email)
     );
     const queryTokens = tokenSet([q, ...conferenceTerms]);
 
@@ -995,14 +990,11 @@ activityRouter.post(
     if (!conference) {
       return res.status(404).json({ error: "You can only invite professionals to conferences in this workspace." });
     }
-    const professional = await dbGet<{ role: string; name: string; email: string }>(
-      "SELECT role,name,email FROM users WHERE id = ?",
+    const professional = await dbGet<{ role: string; name: string }>(
+      "SELECT role,name FROM users WHERE id = ?",
       [body.professionalId]
     );
-    if (
-      !professional ||
-      (professional.role !== "professional" && !isOwnerPreviewEmail(professional.email))
-    ) {
+    if (!professional || professional.role !== "professional") {
       return res.status(404).json({ error: "Professional account not found." });
     }
 
