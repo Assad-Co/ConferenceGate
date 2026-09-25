@@ -6,17 +6,26 @@ interface LinkedInSignInButtonProps {
   onUnavailable?: () => void;
 }
 
-// ConferenceGate uses the member's public LinkedIn profile URL only.
-// This control never starts LinkedIn OAuth; it moves the user into the public-profile signup flow.
+// Start ConferenceGate's LinkedIn OpenID Connect flow. The server callback links the
+// authenticated LinkedIn identity to an existing ConferenceGate account when the emails match,
+// or asks a brand-new member to choose a ConferenceGate role before account creation.
 export const LinkedInSignInButton: React.FC<LinkedInSignInButtonProps> = ({ text = 'signin_with', onUnavailable }) => {
+  const handleClick = () => {
+    try {
+      window.location.assign('/api/auth/linkedin/start');
+    } catch {
+      onUnavailable?.();
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={onUnavailable}
+      onClick={handleClick}
       className="w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-bold rounded-full transition-colors cursor-pointer"
     >
       <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-      {text === 'signup_with' ? 'Build profile from LinkedIn' : 'Use public LinkedIn profile'}
+      {text === 'signup_with' ? 'Sign up with LinkedIn' : 'Sign in with LinkedIn'}
     </button>
   );
 };
