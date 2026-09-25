@@ -110,9 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const switchableRoles: Array<'professional' | 'reviewer' | 'organizer' | 'sponsor'> =
     ownerPreview
-      ? accountRole === 'professional'
-        ? ['professional', 'reviewer', 'organizer', 'sponsor']
-        : ['organizer', 'sponsor']
+      ? ['professional', 'reviewer', 'organizer', 'sponsor']
       : accountRole === 'organizer'
       ? ['organizer']
       : accountRole === 'sponsor'
@@ -268,7 +266,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       onClick={() => {
                         onRoleChange('Professional' as UserRole);
-                        handleTabChange('home');
+                        handleTabChange('profile');
                         setRoleMenuOpen(false);
                       }}
                       className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-blue-50 flex items-center justify-between cursor-pointer ${
