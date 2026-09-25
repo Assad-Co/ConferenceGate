@@ -632,6 +632,7 @@ activityRouter.get(
     const professionals = await dbAll<UserRow>(
       `SELECT * FROM users
         WHERE role = 'professional'
+          AND lower(email) NOT LIKE '%@conferencegate.invalid'
         ORDER BY created_at DESC
         LIMIT 500`
     );
