@@ -34,6 +34,7 @@ import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
+import { LinkedInProfilePanel } from './LinkedInProfilePanel';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
@@ -41,6 +42,7 @@ import { resizeImageFile } from '../utils/image';
 import { generateInitialsAvatar } from '../utils/avatar';
 import type { KeynoteSpeakerMatch } from '../api/auth';
 import {
+  fetchLinkedInProfileEnrichment,
   fetchProfessionalRecoveryStatus,
   recoverLocalProfessionalProfile,
   type ProfessionalRecoveryStatus,
@@ -62,7 +64,7 @@ import {
   AddCommitteePositionPayload,
 } from '../api/activity';
 
-type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'trust' | 'analytics' | 'notifications';
+type ProfileTab = 'conferences' | 'papers' | 'linkedin' | 'reviews' | 'committee' | 'badges' | 'trust' | 'analytics' | 'notifications';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -227,7 +229,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     ownerProfessionalContext &&
     professionalRecoveryStatusLoaded &&
     Boolean(
-      professionalRecoveryStatus?.localLegacy.recoverable ||
       primaryAccountRole !== 'professional' ||
       (
         professionalRecoveryStatus &&
@@ -316,6 +317,26 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   useEffect(() => {
     setResearchSearchName(userProfile.name);
   }, [userProfile.name]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLinkedInProfileEnrichment()
+      .then(({ profile }) => {
+        if (cancelled) return;
+        const titles = (profile?.publications || [])
+          .map((item: any) =>
+            String(item?.name || item?.title || item?.publicationTitle || '').trim()
+          )
+          .filter(Boolean);
+        setLinkedInPaperTitles(titles);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedInPaperTitles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -875,6 +896,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 { id: 'notifications', label: 'Notifications' },
                 { id: 'conferences', label: 'Conferences History' },
                 { id: 'papers', label: 'Papers & Abstracts' },
+                { id: 'linkedin', label: 'LinkedIn Profile' },
                 { id: 'reviews', label: 'Peer Reviews & Kudos' },
                 { id: 'committee', label: 'Committee Positions' },
                 { id: 'badges', label: 'Verified Badges' },
@@ -1086,6 +1108,10 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               <p className="text-xs text-slate-400">No self-reported conferences yet.</p>
             )}
           </div>
+        )}
+
+        {activeTab === 'linkedin' && (
+          <LinkedInProfilePanel currentUserId={currentUserId} linkedinUrl={userProfile.linkedinUrl} />
         )}
 
         {activeTab === 'papers' && (

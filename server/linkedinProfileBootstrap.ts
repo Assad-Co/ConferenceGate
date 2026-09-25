@@ -390,6 +390,22 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
   }
 
   const legacy = candidates[0];
+
+  // Prefer the photo captured by the LinkedIn profile enrichment over any stale account avatar.
+  // The replacement owner account previously carried a conference logo, so blindly preferring
+  // users.avatar can keep that logo even after the real Professional profile is restored.
+  let restoredAvatar: string | null =
+    typeof legacy.photo_url === "string" && legacy.photo_url.trim()
+      ? legacy.photo_url.trim()
+      : typeof legacy.legacy_avatar === "string" && legacy.legacy_avatar.trim()
+        ? legacy.legacy_avatar.trim()
+        : null;
+  if (typeof legacy.photo_url === "string" && legacy.photo_url.trim()) {
+    const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+    const ownedLinkedInPhoto = await copyLinkedInAvatarToDataUrl(legacy.photo_url.trim());
+    if (ownedLinkedInPhoto) restoredAvatar = ownedLinkedInPhoto;
+  }
+
   await dbRun(
     `INSERT INTO linkedin_profile_enrichment (
       user_id, linkedin_url, linkedin_id, public_identifier, full_name,
@@ -490,7 +506,7 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
       legacy.legacy_bio || legacy.about,
       legacy.legacy_linkedin_url || legacy.linkedin_url,
       legacy.legacy_linkedin_id || legacy.linkedin_id,
-      legacy.legacy_avatar || legacy.photo_url,
+      restoredAvatar,
       legacy.legacy_professional_expertise,
       legacy.legacy_technical_specialization,
       legacy.legacy_research_interests,

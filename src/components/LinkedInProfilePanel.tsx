@@ -72,6 +72,28 @@ function patentTitle(item: any): string {
   return text(item?.title) || text(item?.name) || 'Patent';
 }
 
+function itemLabel(item: any, fallback: string): string {
+  if (typeof item === 'string') return item;
+  return (
+    text(item?.name) ||
+    text(item?.title) ||
+    text(item?.projectName) ||
+    text(item?.certificationName) ||
+    text(item?.language) ||
+    text(item?.skill) ||
+    fallback
+  );
+}
+
+function itemDetail(item: any): string {
+  if (!item || typeof item === 'string') return '';
+  return [
+    text(item?.issuer) || text(item?.authority) || text(item?.organization),
+    text(item?.date) || text(item?.issuedAt) || text(item?.year),
+    text(item?.description),
+  ].filter(Boolean).join(' · ');
+}
+
 const kindLabel: Record<LinkedInConferenceSignal['kind'], string> = {
   PAST_CONFERENCE: 'Past conference',
   UPCOMING_CONFERENCE: 'Upcoming conference',
@@ -176,7 +198,17 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
     }
   };
 
-  const recoveryCard = recoveryStatus ? (
+  const currentRecoveredCount =
+    (recoveryStatus?.current.counts.experience || 0) +
+    (recoveryStatus?.current.counts.education || 0) +
+    (recoveryStatus?.current.counts.publications || 0) +
+    (recoveryStatus?.current.counts.patents || 0);
+  const recoveryStillNeeded = Boolean(
+    recoveryStatus &&
+    (!recoveryStatus.current.profilePresent || currentRecoveredCount === 0)
+  );
+
+  const recoveryCard = recoveryStatus && recoveryStillNeeded ? (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
       <div className="flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
@@ -283,6 +315,42 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
         <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
+        </div>
+      )}
+
+      {profile && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {profile.photoUrl && (
+              <img
+                src={profile.photoUrl}
+                alt={profile.fullName || 'LinkedIn profile'}
+                className="w-20 h-20 rounded-2xl object-cover bg-white border border-slate-200 shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <div className="text-lg font-extrabold text-slate-900">
+                {profile.fullName || 'LinkedIn Professional Profile'}
+              </div>
+              {profile.headline && <div className="text-sm font-semibold text-slate-600 mt-1">{profile.headline}</div>}
+              {(profile.locationText || profile.city || profile.country) && (
+                <div className="text-xs text-slate-500 mt-1">
+                  {profile.locationText || [profile.city, profile.country].filter(Boolean).join(', ')}
+                </div>
+              )}
+              {profile.about && <p className="text-xs text-slate-600 mt-3 leading-relaxed">{profile.about}</p>}
+              {profile.linkedinUrl && (
+                <a
+                  href={profile.linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:underline"
+                >
+                  Open LinkedIn profile <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -412,6 +480,74 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
                 <div className="text-sm font-semibold text-slate-800">{educationTitle(item)}</div>
                 {educationDetail(item) && <div className="text-xs text-slate-500 mt-0.5">{educationDetail(item)}</div>}
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(profile?.certifications.length || 0) > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3"><Award className="w-4 h-4 text-emerald-600" /><h3 className="text-sm font-extrabold text-slate-900">Certifications</h3></div>
+          <div className="grid md:grid-cols-2 gap-3">
+            {profile!.certifications.map((item, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 p-3">
+                <div className="text-sm font-semibold text-slate-800">{itemLabel(item, 'Certification')}</div>
+                {itemDetail(item) && <div className="text-[11px] text-slate-500 mt-1">{itemDetail(item)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(profile?.projects.length || 0) > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3"><Briefcase className="w-4 h-4 text-indigo-600" /><h3 className="text-sm font-extrabold text-slate-900">Projects</h3></div>
+          <div className="grid md:grid-cols-2 gap-3">
+            {profile!.projects.map((item, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 p-3">
+                <div className="text-sm font-semibold text-slate-800">{itemLabel(item, 'Project')}</div>
+                {itemDetail(item) && <div className="text-[11px] text-slate-500 mt-1">{itemDetail(item)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(profile?.skills.length || 0) > 0 && (
+        <section>
+          <h3 className="text-sm font-extrabold text-slate-900 mb-3">Skills</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile!.skills.map((item, index) => (
+              <span key={index} className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
+                {itemLabel(item, 'Skill')}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(profile?.honorsAndAwards.length || 0) > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3"><Award className="w-4 h-4 text-amber-600" /><h3 className="text-sm font-extrabold text-slate-900">Honors & Awards</h3></div>
+          <div className="space-y-2">
+            {profile!.honorsAndAwards.map((item, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 p-3">
+                <div className="text-sm font-semibold text-slate-800">{itemLabel(item, 'Honor or award')}</div>
+                {itemDetail(item) && <div className="text-[11px] text-slate-500 mt-1">{itemDetail(item)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(profile?.languages.length || 0) > 0 && (
+        <section>
+          <h3 className="text-sm font-extrabold text-slate-900 mb-3">Languages</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile!.languages.map((item, index) => (
+              <span key={index} className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                {itemLabel(item, 'Language')}
+              </span>
             ))}
           </div>
         </section>
