@@ -41,6 +41,11 @@ import { resizeImageFile } from '../utils/image';
 import { generateInitialsAvatar } from '../utils/avatar';
 import type { KeynoteSpeakerMatch } from '../api/auth';
 import {
+  fetchProfessionalRecoveryStatus,
+  recoverLocalProfessionalProfile,
+  type ProfessionalRecoveryStatus,
+} from '../api/linkedinProfile';
+import {
   ConferenceRegistration,
   fetchMyExternalPapers,
   decideExternalPaper,
@@ -95,6 +100,8 @@ interface UserProfileViewProps {
   identityVerificationMethod?: 'LinkedIn' | 'Google' | null;
   professionalInvitations?: ProfessionalInvitation[];
   keynoteSpeakerMatches?: KeynoteSpeakerMatch[];
+  ownerPreview?: boolean;
+  primaryAccountRole?: 'professional' | 'organizer' | 'sponsor';
 }
 
 const ABSTRACT_STATUS_STYLE: Record<string, string> = {
@@ -152,6 +159,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   identityVerificationMethod = null,
   professionalInvitations = [],
   keynoteSpeakerMatches = [],
+  ownerPreview = false,
+  primaryAccountRole = 'professional',
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
@@ -180,6 +189,54 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [professionalRecoveryStatus, setProfessionalRecoveryStatus] = useState<ProfessionalRecoveryStatus | null>(null);
+  const [professionalRecoveryLoading, setProfessionalRecoveryLoading] = useState(false);
+  const [professionalRecoveryError, setProfessionalRecoveryError] = useState<string | null>(null);
+
+  const professionalRecoveryRequired =
+    variant === 'professional' && ownerPreview && primaryAccountRole !== 'professional';
+
+  useEffect(() => {
+    if (!professionalRecoveryRequired) {
+      setProfessionalRecoveryStatus(null);
+      return;
+    }
+    let cancelled = false;
+    fetchProfessionalRecoveryStatus()
+      .then((status) => {
+        if (!cancelled) setProfessionalRecoveryStatus(status);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setProfessionalRecoveryStatus(null);
+          setProfessionalRecoveryError(error?.message || 'Could not check the original Professional account.');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [professionalRecoveryRequired]);
+
+  const handleRestoreOriginalProfessional = async () => {
+    if (!professionalRecoveryStatus?.localLegacy.recoverable) return;
+    const restoreCredentials = professionalRecoveryStatus.localLegacy.candidate?.originalCredentialsRecoverable
+      ? window.confirm(
+          'ConferenceGate found your original Professional account. Restore its original sign-in password too? ' +
+          'Organizer/Sponsor owner access, billing, and workspaces will remain available.'
+        )
+      : false;
+
+    setProfessionalRecoveryLoading(true);
+    setProfessionalRecoveryError(null);
+    try {
+      await recoverLocalProfessionalProfile(restoreCredentials);
+      window.location.reload();
+    } catch (error: any) {
+      setProfessionalRecoveryError(error?.message || 'Could not restore the original Professional account.');
+    } finally {
+      setProfessionalRecoveryLoading(false);
+    }
+  };
 
   const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -464,6 +521,89 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       userProfile.contributions.sessionsChaired * 20 +
       userProfile.contributions.speakerRoles * 20
   );
+
+  if (professionalRecoveryRequired) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-white rounded-3xl border border-amber-200 shadow-xs overflow-hidden">
+          <div className="h-28 bg-gradient-to-r from-amber-50 to-blue-50" />
+          <div className="px-6 sm:px-8 py-7">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-6 h-6 text-amber-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] uppercase tracking-wider font-extrabold text-amber-700">
+                  Original Professional Account
+                </div>
+                <h1 className="text-2xl font-extrabold text-slate-900 mt-1">
+                  Restore your original Professional profile
+                </h1>
+                <p className="text-sm text-slate-600 mt-2 max-w-3xl">
+                  ConferenceGate is not using the replacement Organizer profile as your Professional identity.
+                  Your Professional photo, LinkedIn extraction, papers, conference history, committee roles,
+                  expertise and reviewer data will appear only after the original Professional record is restored.
+                </p>
+
+                {!professionalRecoveryStatus && !professionalRecoveryError && (
+                  <div className="mt-5 flex items-center gap-2 text-sm text-slate-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Checking for your original Professional profile…
+                  </div>
+                )}
+
+                {professionalRecoveryStatus?.localLegacy.recoverable && (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="text-sm font-extrabold text-emerald-900">
+                      Original Professional profile found
+                    </div>
+                    <div className="text-xs text-emerald-800 mt-1">
+                      {professionalRecoveryStatus.localLegacy.candidate?.fullName || userProfile.name} ·{' '}
+                      {professionalRecoveryStatus.localLegacy.candidate?.counts.publications || 0} publications ·{' '}
+                      {professionalRecoveryStatus.localLegacy.candidate?.counts.patents || 0} patents
+                      {professionalRecoveryStatus.localLegacy.candidate?.originalCredentialsRecoverable
+                        ? ' · original password available'
+                        : ''}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRestoreOriginalProfessional}
+                      disabled={professionalRecoveryLoading}
+                      className="mt-4 px-5 py-3 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-bold disabled:opacity-50 cursor-pointer"
+                    >
+                      {professionalRecoveryLoading ? 'Restoring…' : 'Restore Original Professional Account'}
+                    </button>
+                  </div>
+                )}
+
+                {professionalRecoveryStatus && !professionalRecoveryStatus.localLegacy.recoverable && (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="text-sm font-extrabold text-amber-950">
+                      Original profile is not in the active SQLite database yet
+                    </div>
+                    <p className="text-xs text-amber-800 mt-1">
+                      {professionalRecoveryStatus.tursoRecoveryConfigured
+                        ? 'The legacy Turso recovery source is configured. The original Professional record must be recovered from that source.'
+                        : 'The old Turso source is not connected to this deployment, so ConferenceGate cannot honestly recreate the missing history from the replacement account.'}
+                    </p>
+                    {professionalRecoveryStatus.linkedInRefreshConfigured && (
+                      <p className="text-xs text-amber-800 mt-2">
+                        LinkedIn refresh is available as a separate fallback for public profile data, but it will not be presented as a substitute for your original ConferenceGate history.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {professionalRecoveryError && (
+                  <p className="mt-4 text-sm font-semibold text-rose-700">{professionalRecoveryError}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
