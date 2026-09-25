@@ -95,6 +95,7 @@ export async function removeLinkedInProfileEnrichment(): Promise<void> {
 
 export interface ProfessionalRecoveryStatus {
   ownerRecovery: boolean;
+  avatarRepaired?: boolean;
   current: {
     profilePresent: boolean;
     avatarPresent: boolean;

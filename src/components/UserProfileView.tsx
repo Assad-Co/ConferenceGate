@@ -209,7 +209,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     setProfessionalRecoveryError(null);
     fetchProfessionalRecoveryStatus()
       .then((status) => {
-        if (!cancelled) setProfessionalRecoveryStatus(status);
+        if (cancelled) return;
+        if (status?.avatarRepaired) {
+          window.location.reload();
+          return;
+        }
+        setProfessionalRecoveryStatus(status);
       })
       .catch((error) => {
         if (!cancelled) {

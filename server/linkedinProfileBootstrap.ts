@@ -250,7 +250,7 @@ router.get("/me", requireMember, safe(async (req, res) => {
 
 router.get("/recovery-status", requireMember, safe(async (req, res) => {
   await ensureSchema();
-  const { dbAll, dbGet } = await import("./db");
+  const { dbAll, dbGet, dbRun } = await import("./db");
   const { isOwnerPreviewEmail } = await import("./ownerPreview");
   const userId = req.linkedinProfileUserId!;
   const user = await dbGet<any>("SELECT * FROM users WHERE id = ?", [userId]);
@@ -286,9 +286,33 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
   );
 
   const uniqueCandidate = candidates.length === 1 ? candidates[0] : null;
+  let avatarRepaired = false;
+  if (user.role === "professional" && currentProfile?.photo_url) {
+    const markerKey = `owner_linkedin_avatar_restored_v1_${userId}`;
+    const alreadyRepaired = await dbGet<{ value: string }>(
+      "SELECT value FROM app_secrets WHERE key = ?",
+      [markerKey],
+    );
+    if (!alreadyRepaired) {
+      const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+      const ownedPhoto = await copyLinkedInAvatarToDataUrl(currentProfile.photo_url);
+      const restoredPhoto = ownedPhoto || currentProfile.photo_url;
+      if (restoredPhoto) {
+        await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [restoredPhoto, userId]);
+        await dbRun(
+          "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+          [markerKey, new Date().toISOString()],
+        );
+        user.avatar = restoredPhoto;
+        avatarRepaired = true;
+      }
+    }
+  }
+
   const currentClient = toClient(currentProfile);
   res.json({
     ownerRecovery: true,
+    avatarRepaired,
     current: {
       profilePresent: Boolean(currentProfile),
       avatarPresent: Boolean(user.avatar),
