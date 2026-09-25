@@ -324,6 +324,67 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
       );
     }
 
+    // Restore the rest of the old Professional activity rows once. This is additive and keeps
+    // the current account/password/billing/workspaces intact.
+    if (uniqueCandidate) {
+      const activityRestoreMarker = `owner_legacy_profile_activity_restored_v1_${userId}`;
+      const alreadyRestoredActivity = await dbGet<{ value: string }>(
+        "SELECT value FROM app_secrets WHERE key = ?",
+        [activityRestoreMarker],
+      );
+      if (!alreadyRestoredActivity) {
+        const { randomUUID } = await import("crypto");
+        const copySpecs = [
+          ["external_paper_matches", "user_id"],
+          ["self_reported_attendance", "user_id"],
+          ["self_reported_committee_positions", "user_id"],
+          ["conference_registrations", "user_id"],
+          ["review_volunteers", "reviewer_id"],
+          ["professional_opportunity_interests", "professional_id"],
+          ["professional_invitations", "professional_id"],
+          ["submission_reviews", "reviewer_id"],
+          ["submission_reviewer_assignments", "reviewer_id"],
+        ] as const;
+
+        for (const [table, key] of copySpecs) {
+          const exists = await dbGet<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+            [table],
+          );
+          if (!exists) continue;
+          const cols = await dbAll<{ name: string }>(`PRAGMA table_info("${table}")`);
+          const names = cols.map((row) => String(row.name));
+          if (!names.includes(key)) continue;
+          const rows = await dbAll<any>(
+            `SELECT * FROM "${table}" WHERE "${key}"=?`,
+            [String(uniqueCandidate.user_id)],
+          );
+          if (!rows.length) continue;
+          const columnSql = names.map((name) => `"${name.replaceAll('"','""')}"`).join(",");
+          const placeholders = names.map(() => "?").join(",");
+          for (const row of rows) {
+            const args = names.map((name) => {
+              if (name === key) return userId;
+              if (name === "id") return `recovered_${randomUUID()}`;
+              return row[name] ?? null;
+            });
+            try {
+              await dbRun(
+                `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
+                args,
+              );
+            } catch {
+              // A dependent row may require a related object that was intentionally not copied.
+            }
+          }
+        }
+        await dbRun(
+          "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+          [activityRestoreMarker, new Date().toISOString()],
+        );
+      }
+    }
+
     // Older LinkedIn conference/post extraction may still be attached to the legacy Professional
     // shadow. Restore it to the active account when the active account has no stored activity.
     if (uniqueCandidate) {
