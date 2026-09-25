@@ -143,6 +143,7 @@ async function materializeRecoveryShadow(sourceUser, sourceLinkedIn) {
     ['self_reported_attendance', 'user_id'],
     ['self_reported_committee_positions', 'user_id'],
     ['conference_registrations', 'user_id'],
+    ['review_volunteers', 'reviewer_id'],
   ];
 
   await destination.execute('PRAGMA foreign_keys=OFF');
