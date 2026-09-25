@@ -48,7 +48,8 @@
     "production:readiness": "node scripts/checkProductionReadiness.mjs",
     "production:readiness:strict": "node scripts/checkProductionReadiness.mjs --strict",
     "database:prepare": "node scripts/prepareLocalDatabase.mjs",
-    "database:migrate-from-turso": "node scripts/migrateTursoToSqlite.mjs"
+    "database:migrate-from-turso": "node scripts/migrateTursoToSqlite.mjs",
+    "database:restore-legacy-professional": "node scripts/restoreLegacyProfessionalProfile.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
