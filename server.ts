@@ -130,6 +130,7 @@ async function startServer() {
         database: "ready",
         databaseBackend,
         databasePersistentPathConfigured: databasePathConfigured,
+        legacyRecoveryConfigured: Boolean(process.env.TURSO_DATABASE_URL?.trim()),
         release: release === "local" ? release : release.slice(0, 7),
       });
     } catch {
@@ -139,6 +140,7 @@ async function startServer() {
         database: "unavailable",
         databaseBackend,
         databasePersistentPathConfigured: databasePathConfigured,
+        legacyRecoveryConfigured: Boolean(process.env.TURSO_DATABASE_URL?.trim()),
         release: release === "local" ? release : release.slice(0, 7),
       });
     }
