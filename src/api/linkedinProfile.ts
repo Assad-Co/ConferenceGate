@@ -114,6 +114,7 @@ export interface ProfessionalRecoveryStatus {
       fullName: string | null;
       linkedinUrl: string | null;
       fetchedAt: string | null;
+      originalCredentialsRecoverable: boolean;
       counts: {
         experience: number;
         education: number;
@@ -138,12 +139,14 @@ export async function fetchProfessionalRecoveryStatus(): Promise<ProfessionalRec
   return body;
 }
 
-export async function recoverLocalProfessionalProfile(): Promise<LinkedInProfileImportResult['profile']> {
+export async function recoverLocalProfessionalProfile(
+  restoreCredentials = false,
+): Promise<LinkedInProfileImportResult['profile']> {
   const response = await fetch('/api/linkedin-profile/recover-local', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ confirm: true }),
+    body: JSON.stringify({ confirm: true, restoreCredentials }),
   });
   const body = await readJson(response);
   if (!response.ok) {
