@@ -248,6 +248,256 @@ router.get("/me", requireMember, safe(async (req, res) => {
   });
 }));
 
+router.get("/recovery-status", requireMember, safe(async (req, res) => {
+  await ensureSchema();
+  const { dbAll, dbGet } = await import("./db");
+  const { isOwnerPreviewEmail } = await import("./ownerPreview");
+  const userId = req.linkedinProfileUserId!;
+  const user = await dbGet<any>("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user || !isOwnerPreviewEmail(user.email)) {
+    return res.status(403).json({ error: "Professional profile recovery is available only to the owner-preview account." });
+  }
+
+  const currentProfile = await dbGet<StoredRow>(
+    "SELECT * FROM linkedin_profile_enrichment WHERE user_id = ?",
+    [userId],
+  );
+
+  const candidates = await dbAll<any>(
+    `SELECT l.*,u.email AS account_email,u.name AS account_name
+       FROM linkedin_profile_enrichment l
+       LEFT JOIN users u ON u.id=l.user_id
+      WHERE l.user_id<>?
+        AND (
+          (? IS NOT NULL AND lower(l.linkedin_url)=lower(?))
+          OR (
+            COALESCE(TRIM(l.full_name),'')<>''
+            AND lower(trim(l.full_name))=lower(trim(?))
+          )
+        )
+      ORDER BY l.fetched_at DESC
+      LIMIT 5`,
+    [userId, user.linkedin_url || null, user.linkedin_url || null, user.name || ""],
+  );
+
+  const uniqueCandidate = candidates.length === 1 ? candidates[0] : null;
+  const currentClient = toClient(currentProfile);
+  res.json({
+    ownerRecovery: true,
+    current: {
+      profilePresent: Boolean(currentProfile),
+      avatarPresent: Boolean(user.avatar),
+      linkedinUrl: user.linkedin_url || currentClient?.linkedinUrl || null,
+      counts: {
+        experience: currentClient?.experience.length || 0,
+        education: currentClient?.education.length || 0,
+        publications: currentClient?.publications.length || 0,
+        patents: currentClient?.patents.length || 0,
+      },
+    },
+    localLegacy: {
+      candidateCount: candidates.length,
+      recoverable: Boolean(uniqueCandidate),
+      candidate: uniqueCandidate
+        ? {
+            userId: String(uniqueCandidate.user_id),
+            fullName: uniqueCandidate.full_name ? String(uniqueCandidate.full_name) : null,
+            linkedinUrl: uniqueCandidate.linkedin_url ? String(uniqueCandidate.linkedin_url) : null,
+            fetchedAt: uniqueCandidate.fetched_at ? String(uniqueCandidate.fetched_at) : null,
+            counts: {
+              experience: parseArray(uniqueCandidate.experience).length,
+              education: parseArray(uniqueCandidate.education).length,
+              publications: parseArray(uniqueCandidate.publications).length,
+              patents: parseArray(uniqueCandidate.patents).length,
+            },
+          }
+        : null,
+    },
+    tursoRecoveryConfigured: Boolean(process.env.TURSO_DATABASE_URL?.trim()),
+    linkedInRefreshConfigured: Boolean(
+      process.env.APIFY_TOKEN?.trim() &&
+      (user.linkedin_url || currentClient?.linkedinUrl),
+    ),
+  });
+}));
+
+router.post("/recover-local", requireMember, safe(async (req, res) => {
+  if (req.body?.confirm !== true) {
+    return res.status(400).json({ error: "Explicit confirmation is required before attaching a local legacy Professional profile." });
+  }
+
+  await ensureSchema();
+  const { dbAll, dbGet, dbRun } = await import("./db");
+  const { isOwnerPreviewEmail } = await import("./ownerPreview");
+  const userId = req.linkedinProfileUserId!;
+  const user = await dbGet<any>("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user || !isOwnerPreviewEmail(user.email)) {
+    return res.status(403).json({ error: "Professional profile recovery is available only to the owner-preview account." });
+  }
+
+  const candidates = await dbAll<StoredRow>(
+    `SELECT l.*
+       FROM linkedin_profile_enrichment l
+      WHERE l.user_id<>?
+        AND (
+          (? IS NOT NULL AND lower(l.linkedin_url)=lower(?))
+          OR (
+            COALESCE(TRIM(l.full_name),'')<>''
+            AND lower(trim(l.full_name))=lower(trim(?))
+          )
+        )
+      ORDER BY l.fetched_at DESC
+      LIMIT 5`,
+    [userId, user.linkedin_url || null, user.linkedin_url || null, user.name || ""],
+  );
+
+  if (candidates.length !== 1) {
+    return res.status(409).json({
+      error:
+        candidates.length === 0
+          ? "No unique local legacy Professional profile was found."
+          : "Multiple possible legacy Professional profiles were found; automatic attachment was stopped for safety.",
+      candidateCount: candidates.length,
+    });
+  }
+
+  const legacy = candidates[0];
+  await dbRun(
+    `INSERT INTO linkedin_profile_enrichment (
+      user_id, linkedin_url, linkedin_id, public_identifier, full_name,
+      headline, about, location_text, city, country, photo_url, verified,
+      experience, education, publications, patents, certifications, projects,
+      skills, honors_awards, languages, raw_profile, source_actor, consented_at, fetched_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      linkedin_url=excluded.linkedin_url,
+      linkedin_id=excluded.linkedin_id,
+      public_identifier=excluded.public_identifier,
+      full_name=excluded.full_name,
+      headline=excluded.headline,
+      about=excluded.about,
+      location_text=excluded.location_text,
+      city=excluded.city,
+      country=excluded.country,
+      photo_url=excluded.photo_url,
+      verified=excluded.verified,
+      experience=excluded.experience,
+      education=excluded.education,
+      publications=excluded.publications,
+      patents=excluded.patents,
+      certifications=excluded.certifications,
+      projects=excluded.projects,
+      skills=excluded.skills,
+      honors_awards=excluded.honors_awards,
+      languages=excluded.languages,
+      raw_profile=excluded.raw_profile,
+      source_actor=excluded.source_actor,
+      consented_at=excluded.consented_at,
+      fetched_at=excluded.fetched_at`,
+    [
+      userId,
+      legacy.linkedin_url,
+      legacy.linkedin_id,
+      legacy.public_identifier,
+      legacy.full_name,
+      legacy.headline,
+      legacy.about,
+      legacy.location_text,
+      legacy.city,
+      legacy.country,
+      legacy.photo_url,
+      legacy.verified,
+      legacy.experience,
+      legacy.education,
+      legacy.publications,
+      legacy.patents,
+      legacy.certifications,
+      legacy.projects,
+      legacy.skills,
+      legacy.honors_awards,
+      legacy.languages,
+      legacy.raw_profile,
+      legacy.source_actor,
+      legacy.consented_at,
+      legacy.fetched_at,
+    ],
+  );
+
+  await dbRun(
+    `UPDATE users SET
+       linkedin_url=COALESCE(NULLIF(?,''),linkedin_url),
+       avatar=COALESCE(NULLIF(?,''),avatar),
+       title=COALESCE(NULLIF(?,''),title),
+       organization=COALESCE(NULLIF(?,''),organization),
+       city=COALESCE(NULLIF(?,''),city),
+       country=COALESCE(NULLIF(?,''),country),
+       bio=COALESCE(NULLIF(?,''),bio)
+     WHERE id=?`,
+    [
+      legacy.linkedin_url,
+      legacy.photo_url,
+      legacy.headline,
+      null,
+      legacy.city,
+      legacy.country,
+      legacy.about,
+      userId,
+    ],
+  );
+
+  const copySpecs = [
+    ["external_paper_matches", "user_id"],
+    ["self_reported_attendance", "user_id"],
+    ["self_reported_committee_positions", "user_id"],
+    ["conference_registrations", "user_id"],
+    ["professional_opportunity_interests", "professional_id"],
+    ["professional_invitations", "professional_id"],
+    ["submission_reviews", "reviewer_id"],
+    ["submission_reviewer_assignments", "reviewer_id"],
+  ] as const;
+
+  const tableExists = async (table: string) =>
+    Boolean(await dbGet<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+      [table],
+    ));
+
+  for (const [table, key] of copySpecs) {
+    if (!(await tableExists(table))) continue;
+    const cols = await dbAll<{ name: string }>(`PRAGMA table_info("${table}")`);
+    const names = cols.map((row) => String(row.name));
+    if (!names.includes(key)) continue;
+    const rows = await dbAll<any>(
+      `SELECT * FROM "${table}" WHERE "${key}"=?`,
+      [legacy.user_id],
+    );
+    if (!rows.length) continue;
+    const columnSql = names.map((name) => `"${name.replaceAll('"','""')}"`).join(",");
+    const placeholders = names.map(() => "?").join(",");
+    for (const row of rows) {
+      const args = names.map((name) => (name === key ? userId : row[name] ?? null));
+      await dbRun(
+        `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
+        args,
+      );
+    }
+  }
+
+  const restored = await readStoredProfile(userId);
+  res.json({
+    restored: true,
+    profile: restored,
+    preserved: [
+      "current password",
+      "primary account role",
+      "owner preview",
+      "subscription and billing state",
+      "current workspaces",
+    ],
+  });
+}));
+
+
 router.post("/refresh", requireMember, safe(async (req, res) => {
   if (req.body?.consent !== true) {
     return res.status(400).json({
