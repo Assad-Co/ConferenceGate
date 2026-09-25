@@ -172,6 +172,119 @@ function parseArray(value: string | null | undefined): any[] {
   }
 }
 
+function imageUrlFrom(value: unknown, depth = 0): string | null {
+  if (depth > 4 || value == null) return null;
+  if (typeof value === "string") {
+    const candidate = value.trim();
+    return /^https:\/\//i.test(candidate) ? candidate : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = imageUrlFrom(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["profilePictureUrl", "profileImageUrl", "avatarUrl", "photoUrl", "photo", "displayPhoto", "picture", "image"]) {
+      if (!(key in record)) continue;
+      const found = imageUrlFrom(record[key], depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<string | null> {
+  const requestedUrl = normalizeLinkedInProfileUrl(linkedinUrl);
+  const token = process.env.APIFY_TOKEN?.trim();
+  if (!requestedUrl || !token) return null;
+
+  const requestedSlug = profileSlug(requestedUrl);
+  const exactProfile = (value: unknown): boolean => {
+    const returnedSlug = profileSlug(value);
+    return !returnedSlug || !requestedSlug || returnedSlug === requestedSlug;
+  };
+
+  const providers = [
+    {
+      id: "datascraperes~linkedin-public-profile-scraper",
+      input: { profileUrls: [requestedUrl] },
+      pick(row: Record<string, any>) {
+        const profile = objectValue(row.profile);
+        return {
+          profileUrl: row.profileUrl || row.inputUrl || profile.linkedinUrl || requestedUrl,
+          photo: imageUrlFrom(profile.profilePictureUrl) ||
+            imageUrlFrom(profile.profileImageUrl) ||
+            imageUrlFrom(profile.avatarUrl) ||
+            imageUrlFrom(row.profilePictureUrl) ||
+            imageUrlFrom(row.profileImageUrl) ||
+            imageUrlFrom(row.avatarUrl),
+        };
+      },
+    },
+    {
+      id: "getanyapi~linkedin-profile-scraper",
+      input: { url: requestedUrl },
+      pick(row: Record<string, any>) {
+        return {
+          profileUrl: row.linkedinUrl || row.profileUrl || row.url || requestedUrl,
+          photo: imageUrlFrom(row.avatarUrl) ||
+            imageUrlFrom(row.profilePictureUrl) ||
+            imageUrlFrom(row.profileImageUrl) ||
+            imageUrlFrom(row.image),
+        };
+      },
+    },
+  ] as const;
+
+  for (const provider of providers) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const endpoint = new URL(
+        `https://api.apify.com/v2/actors/${provider.id}/run-sync-get-dataset-items`,
+      );
+      endpoint.searchParams.set("format", "json");
+      endpoint.searchParams.set("clean", "true");
+      endpoint.searchParams.set("maxItems", "1");
+      endpoint.searchParams.set("maxTotalChargeUsd", "0.03");
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(provider.input),
+      });
+      if (!response.ok) continue;
+      const body = await response.json().catch(() => null);
+      const row = Array.isArray(body)
+        ? body.find((item) => item && typeof item === "object" && item.success !== false)
+        : null;
+      if (!row) continue;
+      const picked = provider.pick(row as Record<string, any>);
+      if (!picked.photo || !exactProfile(picked.profileUrl)) continue;
+
+      const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+      const owned = await copyLinkedInAvatarToDataUrl(picked.photo);
+      if (owned) {
+        console.log("[owner-avatar-repair] restored portrait from exact public LinkedIn profile");
+        return owned;
+      }
+    } catch (error: any) {
+      console.warn("[owner-avatar-repair] public LinkedIn portrait provider failed", error?.message || String(error));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return null;
+}
+
 function currentCareer(profile: Record<string, any>) {
   const experience = arrayValue(profile.experience);
   const current = experience.find((item) => {
@@ -293,35 +406,54 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
   // The legacy Professional shadow keeps the user's original ConferenceGate avatar. Prefer an
   // already-owned image data URL from that account over stale organization/conference logos.
   if (user.role === "professional") {
-    const markerKey = `owner_linkedin_avatar_restored_v3_${userId}`;
+    const markerKey = `owner_linkedin_avatar_restored_v4_${userId}`;
     const alreadyRepaired = await dbGet<{ value: string }>(
       "SELECT value FROM app_secrets WHERE key = ?",
       [markerKey],
     );
     if (!alreadyRepaired) {
+      const exactLinkedInUrl =
+        normalizeLinkedInProfileUrl(
+          user.linkedin_url ||
+          currentProfile?.linkedin_url ||
+          uniqueCandidate?.linkedin_url ||
+          ""
+        );
+
+      // The old account avatar can itself be the wrong AAPG/conference logo. For this repair
+      // generation, first reacquire the portrait from the exact public LinkedIn profile URL.
+      let restoredPhoto = exactLinkedInUrl
+        ? await fetchExactPublicLinkedInPortrait(exactLinkedInUrl)
+        : null;
+
       const legacyAvatar =
         typeof uniqueCandidate?.legacy_avatar === "string" && uniqueCandidate.legacy_avatar.trim()
           ? uniqueCandidate.legacy_avatar.trim()
           : null;
-      let restoredPhoto =
-        legacyAvatar?.startsWith("data:image/") ? legacyAvatar : null;
 
       if (!restoredPhoto && currentProfile?.photo_url) {
         const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
         restoredPhoto = await copyLinkedInAvatarToDataUrl(currentProfile.photo_url);
       }
-      if (!restoredPhoto && legacyAvatar) restoredPhoto = legacyAvatar;
-      if (!restoredPhoto && currentProfile?.photo_url) restoredPhoto = currentProfile.photo_url;
+      if (!restoredPhoto && uniqueCandidate?.photo_url) {
+        const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+        restoredPhoto = await copyLinkedInAvatarToDataUrl(String(uniqueCandidate.photo_url));
+      }
+      if (!restoredPhoto && legacyAvatar?.startsWith("data:image/")) {
+        restoredPhoto = legacyAvatar;
+      }
 
       if (restoredPhoto) {
         await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [restoredPhoto, userId]);
         user.avatar = restoredPhoto;
         avatarRepaired = true;
+        await dbRun(
+          "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+          [markerKey, new Date().toISOString()],
+        );
+      } else {
+        console.warn("[owner-avatar-repair] exact LinkedIn portrait was not recovered; leaving current avatar unchanged");
       }
-      await dbRun(
-        "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
-        [markerKey, new Date().toISOString()],
-      );
     }
 
     // Restore the rest of the old Professional activity rows once. This is additive and keeps
