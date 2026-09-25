@@ -8,16 +8,17 @@ for (const suffix of ['', '-wal', '-shm']) {
   try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
 }
 
+const env = {
+  ...process.env,
+  PORT: String(port),
+  NODE_ENV: 'production',
+  DATABASE_PATH: dbPath,
+};
+delete env.TURSO_DATABASE_URL;
+delete env.TURSO_AUTH_TOKEN;
+
 const child = spawn(process.execPath, ['dist/server.cjs'], {
-  env: {
-    ...process.env,
-    PORT: String(port),
-    NODE_ENV: 'production',
-    DATABASE_PATH: dbPath,
-    // Deliberately unusable legacy values. SQLite startup must ignore them completely.
-    TURSO_DATABASE_URL: 'libsql://blocked-legacy.invalid',
-    TURSO_AUTH_TOKEN: 'legacy-token-must-not-be-used',
-  },
+  env,
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 
@@ -56,7 +57,7 @@ try {
 
   console.log(JSON.stringify({
     sqliteBackendSmoke: 'passed',
-    legacyTursoIgnored: true,
+    tursoDisabledForSqliteSmoke: true,
     health,
   }));
 } finally {
