@@ -35,6 +35,12 @@ import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
 import { LinkedInProfilePanel } from './LinkedInProfilePanel';
+import { LinkedInImportedTabSections } from './LinkedInImportedTabSections';
+import {
+  fetchLinkedInConferenceActivity,
+  type LinkedInConferenceActivity,
+  type LinkedInConferenceSignal,
+} from '../api/linkedinConferenceActivity';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
@@ -314,6 +320,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [externalConfirmed, setExternalConfirmed] = useState<ExternalPaper[]>([]);
   const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
   const [linkedInPaperTitles, setLinkedInPaperTitles] = useState<string[]>([]);
+  const [linkedInPublicationCount, setLinkedInPublicationCount] = useState(0);
   const [externalLoading, setExternalLoading] = useState(false);
   const [externalRefreshing, setExternalRefreshing] = useState(false);
   const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
@@ -328,15 +335,22 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     fetchLinkedInProfileEnrichment()
       .then(({ profile }) => {
         if (cancelled) return;
-        const titles = (profile?.publications || [])
+        const publications = profile?.publications || [];
+        const titles = publications
           .map((item: any) =>
-            String(item?.name || item?.title || item?.publicationTitle || '').trim()
+            typeof item === 'string'
+              ? item.trim()
+              : String(item?.name || item?.title || item?.publicationTitle || '').trim()
           )
           .filter(Boolean);
         setLinkedInPaperTitles(titles);
+        setLinkedInPublicationCount(publications.length);
       })
       .catch(() => {
-        if (!cancelled) setLinkedInPaperTitles([]);
+        if (!cancelled) {
+          setLinkedInPaperTitles([]);
+          setLinkedInPublicationCount(0);
+        }
       });
     return () => {
       cancelled = true;
@@ -420,12 +434,13 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       ...uniqueExternalConfirmed.map((paper) => paper.title),
       ...linkedInPaperTitles,
     ];
-    return new Set(
+    const uniqueTitleCount = new Set(
       titles
         .map((title) => paperIdentityKey(String(title || '')))
         .filter(Boolean),
     ).size;
-  }, [userProfile.publications, uniqueExternalConfirmed, linkedInPaperTitles]);
+    return Math.max(uniqueTitleCount, linkedInPublicationCount);
+  }, [userProfile.publications, uniqueExternalConfirmed, linkedInPaperTitles, linkedInPublicationCount]);
 
   // Plain attendance (no presentation) has no real, name-searchable public source anywhere —
   // attendee lists are private to organizers. This is the account typing it in themselves,
@@ -473,6 +488,21 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [committeeLoading, setCommitteeLoading] = useState(false);
   const [isAddCommitteeOpen, setIsAddCommitteeOpen] = useState(false);
 
+  const [linkedInConferenceActivity, setLinkedInConferenceActivity] = useState<LinkedInConferenceActivity | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchLinkedInConferenceActivity()
+      .then((result) => {
+        if (!cancelled) setLinkedInConferenceActivity(result.activity);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedInConferenceActivity(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId]);
+
   useEffect(() => {
     let cancelled = false;
     setCommitteeLoading(true);
@@ -507,6 +537,54 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   };
 
   const completedProfessionalRoles = professionalInvitations.filter((item) => item.status === 'completed');
+  const linkedInRoleSignals = (linkedInConferenceActivity?.conferenceActivity || []).filter(
+    (signal): signal is LinkedInConferenceSignal =>
+      signal.kind === 'CONFERENCE_ROLE' &&
+      signal.memberClaimed &&
+      !signal.repostOrQuote &&
+      signal.confidence >= 90 &&
+      Boolean(signal.role)
+  );
+
+  const roleKey = (signal: LinkedInConferenceSignal) =>
+    [
+      signal.sourceUrl || signal.conferenceName || signal.label,
+      signal.year || '',
+      (signal.role || '').toLowerCase(),
+    ].join('|');
+
+  const uniqueLinkedInRoles = Array.from(
+    new Map(linkedInRoleSignals.map((signal) => [roleKey(signal), signal] as const)).values()
+  );
+
+  const selfReportedCommitteeCount = selfReportedCommittee.filter(
+    (entry) => /committee/i.test(entry.position || '')
+  ).length;
+  const selfReportedChairCount = selfReportedCommittee.filter(
+    (entry) => /chair/i.test(entry.position || '')
+  ).length;
+  const linkedInCommitteeCount = uniqueLinkedInRoles.filter((signal) => /committee/i.test(signal.role || '')).length;
+  const linkedInSessionChairCount = uniqueLinkedInRoles.filter((signal) => /(?:session|track).*chair|^chair$/i.test(signal.role || '')).length;
+  const linkedInPanelCount = uniqueLinkedInRoles.filter((signal) => /panelist|panel participant|moderator/i.test(signal.role || '')).length;
+  const linkedInWorkshopCount = uniqueLinkedInRoles.filter((signal) => /workshop/i.test(signal.role || '')).length;
+
+  const committeePositionCount = Math.max(
+    userProfile.contributions.technicalCommittees,
+    linkedInCommitteeCount + selfReportedCommitteeCount,
+  );
+  const sessionChairCount = Math.max(
+    userProfile.contributions.sessionsChaired,
+    linkedInSessionChairCount + selfReportedChairCount,
+  );
+  const panelParticipationCount = Math.max(
+    userProfile.contributions.panelsParticipated,
+    linkedInPanelCount,
+  );
+  const workshopDeliveredCount = Math.max(
+    userProfile.contributions.workshopsDelivered,
+    linkedInWorkshopCount,
+  );
+
   const committeeEntries = [
     ...completedProfessionalRoles
       .filter((item) => item.roleType === 'committee' || item.roleType === 'chair')
@@ -515,7 +593,22 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         conferenceName: item.conferenceTitle,
         year: Number((item.completedAt || item.respondedAt || item.createdAt || '').slice(0, 4)) || new Date().getFullYear(),
         roleLabel: item.roleType === 'chair' ? 'Session Chair' : 'Technical Committee Member',
+        sourceUrl: null as string | null,
       })),
+    ...uniqueLinkedInRoles.map((signal) => ({
+      title: signal.conferenceName || signal.label,
+      conferenceName: signal.conferenceName || signal.label,
+      year: signal.year || new Date().getFullYear(),
+      roleLabel: signal.role || 'Conference Role',
+      sourceUrl: signal.sourceUrl,
+    })),
+    ...selfReportedCommittee.map((entry) => ({
+      title: entry.position,
+      conferenceName: entry.conferenceName,
+      year: Number(entry.year) || new Date().getFullYear(),
+      roleLabel: entry.position,
+      sourceUrl: null as string | null,
+    })),
     ...userProfile.verifiedAchievements
       .filter((a) => a.badgeType === 'committee' || a.badgeType === 'chair')
       .map((a) => ({
@@ -523,6 +616,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         conferenceName: a.conferenceName,
         year: a.year,
         roleLabel: a.badgeType === 'chair' ? 'Session Chair' : 'Committee Member',
+        sourceUrl: null as string | null,
       })),
     ...userProfile.timeline.flatMap((yr) =>
       yr.items
@@ -532,10 +626,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           conferenceName: item.conference,
           year: yr.year,
           roleLabel: item.role,
+          sourceUrl: null as string | null,
         }))
     ),
   ]
-    .filter((entry, idx, arr) => arr.findIndex((e) => e.title === entry.title && e.year === entry.year) === idx)
+    .filter((entry, idx, arr) => arr.findIndex((e) =>
+      e.conferenceName.toLowerCase() === entry.conferenceName.toLowerCase() &&
+      e.year === entry.year &&
+      e.roleLabel.toLowerCase() === entry.roleLabel.toLowerCase()
+    ) === idx)
     .sort((a, b) => b.year - a.year);
 
   const profileCompletenessChecks = [
@@ -840,7 +939,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
             <div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
-            <div className="text-xl font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees} Positions</div>
+            <div className="text-xl font-extrabold text-indigo-700">{committeePositionCount} Positions</div>
           </div>
         </div>
         )}
@@ -935,6 +1034,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
       {/* Tab Content */}
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+        <LinkedInImportedTabSections tab={activeTab} onPaperTitlesChange={setLinkedInPaperTitles} />
         {activeTab === 'notifications' && (
           <ProfileNotifications
             notifications={notifications}
@@ -1408,19 +1508,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Committee Positions</div>
-                <div className="text-lg font-extrabold text-indigo-700">{userProfile.contributions.technicalCommittees}</div>
+                <div className="text-lg font-extrabold text-indigo-700">{committeePositionCount}</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Sessions Chaired</div>
-                <div className="text-lg font-extrabold text-slate-900">{userProfile.contributions.sessionsChaired}</div>
+                <div className="text-lg font-extrabold text-slate-900">{sessionChairCount}</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Panels Participated</div>
-                <div className="text-lg font-extrabold text-blue-700">{userProfile.contributions.panelsParticipated}</div>
+                <div className="text-lg font-extrabold text-blue-700">{panelParticipationCount}</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Workshops Delivered</div>
-                <div className="text-lg font-extrabold text-emerald-700">{userProfile.contributions.workshopsDelivered}</div>
+                <div className="text-lg font-extrabold text-emerald-700">{workshopDeliveredCount}</div>
               </div>
             </div>
 
@@ -1437,9 +1537,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                         <p className="text-[11px] text-slate-500">{entry.conferenceName} • {entry.year}</p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 font-bold text-[10px] rounded-full whitespace-nowrap shrink-0">
-                      {entry.roleLabel}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {entry.sourceUrl && (
+                        <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-700 hover:underline">
+                          LinkedIn evidence
+                        </a>
+                      )}
+                      <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                        {entry.roleLabel}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
