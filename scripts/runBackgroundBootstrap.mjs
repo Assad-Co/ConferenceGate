@@ -34,6 +34,10 @@ async function main() {
   // forward-looking subscription-status history trigger after the server has initialized users.
   await runScript('scripts/ensureGrowthSchema.mjs');
 
+  // Restore legacy conference/discovery records and stage the owner's original Professional
+  // identity before any newer enrichment jobs run. Safe no-op when legacy Turso is not configured.
+  await runScript('scripts/reconcileLegacyProductionData.mjs');
+
   // Fast DB-only reconciliation first: make the complete AAPG set and its reliable local
   // logo visible within seconds of a deploy, before slower imports and network image work.
   await runScript('scripts/syncAapgOfficialUpcoming.mjs');
