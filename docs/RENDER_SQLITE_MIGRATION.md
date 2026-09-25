@@ -115,8 +115,19 @@ LEGACY_PROFILE_APPLY=1 \
 npm run database:restore-legacy-professional
 ```
 
-The recovery preserves the current password, Google identity, primary role, subscription fields,
-billing state, and current SQLite workspaces. It restores Professional-facing identity/profile
-fields (including avatar when present), LinkedIn profile enrichment, publication matches,
-self-reported conference history, registrations, Professional opportunity interests/invitations,
-and reviewer activity where those legacy tables exist.
+The recovery restores the legacy account as the **real Professional primary identity** while
+preserving owner-preview access, subscription fields, billing state, and current SQLite
+workspaces. It restores Professional-facing identity/profile fields (including avatar when
+present), LinkedIn profile enrichment, publication matches, self-reported conference history,
+registrations, Professional opportunity interests/invitations, and reviewer activity where
+those legacy tables exist.
+
+By default the current SQLite password is preserved. If the Turso legacy row still contains the
+original Professional password hash and you explicitly want the old credentials restored, add:
+
+```bash
+LEGACY_PROFILE_RESTORE_PASSWORD=1
+```
+
+together with `LEGACY_PROFILE_APPLY=1`. This credential restoration is opt-in; it is never done
+implicitly.
