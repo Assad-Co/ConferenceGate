@@ -318,6 +318,29 @@ function isCustomerReadyConference(result: LiveSearchResult): boolean {
   );
 }
 
+/**
+ * A conference does not need six enriched tabs to be discoverable.
+ *
+ * The committed launch catalogue contains verified core facts (title, official/source URL, date,
+ * place, category) for hundreds of real events. Requiring deep enrichment here made the entire
+ * Discover page appear empty whenever the richer SQLite/Turso rows were missing.
+ *
+ * Thin records remain prepared=false, so the UI never promises deep tabs that are not available.
+ * They are still valid conference search results and can be enriched later.
+ */
+function isDiscoverableConference(result: LiveSearchResult): boolean {
+  const title = String(result.title || "").trim();
+  const link = String(result.link || "").trim();
+  if (!title || !/^https?:\\/\\//i.test(link)) return false;
+  return Boolean(
+    result.startDate ||
+    result.location?.city ||
+    result.location?.country ||
+    result.category ||
+    result.description
+  );
+}
+
 function meaningfulCfpText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const text = value.trim();
@@ -887,7 +910,7 @@ export async function searchConferences(
   // External Conference Results are customer-ready only after the hard crawler has produced at
   // least six displayable tabs plus a visual identity. Thin records stay in Turso as enrichment
   // inventory, but are never exposed as half-empty conference pages.
-  const results = merged.filter(isCustomerReadyConference);
+  const results = merged.filter(isDiscoverableConference);
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });
   return results;
@@ -958,7 +981,7 @@ export async function browseStoredConferences(limit = 10000): Promise<LiveSearch
   // catalogue to an already-sorted list of database rows produced a page that restarted at January
   // halfway down.
   const rows = [...(await storedConferencesOrEmpty("")), ...browseLaunchDataset(limit)]
-    .filter(isCustomerReadyConference);
+    .filter(isDiscoverableConference);
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const withDates = rows.map((result) => {
