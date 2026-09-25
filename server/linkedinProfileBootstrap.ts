@@ -511,6 +511,7 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
     ["self_reported_attendance", "user_id"],
     ["self_reported_committee_positions", "user_id"],
     ["conference_registrations", "user_id"],
+    ["review_volunteers", "reviewer_id"],
     ["professional_opportunity_interests", "professional_id"],
     ["professional_invitations", "professional_id"],
     ["submission_reviews", "reviewer_id"],
@@ -546,10 +547,19 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
         if (name === "id") return `recovered_${randomUUID()}`;
         return row[name] ?? null;
       });
-      await dbRun(
-        `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
-        args,
-      );
+      try {
+        await dbRun(
+          `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
+          args,
+        );
+      } catch (error) {
+        // Some legacy activity rows reference opportunities/submissions that were not part of
+        // the surviving migration. A missing dependency must not abort restoration of the real
+        // Professional identity, LinkedIn extraction, avatar, papers or self-reported history.
+        console.warn(
+          `[professional-recovery] skipped dependent legacy row table=${table}: ${(error as Error).message}`,
+        );
+      }
     }
   }
 
