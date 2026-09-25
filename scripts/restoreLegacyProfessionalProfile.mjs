@@ -8,6 +8,7 @@ const destinationPath = path.resolve(
 );
 const accountEmail = process.env.LEGACY_PROFILE_EMAIL?.trim().toLowerCase();
 const apply = process.env.LEGACY_PROFILE_APPLY === '1';
+const restoreLegacyPassword = process.env.LEGACY_PROFILE_RESTORE_PASSWORD === '1';
 
 if (!sourceUrl) throw new Error('TURSO_DATABASE_URL is required.');
 if (!accountEmail) throw new Error('LEGACY_PROFILE_EMAIL is required.');
@@ -144,6 +145,9 @@ try {
 
   if (!legacy) throw new Error('No legacy Turso user found for the requested email.');
   if (!current) throw new Error('No current SQLite user found for the requested email.');
+  if (legacy.role !== 'professional') {
+    throw new Error(`Legacy account exists but is not a Professional account (role=${legacy.role}). Recovery stopped.`);
+  }
 
   const sourceUserColumns = new Set(await columns(source, 'users'));
   const destUserColumns = new Set(await columns(destination, 'users'));
@@ -175,6 +179,23 @@ try {
     });
   }
 
+  if (apply) {
+    const legacyPasswordAvailable =
+      typeof legacy.password_hash === 'string' && legacy.password_hash.trim().length > 0;
+    await destination.execute({
+      sql: `UPDATE users
+               SET role='professional',
+                   password_hash=CASE WHEN ?=1 AND ? IS NOT NULL THEN ? ELSE password_hash END
+             WHERE id=?`,
+      args: [
+        restoreLegacyPassword && legacyPasswordAvailable ? 1 : 0,
+        legacyPasswordAvailable ? legacy.password_hash : null,
+        legacyPasswordAvailable ? legacy.password_hash : null,
+        String(current.id),
+      ],
+    });
+  }
+
   const tableResults = [];
   for (const tableSpec of COPY_TABLES) {
     tableResults.push(await copyRows(tableSpec, String(legacy.id), String(current.id)));
@@ -186,22 +207,31 @@ try {
     legacyUserId: String(legacy.id),
     currentUserId: String(current.id),
     legacyRole: legacy.role,
-    currentPrimaryRolePreserved: current.role,
+    currentPrimaryRoleBefore: current.role,
+    restoredPrimaryRole: apply ? 'professional' : null,
+    legacyCredentialsAvailable: Boolean(
+      typeof legacy.password_hash === 'string' && legacy.password_hash.trim().length > 0
+    ),
+    legacyCredentialsRequested: restoreLegacyPassword,
+    legacyCredentialsRestored:
+      apply &&
+      restoreLegacyPassword &&
+      typeof legacy.password_hash === 'string' &&
+      legacy.password_hash.trim().length > 0,
     userProfileFieldsToRestore: changes,
     relatedProfileActivity: tableResults,
     preservedByDesign: [
-      'password_hash',
-      'google_id',
-      'role',
+      'google_id unless separately reconnected',
       'subscription_status',
       'subscription_plan',
       'subscription_provider',
       'subscription_period_end',
       'current SQLite workspace and billing records',
+      'owner-preview access by configured owner email',
     ],
     nextStep: apply
-      ? 'Restart/redeploy the app and verify the Professional profile.'
-      : 'Review this output, then rerun with LEGACY_PROFILE_APPLY=1 to apply the recovery.',
+      ? 'Restart/redeploy the app and sign in as the restored Professional account.'
+      : 'Review this output, then rerun with LEGACY_PROFILE_APPLY=1. Add LEGACY_PROFILE_RESTORE_PASSWORD=1 only if you want the old Professional password restored.',
   }, null, 2));
 } finally {
   source.close();
