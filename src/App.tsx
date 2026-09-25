@@ -396,7 +396,7 @@ export function App() {
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
     fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
-    if (authUser.role === 'professional' || authUser.ownerPreview) {
+    if (authUser.role === 'professional') {
       fetchProfessionalOpportunities().then(setProfessionalOpportunities).catch(() => {});
       fetchMyProfessionalOpportunityInterestIds().then(setProfessionalOpportunityInterestIds).catch(() => {});
       fetchMyProfessionalInvitations().then(setProfessionalInvitations).catch(() => {});
@@ -920,8 +920,13 @@ export function App() {
       setOrganizerLogoOverride(avatar);
       setSponsorNameOverride(user.organization || user.name);
       setSponsorLogoOverride(avatar);
-      setActiveRole('Professional');
-      setActiveTab('home');
+      if (mappedRole === 'Professional') {
+        setActiveRole('Professional');
+        setActiveTab('home');
+      } else {
+        setActiveRole('Organizer');
+        setActiveTab('organizer');
+      }
     } else if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.organization || user.name);
       setOrganizerLogoOverride(avatar);
