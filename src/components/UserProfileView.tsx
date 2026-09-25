@@ -34,6 +34,7 @@ import { ProfileAnalytics } from './ProfileAnalytics';
 import { ProfileNotifications } from './ProfileNotifications';
 import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
+import { LinkedInProfilePanel } from './LinkedInProfilePanel';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
@@ -41,6 +42,7 @@ import { resizeImageFile } from '../utils/image';
 import { generateInitialsAvatar } from '../utils/avatar';
 import type { KeynoteSpeakerMatch } from '../api/auth';
 import {
+  fetchLinkedInProfileEnrichment,
   fetchProfessionalRecoveryStatus,
   recoverLocalProfessionalProfile,
   type ProfessionalRecoveryStatus,
@@ -62,7 +64,7 @@ import {
   AddCommitteePositionPayload,
 } from '../api/activity';
 
-type ProfileTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges' | 'trust' | 'analytics' | 'notifications';
+type ProfileTab = 'conferences' | 'papers' | 'linkedin' | 'reviews' | 'committee' | 'badges' | 'trust' | 'analytics' | 'notifications';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
