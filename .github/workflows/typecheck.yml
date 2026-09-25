@@ -28,7 +28,7 @@ jobs:
       - name: Sponsor and marketplace alert worker syntax
         run: node --check scripts/refreshSponsorWatchlistAlerts.mjs && node --check scripts/refreshMarketplaceActionAlerts.mjs
       - name: Production readiness script syntax
-        run: node --check scripts/checkProductionReadiness.mjs && node --check scripts/prepareLocalDatabase.mjs && node --check scripts/migrateTursoToSqlite.mjs && node --check scripts/restoreLegacyProfessionalProfile.mjs && node --check scripts/smokeSqliteBackend.mjs && node --check scripts/smokeEphemeralSqliteBackend.mjs
+        run: node --check scripts/checkProductionReadiness.mjs && node --check scripts/prepareLocalDatabase.mjs && node --check scripts/migrateTursoToSqlite.mjs && node --check scripts/restoreLegacyProfessionalProfile.mjs && node --check scripts/reconcileLegacyProductionData.mjs && node --check scripts/smokeSqliteBackend.mjs && node --check scripts/smokeEphemeralSqliteBackend.mjs
       - name: Growth and marketplace intelligence syntax
         run: node --check scripts/growthReport.mjs && node --check scripts/growthCohortReport.mjs && node --check scripts/executiveGrowthSnapshot.mjs && node --check scripts/ensureGrowthSchema.mjs && node --check scripts/smokeGrowthReport.mjs && node --check scripts/smokeGrowthDashboard.mjs && node --check scripts/smokeOwnerPreview.mjs && node --check scripts/smokeMarketplaceIntelligence.mjs
       - name: Production build
