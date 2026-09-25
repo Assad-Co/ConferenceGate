@@ -34,7 +34,7 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Discover catalogue recovery test
-        run: npx tsx --test server/discovery/tests/storedSearchDiscover.test.ts
+        run: npx tsx --test server/discovery/tests/staticCatalogueRecovery.test.ts
       - name: SQLite backend smoke test
         run: node scripts/smokeSqliteBackend.mjs
       - name: Temporary SQLite startup smoke test
