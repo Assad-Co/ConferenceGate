@@ -482,7 +482,7 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
         // Reusing the legacy id would collide with the original row and INSERT OR IGNORE would
         // silently skip recovery. Generate a fresh row id while preserving semantic unique keys
         // such as (user_id,doi), (user_id,conference_id), etc.
-        if (name === "id" && key !== "id") return `recovered_${randomUUID()}`;
+        if (name === "id") return `recovered_${randomUUID()}`;
         return row[name] ?? null;
       });
       await dbRun(
