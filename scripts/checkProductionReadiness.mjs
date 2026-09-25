@@ -1,7 +1,11 @@
 const checkoutProvider = (process.env.BILLING_CHECKOUT_PROVIDER || 'hosted').trim().toLowerCase();
 
-const databaseBackend = 'sqlite';
 const databasePath = process.env.DATABASE_PATH?.trim() || '';
+const tursoUrl = process.env.TURSO_DATABASE_URL?.trim() || '';
+const tursoToken = process.env.TURSO_AUTH_TOKEN?.trim() || '';
+const tursoRequested = Boolean(tursoUrl || tursoToken);
+const tursoRuntimeConfigured = Boolean(tursoUrl && tursoToken);
+const databaseBackend = tursoUrl ? 'turso' : 'sqlite';
 
 const coreRequired = [
   'BILLING_SYNC_SECRET',
@@ -50,6 +54,9 @@ function validHttpsUrl(value) {
 }
 
 const invalid = [];
+if (Boolean(tursoUrl) !== Boolean(tursoToken)) {
+  invalid.push('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be configured together.');
+}
 if (!['hosted', 'paddle'].includes(checkoutProvider)) {
   invalid.push('BILLING_CHECKOUT_PROVIDER must be hosted or paddle.');
 }
@@ -97,13 +104,15 @@ if (
   invalid.push('PADDLE_WEBHOOK_TOLERANCE_SECONDS must be greater than 0 and at most 300.');
 }
 
-const persistentDatabaseReady = Boolean(databasePath);
+const persistentDatabaseReady = tursoRequested ? tursoRuntimeConfigured : Boolean(databasePath);
 
 const report = {
   mode: process.env.NODE_ENV || 'development',
   databaseBackend,
   databasePersistentPathConfigured: Boolean(databasePath),
-  legacyTursoConfigured: Boolean(process.env.TURSO_DATABASE_URL?.trim() || process.env.TURSO_AUTH_TOKEN?.trim()),
+  databasePersistenceConfigured: persistentDatabaseReady,
+  tursoRuntimeConfigured,
+  legacyTursoConfigured: false,
   checkoutProvider,
   required: Object.fromEntries(required.map((name) => [name, Boolean(process.env[name]?.trim())])),
   billingProviders: enabledBillingProviders,
@@ -122,11 +131,13 @@ const report = {
 if (missingRequired.length) {
   report.warnings.push('Missing required production configuration: ' + missingRequired.join(', '));
 }
-if (!databasePath) {
-  report.warnings.push('DATABASE_PATH is not set; production must use a persistent SQLite path such as /var/data/conferencegate.db.');
+if (!tursoRequested && !databasePath) {
+  report.warnings.push(
+    'No durable production database is configured. Set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN, or use a persistent SQLite DATABASE_PATH such as /var/data/conferencegate.db.'
+  );
 }
-if (report.legacyTursoConfigured) {
-  report.warnings.push('Legacy Turso credentials are present but are ignored by the runtime; keep them only while a one-time recovery export is still needed.');
+if (tursoRuntimeConfigured) {
+  report.warnings.push('Turso is configured as the active production database backend.');
 }
 if (enabledBillingProviders.length === 0) {
   report.warnings.push('No verified subscription webhook provider is configured.');

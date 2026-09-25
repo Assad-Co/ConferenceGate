@@ -2,6 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const cwd = process.cwd();
+const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
+if (tursoUrl) {
+  console.log(JSON.stringify({
+    databasePrepare: 'skipped',
+    backend: 'turso',
+    localPreparationSkipped: true,
+  }));
+  process.exit(0);
+}
+
 const aliasPath = path.join(cwd, 'data', 'app.db');
 const configured = process.env.DATABASE_PATH?.trim();
 const targetPath = path.resolve(configured || aliasPath);

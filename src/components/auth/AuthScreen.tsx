@@ -195,20 +195,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       onAuthenticated(user);
     } catch (err: any) {
       if (err?.code === 'OWNER_ACCOUNT_NOT_INITIALIZED') {
-        const localPart = email.trim().split('@')[0] || 'ConferenceGate Owner';
-        const inferredName = localPart
-          .split(/[._-]+/)
-          .filter(Boolean)
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-
-        setMode('signup');
-        setSelectedRole('organizer');
-        setName(inferredName || 'ConferenceGate Owner');
-        setOrganization('Conference Gate');
-        setPassword('');
-        setConfirmPassword('');
-        setError('Create your owner account once on the new database. After signup, Owner Preview opens automatically.');
+        setError(
+          'Your owner account was not found in the active production database. Do not create a duplicate account. Verify the production database connection and try again.'
+        );
       } else {
         setError(err.message || 'Unable to sign in.');
       }

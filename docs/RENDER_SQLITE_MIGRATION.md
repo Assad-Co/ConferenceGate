@@ -1,44 +1,53 @@
-# Render Persistent SQLite Migration
+# Render Database Configuration
 
-ConferenceGate no longer requires Turso for normal production operation.
+ConferenceGate supports two durable production database modes. **Turso is the preferred Render runtime**
+when the existing production Turso database contains the authoritative users and ConferenceGate data.
+Persistent SQLite remains available as a fallback.
 
 ## Target architecture
 
-- Database engine: SQLite through `@libsql/client`
+### Recommended: Turso
+
+- Database engine: libSQL/Turso through `@libsql/client`
+- Runtime:
+  - `TURSO_DATABASE_URL=libsql://...`
+  - `TURSO_AUTH_TOKEN=...`
+- No Render persistent disk is required for database durability.
+- When `TURSO_DATABASE_URL` is configured, Turso takes precedence over `DATABASE_PATH`.
+
+### Alternative: persistent SQLite
+
 - Render persistent disk mount: `/var/data`
 - Database file: `/var/data/conferencegate.db`
 - Runtime:
-  - `DATABASE_BACKEND=sqlite`
   - `DATABASE_PATH=/var/data/conferencegate.db`
-- Turso variables are not required for startup and should be removed after any recovery import is complete.
 
-The existing ConferenceGate SQL is SQLite-native, so this avoids a risky PostgreSQL dialect rewrite.
+The existing ConferenceGate SQL is SQLite-native, so both modes use the same schema and query layer.
 
 ## Render setup
 
-In the existing ConferenceGate web service:
+For the existing production account/data in Turso:
 
-1. Open **Disk**.
-2. Add a persistent disk.
-3. Mount path: `/var/data`.
-4. Use the smallest practical size to start.
-5. Add/update environment variables:
-   - `DATABASE_BACKEND=sqlite`
-   - `DATABASE_PATH=/var/data/conferencegate.db`
-6. Remove `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` after any optional recovery attempt.
-7. Redeploy the latest `main` commit.
+1. Add `TURSO_DATABASE_URL` to the Render web service.
+2. Add the matching `TURSO_AUTH_TOKEN`.
+3. Set a stable `JWT_SECRET`.
+4. `DATABASE_PATH` may be left unset when Turso is active.
+5. Redeploy the latest `main` commit.
+6. Verify `GET /api/health` reports `databaseBackend: "turso"`,
+   `databasePersistenceConfigured: true`, and `tursoRuntimeConfigured: true`.
 
-Render persistent disks are available only on paid-compatible service plans. Without a persistent disk, SQLite still starts, but the database file can be lost on a restart or redeploy.
+Use persistent SQLite only when intentionally running production from a Render disk.
 
 ## Existing scripts
 
 Some older maintenance scripts still open `data/app.db` directly. The production start command runs `scripts/prepareLocalDatabase.mjs`, which links `data/app.db` to `DATABASE_PATH` when a separate path is configured. This keeps the web server and legacy maintenance jobs on the same SQLite file.
 
-## Turso recovery
+## Turso recovery / migration to SQLite
 
-The existing Turso database is currently blocked from reads, so ConferenceGate must not depend on it to boot.
+When Turso is reachable and contains the authoritative production data, ConferenceGate can use it directly
+as the runtime database; no copy step is required.
 
-If Turso access is temporarily restored later and old production rows need to be recovered, run this from a trusted shell with the persistent Render disk mounted:
+If you intentionally want to migrate those rows into persistent SQLite instead, run this from a trusted shell with the persistent Render disk mounted:
 
 ```bash
 DATABASE_PATH=/var/data/conferencegate.db \
@@ -68,8 +77,9 @@ must report:
 
 - `status: "ok"`
 - `database: "ready"`
-- `databaseBackend: "sqlite"`
-- `databasePersistentPathConfigured: true`
+- `databaseBackend: "turso"` when Turso is configured, otherwise `"sqlite"`
+- `databasePersistenceConfigured: true`
+- `tursoRuntimeConfigured: true` when Turso is the runtime backend
 - the expected release SHA prefix
 
 Then run:
