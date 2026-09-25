@@ -18,6 +18,7 @@ interface Props {
 }
 
 function textFrom(record: any, keys: string[]): string {
+  if (typeof record === 'string') return record.trim();
   if (!record || typeof record !== 'object') return '';
   for (const key of keys) {
     const value = record[key];
@@ -123,7 +124,12 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
     onPaperTitlesChange(unique);
   }, [importedPublicationTitles, onPaperTitlesChange]);
   const committeeSignals = useMemo(
-    () => allSignals.filter((s) => s.kind === 'CONFERENCE_ROLE' && /chair|committee/i.test(s.role || '')),
+    () => allSignals.filter((s) =>
+      s.kind === 'CONFERENCE_ROLE' &&
+      s.memberClaimed &&
+      !s.repostOrQuote &&
+      s.confidence >= 90
+    ),
     [allSignals],
   );
   const reviewSignals = useMemo(
@@ -204,7 +210,7 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
   if (tab === 'committee' && committeeSignals.length > 0) {
     return (
       <section className="mb-6 pb-6 border-b border-slate-100 space-y-3">
-        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Committee & Chair Evidence</h3>
+        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Conference Roles & Leadership Evidence</h3>
         <div className="space-y-2">{committeeSignals.map((signal) => <SignalCard key={signal.id} signal={signal} />)}</div>
       </section>
     );
