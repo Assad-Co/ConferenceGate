@@ -216,7 +216,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     fetchProfessionalRecoveryStatus()
       .then((status) => {
         if (cancelled) return;
-        if (status?.avatarRepaired) {
+        if (status?.avatarRepaired || status?.legacyLinkedInActivityRestored) {
           window.location.reload();
           return;
         }
