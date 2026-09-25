@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { createClient } from '@libsql/client';
 
 const port = Number(process.env.OWNER_PREVIEW_SMOKE_PORT || 3117);
 const dbPath = process.env.OWNER_PREVIEW_SMOKE_DB || '/tmp/conferencegate-owner-preview-smoke.db';
@@ -104,6 +105,140 @@ try {
     throw new Error('Owner preview subscription label is incorrect: ' + JSON.stringify(owner.data.user));
   }
 
+  // Simulate the exact post-migration situation: a current owner account exists, while an older
+  // Professional profile remains under a legacy user id in the same database.
+  const initialRecoveryStatus = await jsonRequest('/api/linkedin-profile/recovery-status', {
+    cookie: owner.cookie,
+  });
+  if (!initialRecoveryStatus.response.ok) {
+    throw new Error(
+      `Owner recovery status failed before fixture setup: ${initialRecoveryStatus.response.status} ${JSON.stringify(initialRecoveryStatus.data)}`
+    );
+  }
+
+  const fixtureDb = createClient({ url: 'file:' + dbPath });
+  const legacyUserId = 'legacy_professional_owner_preview_smoke';
+  const legacyAvatar = 'https://example.test/legacy-professional-photo.jpg';
+  try {
+    await fixtureDb.execute({
+      sql: `INSERT INTO users(id,email,role,name,avatar,linkedin_url)
+            VALUES(?,?,'professional',?,?,?)`,
+      args: [
+        legacyUserId,
+        'legacy-professional-owner-preview@example.com',
+        'Owner Preview Smoke',
+        legacyAvatar,
+        'https://www.linkedin.com/in/owner-preview-smoke',
+      ],
+    });
+    await fixtureDb.execute({
+      sql: `INSERT INTO linkedin_profile_enrichment(
+              user_id,linkedin_url,linkedin_id,public_identifier,full_name,
+              headline,about,location_text,city,country,photo_url,verified,
+              experience,education,publications,patents,certifications,projects,
+              skills,honors_awards,languages,raw_profile,source_actor,consented_at,fetched_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      args: [
+        legacyUserId,
+        'https://www.linkedin.com/in/owner-preview-smoke',
+        'legacy-linkedin-id',
+        'owner-preview-smoke',
+        'Owner Preview Smoke',
+        'Legacy Petroleum Geochemist',
+        'Legacy Professional profile biography',
+        'Dhahran, Saudi Arabia',
+        'Dhahran',
+        'Saudi Arabia',
+        legacyAvatar,
+        1,
+        JSON.stringify([{ position: 'Petroleum Geochemist', companyName: 'Legacy Energy Co.' }]),
+        JSON.stringify([{ schoolName: 'Legacy University', degreeName: 'PhD' }]),
+        JSON.stringify([{ title: 'Legacy Professional Publication', date: '2025' }]),
+        JSON.stringify([{ title: 'Legacy Professional Patent', patentNumber: 'LEGACY-001' }]),
+        '[]',
+        '[]',
+        JSON.stringify(['Organic Geochemistry']),
+        '[]',
+        '[]',
+        JSON.stringify({ source: 'legacy-owner-preview-smoke' }),
+        'legacy-test-fixture',
+        '2025-01-01T00:00:00Z',
+        '2025-01-02T00:00:00Z',
+      ],
+    });
+    await fixtureDb.execute({
+      sql: `INSERT INTO external_paper_matches(
+              id,user_id,doi,title,venue,year,url,status
+            ) VALUES(?,?,?,?,?,?,?,'confirmed')`,
+      args: [
+        'legacy-paper-owner-preview-smoke',
+        legacyUserId,
+        '10.0000/legacy.owner.preview',
+        'Legacy Confirmed Conference Paper',
+        'Legacy Conference',
+        '2025',
+        'https://example.test/legacy-paper',
+      ],
+    });
+  } finally {
+    fixtureDb.close();
+  }
+
+  const recoveryStatus = await jsonRequest('/api/linkedin-profile/recovery-status', {
+    cookie: owner.cookie,
+  });
+  if (
+    !recoveryStatus.response.ok ||
+    recoveryStatus.data?.localLegacy?.recoverable !== true ||
+    recoveryStatus.data?.localLegacy?.candidateCount !== 1
+  ) {
+    throw new Error(
+      `Owner legacy Professional profile was not detected: ${recoveryStatus.response.status} ${JSON.stringify(recoveryStatus.data)}`
+    );
+  }
+
+  const recovery = await jsonRequest('/api/linkedin-profile/recover-local', {
+    method: 'POST',
+    cookie: owner.cookie,
+    body: { confirm: true },
+  });
+  if (
+    !recovery.response.ok ||
+    recovery.data?.restored !== true ||
+    recovery.data?.profile?.publications?.[0]?.title !== 'Legacy Professional Publication'
+  ) {
+    throw new Error(
+      `Owner legacy Professional profile was not restored: ${recovery.response.status} ${JSON.stringify(recovery.data)}`
+    );
+  }
+
+  const ownerAfterRecovery = await jsonRequest('/api/auth/me', { cookie: owner.cookie });
+  if (
+    !ownerAfterRecovery.response.ok ||
+    ownerAfterRecovery.data?.user?.role !== 'organizer' ||
+    ownerAfterRecovery.data?.user?.ownerPreview !== true ||
+    ownerAfterRecovery.data?.user?.avatar !== legacyAvatar
+  ) {
+    throw new Error(
+      'Professional recovery changed owner identity or failed to restore avatar: ' +
+        JSON.stringify(ownerAfterRecovery.data)
+    );
+  }
+
+  const restoredPapersDb = createClient({ url: 'file:' + dbPath });
+  try {
+    const restoredPaper = await restoredPapersDb.execute({
+      sql: `SELECT user_id,title FROM external_paper_matches
+             WHERE doi='10.0000/legacy.owner.preview' AND user_id=?`,
+      args: [owner.data.user.id],
+    });
+    if (!restoredPaper.rows?.length) {
+      throw new Error('Confirmed legacy Professional publication evidence was not attached to current owner id.');
+    }
+  } finally {
+    restoredPapersDb.close();
+  }
+
   const sponsorPreferences = await jsonRequest('/api/sponsors/preferences/mine', { cookie: owner.cookie });
   if (!sponsorPreferences.response.ok) {
     throw new Error(
@@ -176,6 +311,9 @@ try {
       sponsorApiReadable: true,
       professionalContextReadable: true,
       professionalPreferencesWritable: true,
+      legacyProfessionalProfileRecovered: true,
+      legacyAvatarRestored: true,
+      legacyPublicationEvidenceRecovered: true,
       hasPaidAccess: true,
       subscriptionStatus: owner.data.user.subscriptionStatus,
     },
