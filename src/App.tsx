@@ -1585,7 +1585,6 @@ export function App() {
             onCreateConference={handleCreateConference}
             onInviteToCommittee={handleInviteToCommittee}
             onAddNotification={handleAddNotification}
-            ownerPreview={authUser.ownerPreview}
           />
           ) : (
             <PaidWorkspaceGate
