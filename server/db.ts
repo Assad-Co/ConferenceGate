@@ -5,31 +5,50 @@ import fs from "fs";
 const IS_TEST = process.env.NODE_ENV === "test";
 const TEST_DATABASE_PATH = process.env.TEST_DATABASE_PATH?.trim() || undefined;
 const DATABASE_PATH = process.env.DATABASE_PATH?.trim() || undefined;
+const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL?.trim() || undefined;
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN?.trim() || undefined;
+const useTurso = !IS_TEST && Boolean(TURSO_DATABASE_URL);
 
 if (IS_TEST && !TEST_DATABASE_PATH) {
   throw new Error("NODE_ENV=test requires an explicit TEST_DATABASE_PATH.");
 }
+if (useTurso && !TURSO_AUTH_TOKEN) {
+  throw new Error(
+    "TURSO_DATABASE_URL is configured but TURSO_AUTH_TOKEN is missing. " +
+      "Set both variables for the production Turso database."
+  );
+}
+
 const localDatabasePath = TEST_DATABASE_PATH
   ? path.resolve(TEST_DATABASE_PATH)
   : DATABASE_PATH
     ? path.resolve(DATABASE_PATH)
     : path.join(process.cwd(), "data", "app.db");
 const DATA_DIR = path.dirname(localDatabasePath);
-if (!fs.existsSync(DATA_DIR)) {
+if (!useTurso && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-export const databaseBackend = IS_TEST ? "sqlite-test" : "sqlite";
+export const databaseBackend = IS_TEST ? "sqlite-test" : useTurso ? "turso" : "sqlite";
 export const databasePathConfigured = Boolean(TEST_DATABASE_PATH || DATABASE_PATH);
+export const databasePersistenceConfigured = useTurso || databasePathConfigured;
 export const databaseFilePath = localDatabasePath;
 
-export const db: Client = createClient({ url: `file:${localDatabasePath}` });
+export const db: Client = useTurso
+  ? createClient({ url: TURSO_DATABASE_URL!, authToken: TURSO_AUTH_TOKEN! })
+  : createClient({ url: `file:${localDatabasePath}` });
 
 if (!IS_TEST) {
-  console.log(
-    `[db] SQLite backend active at ${localDatabasePath}` +
-      (DATABASE_PATH ? " (persistent path configured)" : " (temporary local storage; configure DATABASE_PATH for persistence)")
-  );
+  if (useTurso) {
+    console.log("[db] Turso production database backend active.");
+  } else {
+    console.log(
+      `[db] SQLite backend active at ${localDatabasePath}` +
+        (DATABASE_PATH
+          ? " (persistent path configured)"
+          : " (temporary local storage; configure Turso or DATABASE_PATH for persistence)")
+    );
+  }
 }
 
 /** Close the client explicitly in bounded jobs and integration tests. */
