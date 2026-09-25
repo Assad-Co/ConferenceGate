@@ -455,6 +455,7 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
     ["submission_reviews", "reviewer_id"],
     ["submission_reviewer_assignments", "reviewer_id"],
   ] as const;
+  const { randomUUID } = await import("crypto");
 
   const tableExists = async (table: string) =>
     Boolean(await dbGet<{ name: string }>(
@@ -475,7 +476,15 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
     const columnSql = names.map((name) => `"${name.replaceAll('"','""')}"`).join(",");
     const placeholders = names.map(() => "?").join(",");
     for (const row of rows) {
-      const args = names.map((name) => (name === key ? userId : row[name] ?? null));
+      const args = names.map((name) => {
+        if (name === key) return userId;
+        // Most Professional activity tables use a globally unique id as their primary key.
+        // Reusing the legacy id would collide with the original row and INSERT OR IGNORE would
+        // silently skip recovery. Generate a fresh row id while preserving semantic unique keys
+        // such as (user_id,doi), (user_id,conference_id), etc.
+        if (name === "id" && key !== "id") return `recovered_${randomUUID()}`;
+        return row[name] ?? null;
+      });
       await dbRun(
         `INSERT OR IGNORE INTO "${table}" (${columnSql}) VALUES (${placeholders})`,
         args,
