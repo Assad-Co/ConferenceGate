@@ -416,7 +416,7 @@ function configuredOwnerPasswordResetTokenMatches(candidate: unknown): boolean {
 
 function ownerPasswordResetUseKey(token: string): string {
   const digest = crypto.createHash("sha256").update(token).digest("hex");
-  return \`owner_password_reset_used_\${digest.slice(0, 40)}\`;
+  return `owner_password_reset_used_\${digest.slice(0, 40)}`;
 }
 
 // Emergency one-time owner recovery. The secret token is supplied only through Render's
@@ -427,7 +427,7 @@ authRouter.get("/owner-password-reset", (_req, res) => {
     return res.status(404).send("Password recovery is not enabled.");
   }
   res.setHeader("Cache-Control", "no-store");
-  res.type("html").send(\`<!doctype html>
+  res.type("html").send(`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -490,7 +490,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 </script>
-</body></html>\`);
+</body></html>`);
 });
 
 authRouter.post("/owner-password-reset", authRateLimit, asyncHandler(async (req, res) => {
