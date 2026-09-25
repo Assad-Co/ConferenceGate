@@ -184,6 +184,93 @@ async function materializeRecoveryShadow(sourceUser, sourceLinkedIn) {
   return shadowId;
 }
 
+async function restoreStrongProfessionalMatch(current, sourceUser, sourceLinkedIn, score) {
+  if (score < 90) return { applied: false, reason: 'match not strong enough for automatic restore' };
+
+  const destinationUserCols = new Set(await columns(destination, 'users'));
+  const restorableUserFields = [
+    'name','organization','title','department','city','country','bio','linkedin_url','linkedin_id','avatar',
+    'professional_expertise','technical_specialization','research_interests','preferred_regions',
+    'reviewer_available','committee_available','session_chair_available','speaker_available','reviewer_max_load',
+  ].filter((field) => destinationUserCols.has(field) && sourceUser[field] !== undefined);
+
+  const assignments = ['role=?'];
+  const args = ['professional'];
+  for (const field of restorableUserFields) {
+    const value = sourceUser[field];
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) continue;
+    assignments.push(`${quoteIdent(field)}=?`);
+    args.push(value);
+  }
+  args.push(String(current.id));
+
+  await destination.execute({
+    sql: `UPDATE users SET ${assignments.join(',')} WHERE id=?`,
+    args,
+  });
+
+  if (sourceLinkedIn && await tableExists(destination, 'linkedin_profile_enrichment')) {
+    const sourceCols = await columns(source, 'linkedin_profile_enrichment');
+    const destinationCols = new Set(await columns(destination, 'linkedin_profile_enrichment'));
+    const common = sourceCols.filter((column) => destinationCols.has(column));
+    const values = common.map((column) => column === 'user_id' ? String(current.id) : sourceLinkedIn[column] ?? null);
+    await destination.execute({
+      sql: `INSERT OR REPLACE INTO linkedin_profile_enrichment (${common.map(quoteIdent).join(',')})
+            VALUES (${common.map(() => '?').join(',')})`,
+      args: values,
+    });
+  }
+
+  const safeHistory = [
+    ['external_paper_matches', 'user_id'],
+    ['self_reported_attendance', 'user_id'],
+    ['self_reported_committee_positions', 'user_id'],
+    ['conference_registrations', 'user_id'],
+    ['review_volunteers', 'reviewer_id'],
+  ];
+
+  await destination.execute('PRAGMA foreign_keys=OFF');
+  try {
+    for (const [table, key] of safeHistory) {
+      if (!(await tableExists(source, table)) || !(await tableExists(destination, table))) continue;
+      const sourceCols = await columns(source, table);
+      const destinationCols = new Set(await columns(destination, table));
+      const common = sourceCols.filter((column) => destinationCols.has(column));
+      if (!common.includes(key)) continue;
+
+      const rows = await source.execute({
+        sql: `SELECT * FROM ${quoteIdent(table)} WHERE ${quoteIdent(key)}=?`,
+        args: [String(sourceUser.id)],
+      });
+
+      for (const row of rows.rows) {
+        const payload = JSON.stringify(jsonSafeObject(row));
+        const recoveredId = `recovered_${crypto.createHash('sha256').update(payload).digest('hex').slice(0, 24)}`;
+        const values = common.map((column) => {
+          if (column === key) return String(current.id);
+          if (column === 'id') return recoveredId;
+          return row[column] ?? null;
+        });
+        await destination.execute({
+          sql: `INSERT OR IGNORE INTO ${quoteIdent(table)} (${common.map(quoteIdent).join(',')})
+                VALUES (${common.map(() => '?').join(',')})`,
+          args: values,
+        });
+      }
+    }
+  } finally {
+    await destination.execute('PRAGMA foreign_keys=ON');
+  }
+
+  return {
+    applied: true,
+    score,
+    passwordPreserved: true,
+    billingPreserved: true,
+    workspacesPreserved: true,
+  };
+}
+
 async function stageProfessional(current) {
   if (!(await tableExists(source, 'users'))) {
     return { candidates: 0, staged: 0, reason: 'legacy users table missing' };
@@ -203,6 +290,7 @@ async function stageProfessional(current) {
   const best = scored.filter((item) => item.score === bestScore);
 
   let staged = 0;
+  let automaticRestore = null;
   for (const item of best) {
     const legacy = jsonSafeObject(item.row);
     let linkedin = null;
@@ -215,6 +303,9 @@ async function stageProfessional(current) {
     }
 
     const shadowId = await materializeRecoveryShadow(item.row, linkedin);
+    if (best.length === 1 && !automaticRestore) {
+      automaticRestore = await restoreStrongProfessionalMatch(current, item.row, linkedin, item.score);
+    }
 
     await destination.execute({
       sql: `INSERT INTO legacy_professional_recovery(
@@ -277,7 +368,7 @@ async function stageProfessional(current) {
     }
   }
 
-  return { candidates: scored.length, bestScore, staged };
+  return { candidates: scored.length, bestScore, staged, automaticRestore };
 }
 
 async function mergeConferenceTable(table) {
