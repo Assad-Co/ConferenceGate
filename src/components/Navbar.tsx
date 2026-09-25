@@ -110,7 +110,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const role = (activeRole || currentRole || 'Professional').toLowerCase();
   const switchableRoles: Array<'professional' | 'reviewer' | 'organizer' | 'sponsor'> =
     ownerPreview
-      ? ['professional', 'reviewer', 'organizer', 'sponsor']
+      ? accountRole === 'professional'
+        ? ['professional', 'reviewer', 'organizer', 'sponsor']
+        : ['organizer', 'sponsor']
       : accountRole === 'organizer'
       ? ['organizer']
       : accountRole === 'sponsor'
