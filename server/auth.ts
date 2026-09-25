@@ -475,7 +475,7 @@ authRouter.patch("/me/reviewer-availability", requireAuth, asyncHandler(async (r
 authRouter.patch("/me/professional-preferences", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
   const current = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]);
   if (!current) return res.status(401).json({ error: "Not authenticated" });
-  if (current.role !== "professional" && !isOwnerPreviewEmail(current.email)) {
+  if (current.role !== "professional") {
     return res.status(403).json({ error: "Professional preferences are available to professional accounts." });
   }
 
