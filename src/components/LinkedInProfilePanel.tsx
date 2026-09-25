@@ -153,10 +153,20 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
   };
 
   const handleLocalRecovery = async () => {
+    const canRestoreCredentials = Boolean(
+      recoveryStatus?.localLegacy.candidate?.originalCredentialsRecoverable
+    );
+    const restoreCredentials = canRestoreCredentials
+      ? window.confirm(
+          'Restore the original Professional account profile and its old sign-in password? ' +
+          'Your Organizer/Sponsor owner access, billing, and workspaces will remain available.'
+        )
+      : false;
+
     setRecovering(true);
     setError(null);
     try {
-      await recoverLocalProfessionalProfile();
+      await recoverLocalProfessionalProfile(restoreCredentials);
       await load();
       window.location.reload();
     } catch (err: any) {
@@ -175,13 +185,13 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
           {recoveryStatus.localLegacy.recoverable ? (
             <>
               <p className="text-xs text-amber-800 mt-1">
-                ConferenceGate found one legacy Professional profile in the current database that can be attached to this owner account.
-                This restores the old profile data without changing your current password, billing, workspace, or owner-preview access.
+                ConferenceGate found one legacy Professional account in the current database. Restoring it makes Professional your real primary identity again while keeping Organizer/Sponsor owner access, billing, and workspaces.
               </p>
               <div className="text-[11px] text-amber-800 mt-2">
                 {recoveryStatus.localLegacy.candidate?.fullName || 'Legacy profile'} ·
                 {' '}{recoveryStatus.localLegacy.candidate?.counts.publications || 0} publications ·
-                {' '}{recoveryStatus.localLegacy.candidate?.counts.patents || 0} patents
+                {' '}{recoveryStatus.localLegacy.candidate?.counts.patents || 0} patents ·
+                {' '}{recoveryStatus.localLegacy.candidate?.originalCredentialsRecoverable ? 'original password available' : 'original password not available locally'}
               </div>
               <button
                 type="button"
@@ -190,7 +200,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
                 className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-900 text-white text-xs font-bold disabled:opacity-50"
               >
                 {recovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Restore Original Professional Profile
+                Restore Original Professional Account
               </button>
             </>
           ) : (
