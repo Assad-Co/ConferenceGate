@@ -16,7 +16,10 @@ import {
 import {
   fetchLinkedInProfileEnrichment,
   refreshLinkedInProfileEnrichment,
+  fetchProfessionalRecoveryStatus,
+  recoverLocalProfessionalProfile,
   type LinkedInProfileEnrichment,
+  type ProfessionalRecoveryStatus,
 } from '../api/linkedinProfile';
 import {
   fetchLinkedInConferenceActivity,
@@ -88,25 +91,34 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
   const [activity, setActivity] = useState<LinkedInConferenceActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<ProfessionalRecoveryStatus | null>(null);
+  const [recovering, setRecovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
-    const [profileResult, activityResult] = await Promise.allSettled([
+    const [profileResult, activityResult, recoveryResult] = await Promise.allSettled([
       fetchLinkedInProfileEnrichment(),
       fetchLinkedInConferenceActivity(),
+      fetchProfessionalRecoveryStatus(),
     ]);
     if (profileResult.status === 'fulfilled') setProfile(profileResult.value.profile);
     if (activityResult.status === 'fulfilled') setActivity(activityResult.value.activity);
+    if (recoveryResult.status === 'fulfilled') setRecoveryStatus(recoveryResult.value);
   };
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.allSettled([fetchLinkedInProfileEnrichment(), fetchLinkedInConferenceActivity()])
-      .then(([p, a]) => {
+    Promise.allSettled([
+      fetchLinkedInProfileEnrichment(),
+      fetchLinkedInConferenceActivity(),
+      fetchProfessionalRecoveryStatus(),
+    ])
+      .then(([p, a, r]) => {
         if (cancelled) return;
         if (p.status === 'fulfilled') setProfile(p.value.profile);
         if (a.status === 'fulfilled') setActivity(a.value.activity);
+        if (r.status === 'fulfilled') setRecoveryStatus(r.value);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -140,6 +152,65 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
     }
   };
 
+  const handleLocalRecovery = async () => {
+    setRecovering(true);
+    setError(null);
+    try {
+      await recoverLocalProfessionalProfile();
+      await load();
+      window.location.reload();
+    } catch (err: any) {
+      setError(err?.message || 'Could not restore the legacy Professional profile.');
+    } finally {
+      setRecovering(false);
+    }
+  };
+
+  const recoveryCard = recoveryStatus ? (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
+      <div className="flex items-start gap-3">
+        <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="text-sm font-extrabold text-amber-950">Original Professional profile recovery</div>
+          {recoveryStatus.localLegacy.recoverable ? (
+            <>
+              <p className="text-xs text-amber-800 mt-1">
+                ConferenceGate found one legacy Professional profile in the current database that can be attached to this owner account.
+                This restores the old profile data without changing your current password, billing, workspace, or owner-preview access.
+              </p>
+              <div className="text-[11px] text-amber-800 mt-2">
+                {recoveryStatus.localLegacy.candidate?.fullName || 'Legacy profile'} ·
+                {' '}{recoveryStatus.localLegacy.candidate?.counts.publications || 0} publications ·
+                {' '}{recoveryStatus.localLegacy.candidate?.counts.patents || 0} patents
+              </div>
+              <button
+                type="button"
+                onClick={handleLocalRecovery}
+                disabled={recovering}
+                className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-900 text-white text-xs font-bold disabled:opacity-50"
+              >
+                {recovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Restore Original Professional Profile
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-amber-800 mt-1">
+                The original profile is not currently present as a unique local legacy record.
+                {recoveryStatus.tursoRecoveryConfigured
+                  ? ' Legacy Turso recovery is configured and can be used to restore the original stored profile.'
+                  : ' The original Turso data is not connected to this deployment right now.'}
+              </p>
+              <p className="text-[11px] text-amber-700 mt-2">
+                A LinkedIn refresh is a separate, consent-based fallback and should not be treated as a substitute for the original stored ConferenceGate profile.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-slate-500">
@@ -157,6 +228,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
         <p className="text-sm text-slate-500 mt-2">
           Import your public professional profile and conference-related public posts. No LinkedIn password is required.
         </p>
+        {recoveryCard}
         <button
           onClick={handleRefresh}
           disabled={refreshing || !linkedinUrl}
@@ -176,6 +248,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
 
   return (
     <div className="space-y-7">
+      {recoveryCard}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
