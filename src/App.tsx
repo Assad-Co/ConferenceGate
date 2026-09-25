@@ -15,6 +15,14 @@ import {
   type ProfessionalPreferencesPayload,
 } from './api/auth';
 import { resolveAvatar } from './utils/avatar';
+import {
+  fetchLinkedInProfileEnrichment,
+  refreshLinkedInProfileEnrichment,
+} from './api/linkedinProfile';
+import {
+  fetchLinkedInConferenceActivity,
+  refreshLinkedInConferenceActivity,
+} from './api/linkedinConferenceActivity';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
@@ -1021,6 +1029,106 @@ export function App() {
       })
       .finally(() => setAuthLoading(false));
   }, []);
+
+  // A saved public LinkedIn URL is the member's instruction to build their ConferenceGate
+  // Professional identity from that profile. Keep the imported profile/photo current after login
+  // without blocking authentication. The expensive conference-post scan runs only when missing or
+  // older than 30 days; the lightweight profile sync gets one forced repair generation so accounts
+  // created before the avatar fix receive the real LinkedIn portrait automatically.
+  useEffect(() => {
+    if (!authUser?.id || !authUser.linkedinUrl) return;
+
+    let cancelled = false;
+    const userId = authUser.id;
+    const linkedinUrl = authUser.linkedinUrl;
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const profileRepairKey = `cg_linkedin_profile_sync_v3:${userId}:${linkedinUrl}`;
+
+    const isStale = (value?: string | null) => {
+      const time = value ? Date.parse(value) : NaN;
+      return !Number.isFinite(time) || Date.now() - time > THIRTY_DAYS;
+    };
+
+    const syncLinkedInIdentity = async () => {
+      let profileWasRefreshed = false;
+
+      try {
+        const { profile } = await fetchLinkedInProfileEnrichment();
+        const profileHasUsefulData = Boolean(
+          profile &&
+          (
+            profile.headline ||
+            profile.about ||
+            profile.photoUrl ||
+            profile.experience.length ||
+            profile.education.length ||
+            profile.publications.length ||
+            profile.patents.length ||
+            profile.certifications.length ||
+            profile.projects.length ||
+            profile.skills.length
+          )
+        );
+        const forcedRepairPending =
+          typeof window !== 'undefined' &&
+          !window.localStorage.getItem(profileRepairKey);
+
+        if (!profileHasUsefulData || !profile?.photoUrl || isStale(profile?.fetchedAt) || forcedRepairPending) {
+          await refreshLinkedInProfileEnrichment(linkedinUrl);
+          profileWasRefreshed = true;
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(profileRepairKey, new Date().toISOString());
+          }
+        }
+      } catch (error) {
+        console.warn('[linkedin-auto-sync] profile refresh skipped:', error);
+      }
+
+      try {
+        const { activity } = await fetchLinkedInConferenceActivity();
+        const activityMissing =
+          !activity ||
+          activity.sourceActor === 'member-evidence-recovery';
+        if (activityMissing || isStale(activity?.fetchedAt)) {
+          await refreshLinkedInConferenceActivity(linkedinUrl);
+        }
+      } catch (error) {
+        console.warn('[linkedin-auto-sync] conference activity refresh skipped:', error);
+      }
+
+      if (profileWasRefreshed && !cancelled) {
+        const refreshed = await fetchCurrentUser().catch(() => null);
+        if (!refreshed || cancelled) return;
+        const avatar = resolveAvatar(refreshed.avatar, refreshed.name);
+        setAuthUser(refreshed);
+        setUserProfile((prev) => ({
+          ...prev,
+          name: refreshed.name,
+          title: refreshed.title || prev.title,
+          organization: refreshed.organization || prev.organization,
+          department: refreshed.department || prev.department,
+          city: refreshed.city || prev.city,
+          country: refreshed.country || prev.country,
+          bio: refreshed.bio || prev.bio,
+          linkedinUrl: refreshed.linkedinUrl || prev.linkedinUrl,
+          avatar,
+        }));
+        if (refreshed.ownerPreview) {
+          setOrganizerLogoOverride(avatar);
+          setSponsorLogoOverride(avatar);
+        } else if (refreshed.role === 'organizer') {
+          setOrganizerLogoOverride(avatar);
+        } else if (refreshed.role === 'sponsor') {
+          setSponsorLogoOverride(avatar);
+        }
+      }
+    };
+
+    void syncLinkedInIdentity();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id, authUser?.linkedinUrl]);
 
   const handleLogout = async () => {
     await apiLogout();

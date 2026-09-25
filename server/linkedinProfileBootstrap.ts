@@ -957,6 +957,29 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
   const now = new Date().toISOString();
   const about = text(profile.about);
 
+  // Resolve the member portrait from profile-specific fields, then copy it into ConferenceGate-
+  // owned storage so it does not depend on a short-lived LinkedIn CDN URL.
+  const directPhotoUrl = [
+    imageUrlFrom(profile.photo),
+    imageUrlFrom(profile.photoUrl),
+    imageUrlFrom(profile.profilePicture),
+    imageUrlFrom(profile.profilePictureUrl),
+    imageUrlFrom(profile.profileImage),
+    imageUrlFrom(profile.profileImageUrl),
+    imageUrlFrom(profile.displayPhoto),
+    imageUrlFrom(profile.avatar),
+  ].find(Boolean) || null;
+
+  let ownedProfileAvatar: string | null = null;
+  if (directPhotoUrl) {
+    const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+    ownedProfileAvatar = await copyLinkedInAvatarToDataUrl(directPhotoUrl);
+  }
+  if (!ownedProfileAvatar) {
+    ownedProfileAvatar = await fetchExactPublicLinkedInPortrait(returnedUrl);
+  }
+  const storedPhoto = ownedProfileAvatar || directPhotoUrl || null;
+
   await ensureSchema();
   await dbRun(
     `INSERT INTO linkedin_profile_enrichment (
@@ -1001,7 +1024,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
       location.locationText,
       location.city,
       location.country,
-      text(profile.photo),
+      storedPhoto,
       profile.verified === true ? 1 : 0,
       jsonArray(profile.experience),
       jsonArray(profile.education),
@@ -1019,7 +1042,15 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     ],
   );
 
-  // Import is additive. Existing member-written profile fields always win; LinkedIn only fills blanks.
+  // Import is additive. Existing member-written text fields always win. The LinkedIn portrait
+  // becomes the account avatar unless the member explicitly chose or removed a photo using
+  // ConferenceGate's Change Photo control.
+  const manualAvatarOverride = await dbGet<{ value: string }>(
+    "SELECT value FROM app_secrets WHERE key = ?",
+    [`manual_avatar_override:${userId}`],
+  );
+  const avatarUpdated = Boolean(ownedProfileAvatar && !manualAvatarOverride);
+
   await dbRun(
     `UPDATE users SET
        linkedin_url = ?,
@@ -1027,7 +1058,8 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
        organization = CASE WHEN COALESCE(TRIM(organization), '') = '' THEN ? ELSE organization END,
        city = CASE WHEN COALESCE(TRIM(city), '') = '' THEN ? ELSE city END,
        country = CASE WHEN COALESCE(TRIM(country), '') = '' THEN ? ELSE country END,
-       bio = CASE WHEN COALESCE(TRIM(bio), '') = '' THEN ? ELSE bio END
+       bio = CASE WHEN COALESCE(TRIM(bio), '') = '' THEN ? ELSE bio END,
+       avatar = CASE WHEN ? IS NOT NULL AND ? = 0 THEN ? ELSE avatar END
      WHERE id = ?`,
     [
       returnedUrl,
@@ -1036,6 +1068,9 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
       location.city,
       location.country,
       about ? about.slice(0, 600) : null,
+      ownedProfileAvatar,
+      manualAvatarOverride ? 1 : 0,
+      ownedProfileAvatar,
       userId,
     ],
   );
@@ -1044,6 +1079,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
   res.json({
     profile: stored,
     imported: true,
+    avatarUpdated,
     counts: {
       experience: stored?.experience.length || 0,
       education: stored?.education.length || 0,
