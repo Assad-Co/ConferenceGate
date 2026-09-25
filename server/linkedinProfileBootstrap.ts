@@ -264,10 +264,15 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
   );
 
   const candidates = await dbAll<any>(
-    `SELECT l.*,u.email AS account_email,u.name AS account_name
+    `SELECT l.*,
+            u.email AS account_email,
+            u.name AS account_name,
+            u.role AS account_role,
+            CASE WHEN u.password_hash IS NOT NULL AND TRIM(u.password_hash)<>'' THEN 1 ELSE 0 END AS credential_recoverable
        FROM linkedin_profile_enrichment l
-       LEFT JOIN users u ON u.id=l.user_id
+       JOIN users u ON u.id=l.user_id
       WHERE l.user_id<>?
+        AND u.role='professional'
         AND (
           (? IS NOT NULL AND lower(l.linkedin_url)=lower(?))
           OR (
@@ -304,6 +309,7 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
             fullName: uniqueCandidate.full_name ? String(uniqueCandidate.full_name) : null,
             linkedinUrl: uniqueCandidate.linkedin_url ? String(uniqueCandidate.linkedin_url) : null,
             fetchedAt: uniqueCandidate.fetched_at ? String(uniqueCandidate.fetched_at) : null,
+            originalCredentialsRecoverable: Boolean(uniqueCandidate.credential_recoverable),
             counts: {
               experience: parseArray(uniqueCandidate.experience).length,
               education: parseArray(uniqueCandidate.education).length,
@@ -335,10 +341,32 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
     return res.status(403).json({ error: "Professional profile recovery is available only to the owner-preview account." });
   }
 
-  const candidates = await dbAll<StoredRow>(
-    `SELECT l.*
+  const candidates = await dbAll<any>(
+    `SELECT l.*,
+            u.password_hash AS legacy_password_hash,
+            u.name AS legacy_name,
+            u.organization AS legacy_organization,
+            u.title AS legacy_title,
+            u.department AS legacy_department,
+            u.city AS legacy_city,
+            u.country AS legacy_country,
+            u.bio AS legacy_bio,
+            u.linkedin_url AS legacy_linkedin_url,
+            u.linkedin_id AS legacy_linkedin_id,
+            u.avatar AS legacy_avatar,
+            u.professional_expertise AS legacy_professional_expertise,
+            u.technical_specialization AS legacy_technical_specialization,
+            u.research_interests AS legacy_research_interests,
+            u.preferred_regions AS legacy_preferred_regions,
+            u.reviewer_available AS legacy_reviewer_available,
+            u.committee_available AS legacy_committee_available,
+            u.session_chair_available AS legacy_session_chair_available,
+            u.speaker_available AS legacy_speaker_available,
+            u.reviewer_max_load AS legacy_reviewer_max_load
        FROM linkedin_profile_enrichment l
+       JOIN users u ON u.id=l.user_id
       WHERE l.user_id<>?
+        AND u.role='professional'
         AND (
           (? IS NOT NULL AND lower(l.linkedin_url)=lower(?))
           OR (
@@ -423,24 +451,57 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
     ],
   );
 
+  const restoreCredentials =
+    req.body?.restoreCredentials === true &&
+    typeof legacy.legacy_password_hash === "string" &&
+    legacy.legacy_password_hash.trim().length > 0;
+
   await dbRun(
     `UPDATE users SET
-       linkedin_url=COALESCE(NULLIF(?,''),linkedin_url),
-       avatar=COALESCE(NULLIF(?,''),avatar),
-       title=COALESCE(NULLIF(?,''),title),
+       role='professional',
+       name=COALESCE(NULLIF(?,''),name),
        organization=COALESCE(NULLIF(?,''),organization),
+       title=COALESCE(NULLIF(?,''),title),
+       department=COALESCE(NULLIF(?,''),department),
        city=COALESCE(NULLIF(?,''),city),
        country=COALESCE(NULLIF(?,''),country),
-       bio=COALESCE(NULLIF(?,''),bio)
+       bio=COALESCE(NULLIF(?,''),bio),
+       linkedin_url=COALESCE(NULLIF(?,''),linkedin_url),
+       linkedin_id=COALESCE(NULLIF(?,''),linkedin_id),
+       avatar=COALESCE(NULLIF(?,''),avatar),
+       professional_expertise=COALESCE(NULLIF(?,''),professional_expertise),
+       technical_specialization=COALESCE(NULLIF(?,''),technical_specialization),
+       research_interests=COALESCE(NULLIF(?,''),research_interests),
+       preferred_regions=COALESCE(NULLIF(?,''),preferred_regions),
+       reviewer_available=COALESCE(?,reviewer_available),
+       committee_available=COALESCE(?,committee_available),
+       session_chair_available=COALESCE(?,session_chair_available),
+       speaker_available=COALESCE(?,speaker_available),
+       reviewer_max_load=COALESCE(?,reviewer_max_load),
+       password_hash=CASE WHEN ?=1 THEN ? ELSE password_hash END
      WHERE id=?`,
     [
-      legacy.linkedin_url,
-      legacy.photo_url,
-      legacy.headline,
-      null,
-      legacy.city,
-      legacy.country,
-      legacy.about,
+      legacy.legacy_name || legacy.full_name,
+      legacy.legacy_organization,
+      legacy.legacy_title || legacy.headline,
+      legacy.legacy_department,
+      legacy.legacy_city || legacy.city,
+      legacy.legacy_country || legacy.country,
+      legacy.legacy_bio || legacy.about,
+      legacy.legacy_linkedin_url || legacy.linkedin_url,
+      legacy.legacy_linkedin_id || legacy.linkedin_id,
+      legacy.legacy_avatar || legacy.photo_url,
+      legacy.legacy_professional_expertise,
+      legacy.legacy_technical_specialization,
+      legacy.legacy_research_interests,
+      legacy.legacy_preferred_regions,
+      legacy.legacy_reviewer_available ?? null,
+      legacy.legacy_committee_available ?? null,
+      legacy.legacy_session_chair_available ?? null,
+      legacy.legacy_speaker_available ?? null,
+      legacy.legacy_reviewer_max_load ?? null,
+      restoreCredentials ? 1 : 0,
+      restoreCredentials ? legacy.legacy_password_hash : null,
       userId,
     ],
   );
@@ -496,9 +557,12 @@ router.post("/recover-local", requireMember, safe(async (req, res) => {
   res.json({
     restored: true,
     profile: restored,
+    account: {
+      primaryRole: "professional",
+      originalCredentialsRestored: restoreCredentials,
+    },
     preserved: [
-      "current password",
-      "primary account role",
+      restoreCredentials ? "legacy Professional password restored" : "current password preserved",
       "owner preview",
       "subscription and billing state",
       "current workspaces",
