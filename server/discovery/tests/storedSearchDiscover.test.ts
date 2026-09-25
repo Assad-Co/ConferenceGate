@@ -225,3 +225,24 @@ test("browsing runs no provider call and matches no query", async () => {
     await cleanup();
   }
 });
+
+
+test("Discover stays populated from the committed ConferenceGate catalogue when SQLite has no conference rows", async () => {
+  await cleanup();
+  const { browseStoredConferences } = await import("../../braveSearch");
+  const browse = await browseStoredConferences(1000);
+  assert.ok(
+    browse.length >= 200,
+    `expected the committed ConferenceGate catalogue fallback to provide at least 200 conferences, got ${browse.length}`
+  );
+  assert.ok(
+    browse.some((result) => Boolean(result.startDate) && Boolean(result.location?.country)),
+    "catalogue fallback should expose real dated, located conference records"
+  );
+});
+
+test("Discover does not require six enriched tabs before showing a verified core conference", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "server/braveSearch.ts"), "utf8");
+  assert.match(source, /merged\.filter\(isDiscoverableConference\)/);
+  assert.match(source, /browseLaunchDataset\(limit\)\][\s\S]*?filter\(isDiscoverableConference\)/);
+});
