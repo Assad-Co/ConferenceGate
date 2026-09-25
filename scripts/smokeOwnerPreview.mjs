@@ -215,12 +215,12 @@ try {
   const ownerAfterRecovery = await jsonRequest('/api/auth/me', { cookie: owner.cookie });
   if (
     !ownerAfterRecovery.response.ok ||
-    ownerAfterRecovery.data?.user?.role !== 'organizer' ||
+    ownerAfterRecovery.data?.user?.role !== 'professional' ||
     ownerAfterRecovery.data?.user?.ownerPreview !== true ||
     ownerAfterRecovery.data?.user?.avatar !== legacyAvatar
   ) {
     throw new Error(
-      'Professional recovery changed owner identity or failed to restore avatar: ' +
+      'Professional recovery did not restore the original primary identity or avatar: ' +
         JSON.stringify(ownerAfterRecovery.data)
     );
   }
@@ -311,6 +311,7 @@ try {
       sponsorApiReadable: true,
       professionalContextReadable: true,
       professionalPreferencesWritable: true,
+      originalProfessionalRoleRestored: true,
       legacyProfessionalProfileRecovered: true,
       legacyAvatarRestored: true,
       legacyPublicationEvidenceRecovered: true,
