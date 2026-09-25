@@ -920,13 +920,8 @@ export function App() {
       setOrganizerLogoOverride(avatar);
       setSponsorNameOverride(user.organization || user.name);
       setSponsorLogoOverride(avatar);
-      if (mappedRole === 'Professional') {
-        setActiveRole('Professional');
-        setActiveTab('home');
-      } else {
-        setActiveRole('Organizer');
-        setActiveTab('organizer');
-      }
+      setActiveRole('Professional');
+      setActiveTab('profile');
     } else if (mappedRole === 'Organizer') {
       setOrganizerNameOverride(user.organization || user.name);
       setOrganizerLogoOverride(avatar);
@@ -1663,6 +1658,8 @@ export function App() {
             identityVerificationMethod={authUser.identityVerificationMethod}
             professionalInvitations={professionalInvitations}
             keynoteSpeakerMatches={authUser.keynoteSpeakerMatches}
+            ownerPreview={authUser.ownerPreview}
+            primaryAccountRole={authUser.role}
             submissions={submissions}
             posts={posts}
             registrations={registrations}
@@ -1671,7 +1668,7 @@ export function App() {
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
             initialTab={profileInitialTab}
-            variant={authUser.role === 'organizer' ? 'organizer' : authUser.role === 'sponsor' ? 'sponsor' : 'professional'}
+            variant={activeRole === 'Organizer' ? 'organizer' : activeRole === 'Sponsor' ? 'sponsor' : 'professional'}
             notifications={displayedNotifications}
             onMarkNotificationRead={displayedOnMarkNotificationRead}
             onMarkAllNotificationsRead={displayedOnMarkAllNotificationsRead}
