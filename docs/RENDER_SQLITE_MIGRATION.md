@@ -83,3 +83,40 @@ It must report `ready: true`.
 ## Owner preview
 
 The owner-preview path remains independent of billing. Once the owner account exists in the new persistent SQLite database, normal authentication is still required, but Sponsor/Organizer preview access does not require a subscription.
+
+
+## Recover one legacy Professional profile into an existing owner account
+
+If a replacement SQLite owner account was created before the original Professional account was
+recovered, do **not** create a second user and do not replace the current password/billing/workspace
+state.
+
+Use the dedicated email-matched recovery command:
+
+```bash
+DATABASE_PATH=/var/data/conferencegate.db \
+TURSO_DATABASE_URL='...' \
+TURSO_AUTH_TOKEN='...' \
+LEGACY_PROFILE_EMAIL='owner@example.com' \
+npm run database:restore-legacy-professional
+```
+
+The command is **dry-run by default**. It reports which legacy profile fields and Professional
+activity rows would be restored.
+
+After reviewing the output, apply it explicitly:
+
+```bash
+DATABASE_PATH=/var/data/conferencegate.db \
+TURSO_DATABASE_URL='...' \
+TURSO_AUTH_TOKEN='...' \
+LEGACY_PROFILE_EMAIL='owner@example.com' \
+LEGACY_PROFILE_APPLY=1 \
+npm run database:restore-legacy-professional
+```
+
+The recovery preserves the current password, Google identity, primary role, subscription fields,
+billing state, and current SQLite workspaces. It restores Professional-facing identity/profile
+fields (including avatar when present), LinkedIn profile enrichment, publication matches,
+self-reported conference history, registrations, Professional opportunity interests/invitations,
+and reviewer activity where those legacy tables exist.
