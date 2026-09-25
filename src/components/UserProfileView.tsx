@@ -190,18 +190,21 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [professionalRecoveryStatus, setProfessionalRecoveryStatus] = useState<ProfessionalRecoveryStatus | null>(null);
+  const [professionalRecoveryStatusLoaded, setProfessionalRecoveryStatusLoaded] = useState(false);
   const [professionalRecoveryLoading, setProfessionalRecoveryLoading] = useState(false);
   const [professionalRecoveryError, setProfessionalRecoveryError] = useState<string | null>(null);
 
-  const professionalRecoveryRequired =
-    variant === 'professional' && ownerPreview && primaryAccountRole !== 'professional';
+  const ownerProfessionalContext = variant === 'professional' && ownerPreview;
 
   useEffect(() => {
-    if (!professionalRecoveryRequired) {
+    if (!ownerProfessionalContext) {
       setProfessionalRecoveryStatus(null);
+      setProfessionalRecoveryStatusLoaded(false);
       return;
     }
     let cancelled = false;
+    setProfessionalRecoveryStatusLoaded(false);
+    setProfessionalRecoveryError(null);
     fetchProfessionalRecoveryStatus()
       .then((status) => {
         if (!cancelled) setProfessionalRecoveryStatus(status);
@@ -211,11 +214,27 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           setProfessionalRecoveryStatus(null);
           setProfessionalRecoveryError(error?.message || 'Could not check the original Professional account.');
         }
+      })
+      .finally(() => {
+        if (!cancelled) setProfessionalRecoveryStatusLoaded(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [professionalRecoveryRequired]);
+  }, [ownerProfessionalContext]);
+
+  const professionalRecoveryRequired =
+    ownerProfessionalContext &&
+    professionalRecoveryStatusLoaded &&
+    Boolean(
+      professionalRecoveryStatus?.localLegacy.recoverable ||
+      primaryAccountRole !== 'professional' ||
+      (
+        professionalRecoveryStatus &&
+        !professionalRecoveryStatus.current.profilePresent &&
+        !professionalRecoveryStatus.current.avatarPresent
+      )
+    );
 
   const handleRestoreOriginalProfessional = async () => {
     if (!professionalRecoveryStatus?.localLegacy.recoverable) return;
@@ -521,6 +540,20 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       userProfile.contributions.sessionsChaired * 20 +
       userProfile.contributions.speakerRoles * 20
   );
+
+  if (ownerProfessionalContext && !professionalRecoveryStatusLoaded && !professionalRecoveryError) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-8 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-700" />
+          <div>
+            <div className="text-sm font-extrabold text-slate-900">Loading your original Professional profile…</div>
+            <p className="text-xs text-slate-500 mt-1">ConferenceGate is checking the stored Professional identity before showing profile metrics.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (professionalRecoveryRequired) {
     return (
