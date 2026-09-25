@@ -231,8 +231,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       primaryAccountRole !== 'professional' ||
       (
         professionalRecoveryStatus &&
-        !professionalRecoveryStatus.current.profilePresent &&
-        !professionalRecoveryStatus.current.avatarPresent
+        (
+          !professionalRecoveryStatus.current.profilePresent ||
+          (
+            professionalRecoveryStatus.current.counts.experience === 0 &&
+            professionalRecoveryStatus.current.counts.education === 0 &&
+            professionalRecoveryStatus.current.counts.publications === 0 &&
+            professionalRecoveryStatus.current.counts.patents === 0
+          )
+        )
       )
     );
 
