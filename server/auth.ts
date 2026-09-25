@@ -681,6 +681,17 @@ authRouter.post("/avatar", requireAuth, asyncHandler(async (req: AuthedRequest, 
   }
 
   await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatar, req.userId!]);
+
+  // Remember an explicit member choice so future LinkedIn auto-sync never overwrites a
+  // photo the member intentionally uploaded or intentionally removed.
+  await dbRun(
+    "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
+    [
+      `manual_avatar_override:${req.userId!}`,
+      avatar ? "custom" : "removed",
+    ],
+  );
+
   const row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId]))!;
   res.json({ user: await toPublicUser(row) });
 }));
