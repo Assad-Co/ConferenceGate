@@ -42,6 +42,7 @@ import {
   LayoutGrid,
   PieChart,
   ShieldCheck,
+  ShieldAlert,
   MessageSquareQuote,
   MapPin,
 } from 'lucide-react';
