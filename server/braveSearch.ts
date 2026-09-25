@@ -331,7 +331,7 @@ function isCustomerReadyConference(result: LiveSearchResult): boolean {
 function isDiscoverableConference(result: LiveSearchResult): boolean {
   const title = String(result.title || "").trim();
   const link = String(result.link || "").trim();
-  if (!title || !/^https?:\\/\\//i.test(link)) return false;
+  if (!title || !/^https?:\/\//i.test(link)) return false;
   return Boolean(
     result.startDate ||
     result.location?.city ||
