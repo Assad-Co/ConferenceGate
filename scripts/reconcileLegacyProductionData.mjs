@@ -98,6 +98,91 @@ function matchScore(current, candidate) {
   return score;
 }
 
+async function materializeRecoveryShadow(sourceUser, sourceLinkedIn) {
+  if (!(await tableExists(destination, 'users'))) return null;
+
+  const sourceUserId = String(sourceUser.id);
+  const shadowSuffix = crypto.createHash('sha256').update(sourceUserId).digest('hex').slice(0, 16);
+  const shadowId = `legacy_recovery_${shadowSuffix}`;
+  const shadowEmail = `legacy-recovery-${shadowSuffix}@conferencegate.invalid`;
+
+  const sourceUserCols = await columns(source, 'users');
+  const destinationUserCols = new Set(await columns(destination, 'users'));
+  const commonUserCols = sourceUserCols.filter((column) => destinationUserCols.has(column));
+
+  const userValues = commonUserCols.map((column) => {
+    if (column === 'id') return shadowId;
+    if (column === 'email') return shadowEmail;
+    if (column === 'role') return 'professional';
+    if (column === 'google_id' || column === 'linkedin_id') return null;
+    if (column === 'subscription_status') return 'free';
+    if (column === 'subscription_plan' || column === 'subscription_provider' || column === 'subscription_period_end') return null;
+    return sourceUser[column] ?? null;
+  });
+
+  await destination.execute({
+    sql: `INSERT OR IGNORE INTO users (${commonUserCols.map(quoteIdent).join(',')})
+          VALUES (${commonUserCols.map(() => '?').join(',')})`,
+    args: userValues,
+  });
+
+  if (sourceLinkedIn && await tableExists(destination, 'linkedin_profile_enrichment')) {
+    const sourceCols = await columns(source, 'linkedin_profile_enrichment');
+    const destinationCols = new Set(await columns(destination, 'linkedin_profile_enrichment'));
+    const common = sourceCols.filter((column) => destinationCols.has(column));
+    const values = common.map((column) => column === 'user_id' ? shadowId : sourceLinkedIn[column] ?? null);
+    await destination.execute({
+      sql: `INSERT OR REPLACE INTO linkedin_profile_enrichment (${common.map(quoteIdent).join(',')})
+            VALUES (${common.map(() => '?').join(',')})`,
+      args: values,
+    });
+  }
+
+  const activitySpecs = [
+    ['external_paper_matches', 'user_id'],
+    ['self_reported_attendance', 'user_id'],
+    ['self_reported_committee_positions', 'user_id'],
+    ['conference_registrations', 'user_id'],
+  ];
+
+  await destination.execute('PRAGMA foreign_keys=OFF');
+  try {
+    for (const [table, key] of activitySpecs) {
+      if (!(await tableExists(source, table)) || !(await tableExists(destination, table))) continue;
+      const sourceCols = await columns(source, table);
+      const destinationCols = new Set(await columns(destination, table));
+      const common = sourceCols.filter((column) => destinationCols.has(column));
+      if (!common.includes(key)) continue;
+
+      const rows = await source.execute({
+        sql: `SELECT * FROM ${quoteIdent(table)} WHERE ${quoteIdent(key)}=?`,
+        args: [sourceUserId],
+      });
+
+      for (const row of rows.rows) {
+        const payloadHash = crypto.createHash('sha256')
+          .update(JSON.stringify(jsonSafeObject(row)))
+          .digest('hex')
+          .slice(0, 18);
+        const values = common.map((column) => {
+          if (column === key) return shadowId;
+          if (column === 'id') return `legacy_recovery_${payloadHash}`;
+          return row[column] ?? null;
+        });
+        await destination.execute({
+          sql: `INSERT OR IGNORE INTO ${quoteIdent(table)} (${common.map(quoteIdent).join(',')})
+                VALUES (${common.map(() => '?').join(',')})`,
+          args: values,
+        });
+      }
+    }
+  } finally {
+    await destination.execute('PRAGMA foreign_keys=ON');
+  }
+
+  return shadowId;
+}
+
 async function stageProfessional(current) {
   if (!(await tableExists(source, 'users'))) {
     return { candidates: 0, staged: 0, reason: 'legacy users table missing' };
@@ -127,6 +212,8 @@ async function stageProfessional(current) {
       });
       if (result.rows[0]) linkedin = jsonSafeObject(result.rows[0]);
     }
+
+    const shadowId = await materializeRecoveryShadow(item.row, linkedin);
 
     await destination.execute({
       sql: `INSERT INTO legacy_professional_recovery(
@@ -184,6 +271,9 @@ async function stageProfessional(current) {
       }
     }
     staged += 1;
+    if (shadowId) {
+      console.log(`[legacy-reconcile] Professional recovery shadow ready: ${shadowId}`);
+    }
   }
 
   return { candidates: scored.length, bestScore, staged };
