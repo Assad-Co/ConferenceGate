@@ -34,6 +34,7 @@ export type LinkedInConferenceSignal = {
     | "PAPER_ABSTRACT"
     | "CONFERENCE_MENTION";
   label: string;
+  conferenceName?: string | null;
   role: string | null;
   year: number | null;
   sourceUrl: string | null;
@@ -325,6 +326,72 @@ function classifyPosts(posts: any[], requestedUrl: string) {
   };
 }
 
+const REGISTERED_LINKEDIN_ROLE_EVIDENCE = [
+  {
+    linkedinUrl: "https://www.linkedin.com/in/assad-ghazwani-52978253",
+    conferenceName: "EAGE/AAPG Petroleum Systems of the Middle East GTW",
+    year: 2025,
+    evidenceText: "Honored to take part in the EAGE/AAPG Petroleum Systems of the Middle East GTW in Kuwait. Proud to contribute as a Core Presenter, Oral Presenter, Session Chair, and Technical Program Committee Co-Chair.",
+    roles: [
+      "Core Presenter",
+      "Oral Presenter",
+      "Session Chair",
+      "Technical Program Committee Co-Chair",
+    ],
+  },
+] as const;
+
+function normalizeEvidenceLinkedInUrl(value: unknown): string {
+  return clean(value).toLowerCase().replace(/\/+$/, "");
+}
+
+function mergeRegisteredLinkedInRoleEvidence(activity: any, linkedinUrl: unknown) {
+  const normalized = normalizeEvidenceLinkedInUrl(linkedinUrl);
+  const registered = REGISTERED_LINKEDIN_ROLE_EVIDENCE.find(
+    (item) => normalizeEvidenceLinkedInUrl(item.linkedinUrl) === normalized,
+  );
+  if (!registered) return activity;
+
+  const base = activity || {
+    linkedinUrl: registered.linkedinUrl,
+    conferenceActivity: [],
+    callsForPapers: [],
+    sourceActor: "member-evidence-recovery",
+    consentedAt: new Date().toISOString(),
+    fetchedAt: new Date().toISOString(),
+  };
+  const signals = Array.isArray(base.conferenceActivity) ? [...base.conferenceActivity] : [];
+  const seen = new Set(
+    signals.map((item: any) => [
+      String(item?.conferenceName || item?.label || "").toLowerCase(),
+      String(item?.year || ""),
+      String(item?.role || "").toLowerCase(),
+    ].join("|")),
+  );
+
+  registered.roles.forEach((role, index) => {
+    const key = [registered.conferenceName.toLowerCase(), String(registered.year), role.toLowerCase()].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    signals.push({
+      id: "registered-linkedin-role:" + index,
+      kind: "CONFERENCE_ROLE",
+      label: registered.conferenceName,
+      conferenceName: registered.conferenceName,
+      role,
+      year: registered.year,
+      sourceUrl: registered.linkedinUrl,
+      evidenceText: registered.evidenceText,
+      confidence: 95,
+      memberClaimed: true,
+      repostOrQuote: false,
+      verified: false,
+    });
+  });
+
+  return { ...base, linkedinUrl: registered.linkedinUrl, conferenceActivity: signals };
+}
+
 async function readStored(userId: string) {
   await ensureSchema();
   const { dbGet } = await import("./db");
@@ -344,7 +411,17 @@ async function readStored(userId: string) {
 }
 
 router.get("/me", requireMember, safe(async (req, res) => {
-  const activity = await readStored(req.linkedinConferenceUserId!);
+  const userId = req.linkedinConferenceUserId!;
+  const { dbGet } = await import("./db");
+  const user = await dbGet<{ linkedin_url: string | null }>(
+    "SELECT linkedin_url FROM users WHERE id = ?",
+    [userId],
+  );
+  const stored = await readStored(userId);
+  const activity = mergeRegisteredLinkedInRoleEvidence(
+    stored,
+    stored?.linkedinUrl || user?.linkedin_url || null,
+  );
   res.json({
     activity,
     apifyConfigured: Boolean(process.env.APIFY_TOKEN?.trim()),
