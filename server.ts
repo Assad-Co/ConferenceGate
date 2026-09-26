@@ -217,6 +217,38 @@ async function startServer() {
           topLevelKeys: publicFallback.topLevelKeys,
           mediaLike: publicFallback.mediaLike,
         }));
+
+        const extractReaderSignals = (html: string, markdown: string) => {
+          const ogMatch =
+            /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i.exec(html) ||
+            /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i.exec(html);
+          const ogImage = ogMatch?.[1] || "";
+          const markdownImages = [...markdown.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)[^)]*\)/gi)]
+            .map((match) => match[1]);
+          const allCandidates = [ogImage, ...markdownImages].filter(Boolean);
+          return {
+            htmlPresent: Boolean(html),
+            markdownPresent: Boolean(markdown),
+            ogImagePresent: Boolean(ogImage),
+            ogImageLinkedInCdn: /(?:media|media-exp\d*)\.licdn\.com|linkedin\.com/i.test(ogImage),
+            markdownImageCount: markdownImages.length,
+            linkedInCdnImageCount: allCandidates.filter((url) =>
+              /(?:media|media-exp\d*)\.licdn\.com/i.test(url)
+            ).length,
+          };
+        };
+
+        const jinaMarkdown = await jinaReadPage(linkedinUrl);
+        console.log("[linkedin-shape-diagnostic]", JSON.stringify({
+          provider: "jina-reader",
+          ...extractReaderSignals("", jinaMarkdown || ""),
+        }));
+
+        const firecrawlPage = await firecrawlScrape(linkedinUrl, { maxAttempts: 1 });
+        console.log("[linkedin-shape-diagnostic]", JSON.stringify({
+          provider: "firecrawl",
+          ...extractReaderSignals(firecrawlPage?.html || "", firecrawlPage?.markdown || ""),
+        }));
       }
     } catch (error) {
       console.warn("[linkedin-shape-diagnostic] failed", error);
