@@ -251,6 +251,29 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
           };
         },
       },
+      {
+        id: "data-slayer~linkedin-profile-scraper",
+        input: { linkedin_urls: [requestedUrl] },
+        pick(row: Record<string, any>) {
+          return {
+            profileUrl:
+              row.profile_link ||
+              row.linkedin_url ||
+              row.linkedinUrl ||
+              row.profileUrl ||
+              row.url ||
+              requestedUrl,
+            photo:
+              imageUrlFrom(row.profile_image_url) ||
+              imageUrlFrom(row.profileImageUrl) ||
+              imageUrlFrom(row.profile_picture_url) ||
+              imageUrlFrom(row.profilePictureUrl) ||
+              imageUrlFrom(row.avatar_url) ||
+              imageUrlFrom(row.avatarUrl) ||
+              imageUrlFrom(row),
+          };
+        },
+      },
     ] as const;
 
     for (const provider of providers) {
