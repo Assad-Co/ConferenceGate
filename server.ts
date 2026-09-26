@@ -19,6 +19,7 @@ import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
 import { marketplaceIntelligenceRouter } from "./server/marketplaceIntelligence";
+import { initGrowthAutomationSchema } from "./server/growthAutomation";
 import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
 import { paddleWebhookRouter } from "./server/paddleWebhook";
 import { resolvePaidAccountContext } from "./server/workspaceAccess";
@@ -67,6 +68,7 @@ async function startServer() {
   // resolve (a remote Turso database, or falling back to a local SQLite file) — both must
   // be ready before any request can be handled.
   await initDb();
+  await initGrowthAutomationSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
     try {

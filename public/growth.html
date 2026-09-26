@@ -130,6 +130,59 @@
     </div>
 
     <div class="section">
+      <div class="section-head"><h2>Phase 9 — Customer Acquisition & Growth Automation</h2><span class="muted">Operator-controlled lead pipeline, referrals and liquidity targets</span></div>
+      <div class="grid" id="growthAutomationCards"></div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>Add Organizer / Sponsor Lead</h3>
+        <div class="auth-row" style="flex-wrap:wrap">
+          <select id="growthLeadRole" style="border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px">
+            <option value="organizer">Organizer</option>
+            <option value="sponsor">Sponsor</option>
+          </select>
+          <input id="growthLeadOrganization" type="text" placeholder="Organization" />
+          <input id="growthLeadContact" type="text" placeholder="Contact name" />
+          <input id="growthLeadEmail" type="email" placeholder="Email" />
+          <input id="growthLeadSource" type="text" placeholder="Source e.g. LinkedIn" />
+          <input id="growthLeadCampaign" type="text" placeholder="Campaign (optional)" />
+          <button id="addGrowthLeadButton">Add lead</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>Lead Pipeline</h3>
+        <div style="overflow:auto;margin-top:8px">
+          <table>
+            <thead>
+              <tr><th>Role</th><th>Organization / Contact</th><th>Source</th><th>Stage</th><th class="num">Score</th><th>Next action</th><th>Last touch</th></tr>
+            </thead>
+            <tbody id="growthLeadTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="card span-6">
+          <h3>Marketplace Liquidity Targets</h3>
+          <div id="growthLiquidityTargets" style="margin-top:8px"></div>
+        </div>
+        <div class="card span-6">
+          <h3>Referral Loop</h3>
+          <div class="auth-row" style="margin-top:8px;flex-wrap:wrap">
+            <select id="growthReferralRole" style="border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px">
+              <option value="">Any paid role</option>
+              <option value="organizer">Organizer</option>
+              <option value="sponsor">Sponsor</option>
+            </select>
+            <input id="growthReferralLabel" type="text" placeholder="Referral label" />
+            <button id="createReferralButton">Create referral code</button>
+          </div>
+          <div id="growthReferralList" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-head"><h2>Sponsorship Marketplace</h2><span class="muted">Financial currencies remain separate</span></div>
       <div class="grid">
         <div class="card span-6"><h3>Deal pipeline</h3><div style="overflow:auto"><table><thead><tr><th>Status</th><th class="num">Deals</th></tr></thead><tbody id="dealsTable"></tbody></table></div></div>
@@ -253,6 +306,85 @@
     $('organizerSourcesTable').innerHTML = acq.organizerSources?.length ? acq.organizerSources.map((row) => `<tr><td>${esc(row.source)}</td><td>${esc(row.medium || '—')}</td><td class="num">${fmt(row.signups)}</td><td class="num">${fmt(row.paid)}</td><td class="num">${fmt(row.activated)}</td><td class="num">${fmt(row.sponsorshipInventory)}</td><td class="num">${pct(row.signupToPaidPct)}</td><td class="num">${pct(row.signupToActivatedPct)}</td></tr>`).join('') : emptyRow(8, 'No attributed Organizer signups yet');
     $('organizerCampaignsTable').innerHTML = acq.organizerCampaigns?.length ? acq.organizerCampaigns.map((row) => `<tr><td>${esc(row.campaign)}</td><td>${esc(row.source)}</td><td class="num">${fmt(row.signups)}</td><td class="num">${fmt(row.paid)}</td><td class="num">${fmt(row.activated)}</td><td class="num">${pct(row.signupToPaidPct)}</td><td class="num">${pct(row.signupToActivatedPct)}</td></tr>`).join('') : emptyRow(7, 'No attributed Organizer campaigns yet');
 
+    const ga = data.growthAutomation || {};
+    const gaOrganizer = ga.organizer || {};
+    const gaSponsor = ga.sponsor || {};
+    const liquidity = ga.liquidity || {};
+    $('growthAutomationCards').innerHTML = [
+      `<div class="card span-3"><h3>Organizer lead pipeline</h3><div class="metric">${fmt(gaOrganizer.total)}</div><div class="small">${fmt(gaOrganizer.qualified)} qualified · ${fmt(gaOrganizer.signup)} signed up · ${pct(gaOrganizer.leadToSignupPct)} lead→signup</div></div>`,
+      `<div class="card span-3"><h3>Sponsor lead pipeline</h3><div class="metric">${fmt(gaSponsor.total)}</div><div class="small">${fmt(gaSponsor.qualified)} qualified · ${fmt(gaSponsor.signup)} signed up · ${pct(gaSponsor.leadToSignupPct)} lead→signup</div></div>`,
+      `<div class="card span-3"><h3>Overdue follow-ups</h3><div class="metric">${fmt(ga.overdueFollowUps)}</div><div class="small">Open leads whose next-action time has passed</div></div>`,
+      `<div class="card span-3"><h3>Marketplace liquidity</h3><div class="metric">${liquidity.sponsorToInventoryRatio == null ? '—' : fmt(liquidity.sponsorToInventoryRatio)}</div><div class="small">Sponsors per active opportunity · ${pct(liquidity.inquiryCoveragePct)} inquiry coverage</div></div>`,
+    ].join('');
+
+    const leadStages = ['new','contacted','qualified','invited','signup','activated','paid','lost'];
+    $('growthLeadTable').innerHTML = ga.leads?.length
+      ? ga.leads.map((lead) => {
+          const identity = [lead.organization, lead.contact_name, lead.email].filter(Boolean).map(esc).join('<br>');
+          const source = [lead.source, lead.campaign].filter(Boolean).map(esc).join(' · ') || '—';
+          const nextAction = lead.next_action
+            ? `<b>${esc(lead.next_action)}</b>${lead.next_action_at ? `<br><span class="small">${esc(new Date(lead.next_action_at).toLocaleString())}</span>` : ''}`
+            : '—';
+          const lastTouch = lead.last_outreach_at
+            ? esc(new Date(lead.last_outreach_at).toLocaleString())
+            : 'No outreach logged';
+          return `<tr>
+            <td class="role">${esc(lead.role)}</td>
+            <td>${identity || '—'}</td>
+            <td>${source}</td>
+            <td>
+              <select class="growth-stage-select" data-id="${esc(lead.id)}" style="border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px">
+                ${leadStages.map((stage) => `<option value="${stage}" ${String(lead.stage)===stage?'selected':''}>${stage}</option>`).join('')}
+              </select>
+            </td>
+            <td class="num">${fmt(lead.score)}</td>
+            <td>${nextAction}</td>
+            <td>${lastTouch}<br><button class="secondary growth-outreach-button" data-id="${esc(lead.id)}" style="margin-top:5px;padding:5px 8px">Log touch</button></td>
+          </tr>`;
+        }).join('')
+      : emptyRow(7, 'No growth leads yet');
+
+    const targets = liquidity.targets || {};
+    const targetRows = [
+      ['organizer_pipeline','Qualified Organizer leads',gaOrganizer.qualified,targets.organizerPipeline],
+      ['sponsor_pipeline','Qualified Sponsor leads',gaSponsor.qualified,targets.sponsorPipeline],
+      ['active_inventory','Active sponsorship opportunities',liquidity.activeInventory,targets.activeInventory],
+      ['sponsor_to_inventory_ratio','Sponsors per active opportunity',liquidity.sponsorToInventoryRatio,targets.sponsorToInventoryRatio],
+      ['inquiry_coverage_pct','Inquiry coverage (%)',liquidity.inquiryCoveragePct,targets.inquiryCoveragePct],
+    ];
+    $('growthLiquidityTargets').innerHTML = targetRows.map(([key,label,current,target]) =>
+      `<div class="movement">
+        <span><b>${esc(label)}</b><br><span class="small">Current ${current == null ? '—' : fmt(current)} · target ${target == null ? '—' : fmt(target)}</span></span>
+        <span style="display:flex;gap:6px;align-items:center"><input class="growth-target-input" data-key="${key}" type="number" min="0" step="0.1" value="${target == null ? '' : esc(target)}" style="width:82px;padding:6px 8px"><button class="secondary growth-target-save" data-key="${key}" style="padding:6px 8px">Save</button></span>
+      </div>`
+    ).join('');
+
+    $('growthReferralList').innerHTML = ga.referrals?.length
+      ? ga.referrals.map((referral) =>
+          `<div class="movement"><span><b>${esc(referral.code)}</b><br><span class="small">${esc(referral.label || 'Referral')} · ${esc(referral.role_target || 'any role')}</span></span><span class="badge ok">${fmt(referral.conversions)} conversions</span></div>`
+        ).join('')
+      : '<div class="empty">No referral codes created yet</div>';
+
+    document.querySelectorAll('.growth-stage-select').forEach((node) => {
+      node.addEventListener('change', (event) => {
+        const el = event.currentTarget;
+        updateGrowthLeadStage(el.dataset.id, el.value);
+      });
+    });
+    document.querySelectorAll('.growth-outreach-button').forEach((node) => {
+      node.addEventListener('click', (event) => {
+        const el = event.currentTarget;
+        logGrowthOutreach(el.dataset.id);
+      });
+    });
+    document.querySelectorAll('.growth-target-save').forEach((node) => {
+      node.addEventListener('click', (event) => {
+        const key = event.currentTarget.dataset.key;
+        const input = document.querySelector(`.growth-target-input[data-key="${key}"]`);
+        saveGrowthTarget(key, input?.value);
+      });
+    });
+
     const market = data.marketplace || {};
     $('dealsTable').innerHTML = market.dealStates?.length ? market.dealStates.map((row) => `<tr><td>${esc(row.status).replaceAll('_',' ')}</td><td class="num">${fmt(row.count)}</td></tr>`).join('') : emptyRow(2);
     $('payoutsTable').innerHTML = market.payouts?.length ? market.payouts.map((row) => `<tr><td>${esc(row.status)}</td><td>${esc(row.currency)}</td><td class="num">${fmt(row.count)}</td><td class="num">${fmt(row.amount)}</td></tr>`).join('') : emptyRow(4);
@@ -298,6 +430,118 @@
       const row = cohort[role] || {};
       return `<tr><td class="role">${esc(role)}</td><td class="num">${fmt(row.members)}</td><td class="num">${fmt(row.paid)} · ${pct(row.paidPct)}</td><td class="num">${fmt(row.activated)} · ${pct(row.activationPct)}</td><td class="num">${fmt(row.marketplaceExposure)} · ${pct(row.exposurePct)}</td><td class="num">${fmt(row.inquiries)} · ${pct(row.inquiryPct)}</td><td class="num">${fmt(row.deals)} · ${pct(row.dealPct)}</td><td class="num">${fmt(row.payments)} · ${pct(row.paymentPct)}</td></tr>`;
     }).join('');
+  }
+
+  async function adminJson(path, options = {}) {
+    if (!adminToken) throw new Error('Unlock the dashboard first.');
+    const res = await fetch(path, {
+      credentials: 'include',
+      ...options,
+      headers: {
+        'content-type': 'application/json',
+        'x-discovery-admin-token': adminToken,
+        ...(options.headers || {}),
+      },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `Request failed (${res.status}).`);
+    return body;
+  }
+
+  async function addGrowthLead() {
+    const role = $('growthLeadRole').value;
+    const organization = $('growthLeadOrganization').value.trim();
+    const contactName = $('growthLeadContact').value.trim();
+    const email = $('growthLeadEmail').value.trim();
+    const source = $('growthLeadSource').value.trim();
+    const campaign = $('growthLeadCampaign').value.trim();
+    if (!organization && !contactName && !email) {
+      setNotice('Add an organization, contact name, or email for the lead.');
+      return;
+    }
+    $('addGrowthLeadButton').disabled = true;
+    clearNotice();
+    try {
+      await adminJson('/api/admin/discovery/growth-leads', {
+        method: 'POST',
+        body: JSON.stringify({ role, organization, contactName, email, source, campaign }),
+      });
+      ['growthLeadOrganization','growthLeadContact','growthLeadEmail','growthLeadSource','growthLeadCampaign']
+        .forEach((id) => { $(id).value = ''; });
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not add growth lead.');
+    } finally {
+      $('addGrowthLeadButton').disabled = false;
+    }
+  }
+
+  async function updateGrowthLeadStage(id, stage) {
+    if (!id) return;
+    clearNotice();
+    try {
+      await adminJson(`/api/admin/discovery/growth-leads/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ stage }),
+      });
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not update lead stage.');
+    }
+  }
+
+  async function logGrowthOutreach(id) {
+    if (!id) return;
+    const channel = window.prompt('Channel used (email, LinkedIn, phone, meeting):', 'email');
+    if (channel === null) return;
+    const note = window.prompt('Short note about this touch (optional):', '') ?? '';
+    clearNotice();
+    try {
+      await adminJson(`/api/admin/discovery/growth-leads/${encodeURIComponent(id)}/outreach`, {
+        method: 'POST',
+        body: JSON.stringify({ channel: channel || 'other', eventType: 'manual_touch', note }),
+      });
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not log outreach.');
+    }
+  }
+
+  async function createReferralCode() {
+    const roleTarget = $('growthReferralRole').value;
+    const label = $('growthReferralLabel').value.trim();
+    $('createReferralButton').disabled = true;
+    clearNotice();
+    try {
+      await adminJson('/api/admin/discovery/growth-referrals', {
+        method: 'POST',
+        body: JSON.stringify({ roleTarget: roleTarget || undefined, label: label || undefined }),
+      });
+      $('growthReferralLabel').value = '';
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not create referral code.');
+    } finally {
+      $('createReferralButton').disabled = false;
+    }
+  }
+
+  async function saveGrowthTarget(key, value) {
+    const targetValue = Number(value);
+    if (!key || !Number.isFinite(targetValue) || targetValue < 0) {
+      setNotice('Growth target must be a non-negative number.');
+      return;
+    }
+    clearNotice();
+    try {
+      await adminJson(`/api/admin/discovery/growth-targets/${encodeURIComponent(key)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ targetValue }),
+      });
+      await loadDashboard();
+    } catch (error) {
+      setNotice(error?.message || 'Could not update growth target.');
+    }
   }
 
   async function addCohortMember() {
@@ -374,6 +618,8 @@
   }
 
   $('loadButton').addEventListener('click', loadDashboard);
+  $('addGrowthLeadButton').addEventListener('click', addGrowthLead);
+  $('createReferralButton').addEventListener('click', createReferralCode);
   $('addCohortButton').addEventListener('click', addCohortMember);
   $('tokenInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadDashboard(); });
   $('refreshButton').addEventListener('click', loadDashboard);
