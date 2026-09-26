@@ -71,7 +71,10 @@ export interface BillingLedger {
   payments: BillingLedgerPayment[];
 }
 
-export async function fetchBillingLedger(): Promise<BillingLedger> {
-  const res = await fetch('/api/billing/ledger/mine', { credentials: 'include' });
+export async function fetchBillingLedger(
+  perspective?: 'organizer' | 'sponsor'
+): Promise<BillingLedger> {
+  const query = perspective ? `?role=${encodeURIComponent(perspective)}` : '';
+  const res = await fetch(`/api/billing/ledger/mine${query}`, { credentials: 'include' });
   return parseResponse(res);
 }
