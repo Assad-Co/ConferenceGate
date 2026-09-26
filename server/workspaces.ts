@@ -237,6 +237,38 @@ workspacesRouter.post(
        VALUES(?,?,?,?,?,?,?,?,?)`,
       [user.id, user.role, normalizedSource, medium, campaign, content, term, referralCode, landingPath]
     );
+
+    // Phase 9 referral loop: explicit ?ref= codes become durable conversions only when the code
+    // exists and its role target matches the account that actually signed up.
+    if (referralCode) {
+      const referral = await dbGet<any>(
+        "SELECT * FROM growth_referral_codes WHERE lower(code)=lower(?) AND active=1 LIMIT 1",
+        [referralCode],
+      );
+      if (referral && (!referral.role_target || referral.role_target === user.role)) {
+        await dbRun(
+          `INSERT OR IGNORE INTO growth_referral_conversions(id,referral_code_id,referred_user_id)
+           VALUES(?,?,?)`,
+          [`grefc_${crypto.randomUUID()}`, referral.id, user.id],
+        );
+      }
+    }
+
+    // If this signup was already being tracked as a Phase 9 lead, connect the lead to the real
+    // account immediately. Later dashboard snapshots advance it further from activation/paid state.
+    await dbRun(
+      `UPDATE growth_leads
+          SET converted_user_id=?,
+              stage=CASE
+                WHEN stage IN ('new','contacted','qualified','invited') THEN 'signup'
+                ELSE stage
+              END,
+              score=CASE WHEN score<75 THEN 75 ELSE score END,
+              updated_at=datetime('now')
+        WHERE role=? AND email<>'' AND lower(email)=lower(?) AND stage<>'lost'`,
+      [user.id, user.role, user.email],
+    );
+
     const record = await dbGet<any>("SELECT * FROM account_acquisition WHERE user_id=?", [user.id]);
     res.status(201).json({
       acquisition: record
