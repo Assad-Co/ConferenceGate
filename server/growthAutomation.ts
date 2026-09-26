@@ -263,6 +263,60 @@ export async function setGrowthTarget(key: string, targetValue: number) {
   return dbGet<any>("SELECT * FROM growth_targets WHERE key=?", [key]);
 }
 
+async function syncGrowthLeadConversions() {
+  const leads = await dbAll<any>(
+    `SELECT * FROM growth_leads WHERE stage<>'lost' ORDER BY updated_at DESC LIMIT 500`
+  );
+  const rank: Record<string, number> = {
+    new: 0, contacted: 1, qualified: 2, invited: 3, signup: 4, activated: 5, paid: 6, lost: 99,
+  };
+
+  for (const lead of leads) {
+    const user = lead.converted_user_id
+      ? await dbGet<any>("SELECT * FROM users WHERE id=?", [lead.converted_user_id])
+      : lead.email
+        ? await dbGet<any>(
+            "SELECT * FROM users WHERE lower(email)=lower(?) AND role=? LIMIT 1",
+            [lead.email, lead.role],
+          )
+        : null;
+    if (!user) continue;
+
+    let desired: GrowthLeadStage = "signup";
+    const paid = ["active","trialing"].includes(String(user.subscription_status || ""));
+    if (paid) {
+      desired = "paid";
+    } else if (lead.role === "organizer") {
+      const activated = await dbGet<{ ok: number }>(
+        "SELECT 1 AS ok FROM created_conferences WHERE organizer_id=? LIMIT 1",
+        [user.id],
+      );
+      if (activated) desired = "activated";
+    } else {
+      const activated = await dbGet<{ ok: number }>(
+        `SELECT 1 AS ok
+           WHERE EXISTS(SELECT 1 FROM sponsor_preferences WHERE sponsor_id=?)
+              OR EXISTS(SELECT 1 FROM sponsor_saved_opportunities WHERE sponsor_id=?)
+              OR EXISTS(SELECT 1 FROM sponsorship_need_inquiries WHERE sponsor_id=?)
+           LIMIT 1`,
+        [user.id, user.id, user.id],
+      );
+      if (activated) desired = "activated";
+    }
+
+    const currentRank = rank[String(lead.stage)] ?? 0;
+    const desiredRank = rank[desired] ?? 0;
+    if (desiredRank > currentRank || !lead.converted_user_id) {
+      await dbRun(
+        `UPDATE growth_leads
+            SET stage=?,converted_user_id=?,score=CASE WHEN score<? THEN ? ELSE score END,updated_at=datetime('now')
+          WHERE id=?`,
+        [desiredRank > currentRank ? desired : lead.stage, user.id, desired === "paid" ? 95 : desired === "activated" ? 85 : 75, desired === "paid" ? 95 : desired === "activated" ? 85 : 75, lead.id],
+      );
+    }
+  }
+}
+
 export async function listGrowthLeads(limit = 100) {
   return dbAll<any>(
     `SELECT l.*,
@@ -284,6 +338,7 @@ export async function listGrowthLeads(limit = 100) {
 
 export async function buildGrowthAutomationSnapshot() {
   await initGrowthAutomationSchema();
+  await syncGrowthLeadConversions();
 
   const [leads, stages, overdue, targets, referrals, activeInventory, sponsorAccounts, inquiryInventory] =
     await Promise.all([
