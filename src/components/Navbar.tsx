@@ -180,18 +180,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-blue-50 border-b border-blue-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 overflow-x-auto">
+      <div className="w-full mx-auto px-1 sm:px-2 md:px-3 lg:px-4 xl:px-5">
+        <div className="flex items-center h-14 min-w-0 overflow-hidden">
           {/* Brand Logo + Search, LinkedIn-style */}
-          <div className="flex items-center gap-2 min-w-[132px] md:min-w-[250px] shrink-0 md:shrink">
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink-0">
             <button
               onClick={() => handleTabChange(isOrganizerRole ? 'organizer' : isSponsorRole ? 'sponsor' : 'home')}
               className="flex items-center group text-left cursor-pointer shrink-0"
             >
-              <Logo className="h-11 w-auto" />
+              <Logo className="h-7 sm:h-8 md:h-9 xl:h-10 w-auto max-w-[82px] sm:max-w-[108px] md:max-w-[132px] lg:max-w-[148px] xl:max-w-[170px] object-contain" />
             </button>
 
-            <div className="hidden md:flex w-36 sm:w-44 lg:w-56 xl:w-64 min-w-[110px] shrink">
+            <div className="hidden md:flex w-[clamp(5rem,10vw,10rem)] xl:w-[clamp(6rem,11vw,12rem)] 2xl:w-56 min-w-0 shrink">
               <form onSubmit={handleSearchSubmit} className="relative w-full">
                 <input
                   type="text"
@@ -208,7 +208,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Center Icon Nav, LinkedIn-style — always visible, never tucked behind a menu.
               Extra padding/gap so a short tab list (e.g. organizer/sponsor accounts, which
               only get 2 tabs) still fills its space instead of looking sparse. */}
-          <nav className="flex items-center gap-1 sm:gap-3 lg:gap-5 h-14 shrink-0">
+          <nav className="flex flex-1 min-w-0 items-center justify-center gap-0 sm:gap-0.5 md:gap-1 h-14">
             {navItems.map((item) => {
               const isActive = item.match.includes(activeTab);
               const Icon = item.icon;
@@ -217,29 +217,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={item.id}
                   onClick={() => handleTabChange(item.id)}
                   title={item.label}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-3 sm:px-5 lg:px-6 h-14 min-w-[44px] sm:min-w-[72px] border-b-2 transition-colors cursor-pointer shrink-0 ${
+                  className={`flex flex-col items-center justify-center gap-0.5 px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 h-14 min-w-[28px] sm:min-w-[34px] md:min-w-[40px] lg:min-w-[48px] xl:min-w-[58px] border-b-2 transition-colors cursor-pointer shrink-0 ${
                     isActive
                       ? 'border-slate-900 text-slate-900'
                       : 'border-transparent text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'fill-slate-900/10' : ''}`} strokeWidth={isActive ? 2.25 : 1.75} />
-                  <span className="hidden sm:block text-[11px] font-medium">{item.label}</span>
+                  <Icon className={`w-4 h-4 sm:w-[18px] sm:h-[18px] md:w-5 md:h-5 ${isActive ? 'fill-slate-900/10' : ''}`} strokeWidth={isActive ? 2.25 : 1.75} />
+                  <span className="hidden xl:block text-[10px] 2xl:text-[11px] font-medium whitespace-nowrap">{item.label}</span>
                 </button>
               );
             })}
           </nav>
 
           {/* Right Action Icons & Role Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 shrink-0">
             {/* AI Assistant Button */}
             <button
               onClick={handleOpenAI}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-semibold shadow-xs hover:shadow-md transition-all hover:opacity-95 cursor-pointer"
+              className="flex items-center gap-1 px-1.5 sm:px-2 md:px-2.5 xl:px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-semibold shadow-xs hover:shadow-md transition-all hover:opacity-95 cursor-pointer"
               title="Conference Gate AI Assistant"
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
-              <span className="hidden xl:inline">AI Assistant</span>
+              <span className="hidden 2xl:inline">AI Assistant</span>
             </button>
 
             {/* Role Switcher Pill */}
@@ -247,11 +247,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 ref={roleTriggerRef}
                 onClick={toggleRoleMenu}
-                className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-200/80 cursor-pointer"
+                className="flex items-center gap-0.5 px-1 sm:px-1.5 md:px-2 lg:px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-200/80 cursor-pointer"
               >
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 mr-1">{ownerPreview ? 'Preview:' : 'Role:'}</span>
-                <span className="capitalize text-blue-700 font-bold">{role}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden 2xl:inline text-[10px] uppercase tracking-wider text-slate-400 mr-0.5">{ownerPreview ? 'Preview:' : 'Role:'}</span>
+                <span className="hidden md:inline capitalize text-blue-700 font-bold">{role}</span>
+                <span className="md:hidden uppercase text-blue-700 font-bold">{role.charAt(0)}</span>
+                <ChevronDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />
               </button>
               {roleMenuOpen && roleMenuPos && (
                 <div
@@ -347,7 +348,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Digital Event Badge Quick Access */}
             <button
               onClick={onOpenDigitalBadge}
-              className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+              className="p-1 sm:p-1.5 md:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
               title="Digital Attendee Badge & QR Check-In"
             >
               <QrCode className="w-4 h-4" />
@@ -356,7 +357,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Direct Messages Icon */}
             <button
               onClick={onOpenMessages}
-              className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+              className="p-1 sm:p-1.5 md:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
               title="Direct Messages"
             >
               <MessageSquare className="w-4 h-4" />
@@ -368,7 +369,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Notifications — Sponsorship Alerts while in Sponsor role, Notifications tab otherwise */}
             <button
               onClick={bellClickHandler}
-              className="p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+              className="p-1 sm:p-1.5 md:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
               title={bellTitle}
             >
               <Bell className="w-4 h-4" />
@@ -378,7 +379,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {/* Identity Avatar & Menu — reflects the active role (professional, organizer, or sponsor) */}
-            <div className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
+            <div className="flex items-center gap-1 p-0.5 sm:p-1 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
               <button
                 onClick={() => handleTabChange(identityTab)}
                 className="flex items-center gap-2 cursor-pointer"
@@ -387,7 +388,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <img
                     src={identity.avatar}
                     alt={identity.name}
-                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover ring-1 ring-blue-500/30"
                   />
                   {canCustomizeLogo && (
                     <span
@@ -402,7 +403,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   )}
                 </span>
-                <div className="hidden xl:block text-left pr-1">
+                <div className="hidden 2xl:block text-left pr-1">
                   <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
                   <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
                     <ShieldCheck className="w-3 h-3" />
