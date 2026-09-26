@@ -130,6 +130,59 @@
     </div>
 
     <div class="section">
+      <div class="section-head"><h2>Phase 9 — Customer Acquisition & Growth Automation</h2><span class="muted">Operator-controlled lead pipeline, referrals and liquidity targets</span></div>
+      <div class="grid" id="growthAutomationCards"></div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>Add Organizer / Sponsor Lead</h3>
+        <div class="auth-row" style="flex-wrap:wrap">
+          <select id="growthLeadRole" style="border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px">
+            <option value="organizer">Organizer</option>
+            <option value="sponsor">Sponsor</option>
+          </select>
+          <input id="growthLeadOrganization" type="text" placeholder="Organization" />
+          <input id="growthLeadContact" type="text" placeholder="Contact name" />
+          <input id="growthLeadEmail" type="email" placeholder="Email" />
+          <input id="growthLeadSource" type="text" placeholder="Source e.g. LinkedIn" />
+          <input id="growthLeadCampaign" type="text" placeholder="Campaign (optional)" />
+          <button id="addGrowthLeadButton">Add lead</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>Lead Pipeline</h3>
+        <div style="overflow:auto;margin-top:8px">
+          <table>
+            <thead>
+              <tr><th>Role</th><th>Organization / Contact</th><th>Source</th><th>Stage</th><th class="num">Score</th><th>Next action</th><th>Last touch</th></tr>
+            </thead>
+            <tbody id="growthLeadTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="card span-6">
+          <h3>Marketplace Liquidity Targets</h3>
+          <div id="growthLiquidityTargets" style="margin-top:8px"></div>
+        </div>
+        <div class="card span-6">
+          <h3>Referral Loop</h3>
+          <div class="auth-row" style="margin-top:8px;flex-wrap:wrap">
+            <select id="growthReferralRole" style="border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px">
+              <option value="">Any paid role</option>
+              <option value="organizer">Organizer</option>
+              <option value="sponsor">Sponsor</option>
+            </select>
+            <input id="growthReferralLabel" type="text" placeholder="Referral label" />
+            <button id="createReferralButton">Create referral code</button>
+          </div>
+          <div id="growthReferralList" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-head"><h2>Sponsorship Marketplace</h2><span class="muted">Financial currencies remain separate</span></div>
       <div class="grid">
         <div class="card span-6"><h3>Deal pipeline</h3><div style="overflow:auto"><table><thead><tr><th>Status</th><th class="num">Deals</th></tr></thead><tbody id="dealsTable"></tbody></table></div></div>
