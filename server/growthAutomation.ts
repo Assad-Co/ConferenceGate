@@ -66,7 +66,7 @@ export async function initGrowthAutomationSchema() {
       id TEXT PRIMARY KEY,
       code TEXT NOT NULL UNIQUE,
       owner_user_id TEXT,
-      role_target TEXT CHECK(role_target IN ('organizer','sponsor') OR role_target IS NULL),
+      role_target TEXT CHECK(role_target IS NULL OR role_target IN ('organizer','sponsor')),
       label TEXT,
       active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
