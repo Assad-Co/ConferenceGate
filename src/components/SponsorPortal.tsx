@@ -53,7 +53,6 @@ import {
 } from '../api/sponsors';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
-import { BillingLedgerPanel } from './BillingLedgerPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 
 interface SponsorPortalProps {
@@ -92,7 +91,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onApplyForSponsorship = (_packageId: string) => {},
   ownerPreview = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'payments' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -689,30 +688,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           Matching Preferences
         </button>
         {!ownerPreview && (
-          <>
-            <button
-              onClick={() => setActiveTab('workspace')}
-              className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'workspace'
-                  ? 'bg-blue-600 text-white font-bold shadow-xs'
-                  : 'hover:bg-slate-100 text-slate-700'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Team & Access
-            </button>
-            <button
-              onClick={() => setActiveTab('payments')}
-              className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'payments'
-                  ? 'bg-blue-600 text-white font-bold shadow-xs'
-                  : 'hover:bg-slate-100 text-slate-700'
-              }`}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              Payment Ledger
-            </button>
-          </>
+          <button
+            onClick={() => setActiveTab('workspace')}
+            className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'workspace'
+                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                : 'hover:bg-slate-100 text-slate-700'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Team & Access
+          </button>
         )}
         <button
           onClick={() => setActiveTab('roi')}
@@ -1479,10 +1465,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Paid Sponsor Pro: Team & Access */}
       {!ownerPreview && activeTab === 'workspace' && (
         <WorkspaceTeamPanel accountLabel="Sponsor Pro" />
-      )}
-
-      {!ownerPreview && activeTab === 'payments' && (
-        <BillingLedgerPanel perspective="sponsor" />
       )}
 
       {/* Sponsor Pro: real portfolio analytics */}
