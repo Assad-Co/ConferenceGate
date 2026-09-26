@@ -300,7 +300,42 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
     }
   }
 
-  // Fallback 1: Brave's exact LinkedIn web result. Brave frequently carries a thumbnail for a
+  // Fallback 1: render the exact public LinkedIn page with ConferenceGate\'s installed Chromium.
+  // Accept og:image only when the page declares an og:url for the exact same /in/<slug>.
+  // This rejects login/interstitial pages and generic LinkedIn artwork.
+  try {
+    const { fetchRenderedHtml } = await import("./browserFetch");
+    const html = await fetchRenderedHtml(requestedUrl);
+    if (html) {
+      const readMeta = (property: string): string => {
+        const first = new RegExp(
+          '<meta[^>]+(?:property|name)=["\\\']' + property + '["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']',
+          "i",
+        ).exec(html);
+        const second = new RegExp(
+          '<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+(?:property|name)=["\\\']' + property + '["\\\']',
+          "i",
+        ).exec(html);
+        return first?.[1] || second?.[1] || "";
+      };
+      const declaredUrl = readMeta("og:url");
+      const ogImage = readMeta("og:image");
+      if (exactProfile(declaredUrl) && /^https:\\/\\//i.test(ogImage)) {
+        const owned = await ownImage(ogImage);
+        if (owned) {
+          console.log("[owner-avatar-repair] restored exact LinkedIn portrait via rendered public profile");
+          return owned;
+        }
+      }
+    }
+  } catch (error: any) {
+    console.warn(
+      "[owner-avatar-repair] rendered LinkedIn portrait fallback failed",
+      error?.message || String(error),
+    );
+  }
+
+  // Fallback 2: Brave\'s exact LinkedIn web result. Brave frequently carries a thumbnail for a
   // public profile even when LinkedIn blocks direct page readers. Only accept a thumbnail whose
   // result URL resolves to the exact same /in/<slug>, never a name-only match.
   if (process.env.BRAVE_SEARCH_API_KEY) {
@@ -327,7 +362,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
     }
   }
 
-  // Fallback 2: Google/Serper image search, again requiring the image's landing page to be the
+  // Fallback 3: Google/Serper image search, again requiring the image's landing page to be the
   // exact LinkedIn profile. This avoids ever assigning a similarly named person's portrait.
   if (process.env.SERPER_API_KEY) {
     try {
