@@ -19,6 +19,7 @@ import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
 import { marketplaceIntelligenceRouter } from "./server/marketplaceIntelligence";
+import { enterpriseRouter, enterpriseApiRouter, initEnterpriseSchema } from "./server/enterprise";
 import { initGrowthAutomationSchema } from "./server/growthAutomation";
 import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
 import { paddleWebhookRouter } from "./server/paddleWebhook";
@@ -69,6 +70,7 @@ async function startServer() {
   // be ready before any request can be handled.
   await initDb();
   await initGrowthAutomationSchema();
+  await initEnterpriseSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
     try {
@@ -429,6 +431,10 @@ async function startServer() {
 
   // Phase 8 marketplace intelligence: deterministic account action queues from real marketplace state.
   app.use("/api/marketplace-intelligence", marketplaceIntelligenceRouter);
+
+  // Phase 10 enterprise workspace controls and scoped read-only Enterprise API.
+  app.use("/api/enterprise", enterpriseRouter);
+  app.use("/api/enterprise/v1", enterpriseApiRouter);
 
   // Real community feed: posts, reactions, comments, reposts, saves
   app.use("/api/posts", postsRouter);
