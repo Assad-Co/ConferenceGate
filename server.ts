@@ -110,6 +110,88 @@ async function startServer() {
     }
   }
 
+  if (process.env.LINKEDIN_PROFILE_SHAPE_DIAGNOSTIC === "1") {
+    try {
+      const token = process.env.APIFY_TOKEN?.trim();
+      const users = await dbAll<{ id: string; email: string; linkedin_url: string | null }>(
+        "SELECT id, email, linkedin_url FROM users"
+      );
+      const owner = users.find((row) => isOwnerPreviewEmail(row.email)) || null;
+      const linkedinUrl = owner?.linkedin_url?.trim() || "";
+      if (!token || !linkedinUrl) {
+        console.log("[linkedin-shape-diagnostic]", JSON.stringify({
+          configured: Boolean(token),
+          linkedInUrlPresent: Boolean(linkedinUrl),
+          skipped: true,
+        }));
+      } else {
+        const endpoint = new URL(
+          "https://api.apify.com/v2/actors/harvestapi~linkedin-profile-scraper/run-sync-get-dataset-items",
+        );
+        endpoint.searchParams.set("format", "json");
+        endpoint.searchParams.set("clean", "true");
+        endpoint.searchParams.set("maxItems", "1");
+        endpoint.searchParams.set("maxTotalChargeUsd", "0.05");
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            profileScraperMode: "Profile details no email ($4 per 1k)",
+            queries: [linkedinUrl],
+          }),
+        });
+
+        const payload = await response.json().catch(() => null);
+        const row = Array.isArray(payload) && payload[0] && typeof payload[0] === "object"
+          ? payload[0] as Record<string, unknown>
+          : null;
+
+        const shape: Array<{ path: string; type: string }> = [];
+        const visit = (value: unknown, path: string, depth: number) => {
+          if (depth > 5 || shape.length >= 300) return;
+          if (Array.isArray(value)) {
+            shape.push({ path, type: `array(${value.length})` });
+            if (value.length) visit(value[0], `${path}[0]`, depth + 1);
+            return;
+          }
+          if (value && typeof value === "object") {
+            shape.push({ path, type: "object" });
+            for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+              visit(child, path ? `${path}.${key}` : key, depth + 1);
+            }
+            return;
+          }
+          if (typeof value === "string") {
+            shape.push({
+              path,
+              type: /^https:\/\//i.test(value) ? "https-string" : "string",
+            });
+            return;
+          }
+          shape.push({ path, type: value === null ? "null" : typeof value });
+        };
+
+        if (row) visit(row, "", 0);
+        const mediaLike = shape.filter((item) =>
+          /photo|picture|image|avatar|display/i.test(item.path)
+        );
+        console.log("[linkedin-shape-diagnostic]", JSON.stringify({
+          httpStatus: response.status,
+          itemReturned: Boolean(row),
+          topLevelKeys: row ? Object.keys(row).sort() : [],
+          mediaLike,
+        }));
+      }
+    } catch (error) {
+      console.warn("[linkedin-shape-diagnostic] failed", error);
+    }
+  }
+
   await initAuthSecret();
   // The discovery engine's own tables. Purely additive `CREATE TABLE IF NOT EXISTS` on new
   // `discovery_*` names — no existing table is altered and no existing row is touched.
