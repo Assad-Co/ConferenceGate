@@ -196,12 +196,13 @@ export async function updateGrowthLead(
       WHERE id=?`,
     [
       nextStage || current.stage,
+      scoreValue,
       input.nextAction === undefined ? current.next_action : clean(input.nextAction, 400),
       input.nextActionAt === undefined ? current.next_action_at : clean(input.nextActionAt, 40),
       input.notes === undefined ? current.notes : clean(input.notes, 1200),
       input.convertedUserId === undefined ? current.converted_user_id : clean(input.convertedUserId, 120),
       id,
-    ].map((value, index) => (index === 1 ? scoreValue : value)),
+    ],
   );
   return getGrowthLead(id);
 }
