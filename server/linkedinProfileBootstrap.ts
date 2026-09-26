@@ -201,7 +201,7 @@ function imageUrlFrom(value: unknown, depth = 0): string | null {
   return null;
 }
 
-async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<string | null> {
+export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<string | null> {
   const requestedUrl = normalizeLinkedInProfileUrl(linkedinUrl);
   if (!requestedUrl) return null;
 
