@@ -42,6 +42,7 @@ import {
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { requireInternalCrawlAuthorization } from "./server/internalCrawlAccess";
 import { isOwnerPreviewEmail } from "./server/ownerPreview";
+import { fetchExactPublicLinkedInPortrait } from "./server/linkedinProfileBootstrap";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { jinaReadPage, isJinaConfigured, hasJinaKey } from "./server/jinaReader";
@@ -66,6 +67,44 @@ async function startServer() {
   // resolve (a remote Turso database, or falling back to a local SQLite file) — both must
   // be ready before any request can be handled.
   await initDb();
+
+  if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
+    try {
+      const users = await dbAll<{ id: string; email: string; linkedin_url: string | null }>(
+        "SELECT id, email, linkedin_url FROM users"
+      );
+      const owner = users.find((row) => isOwnerPreviewEmail(row.email)) || null;
+      const linkedinUrl = owner?.linkedin_url?.trim() || "";
+      const portrait = owner && linkedinUrl
+        ? await fetchExactPublicLinkedInPortrait(linkedinUrl)
+        : null;
+
+      if (owner && portrait) {
+        await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [portrait, owner.id]);
+        await dbRun(
+          "UPDATE linkedin_profile_enrichment SET photo_url = ? WHERE user_id = ?",
+          [portrait, owner.id],
+        );
+        console.log("[owner-linkedin-portrait-repair]", JSON.stringify({
+          ownerFound: true,
+          linkedInUrlPresent: true,
+          portraitRecovered: true,
+          storedInUsersAvatar: true,
+          storedInLinkedInProfile: true,
+          kind: portrait.startsWith("data:image/") ? "data-image" : "https-url",
+          length: portrait.length,
+        }));
+      } else {
+        console.warn("[owner-linkedin-portrait-repair]", JSON.stringify({
+          ownerFound: Boolean(owner),
+          linkedInUrlPresent: Boolean(linkedinUrl),
+          portraitRecovered: false,
+        }));
+      }
+    } catch (error) {
+      console.warn("[owner-linkedin-portrait-repair] failed", error);
+    }
+  }
 
   if (process.env.OWNER_PROFILE_DIAGNOSTIC === "1") {
     try {

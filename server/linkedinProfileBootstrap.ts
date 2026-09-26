@@ -201,92 +201,212 @@ function imageUrlFrom(value: unknown, depth = 0): string | null {
   return null;
 }
 
-async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<string | null> {
+export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<string | null> {
   const requestedUrl = normalizeLinkedInProfileUrl(linkedinUrl);
-  const token = process.env.APIFY_TOKEN?.trim();
-  if (!requestedUrl || !token) return null;
+  if (!requestedUrl) return null;
 
   const requestedSlug = profileSlug(requestedUrl);
   const exactProfile = (value: unknown): boolean => {
     const returnedSlug = profileSlug(value);
-    return !returnedSlug || !requestedSlug || returnedSlug === requestedSlug;
+    return Boolean(returnedSlug && requestedSlug && returnedSlug === requestedSlug);
+  };
+  const ownImage = async (candidate: unknown): Promise<string | null> => {
+    const url = imageUrlFrom(candidate);
+    if (!url) return null;
+    const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
+    return await copyLinkedInAvatarToDataUrl(url);
   };
 
-  const providers = [
-    {
-      id: "datascraperes~linkedin-public-profile-scraper",
-      input: { profileUrls: [requestedUrl] },
-      pick(row: Record<string, any>) {
-        const profile = objectValue(row.profile);
-        return {
-          profileUrl: row.profileUrl || row.inputUrl || profile.linkedinUrl || requestedUrl,
-          photo: imageUrlFrom(profile.profilePictureUrl) ||
-            imageUrlFrom(profile.profileImageUrl) ||
-            imageUrlFrom(profile.avatarUrl) ||
-            imageUrlFrom(row.profilePictureUrl) ||
-            imageUrlFrom(row.profileImageUrl) ||
-            imageUrlFrom(row.avatarUrl),
-        };
-      },
-    },
-    {
-      id: "getanyapi~linkedin-profile-scraper",
-      input: { url: requestedUrl },
-      pick(row: Record<string, any>) {
-        return {
-          profileUrl: row.linkedinUrl || row.profileUrl || row.url || requestedUrl,
-          photo: imageUrlFrom(row.avatarUrl) ||
-            imageUrlFrom(row.profilePictureUrl) ||
-            imageUrlFrom(row.profileImageUrl) ||
-            imageUrlFrom(row.image),
-        };
-      },
-    },
-  ] as const;
-
-  for (const provider of providers) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60_000);
-    try {
-      const endpoint = new URL(
-        `https://api.apify.com/v2/actors/${provider.id}/run-sync-get-dataset-items`,
-      );
-      endpoint.searchParams.set("format", "json");
-      endpoint.searchParams.set("clean", "true");
-      endpoint.searchParams.set("maxItems", "1");
-      endpoint.searchParams.set("maxTotalChargeUsd", "0.03");
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+  // Primary route: dedicated LinkedIn-profile actors, when the connected Apify account
+  // is allowed to run them.
+  const token = process.env.APIFY_TOKEN?.trim();
+  if (token) {
+    const providers = [
+      {
+        id: "datascraperes~linkedin-public-profile-scraper",
+        input: { profileUrls: [requestedUrl] },
+        pick(row: Record<string, any>) {
+          const profile = objectValue(row.profile);
+          return {
+            profileUrl: row.profileUrl || row.inputUrl || profile.linkedinUrl || requestedUrl,
+            photo: imageUrlFrom(profile.profilePictureUrl) ||
+              imageUrlFrom(profile.profileImageUrl) ||
+              imageUrlFrom(profile.avatarUrl) ||
+              imageUrlFrom(row.profilePictureUrl) ||
+              imageUrlFrom(row.profileImageUrl) ||
+              imageUrlFrom(row.avatarUrl),
+          };
         },
-        body: JSON.stringify(provider.input),
-      });
-      if (!response.ok) continue;
-      const body = await response.json().catch(() => null);
-      const row = Array.isArray(body)
-        ? body.find((item) => item && typeof item === "object" && item.success !== false)
-        : null;
-      if (!row) continue;
-      const picked = provider.pick(row as Record<string, any>);
-      if (!picked.photo || !exactProfile(picked.profileUrl)) continue;
+      },
+      {
+        id: "getanyapi~linkedin-profile-scraper",
+        input: { url: requestedUrl },
+        pick(row: Record<string, any>) {
+          return {
+            profileUrl: row.linkedinUrl || row.profileUrl || row.url || requestedUrl,
+            photo: imageUrlFrom(row.avatarUrl) ||
+              imageUrlFrom(row.profilePictureUrl) ||
+              imageUrlFrom(row.profileImageUrl) ||
+              imageUrlFrom(row.image),
+          };
+        },
+      },
+    ] as const;
 
-      const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
-      const owned = await copyLinkedInAvatarToDataUrl(picked.photo);
-      if (owned) {
-        console.log("[owner-avatar-repair] restored portrait from exact public LinkedIn profile");
-        return owned;
+    for (const provider of providers) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60_000);
+      try {
+        const endpoint = new URL(
+          `https://api.apify.com/v2/actors/${provider.id}/run-sync-get-dataset-items`,
+        );
+        endpoint.searchParams.set("format", "json");
+        endpoint.searchParams.set("clean", "true");
+        endpoint.searchParams.set("maxItems", "1");
+        endpoint.searchParams.set("maxTotalChargeUsd", "0.03");
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(provider.input),
+        });
+        if (!response.ok) continue;
+        const body = await response.json().catch(() => null);
+        const row = Array.isArray(body)
+          ? body.find((item) => item && typeof item === "object" && item.success !== false)
+          : null;
+        if (!row) continue;
+        const picked = provider.pick(row as Record<string, any>);
+        if (!picked.photo || !exactProfile(picked.profileUrl)) continue;
+
+        const owned = await ownImage(picked.photo);
+        if (owned) {
+          console.log("[owner-avatar-repair] restored exact LinkedIn portrait via profile provider");
+          return owned;
+        }
+      } catch (error: any) {
+        console.warn(
+          "[owner-avatar-repair] LinkedIn portrait provider failed",
+          error?.message || String(error),
+        );
+      } finally {
+        clearTimeout(timeout);
       }
-    } catch (error: any) {
-      console.warn("[owner-avatar-repair] public LinkedIn portrait provider failed", error?.message || String(error));
-    } finally {
-      clearTimeout(timeout);
     }
   }
+
+  // Fallback 1: render the exact public LinkedIn page with ConferenceGate\'s installed Chromium.
+  // Accept og:image only when the page declares an og:url for the exact same /in/<slug>.
+  // This rejects login/interstitial pages and generic LinkedIn artwork.
+  try {
+    const { fetchRenderedHtml } = await import("./browserFetch");
+    const html = await fetchRenderedHtml(requestedUrl);
+    if (html) {
+      const readMeta = (property: string): string => {
+        const tags = html.match(/<meta\b[^>]*>/gi) || [];
+        for (const tag of tags) {
+          const lower = tag.toLowerCase();
+          const propertyNeedle = `property="${property.toLowerCase()}"`;
+          const propertyNeedleSingle = `property=\'${property.toLowerCase()}\'`;
+          const nameNeedle = `name="${property.toLowerCase()}"`;
+          const nameNeedleSingle = `name=\'${property.toLowerCase()}\'`;
+          if (!lower.includes(propertyNeedle) && !lower.includes(propertyNeedleSingle) &&
+              !lower.includes(nameNeedle) && !lower.includes(nameNeedleSingle)) continue;
+          const content = /content=["\']([^"\']+)["\']/i.exec(tag);
+          if (content?.[1]) return content[1];
+        }
+        return "";
+      };
+      const declaredUrl = readMeta("og:url");
+      const ogImage = readMeta("og:image");
+      if (exactProfile(declaredUrl) && ogImage.startsWith("https://")) {
+        const owned = await ownImage(ogImage);
+        if (owned) {
+          console.log("[owner-avatar-repair] restored exact LinkedIn portrait via rendered public profile");
+          return owned;
+        }
+      }
+    }
+  } catch (error: any) {
+    console.warn(
+      "[owner-avatar-repair] rendered LinkedIn portrait fallback failed",
+      error?.message || String(error),
+    );
+  }
+  // Fallback 2: Brave\'s exact LinkedIn web result. Brave frequently carries a thumbnail for a
+  // public profile even when LinkedIn blocks direct page readers. Only accept a thumbnail whose
+  // result URL resolves to the exact same /in/<slug>, never a name-only match.
+  if (process.env.BRAVE_SEARCH_API_KEY) {
+    try {
+      const { braveSearch } = await import("./braveSearch");
+      const results = await braveSearch(
+        `site:linkedin.com/in "${requestedSlug}"`,
+        10,
+        "high",
+      );
+      const exact = results.find((item) => exactProfile(item.link) && Boolean(item.thumbnail));
+      if (exact?.thumbnail) {
+        const owned = await ownImage(exact.thumbnail);
+        if (owned) {
+          console.log("[owner-avatar-repair] restored exact LinkedIn portrait via Brave thumbnail");
+          return owned;
+        }
+      }
+    } catch (error: any) {
+      console.warn(
+        "[owner-avatar-repair] Brave LinkedIn portrait fallback failed",
+        error?.message || String(error),
+      );
+    }
+  }
+
+  // Fallback 3: Google/Serper image search, again requiring the image's landing page to be the
+  // exact LinkedIn profile. This avoids ever assigning a similarly named person's portrait.
+  if (process.env.SERPER_API_KEY) {
+    try {
+      const response = await fetch("https://google.serper.dev/images", {
+        method: "POST",
+        headers: {
+          "X-API-KEY": process.env.SERPER_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          q: `"${requestedSlug}" LinkedIn`,
+          num: 20,
+        }),
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (response.ok) {
+        const body = await response.json().catch(() => null);
+        const images = Array.isArray(body?.images) ? body.images : [];
+        const exact = images.find((item: any) =>
+          exactProfile(item?.link || item?.sourceUrl || item?.source)
+        );
+        const candidate =
+          imageUrlFrom(exact?.imageUrl) ||
+          imageUrlFrom(exact?.thumbnailUrl) ||
+          imageUrlFrom(exact?.thumbnail);
+        if (candidate) {
+          const owned = await ownImage(candidate);
+          if (owned) {
+            console.log("[owner-avatar-repair] restored exact LinkedIn portrait via Serper image result");
+            return owned;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.warn(
+        "[owner-avatar-repair] Serper LinkedIn portrait fallback failed",
+        error?.message || String(error),
+      );
+    }
+  }
+
   return null;
 }
 
@@ -457,7 +577,7 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
   // The legacy Professional shadow keeps the user's original ConferenceGate avatar. Prefer an
   // already-owned image data URL from that account over stale organization/conference logos.
   if (user.role === "professional") {
-    const markerKey = `owner_linkedin_avatar_restored_v4_${userId}`;
+    const markerKey = `owner_linkedin_avatar_restored_v5_${userId}`;
     const alreadyRepaired = await dbGet<{ value: string }>(
       "SELECT value FROM app_secrets WHERE key = ?",
       [markerKey],
@@ -477,11 +597,6 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
         ? await fetchExactPublicLinkedInPortrait(exactLinkedInUrl)
         : null;
 
-      const legacyAvatar =
-        typeof uniqueCandidate?.legacy_avatar === "string" && uniqueCandidate.legacy_avatar.trim()
-          ? uniqueCandidate.legacy_avatar.trim()
-          : null;
-
       if (!restoredPhoto && currentProfile?.photo_url) {
         const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
         restoredPhoto = await copyLinkedInAvatarToDataUrl(currentProfile.photo_url);
@@ -490,13 +605,14 @@ router.get("/recovery-status", requireMember, safe(async (req, res) => {
         const { copyLinkedInAvatarToDataUrl } = await import("./linkedinAvatar");
         restoredPhoto = await copyLinkedInAvatarToDataUrl(String(uniqueCandidate.photo_url));
       }
-      if (!restoredPhoto && legacyAvatar?.startsWith("data:image/")) {
-        restoredPhoto = legacyAvatar;
-      }
-
       if (restoredPhoto) {
         await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [restoredPhoto, userId]);
+        await dbRun(
+          "UPDATE linkedin_profile_enrichment SET photo_url = ? WHERE user_id = ?",
+          [restoredPhoto, userId],
+        );
         user.avatar = restoredPhoto;
+        if (currentProfile) currentProfile.photo_url = restoredPhoto;
         avatarRepaired = true;
         await dbRun(
           "INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)",
