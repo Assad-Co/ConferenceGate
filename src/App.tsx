@@ -1042,7 +1042,7 @@ export function App() {
     const userId = authUser.id;
     const linkedinUrl = authUser.linkedinUrl;
     const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-    const profileRepairKey = `cg_linkedin_profile_sync_v3:${userId}:${linkedinUrl}`;
+    const profileRepairKey = `cg_linkedin_profile_sync_v4:${userId}:${linkedinUrl}`;
 
     const isStale = (value?: string | null) => {
       const time = value ? Date.parse(value) : NaN;
