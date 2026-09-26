@@ -41,6 +41,7 @@ import {
 } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { requireInternalCrawlAuthorization } from "./server/internalCrawlAccess";
+import { isOwnerPreviewEmail } from "./server/ownerPreview";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
 import { jinaReadPage, isJinaConfigured, hasJinaKey } from "./server/jinaReader";
@@ -65,6 +66,50 @@ async function startServer() {
   // resolve (a remote Turso database, or falling back to a local SQLite file) — both must
   // be ready before any request can be handled.
   await initDb();
+
+  if (process.env.OWNER_PROFILE_DIAGNOSTIC === "1") {
+    try {
+      const users = await dbAll<{ id: string; email: string; avatar: string | null; linkedin_url: string | null }>(
+        "SELECT id, email, avatar, linkedin_url FROM users"
+      );
+      const owner = users.find((row) => isOwnerPreviewEmail(row.email)) || null;
+      let linkedInProfile: { photo_url: string | null; publications: string | null; patents: string | null } | undefined;
+      if (owner) {
+        linkedInProfile = await dbGet<{ photo_url: string | null; publications: string | null; patents: string | null }>(
+          "SELECT photo_url, publications, patents FROM linkedin_profile_enrichment WHERE user_id = ?",
+          [owner.id],
+        );
+      }
+      const classify = (value: string | null | undefined) => {
+        const v = value?.trim() || "";
+        if (!v) return { present: false, kind: "none", length: 0 };
+        if (v.startsWith("data:image/")) return { present: true, kind: "data-image", length: v.length };
+        if (/^https:\/\//i.test(v)) return { present: true, kind: "https-url", length: v.length };
+        return { present: true, kind: "other", length: v.length };
+      };
+      const countJsonArray = (value: string | null | undefined) => {
+        if (!value) return 0;
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed.length : 0;
+        } catch {
+          return 0;
+        }
+      };
+      console.log("[owner-profile-diagnostic]", JSON.stringify({
+        backend: databaseBackend,
+        ownerFound: Boolean(owner),
+        userAvatar: classify(owner?.avatar),
+        linkedInUrlPresent: Boolean(owner?.linkedin_url),
+        linkedInPhoto: classify(linkedInProfile?.photo_url),
+        linkedInPublications: countJsonArray(linkedInProfile?.publications),
+        linkedInPatents: countJsonArray(linkedInProfile?.patents),
+      }));
+    } catch (error) {
+      console.warn("[owner-profile-diagnostic] failed", error);
+    }
+  }
+
   await initAuthSecret();
   // The discovery engine's own tables. Purely additive `CREATE TABLE IF NOT EXISTS` on new
   // `discovery_*` names — no existing table is altered and no existing row is touched.
