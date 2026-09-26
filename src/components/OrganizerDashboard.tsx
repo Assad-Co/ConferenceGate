@@ -27,15 +27,7 @@ import {
   MessageCircle,
   Video,
   Star,
-  Wine,
   Presentation,
-  GraduationCap,
-  Snowflake,
-  Bus,
-  Landmark,
-  UtensilsCrossed,
-  Utensils,
-  Gift,
   Globe,
   Smile,
   Briefcase,
@@ -69,7 +61,6 @@ import { sendMessage } from '../api/messages';
 import {
   SponsorApplicant,
   ReviewableSponsor,
-  ExternalSponsorshipOpportunity,
   notifyVerifiedSponsors,
   createSponsorshipNeed,
   fetchMySponsorshipNeeds,
@@ -101,7 +92,6 @@ interface OrganizerDashboardProps {
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities: SponsorshipOpportunity[];
-  externalSponsorshipOpportunities?: ExternalSponsorshipOpportunity[];
   onActivateOpportunityPackage: (opp: { key: string; tier: string; price: number; slots: number; benefits: string[] }) => void;
   sponsorApplicants?: SponsorApplicant[];
   onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
@@ -250,7 +240,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
   sponsorshipOpportunities,
-  externalSponsorshipOpportunities = [],
   onActivateOpportunityPackage,
   sponsorApplicants = [],
   onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
@@ -1015,109 +1004,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     });
   };
 
-  // Sponsorship Opportunities Catalog State
-  const sponsorshipOpportunityColors: Record<
-    string,
-    { header: string; iconBox: string; icon: string; border: string; price: string; badge: string }
-  > = {
-    violet: {
-      header: 'bg-violet-50',
-      iconBox: 'bg-white border border-violet-200',
-      icon: 'text-violet-700',
-      border: 'border-violet-100',
-      price: 'text-violet-700',
-      badge: 'bg-violet-100 text-violet-800',
-    },
-    blue: {
-      header: 'bg-blue-50',
-      iconBox: 'bg-white border border-blue-200',
-      icon: 'text-blue-700',
-      border: 'border-blue-100',
-      price: 'text-blue-700',
-      badge: 'bg-blue-100 text-blue-800',
-    },
-    indigo: {
-      header: 'bg-indigo-50',
-      iconBox: 'bg-white border border-indigo-200',
-      icon: 'text-indigo-700',
-      border: 'border-indigo-100',
-      price: 'text-indigo-700',
-      badge: 'bg-indigo-100 text-indigo-800',
-    },
-    sky: {
-      header: 'bg-sky-50',
-      iconBox: 'bg-white border border-sky-200',
-      icon: 'text-sky-700',
-      border: 'border-sky-100',
-      price: 'text-sky-700',
-      badge: 'bg-sky-100 text-sky-800',
-    },
-    emerald: {
-      header: 'bg-emerald-50',
-      iconBox: 'bg-white border border-emerald-200',
-      icon: 'text-emerald-700',
-      border: 'border-emerald-100',
-      price: 'text-emerald-700',
-      badge: 'bg-emerald-100 text-emerald-800',
-    },
-    amber: {
-      header: 'bg-amber-50',
-      iconBox: 'bg-white border border-amber-200',
-      icon: 'text-amber-700',
-      border: 'border-amber-100',
-      price: 'text-amber-700',
-      badge: 'bg-amber-100 text-amber-800',
-    },
-    teal: {
-      header: 'bg-teal-50',
-      iconBox: 'bg-white border border-teal-200',
-      icon: 'text-teal-700',
-      border: 'border-teal-100',
-      price: 'text-teal-700',
-      badge: 'bg-teal-100 text-teal-800',
-    },
-    rose: {
-      header: 'bg-rose-50',
-      iconBox: 'bg-white border border-rose-200',
-      icon: 'text-rose-700',
-      border: 'border-rose-100',
-      price: 'text-rose-700',
-      badge: 'bg-rose-100 text-rose-800',
-    },
-    fuchsia: {
-      header: 'bg-fuchsia-50',
-      iconBox: 'bg-white border border-fuchsia-200',
-      icon: 'text-fuchsia-700',
-      border: 'border-fuchsia-100',
-      price: 'text-fuchsia-700',
-      badge: 'bg-fuchsia-100 text-fuchsia-800',
-    },
-  };
-
-  const sponsorshipOpportunityIcons: Record<string, React.ElementType> = {
-    violet: Wine,
-    blue: Presentation,
-    indigo: GraduationCap,
-    sky: Snowflake,
-    emerald: Bus,
-    amber: Landmark,
-    teal: UtensilsCrossed,
-    rose: Utensils,
-    fuchsia: Gift,
-  };
-
-  const sponsorshipOpportunityToneKeys = [
-    'violet',
-    'blue',
-    'indigo',
-    'sky',
-    'emerald',
-    'amber',
-    'teal',
-    'rose',
-    'fuchsia',
-  ] as const;
-
   const verifiedSponsorCount = new Set(
     sponsorApplicants.filter((a) => isSponsorVerified(a.sponsor)).map((a) => a.sponsor.id)
   ).size;
@@ -1563,7 +1449,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
           { id: 'professionals', label: 'Professional Network' },
           { id: 'committee', label: 'Technical Committee' },
-          { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length + externalSponsorshipOpportunities.length})` },
+          { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
           { id: 'communications', label: 'Communications Hub' },
           { id: 'workspace', label: 'Team & Access' },
           { id: 'payments', label: 'Payment Ledger' },
@@ -3697,110 +3583,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">Sponsorship Opportunities & Packages</h2>
-            <p className="text-xs text-slate-500">
-              Official sponsorship and exhibitor opportunities from upcoming conferences. Published pricing is shown
-              when the organizer provides it; otherwise the same action button opens the official enquiry page.
-            </p>
-          </div>
-
-          {externalSponsorshipOpportunities.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-              <Globe className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-              <h3 className="font-bold text-sm text-slate-800">No stored sponsorship opportunities yet</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                This page reads the ConferenceGate sponsorship catalog only. Background enrichment updates the stored
-                catalog separately; opening this page does not run a live website search.
-              </p>
-            </div>
-          ) : (
-            <div className="columns-1 md:columns-2 xl:columns-3 gap-6 [column-fill:_balance]">
-              {externalSponsorshipOpportunities.map((opportunity, index) => {
-                const tone = sponsorshipOpportunityToneKeys[index % sponsorshipOpportunityToneKeys.length];
-                const Icon = sponsorshipOpportunityIcons[tone] || Briefcase;
-                const c = sponsorshipOpportunityColors[tone] || sponsorshipOpportunityColors.blue;
-                const pricedPackages = (opportunity.packages || []).filter((pkg) => pkg.priceAmount !== null);
-                const startingPackage = pricedPackages.length
-                  ? pricedPackages.reduce((min, pkg) =>
-                      (pkg.priceAmount ?? Number.POSITIVE_INFINITY) < (min.priceAmount ?? Number.POSITIVE_INFINITY) ? pkg : min
-                    )
-                  : null;
-
-                return (
-                  <div
-                    key={opportunity.conferenceId}
-                    className={`break-inside-avoid mb-6 bg-white rounded-3xl border ${c.border} shadow-xs overflow-hidden`}
-                  >
-                    <div className={`${c.header} p-5 flex items-start gap-3`}>
-                      <div className={`w-10 h-10 rounded-xl ${c.iconBox} flex items-center justify-center shrink-0`}>
-                        <Icon className={`w-5 h-5 ${c.icon}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-sm text-slate-900">{opportunity.conferenceTitle}</h3>
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${c.badge}`}>
-                            {startingPackage?.priceText ? `From ${startingPackage.priceText}` : 'Inquire'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {[opportunity.city, opportunity.country].filter(Boolean).join(', ')}
-                          {opportunity.startDate ? ` · ${formatDate(opportunity.startDate)}` : ''}
-                        </p>
-                        {opportunity.categories?.length > 0 && (
-                          <p className="text-[10px] text-slate-400 mt-1 truncate">
-                            {opportunity.categories.slice(0, 4).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-4 space-y-2">
-                      {(opportunity.packages || []).slice(0, 8).map((pkg, pkgIndex) => (
-                        <div
-                          key={`${opportunity.conferenceId}__${pkgIndex}__${pkg.name}`}
-                          className="p-3 bg-slate-50 rounded-xl border border-slate-200"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-bold text-xs text-slate-900">{pkg.name}</div>
-                              <div className="text-[10px] text-slate-500 truncate">
-                                {pkg.benefits?.length
-                                  ? pkg.benefits.join(' · ')
-                                  : 'Official sponsorship / exhibitor opportunity'}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              {pkg.priceText ? (
-                                <>
-                                  <div className={`font-extrabold text-sm ${c.price}`}>{pkg.priceText}</div>
-                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Published price</div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className={`font-extrabold text-sm ${c.price}`}>Inquire</div>
-                                  <div className="text-[9px] text-slate-400 uppercase font-bold">Price on request</div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <a
-                            href={opportunity.actionUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 w-full py-1.5 rounded-lg font-bold text-[11px] transition-colors bg-blue-900 hover:bg-blue-950 text-white cursor-pointer flex items-center justify-center"
-                          >
-                            {pkg.priceText ? 'Sponsor / Exhibit Now' : 'Inquire Now'}
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
 
