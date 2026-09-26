@@ -53,6 +53,7 @@ import {
 } from '../api/sponsors';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
+import { EnterpriseWorkspacePanel } from './EnterpriseWorkspacePanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 
 interface SponsorPortalProps {
@@ -91,7 +92,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onApplyForSponsorship = (_packageId: string) => {},
   ownerPreview = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'enterprise' | 'roi' | 'profile'>('matches');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -700,6 +701,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             Team & Access
           </button>
         )}
+        <button
+          onClick={() => setActiveTab('enterprise')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'enterprise'
+              ? 'bg-blue-600 text-white font-bold shadow-xs'
+              : 'hover:bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          Enterprise
+        </button>
         <button
           onClick={() => setActiveTab('roi')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -1465,6 +1477,10 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Paid Sponsor Pro: Team & Access */}
       {!ownerPreview && activeTab === 'workspace' && (
         <WorkspaceTeamPanel accountLabel="Sponsor Pro" />
+      )}
+
+      {activeTab === 'enterprise' && (
+        <EnterpriseWorkspacePanel role="sponsor" />
       )}
 
       {/* Sponsor Pro: real portfolio analytics */}
