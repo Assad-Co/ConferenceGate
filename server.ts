@@ -125,66 +125,97 @@ async function startServer() {
           skipped: true,
         }));
       } else {
-        const endpoint = new URL(
-          "https://api.apify.com/v2/actors/harvestapi~linkedin-profile-scraper/run-sync-get-dataset-items",
-        );
-        endpoint.searchParams.set("format", "json");
-        endpoint.searchParams.set("clean", "true");
-        endpoint.searchParams.set("maxItems", "1");
-        endpoint.searchParams.set("maxTotalChargeUsd", "0.05");
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            profileScraperMode: "Profile details no email ($4 per 1k)",
-            queries: [linkedinUrl],
-          }),
-        });
-
-        const payload = await response.json().catch(() => null);
-        const row = Array.isArray(payload) && payload[0] && typeof payload[0] === "object"
-          ? payload[0] as Record<string, unknown>
-          : null;
-
-        const shape: Array<{ path: string; type: string }> = [];
-        const visit = (value: unknown, path: string, depth: number) => {
-          if (depth > 5 || shape.length >= 300) return;
-          if (Array.isArray(value)) {
-            shape.push({ path, type: `array(${value.length})` });
-            if (value.length) visit(value[0], `${path}[0]`, depth + 1);
-            return;
-          }
-          if (value && typeof value === "object") {
-            shape.push({ path, type: "object" });
-            for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-              visit(child, path ? `${path}.${key}` : key, depth + 1);
+        const shapeOf = (row: Record<string, unknown> | null) => {
+          const shape: Array<{ path: string; type: string }> = [];
+          const visit = (value: unknown, path: string, depth: number) => {
+            if (depth > 5 || shape.length >= 300) return;
+            if (Array.isArray(value)) {
+              shape.push({ path, type: `array(${value.length})` });
+              if (value.length) visit(value[0], `${path}[0]`, depth + 1);
+              return;
             }
-            return;
-          }
-          if (typeof value === "string") {
-            shape.push({
-              path,
-              type: /^https:\/\//i.test(value) ? "https-string" : "string",
-            });
-            return;
-          }
-          shape.push({ path, type: value === null ? "null" : typeof value });
+            if (value && typeof value === "object") {
+              shape.push({ path, type: "object" });
+              for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+                visit(child, path ? `${path}.${key}` : key, depth + 1);
+              }
+              return;
+            }
+            if (typeof value === "string") {
+              shape.push({
+                path,
+                type: /^https:\/\//i.test(value) ? "https-string" : "string",
+              });
+              return;
+            }
+            shape.push({ path, type: value === null ? "null" : typeof value });
+          };
+          if (row) visit(row, "", 0);
+          return {
+            topLevelKeys: row ? Object.keys(row).sort() : [],
+            mediaLike: shape.filter((item) => /photo|picture|image|avatar|display/i.test(item.path)),
+          };
         };
 
-        if (row) visit(row, "", 0);
-        const mediaLike = shape.filter((item) =>
-          /photo|picture|image|avatar|display/i.test(item.path)
+        const runActor = async (
+          actorId: string,
+          input: Record<string, unknown>,
+          maxChargeUsd: string,
+        ) => {
+          const endpoint = new URL(
+            `https://api.apify.com/v2/actors/${actorId}/run-sync-get-dataset-items`,
+          );
+          endpoint.searchParams.set("format", "json");
+          endpoint.searchParams.set("clean", "true");
+          endpoint.searchParams.set("maxItems", "1");
+          endpoint.searchParams.set("maxTotalChargeUsd", maxChargeUsd);
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify(input),
+          });
+          const payload = await response.json().catch(() => null);
+          const row = Array.isArray(payload) && payload[0] && typeof payload[0] === "object"
+            ? payload[0] as Record<string, unknown>
+            : null;
+          return { httpStatus: response.status, row, ...shapeOf(row) };
+        };
+
+        const harvest = await runActor(
+          "harvestapi~linkedin-profile-scraper",
+          {
+            profileScraperMode: "Profile details no email ($4 per 1k)",
+            queries: [linkedinUrl],
+          },
+          "0.05",
         );
         console.log("[linkedin-shape-diagnostic]", JSON.stringify({
-          httpStatus: response.status,
-          itemReturned: Boolean(row),
-          topLevelKeys: row ? Object.keys(row).sort() : [],
-          mediaLike,
+          provider: "harvestapi",
+          httpStatus: harvest.httpStatus,
+          itemReturned: Boolean(harvest.row),
+          topLevelKeys: harvest.topLevelKeys,
+          mediaLike: harvest.mediaLike,
+        }));
+
+        const publicFallback = await runActor(
+          "logiover~linkedin-profile-scraper",
+          {
+            profiles: [linkedinUrl],
+            includeRecentActivity: false,
+            maxResults: 1,
+          },
+          "0.05",
+        );
+        console.log("[linkedin-shape-diagnostic]", JSON.stringify({
+          provider: "logiover",
+          httpStatus: publicFallback.httpStatus,
+          itemReturned: Boolean(publicFallback.row),
+          topLevelKeys: publicFallback.topLevelKeys,
+          mediaLike: publicFallback.mediaLike,
         }));
       }
     } catch (error) {
