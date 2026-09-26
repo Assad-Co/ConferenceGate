@@ -794,6 +794,44 @@ function readLinkedInLinkUser(req: Request): string | null {
   }
 }
 
+async function persistAuthenticatedLinkedInPicture(
+  userId: string,
+  picture: string | null,
+): Promise<string | null> {
+  if (!picture || !/^https:\/\//i.test(picture)) return null;
+
+  // Prefer a ConferenceGate-owned copy, but keep the authenticated LinkedIn image URL as a
+  // temporary fallback if LinkedIn's CDN refuses the server-side copy. This is still safer than
+  // falling back to a conference/company logo.
+  const ownedAvatar = await copyLinkedInAvatarToDataUrl(picture);
+  const avatar = ownedAvatar || picture;
+
+  // Respect an explicit member choice made through Change Photo / Remove Photo.
+  const manualOverride = await dbGet<{ value: string }>(
+    "SELECT value FROM app_secrets WHERE key = ?",
+    [`manual_avatar_override:${userId}`],
+  );
+
+  if (!manualOverride) {
+    await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [avatar, userId]);
+  }
+
+  // When the member already has a LinkedIn enrichment row, keep the authenticated portrait there
+  // as well. This lets the Professional profile render the saved LinkedIn picture immediately from
+  // Turso on later logins without another scrape.
+  const enrichmentTable = await dbGet<{ name: string }>(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='linkedin_profile_enrichment' LIMIT 1",
+  );
+  if (enrichmentTable) {
+    await dbRun(
+      "UPDATE linkedin_profile_enrichment SET photo_url = ? WHERE user_id = ?",
+      [avatar, userId],
+    );
+  }
+
+  return avatar;
+}
+
 authRouter.get("/linkedin/start", (req, res) => {
   if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
     return res.redirect("/?authError=linkedin_not_configured");
@@ -878,9 +916,8 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
     const name: string = profile.name || email || "LinkedIn Member";
     const picture: string | null = typeof profile.picture === "string" ? profile.picture : null;
 
-    // New approach: download the authenticated OpenID picture on the server and persist a
-    // ConferenceGate-owned data URL. The browser never needs to hot-link LinkedIn's CDN.
-    const ownedAvatar = await copyLinkedInAvatarToDataUrl(picture);
+    // LinkedIn OpenID Connect is the most reliable source of the signed-in member's own
+    // portrait. Persist it for the matched ConferenceGate account once that account is resolved.
 
     // A signed-in member explicitly starting LinkedIn OAuth is linking/syncing that exact
     // ConferenceGate account. This avoids relying on the two services sharing the same email.
@@ -895,11 +932,8 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
         return res.redirect("/?authError=linkedin_already_linked");
       }
 
-      if (ownedAvatar) {
-        await dbRun("UPDATE users SET linkedin_id = ?, avatar = ? WHERE id = ?", [linkedinId, ownedAvatar, linkingRow.id]);
-      } else {
-        await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, linkingRow.id]);
-      }
+      await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, linkingRow.id]);
+      await persistAuthenticatedLinkedInPicture(linkingRow.id, picture);
 
       const refreshed = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [linkingRow.id]))!;
       const token = signToken(refreshed.id);
@@ -913,15 +947,14 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
       const byEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [email]);
       if (byEmail) {
         await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, byEmail.id]);
+        await persistAuthenticatedLinkedInPicture(byEmail.id, picture);
         row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [byEmail.id]);
       }
     }
 
     if (row) {
-      if (ownedAvatar) {
-        await dbRun("UPDATE users SET avatar = ? WHERE id = ?", [ownedAvatar, row.id]);
-        row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [row.id]);
-      }
+      await persistAuthenticatedLinkedInPicture(row.id, picture);
+      row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [row.id]);
       const token = signToken(row!.id);
       setSessionCookie(res, token);
       return res.redirect("/?linkedinSynced=1");
@@ -987,26 +1020,23 @@ authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
 
   const normalizedRole = role.toLowerCase() as AuthRole;
   const normalizedEmail = pending.email.toLowerCase();
-  const ownedAvatar = await copyLinkedInAvatarToDataUrl(pending.avatar);
 
   // Someone may already have an account under this email (e.g. signed up with a password) —
   // link the LinkedIn identity to it instead of creating a duplicate account.
   const existingByEmail = await dbGet<UserRow>("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   let row: UserRow;
   if (existingByEmail) {
-    if (ownedAvatar) {
-      await dbRun("UPDATE users SET linkedin_id = ?, avatar = ? WHERE id = ?", [pending.linkedinId, ownedAvatar, existingByEmail.id]);
-    } else {
-      await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [pending.linkedinId, existingByEmail.id]);
-    }
+    await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [pending.linkedinId, existingByEmail.id]);
+    await persistAuthenticatedLinkedInPicture(existingByEmail.id, pending.avatar);
     row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [existingByEmail.id]))!;
   } else {
     const id = crypto.randomUUID();
     await dbRun(
-      `INSERT INTO users (id, email, password_hash, linkedin_id, role, name, avatar)
-       VALUES (?, ?, NULL, ?, ?, ?, ?)`,
-      [id, normalizedEmail, pending.linkedinId, normalizedRole, pending.name, ownedAvatar]
+      `INSERT INTO users (id, email, password_hash, linkedin_id, role, name)
+       VALUES (?, ?, NULL, ?, ?, ?)`,
+      [id, normalizedEmail, pending.linkedinId, normalizedRole, pending.name]
     );
+    await persistAuthenticatedLinkedInPicture(id, pending.avatar);
     row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
   }
 
