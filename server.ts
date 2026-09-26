@@ -182,7 +182,25 @@ async function startServer() {
           const row = Array.isArray(payload) && payload[0] && typeof payload[0] === "object"
             ? payload[0] as Record<string, unknown>
             : null;
-          return { httpStatus: response.status, row, ...shapeOf(row) };
+          const errorRecord =
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? payload as Record<string, any>
+              : {};
+          const errorType = String(
+            errorRecord?.error?.type ||
+            errorRecord?.type ||
+            errorRecord?.errorCode ||
+            ""
+          ).slice(0, 120);
+          const errorMessage = String(
+            errorRecord?.error?.message ||
+            errorRecord?.message ||
+            errorRecord?.error ||
+            ""
+          )
+            .replace(/apify_api_[A-Za-z0-9_-]+/gi, "[redacted-token]")
+            .slice(0, 300);
+          return { httpStatus: response.status, row, errorType, errorMessage, ...shapeOf(row) };
         };
 
         const harvest = await runActor(
@@ -199,6 +217,8 @@ async function startServer() {
           itemReturned: Boolean(harvest.row),
           topLevelKeys: harvest.topLevelKeys,
           mediaLike: harvest.mediaLike,
+          errorType: harvest.errorType,
+          errorMessage: harvest.errorMessage,
         }));
 
         const publicFallback = await runActor(
@@ -216,6 +236,8 @@ async function startServer() {
           itemReturned: Boolean(publicFallback.row),
           topLevelKeys: publicFallback.topLevelKeys,
           mediaLike: publicFallback.mediaLike,
+          errorType: publicFallback.errorType,
+          errorMessage: publicFallback.errorMessage,
         }));
 
         const extractReaderSignals = (html: string, markdown: string) => {
