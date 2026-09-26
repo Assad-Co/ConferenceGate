@@ -1,5 +1,6 @@
 import { dbAll, dbGet } from "./db";
 import { buildMarketplaceHealth } from "./marketplaceIntelligence";
+import { buildGrowthAutomationSnapshot } from "./growthAutomation";
 
 function n(value: unknown): number {
   const parsed = Number(value ?? 0);
@@ -507,6 +508,7 @@ export async function buildGrowthDashboard() {
     revenueOptimizationState,
     launchCohortState,
     marketplaceIntelligenceState,
+    growthAutomationState,
   ] = await Promise.all([
     roleSummary("organizer"),
     roleSummary("sponsor"),
@@ -517,6 +519,7 @@ export async function buildGrowthDashboard() {
     revenueOptimization(),
     buildLaunchCohort(),
     buildMarketplaceHealth(),
+    buildGrowthAutomationSnapshot(),
   ]);
 
   const release = process.env.RENDER_GIT_COMMIT?.trim() || process.env.GIT_COMMIT_SHA?.trim() || "local";
@@ -547,5 +550,6 @@ export async function buildGrowthDashboard() {
     revenueOptimization: revenueOptimizationState,
     launchCohort: launchCohortState,
     marketplaceIntelligence: marketplaceIntelligenceState,
+    growthAutomation: growthAutomationState,
   };
 }
