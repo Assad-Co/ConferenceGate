@@ -308,7 +308,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
     const html = await fetchRenderedHtml(requestedUrl);
     if (html) {
       const readMeta = (property: string): string => {
-        const tags = html.match(/<meta\\b[^>]*>/gi) || [];
+        const tags = html.match(/<meta\b[^>]*>/gi) || [];
         for (const tag of tags) {
           const lower = tag.toLowerCase();
           const propertyNeedle = `property="${property.toLowerCase()}"`;
