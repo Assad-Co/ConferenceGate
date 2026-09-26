@@ -43,7 +43,6 @@ import {
   setSponsorWatchAlert,
   removeSponsorSavedOpportunity,
   type SponsorSavedOpportunity,
-  type ExternalSponsorshipOpportunity,
   type SponsorPortfolioAnalytics,
   type SponsorLaunchpad,
   type SponsorPreferences,
@@ -60,7 +59,6 @@ import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
   sponsorshipOpportunities?: SponsorshipOpportunity[];
-  externalSponsorshipOpportunities?: ExternalSponsorshipOpportunity[];
   myApplications: SponsorApplicationSummary[];
   sponsorProfile: SponsorProfile;
   /** This sponsor's real notifications — application decisions, organizer reviews, and new
@@ -86,7 +84,6 @@ const StarRating: React.FC<{ rating: number; size?: string }> = ({ rating, size 
 export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   sponsorshipPackages,
   sponsorshipOpportunities = [],
-  externalSponsorshipOpportunities = [],
   myApplications,
   sponsorProfile,
   sponsorAlerts = [],
@@ -335,6 +332,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     savedOpportunities.forEach((item) => map.set(watchlistKey(item.sourceType, item.sourceId), item));
     return map;
   }, [savedOpportunities]);
+
+  const visibleSavedOpportunities = useMemo(
+    () => savedOpportunities.filter((item) => item.sourceType !== 'external_catalog'),
+    [savedOpportunities]
+  );
 
   const handleSaveOpportunity = async (
     sourceType: SponsorSavedOpportunity['sourceType'],
@@ -898,7 +900,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           )}
 
-          {standardPackages.length === 0 && suggestedPackages.length === 0 && externalSponsorshipOpportunities.length === 0 ? (
+          {standardPackages.length === 0 && suggestedPackages.length === 0 ? (
             <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
               No sponsorship packages have been published by organizers yet. Check back soon.
             </div>
@@ -1030,65 +1032,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               )}
             </>
           )}
-          {externalSponsorshipOpportunities.length > 0 && (
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Official External Sponsorship Opportunities</h2>
-                <p className="text-xs text-slate-500">
-                  Stored ConferenceGate catalog entries linked to official sponsor or exhibitor pages. These open on the organizer's official site.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {externalSponsorshipOpportunities.map((opportunity) => (
-                  <div
-                    key={opportunity.conferenceId}
-                    className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-5 shadow-xs hover:border-blue-400 transition-all"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[9px] font-bold uppercase">
-                          Official Source
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-500 text-right">
-                          {[opportunity.city, opportunity.country].filter(Boolean).join(', ')}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-sm text-slate-900">{opportunity.conferenceTitle}</h3>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          {opportunity.startDate || 'Upcoming date'}{opportunity.endDate ? ' – ' + opportunity.endDate : ''}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {opportunity.categories.slice(0, 6).map((category) => (
-                          <span key={category} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[9px] font-semibold">
-                            {category}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">
-                        {opportunity.hasPublishedPricing
-                          ? 'Official published sponsorship pricing is available.'
-                          : 'Pricing is not explicitly published; contact the organizer for commercial terms.'}
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <a
-                        href={opportunity.actionUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold flex items-center justify-center"
-                      >
-                        {opportunity.actionLabel}
-                      </a>
-                      {renderSaveButton('external_catalog', opportunity.conferenceId)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
         </div>
       )}
@@ -1116,7 +1060,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           </div>
 
-          {savedOpportunities.length === 0 ? (
+          {visibleSavedOpportunities.length === 0 ? (
             <div className="p-10 bg-white rounded-3xl border border-slate-200 text-center">
               <Bookmark className="w-9 h-9 text-slate-300 mx-auto mb-2" />
               <h3 className="text-sm font-bold text-slate-800">Your watchlist is empty</h3>
@@ -1126,7 +1070,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {savedOpportunities.map((item) => {
+              {visibleSavedOpportunities.map((item) => {
                 const snapshot = item.snapshot || {};
                 const isNeed = item.sourceType === 'internal_need';
                 const isPackage = item.sourceType === 'package';
