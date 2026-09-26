@@ -408,7 +408,7 @@ billingRouter.get(
         : undefined;
     const ledgerRole =
       requestedRole ||
-      (ledgerRole === "organizer" || row.role === "sponsor" ? row.role : undefined);
+      (row.role === "organizer" || row.role === "sponsor" ? row.role : undefined);
 
     if (!ledgerRole) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
