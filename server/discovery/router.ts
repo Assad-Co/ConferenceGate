@@ -15,6 +15,17 @@ import { asyncHandler } from "../asyncHandler";
 import { requireAuth, type AuthedRequest } from "../auth";
 import { dbAll, dbGet, dbRun } from "../db";
 import { buildGrowthDashboard, buildLaunchCohort } from "../growthDashboard";
+import {
+  addGrowthOutreachEvent,
+  buildGrowthAutomationSnapshot,
+  createGrowthLead,
+  createGrowthReferralCode,
+  getGrowthLead,
+  setGrowthTarget,
+  updateGrowthLead,
+  type GrowthLeadRole,
+  type GrowthLeadStage,
+} from "../growthAutomation";
 import { buildQualityReport, exportEventsCsv } from "./exportCsv";
 import { computeMetrics } from "./metrics";
 import { runDiscovery } from "./pipeline";
@@ -355,6 +366,115 @@ discoveryRouter.delete(
       req.params.userId,
     ]);
     res.json({ ok: true, launchCohort: await buildLaunchCohort(cohort) });
+  })
+);
+
+// Phase 9 — Customer Acquisition & Marketplace Growth Automation.
+// These routes are private operator controls. They track leads, follow-up, referrals and
+// liquidity targets; they do not auto-send external messages or change customer commercial state.
+discoveryRouter.get(
+  "/growth-automation",
+  ...adminOnly,
+  asyncHandler(async (_req: AuthedRequest, res: Response) => {
+    res.json({ growthAutomation: await buildGrowthAutomationSnapshot() });
+  })
+);
+
+discoveryRouter.post(
+  "/growth-leads",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const role = req.body?.role === "organizer" || req.body?.role === "sponsor"
+      ? (req.body.role as GrowthLeadRole)
+      : null;
+    if (!role) return res.status(400).json({ error: "role must be organizer or sponsor." });
+
+    const lead = await createGrowthLead({
+      role,
+      organization: req.body?.organization,
+      contactName: req.body?.contactName,
+      email: req.body?.email,
+      website: req.body?.website,
+      source: req.body?.source,
+      campaign: req.body?.campaign,
+      score: req.body?.score,
+      nextAction: req.body?.nextAction,
+      nextActionAt: req.body?.nextActionAt,
+      notes: req.body?.notes,
+    });
+    res.status(201).json({ lead, growthAutomation: await buildGrowthAutomationSnapshot() });
+  })
+);
+
+discoveryRouter.patch(
+  "/growth-leads/:id",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const current = await getGrowthLead(req.params.id);
+    if (!current) return res.status(404).json({ error: "Lead not found." });
+
+    const allowedStages: GrowthLeadStage[] = [
+      "new","contacted","qualified","invited","signup","activated","paid","lost"
+    ];
+    const requestedStage =
+      typeof req.body?.stage === "string" && allowedStages.includes(req.body.stage as GrowthLeadStage)
+        ? (req.body.stage as GrowthLeadStage)
+        : undefined;
+
+    const lead = await updateGrowthLead(req.params.id, {
+      stage: requestedStage,
+      score: req.body?.score,
+      nextAction: req.body?.nextAction,
+      nextActionAt: req.body?.nextActionAt,
+      notes: req.body?.notes,
+      convertedUserId: req.body?.convertedUserId,
+    });
+    res.json({ lead, growthAutomation: await buildGrowthAutomationSnapshot() });
+  })
+);
+
+discoveryRouter.post(
+  "/growth-leads/:id/outreach",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const event = await addGrowthOutreachEvent({
+      leadId: req.params.id,
+      channel: typeof req.body?.channel === "string" ? req.body.channel : "other",
+      eventType: typeof req.body?.eventType === "string" ? req.body.eventType : "note",
+      note: typeof req.body?.note === "string" ? req.body.note : undefined,
+    });
+    if (!event) return res.status(404).json({ error: "Lead not found." });
+    res.status(201).json({ event, growthAutomation: await buildGrowthAutomationSnapshot() });
+  })
+);
+
+discoveryRouter.post(
+  "/growth-referrals",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const roleTarget = req.body?.roleTarget === "organizer" || req.body?.roleTarget === "sponsor"
+      ? (req.body.roleTarget as GrowthLeadRole)
+      : undefined;
+    const referral = await createGrowthReferralCode({
+      ownerUserId: typeof req.body?.ownerUserId === "string" ? req.body.ownerUserId : undefined,
+      roleTarget,
+      label: typeof req.body?.label === "string" ? req.body.label : undefined,
+    });
+    res.status(201).json({ referral, growthAutomation: await buildGrowthAutomationSnapshot() });
+  })
+);
+
+discoveryRouter.patch(
+  "/growth-targets/:key",
+  ...adminOnly,
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    const targetValue = Number(req.body?.targetValue);
+    if (!Number.isFinite(targetValue) || targetValue < 0) {
+      return res.status(400).json({ error: "targetValue must be a non-negative number." });
+    }
+    const target = await setGrowthTarget(req.params.key, targetValue);
+    if (!target) return res.status(404).json({ error: "Growth target not found." });
+    res.json({ target, growthAutomation: await buildGrowthAutomationSnapshot() });
   })
 );
 
