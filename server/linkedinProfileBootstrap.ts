@@ -187,7 +187,12 @@ function imageUrlFrom(value: unknown, depth = 0): string | null {
   }
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
-    for (const key of ["profilePictureUrl", "profileImageUrl", "avatarUrl", "photoUrl", "photo", "displayPhoto", "picture", "image"]) {
+    for (const key of [
+      "profilePictureUrl", "profilePicture", "profileImageUrl", "profileImage",
+      "profilePhotoUrl", "profilePhoto", "profilePhotoURL", "profile_picture_url",
+      "profile_image_url", "picture_url", "pictureUrl", "avatarUrl", "avatar_url",
+      "avatar", "photoUrl", "photo", "displayPhoto", "picture", "image"
+    ]) {
       if (!(key in record)) continue;
       const found = imageUrlFrom(record[key], depth + 1);
       if (found) return found;
@@ -286,27 +291,73 @@ async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Promise<st
 }
 
 function currentCareer(profile: Record<string, any>) {
-  const experience = arrayValue(profile.experience);
+  const experience = arrayValue(profile.experience).length
+    ? arrayValue(profile.experience)
+    : arrayValue(profile.positions).length
+      ? arrayValue(profile.positions)
+      : [...arrayValue(profile.currentPositions), ...arrayValue(profile.pastPositions)];
+
   const current = experience.find((item) => {
-    const endText = text(item?.endDate?.text);
+    const endText =
+      text(item?.endDate?.text) ||
+      text(item?.endDate) ||
+      text(item?.dateRange?.end) ||
+      text(item?.period);
     return !endText || /present|current/i.test(endText);
   }) || experience[0] || null;
 
-  const firstCurrentPosition = arrayValue(profile.currentPosition)[0] || null;
+  const firstCurrentPosition =
+    arrayValue(profile.currentPosition)[0] ||
+    arrayValue(profile.currentPositions)[0] ||
+    null;
+
+  const currentCompany = objectValue(profile.currentCompany);
 
   return {
-    title: text(current?.position) || text(profile.headline),
-    organization: text(current?.companyName) || text(firstCurrentPosition?.companyName),
+    title:
+      text(current?.position) ||
+      text(current?.title) ||
+      text(firstCurrentPosition?.position) ||
+      text(firstCurrentPosition?.title) ||
+      text(profile.currentTitle) ||
+      text(profile.headline),
+    organization:
+      text(current?.companyName) ||
+      text(current?.company) ||
+      text(firstCurrentPosition?.companyName) ||
+      text(firstCurrentPosition?.company) ||
+      text(profile.currentCompanyName) ||
+      text(currentCompany.name),
   };
 }
 
 function locationFields(profile: Record<string, any>) {
+  if (typeof profile.location === "string") {
+    return {
+      locationText: text(profile.location),
+      city: text(profile.city),
+      country: text(profile.country),
+    };
+  }
+
   const location = objectValue(profile.location);
   const parsed = objectValue(location.parsed);
   return {
-    locationText: text(location.linkedinText) || text(parsed.text),
-    city: text(parsed.city),
-    country: text(parsed.country) || text(parsed.countryFull),
+    locationText:
+      text(location.linkedinText) ||
+      text(location.default) ||
+      text(location.full) ||
+      text(parsed.text) ||
+      text(profile.locationText),
+    city:
+      text(parsed.city) ||
+      text(location.city) ||
+      text(profile.city),
+    country:
+      text(parsed.country) ||
+      text(parsed.countryFull) ||
+      text(location.country) ||
+      text(profile.country),
   };
 }
 
@@ -953,9 +1004,33 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
 
   const location = locationFields(profile);
   const career = currentCareer(profile);
-  const fullName = [text(profile.firstName), text(profile.lastName)].filter(Boolean).join(" ") || null;
+  const fullName =
+    [text(profile.firstName), text(profile.lastName)].filter(Boolean).join(" ") ||
+    text(profile.fullName) ||
+    text(profile.name) ||
+    null;
   const now = new Date().toISOString();
-  const about = text(profile.about);
+  const about = text(profile.about) || text(profile.summary) || text(profile.description);
+
+  const normalizedExperience = arrayValue(profile.experience).length
+    ? arrayValue(profile.experience)
+    : arrayValue(profile.positions).length
+      ? arrayValue(profile.positions)
+      : [...arrayValue(profile.currentPositions), ...arrayValue(profile.pastPositions)];
+  const normalizedEducation = arrayValue(profile.education).length
+    ? arrayValue(profile.education)
+    : arrayValue(profile.schools);
+  const normalizedPublications = arrayValue(profile.publications);
+  const normalizedPatents = arrayValue(profile.patents);
+  const normalizedCertifications = arrayValue(profile.certifications).length
+    ? arrayValue(profile.certifications)
+    : arrayValue(profile.licensesAndCertifications);
+  const normalizedProjects = arrayValue(profile.projects);
+  const normalizedSkills = arrayValue(profile.skills);
+  const normalizedHonors = arrayValue(profile.honorsAndAwards).length
+    ? arrayValue(profile.honorsAndAwards)
+    : arrayValue(profile.awards);
+  const normalizedLanguages = arrayValue(profile.languages);
 
   // Resolve the member portrait from profile-specific fields, then copy it into ConferenceGate-
   // owned storage so it does not depend on a short-lived LinkedIn CDN URL.
@@ -968,6 +1043,12 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     imageUrlFrom(profile.profileImageUrl),
     imageUrlFrom(profile.displayPhoto),
     imageUrlFrom(profile.avatar),
+    imageUrlFrom(profile.profilePhotoUrl),
+    imageUrlFrom(profile.profilePhoto),
+    imageUrlFrom(profile.profile_picture_url),
+    imageUrlFrom(profile.profile_image_url),
+    imageUrlFrom(profile.picture_url),
+    imageUrlFrom(profile),
   ].find(Boolean) || null;
 
   let ownedProfileAvatar: string | null = null;
@@ -1016,25 +1097,25 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     [
       userId,
       returnedUrl,
-      text(profile.id),
-      text(profile.publicIdentifier),
+      text(profile.id) || text(profile.profileId) || text(profile.linkedInIdentifier),
+      text(profile.publicIdentifier) || profileSlug(returnedUrl),
       fullName,
-      text(profile.headline),
+      text(profile.headline) || text(profile.title),
       about,
       location.locationText,
       location.city,
       location.country,
       storedPhoto,
       profile.verified === true ? 1 : 0,
-      jsonArray(profile.experience),
-      jsonArray(profile.education),
-      jsonArray(profile.publications),
-      jsonArray(profile.patents),
-      jsonArray(profile.certifications),
-      jsonArray(profile.projects),
-      jsonArray(profile.skills),
-      jsonArray(profile.honorsAndAwards),
-      jsonArray(profile.languages),
+      JSON.stringify(normalizedExperience),
+      JSON.stringify(normalizedEducation),
+      JSON.stringify(normalizedPublications),
+      JSON.stringify(normalizedPatents),
+      JSON.stringify(normalizedCertifications),
+      JSON.stringify(normalizedProjects),
+      JSON.stringify(normalizedSkills),
+      JSON.stringify(normalizedHonors),
+      JSON.stringify(normalizedLanguages),
       JSON.stringify(profile),
       SOURCE_ACTOR,
       now,
@@ -1049,7 +1130,8 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     "SELECT value FROM app_secrets WHERE key = ?",
     [`manual_avatar_override:${userId}`],
   );
-  const avatarUpdated = Boolean(ownedProfileAvatar && !manualAvatarOverride);
+  const avatarCandidate = ownedProfileAvatar || directPhotoUrl || null;
+  const avatarUpdated = Boolean(avatarCandidate && !manualAvatarOverride);
 
   await dbRun(
     `UPDATE users SET
@@ -1068,9 +1150,9 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
       location.city,
       location.country,
       about ? about.slice(0, 600) : null,
-      ownedProfileAvatar,
+      avatarCandidate,
       manualAvatarOverride ? 1 : 0,
-      ownedProfileAvatar,
+      avatarCandidate,
       userId,
     ],
   );

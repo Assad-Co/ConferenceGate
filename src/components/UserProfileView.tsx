@@ -216,10 +216,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     fetchProfessionalRecoveryStatus()
       .then((status) => {
         if (cancelled) return;
-        if (status?.avatarRepaired || status?.legacyLinkedInActivityRestored) {
-          window.location.reload();
-          return;
-        }
         setProfessionalRecoveryStatus(status);
       })
       .catch((error) => {
@@ -321,6 +317,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [externalCandidates, setExternalCandidates] = useState<ExternalPaper[]>([]);
   const [linkedInPaperTitles, setLinkedInPaperTitles] = useState<string[]>([]);
   const [linkedInPublicationCount, setLinkedInPublicationCount] = useState(0);
+  const [linkedInProfilePhotoUrl, setLinkedInProfilePhotoUrl] = useState<string | null>(null);
   const [externalLoading, setExternalLoading] = useState(false);
   const [externalRefreshing, setExternalRefreshing] = useState(false);
   const [decidingDoi, setDecidingDoi] = useState<string | null>(null);
@@ -345,11 +342,13 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           .filter(Boolean);
         setLinkedInPaperTitles(titles);
         setLinkedInPublicationCount(publications.length);
+        setLinkedInProfilePhotoUrl(profile?.photoUrl || null);
       })
       .catch(() => {
         if (!cancelled) {
           setLinkedInPaperTitles([]);
           setLinkedInPublicationCount(0);
+          setLinkedInProfilePhotoUrl(null);
         }
       });
     return () => {
@@ -637,13 +636,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     ) === idx)
     .sort((a, b) => b.year - a.year);
 
+  const effectiveProfileAvatar = linkedInProfilePhotoUrl || userProfile.avatar;
+  const effectiveHasCustomAvatar = Boolean(linkedInProfilePhotoUrl || hasCustomAvatar);
+
   const profileCompletenessChecks = [
     Boolean(userProfile.name?.trim()),
     Boolean(userProfile.title?.trim()),
     Boolean(userProfile.organization?.trim()),
     Boolean(userProfile.bio?.trim() && userProfile.bio.trim().length >= 40),
     Boolean(userProfile.city?.trim() || userProfile.country?.trim()),
-    Boolean(hasCustomAvatar),
+    effectiveHasCustomAvatar,
     (userProfile.expertise || []).length > 0,
     (userProfile.technicalSpecialization || []).length > 0,
     (userProfile.researchInterests || []).length > 0,
@@ -672,20 +674,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       userProfile.contributions.sessionsChaired * 20 +
       userProfile.contributions.speakerRoles * 20
   );
-
-  if (ownerProfessionalContext && !professionalRecoveryStatusLoaded && !professionalRecoveryError) {
-    return (
-      <div className="space-y-8">
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-8 flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-blue-700" />
-          <div>
-            <div className="text-sm font-extrabold text-slate-900">Loading your original Professional profile…</div>
-            <p className="text-xs text-slate-500 mt-1">ConferenceGate is checking the stored Professional identity before showing profile metrics.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (professionalRecoveryRequired) {
     return (
@@ -782,7 +770,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6">
             <div className="relative -mt-12 shrink-0">
               <img
-                src={userProfile.avatar}
+                src={effectiveProfileAvatar}
                 alt={userProfile.name}
                 className="w-28 h-28 rounded-3xl object-cover ring-4 ring-white shadow-xl bg-slate-900"
               />
