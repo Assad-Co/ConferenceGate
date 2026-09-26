@@ -308,19 +308,23 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
     const html = await fetchRenderedHtml(requestedUrl);
     if (html) {
       const readMeta = (property: string): string => {
-        const first = new RegExp(
-          '<meta[^>]+(?:property|name)=["\\\']' + property + '["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']',
-          "i",
-        ).exec(html);
-        const second = new RegExp(
-          '<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+(?:property|name)=["\\\']' + property + '["\\\']',
-          "i",
-        ).exec(html);
-        return first?.[1] || second?.[1] || "";
+        const tags = html.match(/<meta\\b[^>]*>/gi) || [];
+        for (const tag of tags) {
+          const lower = tag.toLowerCase();
+          const propertyNeedle = `property="${property.toLowerCase()}"`;
+          const propertyNeedleSingle = `property=\'${property.toLowerCase()}\'`;
+          const nameNeedle = `name="${property.toLowerCase()}"`;
+          const nameNeedleSingle = `name=\'${property.toLowerCase()}\'`;
+          if (!lower.includes(propertyNeedle) && !lower.includes(propertyNeedleSingle) &&
+              !lower.includes(nameNeedle) && !lower.includes(nameNeedleSingle)) continue;
+          const content = /content=["\']([^"\']+)["\']/i.exec(tag);
+          if (content?.[1]) return content[1];
+        }
+        return "";
       };
       const declaredUrl = readMeta("og:url");
       const ogImage = readMeta("og:image");
-      if (exactProfile(declaredUrl) && /^https:\\/\\//i.test(ogImage)) {
+      if (exactProfile(declaredUrl) && ogImage.startsWith("https://")) {
         const owned = await ownImage(ogImage);
         if (owned) {
           console.log("[owner-avatar-repair] restored exact LinkedIn portrait via rendered public profile");
@@ -334,7 +338,6 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
       error?.message || String(error),
     );
   }
-
   // Fallback 2: Brave\'s exact LinkedIn web result. Brave frequently carries a thumbnail for a
   // public profile even when LinkedIn blocks direct page readers. Only accept a thumbnail whose
   // result URL resolves to the exact same /in/<slug>, never a name-only match.
