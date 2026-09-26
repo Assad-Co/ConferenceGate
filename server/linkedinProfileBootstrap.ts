@@ -258,7 +258,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
       const timeout = setTimeout(() => controller.abort(), 60_000);
       try {
         const endpoint = new URL(
-          \`https://api.apify.com/v2/actors/\${provider.id}/run-sync-get-dataset-items\`,
+          `https://api.apify.com/v2/actors/${provider.id}/run-sync-get-dataset-items`,
         );
         endpoint.searchParams.set("format", "json");
         endpoint.searchParams.set("clean", "true");
@@ -269,7 +269,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
           method: "POST",
           signal: controller.signal,
           headers: {
-            Authorization: \`Bearer \${token}\`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -307,7 +307,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
     try {
       const { braveSearch } = await import("./braveSearch");
       const results = await braveSearch(
-        \`site:linkedin.com/in "\${requestedSlug}"\`,
+        `site:linkedin.com/in "${requestedSlug}"`,
         10,
         "high",
       );
@@ -338,7 +338,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          q: \`"\${requestedSlug}" LinkedIn\`,
+          q: `"${requestedSlug}" LinkedIn`,
           num: 20,
         }),
         signal: AbortSignal.timeout(12_000),
