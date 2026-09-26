@@ -28,7 +28,7 @@ export const BillingLedgerPanel: React.FC<BillingLedgerPanelProps> = ({ perspect
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetchBillingLedger()
+    fetchBillingLedger(perspective)
       .then((data) => {
         if (!active) return;
         setLedger(data);
