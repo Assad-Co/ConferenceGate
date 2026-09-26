@@ -189,9 +189,28 @@ export async function buildEnterprisePortfolio(accountId: string, role: PaidAcco
   const team = await teamSummary(accountId, role);
 
   if (role === "organizer") {
+    const conferenceRows = await dbAll<{ id: string; data: string }>(
+      "SELECT id,data FROM created_conferences WHERE organizer_id=? ORDER BY created_at DESC",
+      [accountId],
+    );
+    const conferenceIds = conferenceRows.map((row) => row.id);
+    const placeholders = conferenceIds.map(() => "?").join(",");
+    const today = new Date().toISOString().slice(0, 10);
+    const upcomingCount = conferenceRows.reduce((count, row) => {
+      try {
+        const data = JSON.parse(row.data || "{}");
+        const start =
+          data?.dates?.start ||
+          data?.startDate ||
+          data?.start_date ||
+          null;
+        return start && String(start).slice(0, 10) >= today ? count + 1 : count;
+      } catch {
+        return count;
+      }
+    }, 0);
+
     const [
-      conferences,
-      upcoming,
       registrations,
       submissions,
       accepted,
@@ -200,32 +219,25 @@ export async function buildEnterprisePortfolio(accountId: string, role: PaidAcco
       deals,
       completedDeals,
     ] = await Promise.all([
-      dbGet<{ count: number }>("SELECT COUNT(*) AS count FROM created_conferences WHERE organizer_id=?", [accountId]),
-      dbGet<{ count: number }>(
-        "SELECT COUNT(*) AS count FROM created_conferences WHERE organizer_id=? AND date(start_date)>=date('now')",
-        [accountId],
-      ).catch(() => ({ count: 0 })),
-      dbGet<{ count: number }>(
-        `SELECT COUNT(*) AS count
-           FROM conference_registrations r
-           JOIN created_conferences c ON c.id=r.conference_id
-          WHERE c.organizer_id=?`,
-        [accountId],
-      ),
-      dbGet<{ count: number }>(
-        `SELECT COUNT(*) AS count
-           FROM abstract_submissions s
-           JOIN created_conferences c ON c.id=s.conference_id
-          WHERE c.organizer_id=?`,
-        [accountId],
-      ).catch(() => ({ count: 0 })),
-      dbGet<{ count: number }>(
-        `SELECT COUNT(*) AS count
-           FROM abstract_submissions s
-           JOIN created_conferences c ON c.id=s.conference_id
-          WHERE c.organizer_id=? AND lower(COALESCE(s.status,''))='accepted'`,
-        [accountId],
-      ).catch(() => ({ count: 0 })),
+      conferenceIds.length
+        ? dbGet<{ count: number }>(
+            `SELECT COUNT(*) AS count FROM conference_registrations WHERE conference_id IN (${placeholders})`,
+            conferenceIds,
+          )
+        : Promise.resolve({ count: 0 }),
+      conferenceIds.length
+        ? dbGet<{ count: number }>(
+            `SELECT COUNT(*) AS count FROM submissions WHERE conference_id IN (${placeholders})`,
+            conferenceIds,
+          )
+        : Promise.resolve({ count: 0 }),
+      conferenceIds.length
+        ? dbGet<{ count: number }>(
+            `SELECT COUNT(*) AS count FROM submissions
+              WHERE conference_id IN (${placeholders}) AND lower(COALESCE(status,''))='accepted'`,
+            conferenceIds,
+          )
+        : Promise.resolve({ count: 0 }),
       dbGet<{ count: number }>("SELECT COUNT(*) AS count FROM sponsorship_needs WHERE organizer_id=?", [accountId]),
       dbGet<{ count: number }>(
         `SELECT COUNT(*) AS count
@@ -244,8 +256,8 @@ export async function buildEnterprisePortfolio(accountId: string, role: PaidAcco
       role,
       team,
       conferences: {
-        total: Number(conferences?.count || 0),
-        upcoming: Number(upcoming?.count || 0),
+        total: conferenceRows.length,
+        upcoming: upcomingCount,
         registrations: Number(registrations?.count || 0),
         submissions: Number(submissions?.count || 0),
         accepted: Number(accepted?.count || 0),
@@ -270,9 +282,12 @@ export async function buildEnterprisePortfolio(accountId: string, role: PaidAcco
     ),
     dbGet<{ count: number }>("SELECT COUNT(*) AS count FROM sponsor_requests WHERE sponsor_id=?", [accountId]),
     dbGet<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM sponsor_request_responses WHERE sponsor_id=? AND status='accepted'",
+      `SELECT COUNT(*) AS count
+         FROM sponsor_request_responses r
+         JOIN sponsor_requests q ON q.id=r.request_id
+        WHERE q.sponsor_id=? AND r.status='accepted'`,
       [accountId],
-    ).catch(() => ({ count: 0 })),
+    ),
   ]);
 
   return {
@@ -526,15 +541,28 @@ enterpriseApiRouter.get(
       return res.status(403).json({ error: "Conference portfolio API is available to Organizer workspaces." });
     }
     const rows = await dbAll<any>(
-      `SELECT id,title,start_date,end_date,location,created_at
+      `SELECT id,data,created_at
          FROM created_conferences
         WHERE organizer_id=?
-        ORDER BY start_date IS NULL,start_date ASC,created_at DESC
+        ORDER BY created_at DESC
         LIMIT 500`,
       [key.accountId],
     );
-    await auditApi(req, "conferences.read", { count: rows.length });
-    res.json({ conferences: rows });
+    const conferences = rows.map((row) => {
+      let data: any = {};
+      try { data = JSON.parse(row.data || "{}"); } catch {}
+      return {
+        id: row.id,
+        title: data.title || "",
+        dates: data.dates || null,
+        location: data.location || null,
+        format: data.format || null,
+        topics: Array.isArray(data.topics) ? data.topics : [],
+        createdAt: row.created_at,
+      };
+    });
+    await auditApi(req, "conferences.read", { count: conferences.length });
+    res.json({ conferences });
   }),
 );
 
