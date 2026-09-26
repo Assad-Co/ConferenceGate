@@ -400,17 +400,28 @@ billingRouter.get(
   "/ledger/mine",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const row = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [req.userId!]);
-    if (!row || (row.role !== "organizer" && row.role !== "sponsor")) {
+    if (!row) return res.status(404).json({ error: "Account not found." });
+
+    const requestedRole =
+      req.query.role === "organizer" || req.query.role === "sponsor"
+        ? req.query.role
+        : undefined;
+    const ledgerRole =
+      requestedRole ||
+      (row.role === "organizer" || row.role === "sponsor" ? row.role : undefined);
+
+    if (!ledgerRole) {
       return res.status(403).json({ error: "Organizer or Sponsor account required." });
     }
-    const context = await resolvePaidAccountContext(req.userId!, row.role);
+
+    const context = await resolvePaidAccountContext(req.userId!, ledgerRole);
     if (!context?.paid) {
       return res.status(402).json({ error: "Paid workspace subscription required." });
     }
     const accountId = context.accountId;
 
     const payments = await dbGet<{ count: number }>(
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? `SELECT COUNT(*) as count
              FROM sponsorship_payments p
              JOIN sponsorship_deals d ON d.id=p.deal_id
@@ -422,7 +433,7 @@ billingRouter.get(
       [accountId]
     );
     const paymentCurrencyTotals = await dbAll<{ currency: string; amount: number | null }>(
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? `SELECT p.currency as currency, COALESCE(SUM(p.amount),0) as amount
              FROM sponsorship_payments p
              JOIN sponsorship_deals d ON d.id=p.deal_id
@@ -436,7 +447,7 @@ billingRouter.get(
       [accountId]
     );
     const recent = await dbAll<any>(
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? `SELECT p.*,d.conference_title,d.opportunity_title,
                   o.status as payout_status,o.payout_amount,o.platform_fee_amount,o.payout_reference,o.paid_at
              FROM sponsorship_payments p
@@ -450,7 +461,7 @@ billingRouter.get(
     );
 
     const payoutSummary =
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? await dbGet<{ pending_count: number }>(
             `SELECT SUM(CASE WHEN status IN ('pending','held') THEN 1 ELSE 0 END) AS pending_count
                FROM sponsorship_payout_obligations
@@ -459,7 +470,7 @@ billingRouter.get(
           )
         : undefined;
     const payoutPaidCurrencyTotals =
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? await dbAll<{ currency: string; amount: number | null }>(
             `SELECT currency, COALESCE(SUM(payout_amount),0) as amount
                FROM sponsorship_payout_obligations
@@ -469,7 +480,7 @@ billingRouter.get(
           )
         : [];
     const payoutPendingCurrencyTotals =
-      row.role === "organizer"
+      ledgerRole === "organizer"
         ? await dbAll<{ currency: string; amount: number | null }>(
             `SELECT currency, COALESCE(SUM(payout_amount),0) as amount
                FROM sponsorship_payout_obligations
