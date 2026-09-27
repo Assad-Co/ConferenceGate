@@ -122,6 +122,52 @@ async function audit(
   );
 }
 
+async function ensureEnterpriseSettingsSchema() {
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS account_workspace_enterprise_settings (
+      workspace_id TEXT PRIMARY KEY,
+      require_allowed_domain INTEGER NOT NULL DEFAULT 0,
+      allowed_email_domains TEXT NOT NULL DEFAULT '[]',
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES account_workspaces(id) ON DELETE CASCADE
+    )
+  `);
+}
+
+function normalizeDomain(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const domain = value.trim().toLowerCase().replace(/^@+/, "");
+  if (!domain || domain.length > 253) return null;
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) return null;
+  return domain;
+}
+
+async function enterpriseSettingsDTO(workspaceId: string) {
+  await ensureEnterpriseSettingsSchema();
+  const row = await dbGet<any>(
+    "SELECT * FROM account_workspace_enterprise_settings WHERE workspace_id=?",
+    [workspaceId]
+  );
+  let domains: string[] = [];
+  if (row?.allowed_email_domains) {
+    try {
+      const parsed = JSON.parse(row.allowed_email_domains);
+      if (Array.isArray(parsed)) domains = parsed.map(String);
+    } catch {}
+  }
+  return {
+    requireAllowedDomain: Boolean(row?.require_allowed_domain),
+    allowedEmailDomains: domains,
+    updatedAt: row?.updated_at || null,
+  };
+}
+
+function csvCell(value: unknown): string {
+  const text = value == null ? "" : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"','""')}"` : text;
+}
+
 async function workspaceDTO(context: {
   workspace: AccountWorkspaceRow;
   membership: AccountWorkspaceMemberRow;
@@ -764,6 +810,93 @@ workspacesRouter.post(
 );
 
 workspacesRouter.get(
+  "/enterprise-settings",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      res.json({ settings: await enterpriseSettingsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load enterprise settings." });
+    }
+  })
+);
+
+workspacesRouter.put(
+  "/enterprise-settings",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (context.membership.member_role !== "owner") {
+        return res.status(403).json({ error: "Workspace owner permission required." });
+      }
+
+      const requested = Array.isArray(req.body?.allowedEmailDomains) ? req.body.allowedEmailDomains : [];
+      const domains = [...new Set(requested.map(normalizeDomain).filter(Boolean) as string[])].slice(0, 50);
+      const requireAllowedDomain = Boolean(req.body?.requireAllowedDomain);
+      if (requireAllowedDomain && domains.length === 0) {
+        return res.status(400).json({ error: "Add at least one approved email domain before enforcing the domain rule." });
+      }
+
+      await ensureEnterpriseSettingsSchema();
+      await dbRun(
+        `INSERT INTO account_workspace_enterprise_settings(
+          workspace_id,require_allowed_domain,allowed_email_domains,updated_by,updated_at
+        ) VALUES(?,?,?,?,datetime('now'))
+        ON CONFLICT(workspace_id) DO UPDATE SET
+          require_allowed_domain=excluded.require_allowed_domain,
+          allowed_email_domains=excluded.allowed_email_domains,
+          updated_by=excluded.updated_by,
+          updated_at=datetime('now')`,
+        [context.workspace.id, requireAllowedDomain ? 1 : 0, JSON.stringify(domains), req.userId!]
+      );
+      await audit(context.workspace.id, req.userId!, "enterprise_settings_updated", null, {
+        requireAllowedDomain,
+        allowedEmailDomains: domains,
+      });
+      res.json({ settings: await enterpriseSettingsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not update enterprise settings." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/audit.csv",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      const rows = await dbAll<any>(
+        `SELECT a.created_at,a.action,u.name AS actor_name,u.email AS actor_email,
+                t.name AS target_name,t.email AS target_email,a.details
+           FROM account_workspace_audit a
+           JOIN users u ON u.id=a.actor_id
+           LEFT JOIN users t ON t.id=a.target_user_id
+          WHERE a.workspace_id=?
+          ORDER BY a.created_at DESC`,
+        [context.workspace.id]
+      );
+      const csv = [
+        ["created_at","action","actor_name","actor_email","target_name","target_email","details"].join(","),
+        ...rows.map((row) => [
+          row.created_at,row.action,row.actor_name,row.actor_email,row.target_name,row.target_email,row.details || ""
+        ].map(csvCell).join(","))
+      ].join("\n");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="conferencegate-workspace-audit.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace audit." });
+    }
+  })
+);
+
+workspacesRouter.get(
   "/activation",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     try {
@@ -831,6 +964,16 @@ workspacesRouter.post(
       ? req.body.memberRole
       : "member";
     if (!email) return res.status(400).json({ error: "Member email is required." });
+
+    const enterpriseSettings = await enterpriseSettingsDTO(context.workspace.id);
+    if (enterpriseSettings.requireAllowedDomain) {
+      const emailDomain = email.split("@").pop()?.toLowerCase() || "";
+      if (!enterpriseSettings.allowedEmailDomains.includes(emailDomain)) {
+        return res.status(403).json({
+          error: "This workspace only accepts members from approved email domains.",
+        });
+      }
+    }
 
     const target = await dbGet<UserRow>("SELECT * FROM users WHERE lower(email)=?", [email]);
     if (!target) {

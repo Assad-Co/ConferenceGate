@@ -188,3 +188,32 @@ export async function importOrganizerConferenceFromOfficialUrl(
   }
   return parseResponse(res);
 }
+
+export interface WorkspaceEnterpriseSettings {
+  requireAllowedDomain: boolean;
+  allowedEmailDomains: string[];
+  updatedAt: string | null;
+}
+
+export async function fetchWorkspaceEnterpriseSettings(): Promise<WorkspaceEnterpriseSettings> {
+  const res = await fetch('/api/workspaces/enterprise-settings', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.settings;
+}
+
+export async function updateWorkspaceEnterpriseSettings(
+  settings: Pick<WorkspaceEnterpriseSettings, 'requireAllowedDomain' | 'allowedEmailDomains'>
+): Promise<WorkspaceEnterpriseSettings> {
+  const res = await fetch('/api/workspaces/enterprise-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(settings),
+  });
+  const data = await parseResponse(res);
+  return data.settings;
+}
+
+export function downloadWorkspaceAuditCsv(): void {
+  window.location.assign('/api/workspaces/audit.csv');
+}

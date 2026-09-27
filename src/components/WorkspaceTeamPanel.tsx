@@ -13,6 +13,8 @@ import {
   RefreshCw,
   ArrowRight,
   Trophy,
+  Download,
+  LockKeyhole,
 } from 'lucide-react';
 import {
   addWorkspaceMember,
@@ -21,6 +23,10 @@ import {
   removeWorkspaceMember,
   renameMyWorkspace,
   updateWorkspaceMemberRole,
+  fetchWorkspaceEnterpriseSettings,
+  updateWorkspaceEnterpriseSettings,
+  downloadWorkspaceAuditCsv,
+  type WorkspaceEnterpriseSettings,
   type AccountWorkspace,
   type WorkspaceActivation,
   type WorkspaceMemberRole,
@@ -52,6 +58,9 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [memberRole, setMemberRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [error, setError] = useState<string | null>(null);
   const [activationError, setActivationError] = useState<string | null>(null);
+  const [enterpriseSettings, setEnterpriseSettings] = useState<WorkspaceEnterpriseSettings | null>(null);
+  const [enterpriseDomains, setEnterpriseDomains] = useState('');
+  const [savingEnterprise, setSavingEnterprise] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const seatsUsed = workspace?.members.length || 0;
@@ -80,6 +89,15 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       setWorkspace(data);
       setWorkspaceName(data.name);
       await refreshActivation();
+      if (data.myRole === 'owner' || data.myRole === 'admin') {
+        try {
+          const settings = await fetchWorkspaceEnterpriseSettings();
+          setEnterpriseSettings(settings);
+          setEnterpriseDomains(settings.allowedEmailDomains.join(', '));
+        } catch {
+          setEnterpriseSettings(null);
+        }
+      }
     } catch (err: any) {
       setError(err?.message || 'Could not load team workspace.');
     } finally {
@@ -104,6 +122,38 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       setError(err?.message || 'Could not rename workspace.');
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const saveEnterpriseSettings = async () => {
+    if (!enterpriseSettings) return;
+    setSavingEnterprise(true);
+    setError(null);
+    try {
+      const domains = [...new Set(
+        enterpriseDomains
+          .split(',')
+          .map((item) => item.trim().toLowerCase().replace(/^@+/, ''))
+          .filter(Boolean)
+      )];
+      const updated = await updateWorkspaceEnterpriseSettings({
+        requireAllowedDomain: enterpriseSettings.requireAllowedDomain,
+        allowedEmailDomains: domains,
+      });
+      setEnterpriseSettings(updated);
+      setEnterpriseDomains(updated.allowedEmailDomains.join(', '));
+      showToast({
+        type: 'success',
+        title: 'Enterprise controls saved',
+        message: updated.requireAllowedDomain
+          ? 'New workspace members must use an approved company email domain.'
+          : 'Email-domain enforcement is disabled.',
+      });
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Could not save enterprise controls.');
+    } finally {
+      setSavingEnterprise(false);
     }
   };
 
@@ -329,6 +379,73 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
 
         {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">{error}</div>}
       </div>
+
+      {canAdmin && enterpriseSettings && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                <LockKeyhole className="w-5 h-5 text-indigo-700" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Enterprise Governance</span>
+                <h3 className="text-base font-bold text-slate-900 mt-0.5">Workspace access controls</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                  Restrict new team members to approved company email domains and export the full workspace access audit when needed.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={downloadWorkspaceAuditCsv}
+              className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer self-start"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export Audit CSV
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1.5">
+                Approved email domains
+              </label>
+              <input
+                value={enterpriseDomains}
+                disabled={workspace.myRole !== 'owner'}
+                onChange={(e) => setEnterpriseDomains(e.target.value)}
+                placeholder="company.com, subsidiary.com"
+                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs disabled:opacity-60"
+              />
+            </div>
+            <label className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={enterpriseSettings.requireAllowedDomain}
+                disabled={workspace.myRole !== 'owner'}
+                onChange={(e) =>
+                  setEnterpriseSettings({ ...enterpriseSettings, requireAllowedDomain: e.target.checked })
+                }
+              />
+              Enforce approved domains
+            </label>
+          </div>
+
+          {workspace.myRole === 'owner' && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={saveEnterpriseSettings}
+                disabled={savingEnterprise}
+                className="px-4 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {savingEnterprise ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Enterprise Controls
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {canAdmin && (
         <form onSubmit={addMember} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
