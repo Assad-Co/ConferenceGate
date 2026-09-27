@@ -474,6 +474,66 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
           </div>
 
           {workspace.myRole === 'owner' && (
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-indigo-600">Verified organization domain</div>
+                <p className="text-[10px] text-slate-600 mt-1">
+                  Verify control of your company domain with one DNS TXT record. This does not change sign-in or enable SSO.
+                </p>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  value={enterpriseDomain}
+                  onChange={(e) => setEnterpriseDomain(e.target.value)}
+                  placeholder="company.com"
+                  className="flex-1 p-2.5 rounded-xl bg-white border border-slate-200 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={startDomainVerification}
+                  disabled={domainVerificationBusy || !enterpriseDomain.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-white border border-indigo-200 text-indigo-700 text-xs font-bold cursor-pointer disabled:opacity-50"
+                >
+                  Start Verification
+                </button>
+              </div>
+
+              {enterpriseSettings.domainVerification && (
+                <div className="rounded-xl bg-white border border-slate-200 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">{enterpriseSettings.domainVerification.domain}</div>
+                      <div className="text-[10px] text-slate-500">
+                        Status:{' '}
+                        <span className={enterpriseSettings.domainVerification.status === 'verified' ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
+                          {enterpriseSettings.domainVerification.status}
+                        </span>
+                      </div>
+                    </div>
+                    {enterpriseSettings.domainVerification.status !== 'verified' && (
+                      <button
+                        type="button"
+                        onClick={checkDomainVerification}
+                        disabled={domainVerificationBusy}
+                        className="px-3 py-2 rounded-lg bg-indigo-700 text-white text-[10px] font-bold cursor-pointer disabled:opacity-50"
+                      >
+                        Check DNS
+                      </button>
+                    )}
+                  </div>
+                  {enterpriseSettings.domainVerification.status !== 'verified' && (
+                    <div className="text-[10px] text-slate-600 space-y-1">
+                      <div><span className="font-bold">TXT name:</span> {enterpriseSettings.domainVerification.txtName}</div>
+                      <div className="break-all"><span className="font-bold">TXT value:</span> {enterpriseSettings.domainVerification.txtValue}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {workspace.myRole === 'owner' && (
             <div className="flex justify-end">
               <button
                 type="button"
