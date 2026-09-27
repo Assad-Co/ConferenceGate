@@ -581,6 +581,78 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
             </div>
           )}
 
+          {dataControls && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Data & admin controls</div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Control delegated admin actions, data exports, and how much workspace audit history is shown in the dashboard.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <label className="flex items-start gap-2 p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={dataControls.adminsCanManageMembers}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, adminsCanManageMembers: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-bold block">Admins manage members</span>
+                    <span className="text-[10px] text-slate-500">Allow admin seats to add, remove, and change team roles.</span>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={dataControls.allowAdminExports}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, allowAdminExports: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-bold block">Admins can export</span>
+                    <span className="text-[10px] text-slate-500">Allow admin seats to download audit and workspace-data exports.</span>
+                  </span>
+                </label>
+
+                <label className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <span className="font-bold block mb-1">Audit dashboard window</span>
+                  <select
+                    value={dataControls.auditVisibilityDays}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, auditVisibilityDays: Number(e.target.value) })}
+                    className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
+                  >
+                    <option value={30}>30 days</option>
+                    <option value={90}>90 days</option>
+                    <option value={365}>1 year</option>
+                    <option value={1095}>3 years</option>
+                    <option value={3650}>10 years</option>
+                  </select>
+                  <span className="text-[10px] text-slate-500 block mt-1">This limits dashboard history; it does not delete stored audit records.</span>
+                </label>
+              </div>
+
+              {workspace.myRole === 'owner' && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={saveDataControls}
+                    disabled={savingDataControls}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingDataControls ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Data Controls
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {workspace.myRole === 'owner' && (
             <div className="flex justify-end">
               <button
