@@ -189,9 +189,19 @@ export async function importOrganizerConferenceFromOfficialUrl(
   return parseResponse(res);
 }
 
+export interface WorkspaceDomainVerification {
+  domain: string;
+  status: 'pending' | 'verified';
+  txtName: string;
+  txtValue: string;
+  verifiedAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface WorkspaceEnterpriseSettings {
   requireAllowedDomain: boolean;
   allowedEmailDomains: string[];
+  domainVerification: WorkspaceDomainVerification | null;
   updatedAt: string | null;
 }
 
