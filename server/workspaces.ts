@@ -1108,8 +1108,8 @@ workspacesRouter.post(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
 
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
@@ -1181,8 +1181,8 @@ workspacesRouter.patch(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
     if (req.params.userId === context.workspace.owner_id) {
       return res.status(409).json({ error: "The owner role cannot be changed." });
@@ -1217,8 +1217,8 @@ workspacesRouter.delete(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
     if (req.params.userId === context.workspace.owner_id) {
       return res.status(409).json({ error: "The workspace owner cannot be removed." });
