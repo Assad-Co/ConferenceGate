@@ -27,11 +27,14 @@ import {
   updateWorkspaceEnterpriseSettings,
   downloadWorkspaceAuditCsv,
   downloadWorkspaceDataJson,
+  downloadWorkspaceEnterpriseReportCsv,
+  fetchWorkspaceEnterpriseReport,
   updateWorkspaceDataControls,
   startWorkspaceDomainVerification,
   checkWorkspaceDomainVerification,
   type WorkspaceEnterpriseSettings,
   type WorkspaceDataControls,
+  type WorkspaceEnterpriseReport,
   type AccountWorkspace,
   type WorkspaceActivation,
   type WorkspaceMemberRole,
@@ -70,6 +73,8 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
   const [dataControls, setDataControls] = useState<WorkspaceDataControls | null>(null);
   const [savingDataControls, setSavingDataControls] = useState(false);
+  const [enterpriseReport, setEnterpriseReport] = useState<WorkspaceEnterpriseReport | null>(null);
+  const [enterpriseReportLoading, setEnterpriseReportLoading] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const canManageMembers = workspace
@@ -107,12 +112,17 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       await refreshActivation();
       if (data.myRole === 'owner' || data.myRole === 'admin') {
         try {
-          const settings = await fetchWorkspaceEnterpriseSettings();
+          const [settings, report] = await Promise.all([
+            fetchWorkspaceEnterpriseSettings(),
+            fetchWorkspaceEnterpriseReport(),
+          ]);
           setEnterpriseSettings(settings);
           setEnterpriseDomains(settings.allowedEmailDomains.join(', '));
           setEnterpriseDomain(settings.domainVerification?.domain || settings.allowedEmailDomains[0] || '');
+          setEnterpriseReport(report);
         } catch {
           setEnterpriseSettings(null);
+          setEnterpriseReport(null);
         }
       }
     } catch (err: any) {
@@ -208,6 +218,18 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       setError(err?.message || 'Domain verification is not complete yet.');
     } finally {
       setDomainVerificationBusy(false);
+    }
+  };
+
+  const refreshEnterpriseReport = async () => {
+    setEnterpriseReportLoading(true);
+    setError(null);
+    try {
+      setEnterpriseReport(await fetchWorkspaceEnterpriseReport());
+    } catch (err: any) {
+      setError(err?.message || 'Could not refresh enterprise report.');
+    } finally {
+      setEnterpriseReportLoading(false);
     }
   };
 
@@ -666,6 +688,101 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {canAdmin && enterpriseReport && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Enterprise Reporting</span>
+              <h3 className="text-base font-bold text-slate-900 mt-0.5">Workspace usage & activity</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Live workspace metrics from ConferenceGate records. No estimated customer activity is added.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={refreshEnterpriseReport}
+                disabled={enterpriseReportLoading}
+                className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${enterpriseReportLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              {canExport && (
+                <button
+                  type="button"
+                  onClick={downloadWorkspaceEnterpriseReportCsv}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Report CSV
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
+              <div className="text-[9px] uppercase font-bold text-blue-500">Seat utilization</div>
+              <div className="text-xl font-extrabold text-blue-950 mt-1">{enterpriseReport.workspace.seatUtilizationPct}%</div>
+              <div className="text-[10px] text-blue-700 mt-1">{enterpriseReport.workspace.seatsUsed} / {enterpriseReport.workspace.seatLimit} seats</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-[9px] uppercase font-bold text-slate-500">Workspace changes</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-1">{enterpriseReport.activity.auditEvents30d}</div>
+              <div className="text-[10px] text-slate-500 mt-1">audit events in 30 days</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+              <div className="text-[9px] uppercase font-bold text-emerald-600">Domain identity</div>
+              <div className="text-sm font-extrabold text-emerald-950 mt-2">
+                {enterpriseReport.governance.domainVerification?.status === 'verified' ? 'Verified' : enterpriseReport.governance.domainVerification ? 'Pending' : 'Not configured'}
+              </div>
+              <div className="text-[10px] text-emerald-700 mt-1 truncate">
+                {enterpriseReport.governance.domainVerification?.domain || '—'}
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+              <div className="text-[9px] uppercase font-bold text-indigo-500">Team roles</div>
+              <div className="text-[10px] text-indigo-900 mt-2 space-y-0.5">
+                <div>{enterpriseReport.workspace.roleCounts.admin} admin</div>
+                <div>{enterpriseReport.workspace.roleCounts.member} member</div>
+                <div>{enterpriseReport.workspace.roleCounts.viewer} viewer</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-900">Product activity</div>
+              <div className="divide-y divide-slate-100">
+                {Object.entries(enterpriseReport.productMetrics).map(([key, value]) => (
+                  <div key={key} className="px-4 py-2.5 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-600">{key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}</span>
+                    <span className="font-extrabold text-slate-900">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-900">Top workspace actions · 30 days</div>
+              {enterpriseReport.activity.topActions30d.length ? (
+                <div className="divide-y divide-slate-100">
+                  {enterpriseReport.activity.topActions30d.slice(0, 6).map((item) => (
+                    <div key={item.action} className="px-4 py-2.5 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-600">{item.action.replace(/_/g, ' ')}</span>
+                      <span className="font-extrabold text-slate-900">{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-[11px] text-slate-400">No workspace changes in the last 30 days.</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

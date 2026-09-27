@@ -65,7 +65,23 @@ The audit dashboard window is a visibility control only. It does not silently de
 
 All policy changes and exports are themselves written to the workspace audit trail.
 
-## Next Phase 10 slices
+## Phase 10.4 — Enterprise Reporting
 
-- **10.4 Enterprise Reporting** — organization-level usage and activity reporting.
-- **10.5 Enterprise Validation** — end-to-end permissions, audit, and policy smoke tests.
+Owner and admin seats can view a live workspace report built only from ConferenceGate records.
+
+The report includes:
+
+- seat usage and seat-utilization percentage;
+- owner/admin/member/viewer distribution;
+- company-domain verification state;
+- workspace audit-event volume over the trailing 30 days;
+- the most recent workspace change;
+- top workspace actions over the trailing 30 days;
+- Organizer-specific metrics such as conferences, active sponsorship needs, Sponsor inquiries, and active Deal Rooms;
+- Sponsor-specific metrics such as saved opportunities, sponsorship inquiries, active Deal Rooms, and active Sponsor Requests.
+
+A CSV export is available to owners and to admins only when the owner has enabled admin exports.
+
+## Next Phase 10 slice
+
+- **10.5 Enterprise Validation** — dedicated end-to-end validation of enterprise permissions, identity, exports, reporting, and policy enforcement.

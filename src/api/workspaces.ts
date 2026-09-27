@@ -280,3 +280,42 @@ export async function updateWorkspaceDataControls(
 export function downloadWorkspaceDataJson(): void {
   window.location.assign('/api/workspaces/data-export.json');
 }
+
+
+export interface WorkspaceEnterpriseReport {
+  generatedAt: string;
+  workspace: {
+    id: string;
+    name: string;
+    accountRole: 'organizer' | 'sponsor';
+    seatLimit: number;
+    seatsUsed: number;
+    seatUtilizationPct: number;
+    roleCounts: Record<'owner' | 'admin' | 'member' | 'viewer', number>;
+  };
+  governance: {
+    dataControls: WorkspaceDataControls;
+    domainVerification: {
+      domain: string;
+      status: 'pending' | 'verified';
+      verifiedAt: string | null;
+    } | null;
+  };
+  activity: {
+    auditEvents30d: number;
+    lastWorkspaceChangeAt: string | null;
+    lastWorkspaceChangeAction: string | null;
+    topActions30d: Array<{ action: string; count: number }>;
+  };
+  productMetrics: Record<string, number>;
+}
+
+export async function fetchWorkspaceEnterpriseReport(): Promise<WorkspaceEnterpriseReport> {
+  const res = await fetch('/api/workspaces/enterprise-report', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.report;
+}
+
+export function downloadWorkspaceEnterpriseReportCsv(): void {
+  window.location.assign('/api/workspaces/enterprise-report.csv');
+}

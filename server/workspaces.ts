@@ -305,6 +305,118 @@ async function count(sql: string, args: any[] = []): Promise<number> {
   return Number(row?.count || 0);
 }
 
+async function buildWorkspaceEnterpriseReport(context: {
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}) {
+  const workspaceId = context.workspace.id;
+  const accountId = context.workspace.owner_id;
+  const role = context.workspace.account_role;
+
+  const [memberRows, audit30d, lastAudit, auditActions, controls, domainVerification] = await Promise.all([
+    dbAll<any>(
+      `SELECT member_role,COUNT(*) AS count
+         FROM account_workspace_members
+        WHERE workspace_id=? AND status='active'
+        GROUP BY member_role`,
+      [workspaceId]
+    ),
+    count(
+      "SELECT COUNT(*) AS count FROM account_workspace_audit WHERE workspace_id=? AND created_at>=datetime('now','-30 days')",
+      [workspaceId]
+    ),
+    dbGet<any>(
+      "SELECT created_at,action FROM account_workspace_audit WHERE workspace_id=? ORDER BY created_at DESC LIMIT 1",
+      [workspaceId]
+    ),
+    dbAll<any>(
+      `SELECT action,COUNT(*) AS count
+         FROM account_workspace_audit
+        WHERE workspace_id=? AND created_at>=datetime('now','-30 days')
+        GROUP BY action
+        ORDER BY count DESC,action ASC
+        LIMIT 10`,
+      [workspaceId]
+    ),
+    workspaceDataControlsDTO(workspaceId),
+    enterpriseDomainVerificationDTO(workspaceId),
+  ]);
+
+  const roleCounts: Record<string, number> = { owner: 0, admin: 0, member: 0, viewer: 0 };
+  for (const row of memberRows) roleCounts[String(row.member_role)] = Number(row.count || 0);
+  const seatsUsed = Object.values(roleCounts).reduce((sum, value) => sum + value, 0);
+  const seatUtilizationPct = Math.round((seatsUsed / Math.max(1, context.workspace.seat_limit)) * 1000) / 10;
+
+  let productMetrics: Record<string, number> = {};
+  if (role === "organizer") {
+    const [conferences, activeNeeds, inquiries, activeDeals] = await Promise.all([
+      count("SELECT COUNT(*) AS count FROM created_conferences WHERE organizer_id=?", [accountId]),
+      count(
+        `SELECT COUNT(*) AS count FROM sponsorship_needs
+          WHERE organizer_id=? AND status='active'
+            AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))`,
+        [accountId]
+      ),
+      count(
+        `SELECT COUNT(*) AS count
+           FROM sponsorship_need_inquiries i
+           JOIN sponsorship_needs n ON n.id=i.need_id
+          WHERE n.organizer_id=?`,
+        [accountId]
+      ),
+      count(
+        "SELECT COUNT(*) AS count FROM sponsorship_deals WHERE organizer_id=? AND status NOT IN ('completed','canceled')",
+        [accountId]
+      ),
+    ]);
+    productMetrics = { conferences, activeSponsorshipNeeds: activeNeeds, sponsorInquiries: inquiries, activeDealRooms: activeDeals };
+  } else {
+    const [saved, inquiries, activeDeals, requests] = await Promise.all([
+      count("SELECT COUNT(*) AS count FROM sponsor_saved_opportunities WHERE sponsor_id=?", [accountId]),
+      count("SELECT COUNT(*) AS count FROM sponsorship_need_inquiries WHERE sponsor_id=?", [accountId]),
+      count(
+        "SELECT COUNT(*) AS count FROM sponsorship_deals WHERE sponsor_id=? AND status NOT IN ('completed','canceled')",
+        [accountId]
+      ),
+      count("SELECT COUNT(*) AS count FROM sponsor_requests WHERE sponsor_id=? AND status='active'", [accountId]),
+    ]);
+    productMetrics = { savedOpportunities: saved, sponsorshipInquiries: inquiries, activeDealRooms: activeDeals, activeSponsorRequests: requests };
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    workspace: {
+      id: workspaceId,
+      name: context.workspace.name,
+      accountRole: role,
+      seatLimit: context.workspace.seat_limit,
+      seatsUsed,
+      seatUtilizationPct,
+      roleCounts,
+    },
+    governance: {
+      dataControls: controls,
+      domainVerification: domainVerification
+        ? {
+            domain: domainVerification.domain,
+            status: domainVerification.status,
+            verifiedAt: domainVerification.verifiedAt,
+          }
+        : null,
+    },
+    activity: {
+      auditEvents30d: audit30d,
+      lastWorkspaceChangeAt: lastAudit?.created_at || null,
+      lastWorkspaceChangeAction: lastAudit?.action || null,
+      topActions30d: auditActions.map((row) => ({
+        action: String(row.action),
+        count: Number(row.count || 0),
+      })),
+    },
+    productMetrics,
+  };
+}
+
 function cleanAttribution(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -1184,6 +1296,64 @@ workspacesRouter.get(
       res.send(JSON.stringify(payload, null, 2));
     } catch (error: any) {
       res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace data." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/enterprise-report",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      res.json({ report: await buildWorkspaceEnterpriseReport(context) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load enterprise workspace report." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/enterprise-report.csv",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+      const report = await buildWorkspaceEnterpriseReport(context);
+      const rows: Array<[string, unknown]> = [
+        ["generated_at", report.generatedAt],
+        ["workspace_name", report.workspace.name],
+        ["account_role", report.workspace.accountRole],
+        ["seat_limit", report.workspace.seatLimit],
+        ["seats_used", report.workspace.seatsUsed],
+        ["seat_utilization_pct", report.workspace.seatUtilizationPct],
+        ["owners", report.workspace.roleCounts.owner],
+        ["admins", report.workspace.roleCounts.admin],
+        ["members", report.workspace.roleCounts.member],
+        ["viewers", report.workspace.roleCounts.viewer],
+        ["audit_events_30d", report.activity.auditEvents30d],
+        ["last_workspace_change_at", report.activity.lastWorkspaceChangeAt],
+        ["domain", report.governance.domainVerification?.domain || ""],
+        ["domain_status", report.governance.domainVerification?.status || "not_configured"],
+      ];
+      for (const [key, value] of Object.entries(report.productMetrics)) {
+        rows.push([key, value]);
+      }
+      const csv = ["metric,value", ...rows.map(([key, value]) => [csvCell(key), csvCell(value)].join(","))].join("\n");
+      await audit(context.workspace.id, req.userId!, "enterprise_report_exported");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="conferencegate-enterprise-report.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not export enterprise workspace report." });
     }
   })
 );
