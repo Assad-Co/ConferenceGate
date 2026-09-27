@@ -189,9 +189,19 @@ export async function importOrganizerConferenceFromOfficialUrl(
   return parseResponse(res);
 }
 
+export interface WorkspaceDomainVerification {
+  domain: string;
+  status: 'pending' | 'verified';
+  txtName: string;
+  txtValue: string;
+  verifiedAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface WorkspaceEnterpriseSettings {
   requireAllowedDomain: boolean;
   allowedEmailDomains: string[];
+  domainVerification: WorkspaceDomainVerification | null;
   updatedAt: string | null;
 }
 
@@ -216,4 +226,25 @@ export async function updateWorkspaceEnterpriseSettings(
 
 export function downloadWorkspaceAuditCsv(): void {
   window.location.assign('/api/workspaces/audit.csv');
+}
+
+
+export async function startWorkspaceDomainVerification(domain: string): Promise<WorkspaceDomainVerification> {
+  const res = await fetch('/api/workspaces/enterprise-domain/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ domain }),
+  });
+  const data = await parseResponse(res);
+  return data.verification;
+}
+
+export async function checkWorkspaceDomainVerification(): Promise<WorkspaceDomainVerification> {
+  const res = await fetch('/api/workspaces/enterprise-domain/check', {
+    method: 'POST',
+    credentials: 'include',
+  });
+  const data = await parseResponse(res);
+  return data.verification;
 }

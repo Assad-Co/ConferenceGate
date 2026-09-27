@@ -91,6 +91,7 @@ try {
 
   const owner = await signup('Workspace Owner', 'workspace-owner@example.com');
   const member = await signup('Workspace Member', 'workspace-member@example.com');
+  const outsider = await signup('Workspace Outsider', 'workspace-outsider@other.org');
 
   await request('/api/billing/provider-sync', {
     method: 'POST',
@@ -108,6 +109,39 @@ try {
   const workspaceResult = await request('/api/workspaces/mine', { cookie: owner.cookie });
   if (workspaceResult?.workspace?.myRole !== 'owner') {
     throw new Error('Owner workspace was not created correctly.');
+  }
+
+  const enterpriseSettings = await request('/api/workspaces/enterprise-settings', {
+    method: 'PUT',
+    cookie: owner.cookie,
+    body: {
+      requireAllowedDomain: true,
+      allowedEmailDomains: ['example.com'],
+    },
+  });
+  if (!enterpriseSettings?.settings?.requireAllowedDomain || !enterpriseSettings?.settings?.allowedEmailDomains?.includes('example.com')) {
+    throw new Error('Enterprise email-domain policy was not saved.');
+  }
+
+  await request('/api/workspaces/members', {
+    method: 'POST',
+    cookie: owner.cookie,
+    expectedStatus: 403,
+    body: {
+      email: outsider.user.email,
+      memberRole: 'member',
+    },
+  });
+
+  const verificationStart = await request('/api/workspaces/enterprise-domain/start', {
+    method: 'POST',
+    cookie: owner.cookie,
+    body: { domain: 'example.com' },
+  });
+  if (verificationStart?.verification?.status !== 'pending' ||
+      verificationStart?.verification?.txtName !== '_conferencegate.example.com' ||
+      !String(verificationStart?.verification?.txtValue || '').startsWith('conferencegate-verification=')) {
+    throw new Error('Enterprise domain verification challenge was not created correctly.');
   }
 
   const addResult = await request('/api/workspaces/members', {
@@ -178,12 +212,23 @@ try {
     throw new Error('Removed team seat still has inherited paid access.');
   }
 
+  const auditResponse = await fetch(base + '/api/workspaces/audit.csv', {
+    headers: { cookie: owner.cookie },
+  });
+  const auditCsv = await auditResponse.text();
+  if (!auditResponse.ok || !auditCsv.includes('enterprise_settings_updated') || !auditCsv.includes('enterprise_domain_verification_started')) {
+    throw new Error('Workspace audit CSV did not include enterprise governance events.');
+  }
+
   console.log(JSON.stringify({
     workspaceSeatSmoke: 'passed',
     inheritedPaidAccess: true,
     sharedOrganizerData: true,
     viewerReadOnly: true,
     removalRevokesInheritedAccess: true,
+    enterpriseDomainPolicy: true,
+    enterpriseDomainChallenge: true,
+    enterpriseAuditExport: true,
   }));
 } finally {
   child.kill('SIGTERM');
