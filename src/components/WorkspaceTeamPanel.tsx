@@ -27,11 +27,14 @@ import {
   updateWorkspaceEnterpriseSettings,
   downloadWorkspaceAuditCsv,
   downloadWorkspaceDataJson,
+  downloadWorkspaceEnterpriseReportCsv,
+  fetchWorkspaceEnterpriseReport,
   updateWorkspaceDataControls,
   startWorkspaceDomainVerification,
   checkWorkspaceDomainVerification,
   type WorkspaceEnterpriseSettings,
   type WorkspaceDataControls,
+  type WorkspaceEnterpriseReport,
   type AccountWorkspace,
   type WorkspaceActivation,
   type WorkspaceMemberRole,
@@ -70,6 +73,8 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
   const [dataControls, setDataControls] = useState<WorkspaceDataControls | null>(null);
   const [savingDataControls, setSavingDataControls] = useState(false);
+  const [enterpriseReport, setEnterpriseReport] = useState<WorkspaceEnterpriseReport | null>(null);
+  const [enterpriseReportLoading, setEnterpriseReportLoading] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const canManageMembers = workspace
@@ -107,12 +112,17 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       await refreshActivation();
       if (data.myRole === 'owner' || data.myRole === 'admin') {
         try {
-          const settings = await fetchWorkspaceEnterpriseSettings();
+          const [settings, report] = await Promise.all([
+            fetchWorkspaceEnterpriseSettings(),
+            fetchWorkspaceEnterpriseReport(),
+          ]);
           setEnterpriseSettings(settings);
           setEnterpriseDomains(settings.allowedEmailDomains.join(', '));
           setEnterpriseDomain(settings.domainVerification?.domain || settings.allowedEmailDomains[0] || '');
+          setEnterpriseReport(report);
         } catch {
           setEnterpriseSettings(null);
+          setEnterpriseReport(null);
         }
       }
     } catch (err: any) {
@@ -208,6 +218,18 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       setError(err?.message || 'Domain verification is not complete yet.');
     } finally {
       setDomainVerificationBusy(false);
+    }
+  };
+
+  const refreshEnterpriseReport = async () => {
+    setEnterpriseReportLoading(true);
+    setError(null);
+    try {
+      setEnterpriseReport(await fetchWorkspaceEnterpriseReport());
+    } catch (err: any) {
+      setError(err?.message || 'Could not refresh enterprise report.');
+    } finally {
+      setEnterpriseReportLoading(false);
     }
   };
 
