@@ -136,6 +136,50 @@ async function ensureEnterpriseSettingsSchema() {
   `);
 }
 
+async function ensureWorkspaceDataControlsSchema() {
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS account_workspace_data_controls (
+      workspace_id TEXT PRIMARY KEY,
+      admins_can_manage_members INTEGER NOT NULL DEFAULT 1,
+      allow_admin_exports INTEGER NOT NULL DEFAULT 1,
+      audit_visibility_days INTEGER NOT NULL DEFAULT 365,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES account_workspaces(id) ON DELETE CASCADE
+    )
+  `);
+}
+
+function clampAuditDays(value: unknown): number {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return 365;
+  return Math.max(30, Math.min(3650, parsed));
+}
+
+async function workspaceDataControlsDTO(workspaceId: string) {
+  await ensureWorkspaceDataControlsSchema();
+  const row = await dbGet<any>(
+    "SELECT * FROM account_workspace_data_controls WHERE workspace_id=?",
+    [workspaceId]
+  );
+  return {
+    adminsCanManageMembers: row ? Boolean(row.admins_can_manage_members) : true,
+    allowAdminExports: row ? Boolean(row.allow_admin_exports) : true,
+    auditVisibilityDays: clampAuditDays(row?.audit_visibility_days ?? 365),
+    updatedAt: row?.updated_at || null,
+  };
+}
+
+async function canManageWorkspaceMembers(context: {
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}) {
+  if (context.membership.member_role === "owner") return true;
+  if (context.membership.member_role !== "admin") return false;
+  const controls = await workspaceDataControlsDTO(context.workspace.id);
+  return controls.adminsCanManageMembers;
+}
+
 async function ensureEnterpriseDomainVerificationSchema() {
   await dbRun(`
     CREATE TABLE IF NOT EXISTS account_workspace_domain_verifications (
