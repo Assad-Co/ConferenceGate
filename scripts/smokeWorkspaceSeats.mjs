@@ -92,6 +92,7 @@ try {
   const owner = await signup('Workspace Owner', 'workspace-owner@example.com');
   const member = await signup('Workspace Member', 'workspace-member@example.com');
   const outsider = await signup('Workspace Outsider', 'workspace-outsider@other.org');
+  const candidate = await signup('Workspace Candidate', 'workspace-candidate@example.com');
 
   await request('/api/billing/provider-sync', {
     method: 'POST',
@@ -162,6 +163,48 @@ try {
     throw new Error('Member did not inherit owner paid access: ' + JSON.stringify(inheritedStatus));
   }
 
+  const dataControls = await request('/api/workspaces/data-controls', {
+    method: 'PUT',
+    cookie: owner.cookie,
+    body: {
+      adminsCanManageMembers: false,
+      allowAdminExports: false,
+      auditVisibilityDays: 90,
+    },
+  });
+  if (dataControls?.controls?.adminsCanManageMembers !== false ||
+      dataControls?.controls?.allowAdminExports !== false ||
+      dataControls?.controls?.auditVisibilityDays !== 90) {
+    throw new Error('Workspace data controls were not saved correctly.');
+  }
+
+  const adminRoleChange = await request(`/api/workspaces/members/${member.user.id}`, {
+    method: 'PATCH',
+    cookie: owner.cookie,
+    body: { memberRole: 'admin' },
+  });
+  const adminRow = (adminRoleChange?.workspace?.members || []).find((item) => item.id === member.user.id);
+  if (!adminRow || adminRow.workspaceRole !== 'admin') {
+    throw new Error('Workspace member was not promoted to admin.');
+  }
+
+  await request('/api/workspaces/members', {
+    method: 'POST',
+    cookie: member.cookie,
+    expectedStatus: 403,
+    body: {
+      email: candidate.user.email,
+      memberRole: 'member',
+    },
+  });
+
+  const blockedAdminExport = await fetch(base + '/api/workspaces/data-export.json', {
+    headers: { cookie: member.cookie },
+  });
+  if (blockedAdminExport.status !== 403) {
+    throw new Error('Admin data export was not blocked by owner policy.');
+  }
+
   const memberConferenceId = 'conf_workspace_member_2027';
   await request('/api/activity/conferences', {
     method: 'POST',
@@ -212,6 +255,16 @@ try {
     throw new Error('Removed team seat still has inherited paid access.');
   }
 
+  const ownerDataExport = await fetch(base + '/api/workspaces/data-export.json', {
+    headers: { cookie: owner.cookie },
+  });
+  const ownerDataPayload = await ownerDataExport.json();
+  if (!ownerDataExport.ok ||
+      ownerDataPayload?.workspace?.accountRole !== 'organizer' ||
+      !Array.isArray(ownerDataPayload?.records?.conferences)) {
+    throw new Error('Owner workspace data export did not return organizer workspace data.');
+  }
+
   const auditResponse = await fetch(base + '/api/workspaces/audit.csv', {
     headers: { cookie: owner.cookie },
   });
@@ -229,6 +282,9 @@ try {
     enterpriseDomainPolicy: true,
     enterpriseDomainChallenge: true,
     enterpriseAuditExport: true,
+    enterpriseDataControls: true,
+    adminExportPolicy: true,
+    workspaceDataExport: true,
   }));
 } finally {
   child.kill('SIGTERM');
