@@ -51,7 +51,8 @@
     "database:migrate-from-turso": "node scripts/migrateTursoToSqlite.mjs",
     "database:restore-legacy-professional": "node scripts/restoreLegacyProfessionalProfile.mjs",
     "database:reconcile-legacy": "node scripts/reconcileLegacyProductionData.mjs",
-    "growth:automation-smoke": "node scripts/smokeGrowthAutomation.mjs"
+    "growth:automation-smoke": "node scripts/smokeGrowthAutomation.mjs",
+    "enterprise:smoke": "node scripts/smokeEnterpriseGovernance.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
