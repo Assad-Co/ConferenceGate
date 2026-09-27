@@ -162,6 +162,43 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
     }
   };
 
+  const startDomainVerification = async () => {
+    if (!enterpriseDomain.trim()) return;
+    setDomainVerificationBusy(true);
+    setError(null);
+    try {
+      const verification = await startWorkspaceDomainVerification(enterpriseDomain.trim());
+      setEnterpriseSettings((prev) => prev ? { ...prev, domainVerification: verification } : prev);
+      showToast({
+        type: 'success',
+        title: 'Domain verification started',
+        message: 'Add the TXT record shown below to your company DNS, then check verification.',
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not start domain verification.');
+    } finally {
+      setDomainVerificationBusy(false);
+    }
+  };
+
+  const checkDomainVerification = async () => {
+    setDomainVerificationBusy(true);
+    setError(null);
+    try {
+      const verification = await checkWorkspaceDomainVerification();
+      setEnterpriseSettings((prev) => prev ? { ...prev, domainVerification: verification } : prev);
+      showToast({
+        type: 'success',
+        title: 'Company domain verified',
+        message: `${verification.domain} is now verified for this workspace.`,
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Domain verification is not complete yet.');
+    } finally {
+      setDomainVerificationBusy(false);
+    }
+  };
+
   const addMember = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email.trim()) return;
