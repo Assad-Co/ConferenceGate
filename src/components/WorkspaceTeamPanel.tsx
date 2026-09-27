@@ -26,9 +26,12 @@ import {
   fetchWorkspaceEnterpriseSettings,
   updateWorkspaceEnterpriseSettings,
   downloadWorkspaceAuditCsv,
+  downloadWorkspaceDataJson,
+  updateWorkspaceDataControls,
   startWorkspaceDomainVerification,
   checkWorkspaceDomainVerification,
   type WorkspaceEnterpriseSettings,
+  type WorkspaceDataControls,
   type AccountWorkspace,
   type WorkspaceActivation,
   type WorkspaceMemberRole,
@@ -65,8 +68,16 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [savingEnterprise, setSavingEnterprise] = useState(false);
   const [enterpriseDomain, setEnterpriseDomain] = useState('');
   const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
+  const [dataControls, setDataControls] = useState<WorkspaceDataControls | null>(null);
+  const [savingDataControls, setSavingDataControls] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
+  const canManageMembers = workspace
+    ? workspace.myRole === 'owner' || (workspace.myRole === 'admin' && (dataControls?.adminsCanManageMembers ?? true))
+    : false;
+  const canExport = workspace
+    ? workspace.myRole === 'owner' || (workspace.myRole === 'admin' && (dataControls?.allowAdminExports ?? true))
+    : false;
   const seatsUsed = workspace?.members.length || 0;
   const seatPercent = workspace ? Math.min(100, Math.round((seatsUsed / Math.max(1, workspace.seatLimit)) * 100)) : 0;
 
@@ -92,6 +103,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       const data = await fetchMyWorkspace();
       setWorkspace(data);
       setWorkspaceName(data.name);
+      setDataControls(data.dataControls || null);
       await refreshActivation();
       if (data.myRole === 'owner' || data.myRole === 'admin') {
         try {
@@ -196,6 +208,30 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       setError(err?.message || 'Domain verification is not complete yet.');
     } finally {
       setDomainVerificationBusy(false);
+    }
+  };
+
+  const saveDataControls = async () => {
+    if (!dataControls) return;
+    setSavingDataControls(true);
+    setError(null);
+    try {
+      const updated = await updateWorkspaceDataControls({
+        adminsCanManageMembers: dataControls.adminsCanManageMembers,
+        allowAdminExports: dataControls.allowAdminExports,
+        auditVisibilityDays: dataControls.auditVisibilityDays,
+      });
+      setDataControls(updated);
+      setWorkspace((prev) => prev ? { ...prev, dataControls: updated } : prev);
+      showToast({
+        type: 'success',
+        title: 'Governance controls saved',
+        message: 'Workspace permissions, export policy, and audit visibility are updated.',
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not save workspace data controls.');
+    } finally {
+      setSavingDataControls(false);
     }
   };
 
@@ -437,14 +473,26 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={downloadWorkspaceAuditCsv}
-              className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer self-start"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export Audit CSV
-            </button>
+            {canExport && (
+              <div className="flex flex-wrap gap-2 self-start">
+                <button
+                  type="button"
+                  onClick={downloadWorkspaceAuditCsv}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Audit CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadWorkspaceDataJson}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Workspace Data
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">
@@ -533,6 +581,78 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
             </div>
           )}
 
+          {dataControls && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Data & admin controls</div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Control delegated admin actions, data exports, and how much workspace audit history is shown in the dashboard.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <label className="flex items-start gap-2 p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={dataControls.adminsCanManageMembers}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, adminsCanManageMembers: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-bold block">Admins manage members</span>
+                    <span className="text-[10px] text-slate-500">Allow admin seats to add, remove, and change team roles.</span>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={dataControls.allowAdminExports}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, allowAdminExports: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-bold block">Admins can export</span>
+                    <span className="text-[10px] text-slate-500">Allow admin seats to download audit and workspace-data exports.</span>
+                  </span>
+                </label>
+
+                <label className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700">
+                  <span className="font-bold block mb-1">Audit dashboard window</span>
+                  <select
+                    value={dataControls.auditVisibilityDays}
+                    disabled={workspace.myRole !== 'owner'}
+                    onChange={(e) => setDataControls({ ...dataControls, auditVisibilityDays: Number(e.target.value) })}
+                    className="w-full p-2 rounded-lg border border-slate-200 bg-white text-xs"
+                  >
+                    <option value={30}>30 days</option>
+                    <option value={90}>90 days</option>
+                    <option value={365}>1 year</option>
+                    <option value={1095}>3 years</option>
+                    <option value={3650}>10 years</option>
+                  </select>
+                  <span className="text-[10px] text-slate-500 block mt-1">This limits dashboard history; it does not delete stored audit records.</span>
+                </label>
+              </div>
+
+              {workspace.myRole === 'owner' && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={saveDataControls}
+                    disabled={savingDataControls}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {savingDataControls ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Data Controls
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {workspace.myRole === 'owner' && (
             <div className="flex justify-end">
               <button
@@ -549,7 +669,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
         </div>
       )}
 
-      {canAdmin && (
+      {canManageMembers && (
         <form onSubmit={addMember} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-blue-700" />
@@ -614,7 +734,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {member.workspaceRole === 'owner' || !canAdmin ? (
+                {member.workspaceRole === 'owner' || !canManageMembers ? (
                   <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">
                     {member.workspaceRole}
                   </span>

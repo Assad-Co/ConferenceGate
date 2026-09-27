@@ -39,6 +39,13 @@ export interface WorkspaceAuditItem {
   createdAt: string;
 }
 
+export interface WorkspaceDataControls {
+  adminsCanManageMembers: boolean;
+  allowAdminExports: boolean;
+  auditVisibilityDays: number;
+  updatedAt: string | null;
+}
+
 export interface AccountWorkspace {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export interface AccountWorkspace {
   ownerId: string;
   seatLimit: number;
   myRole: WorkspaceMemberRole;
+  dataControls: WorkspaceDataControls;
   members: WorkspaceMember[];
   audit: WorkspaceAuditItem[];
 }
@@ -247,4 +255,28 @@ export async function checkWorkspaceDomainVerification(): Promise<WorkspaceDomai
   });
   const data = await parseResponse(res);
   return data.verification;
+}
+
+
+export async function fetchWorkspaceDataControls(): Promise<WorkspaceDataControls> {
+  const res = await fetch('/api/workspaces/data-controls', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.controls;
+}
+
+export async function updateWorkspaceDataControls(
+  controls: Pick<WorkspaceDataControls, 'adminsCanManageMembers' | 'allowAdminExports' | 'auditVisibilityDays'>
+): Promise<WorkspaceDataControls> {
+  const res = await fetch('/api/workspaces/data-controls', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(controls),
+  });
+  const data = await parseResponse(res);
+  return data.controls;
+}
+
+export function downloadWorkspaceDataJson(): void {
+  window.location.assign('/api/workspaces/data-export.json');
 }

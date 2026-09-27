@@ -136,6 +136,50 @@ async function ensureEnterpriseSettingsSchema() {
   `);
 }
 
+async function ensureWorkspaceDataControlsSchema() {
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS account_workspace_data_controls (
+      workspace_id TEXT PRIMARY KEY,
+      admins_can_manage_members INTEGER NOT NULL DEFAULT 1,
+      allow_admin_exports INTEGER NOT NULL DEFAULT 1,
+      audit_visibility_days INTEGER NOT NULL DEFAULT 365,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES account_workspaces(id) ON DELETE CASCADE
+    )
+  `);
+}
+
+function clampAuditDays(value: unknown): number {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return 365;
+  return Math.max(30, Math.min(3650, parsed));
+}
+
+async function workspaceDataControlsDTO(workspaceId: string) {
+  await ensureWorkspaceDataControlsSchema();
+  const row = await dbGet<any>(
+    "SELECT * FROM account_workspace_data_controls WHERE workspace_id=?",
+    [workspaceId]
+  );
+  return {
+    adminsCanManageMembers: row ? Boolean(row.admins_can_manage_members) : true,
+    allowAdminExports: row ? Boolean(row.allow_admin_exports) : true,
+    auditVisibilityDays: clampAuditDays(row?.audit_visibility_days ?? 365),
+    updatedAt: row?.updated_at || null,
+  };
+}
+
+async function canManageWorkspaceMembers(context: {
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}) {
+  if (context.membership.member_role === "owner") return true;
+  if (context.membership.member_role !== "admin") return false;
+  const controls = await workspaceDataControlsDTO(context.workspace.id);
+  return controls.adminsCanManageMembers;
+}
+
 async function ensureEnterpriseDomainVerificationSchema() {
   await dbRun(`
     CREATE TABLE IF NOT EXISTS account_workspace_domain_verifications (
@@ -213,15 +257,16 @@ async function workspaceDTO(context: {
       ORDER BY CASE m.member_role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END, u.name ASC`,
     [context.workspace.id]
   );
+  const dataControls = await workspaceDataControlsDTO(context.workspace.id);
   const auditRows = await dbAll<any>(
     `SELECT a.*,u.name as actor_name,t.name as target_name
        FROM account_workspace_audit a
        JOIN users u ON u.id=a.actor_id
        LEFT JOIN users t ON t.id=a.target_user_id
-      WHERE a.workspace_id=?
+      WHERE a.workspace_id=? AND a.created_at >= datetime('now', ?)
       ORDER BY a.created_at DESC
       LIMIT 100`,
-    [context.workspace.id]
+    [context.workspace.id, `-${dataControls.auditVisibilityDays} days`]
   );
   return {
     id: context.workspace.id,
@@ -230,6 +275,7 @@ async function workspaceDTO(context: {
     ownerId: context.workspace.owner_id,
     seatLimit: context.workspace.seat_limit,
     myRole: context.membership.member_role,
+    dataControls,
     members: rows.map((row: any) => ({
       id: row.user_id,
       name: row.name,
@@ -896,6 +942,65 @@ workspacesRouter.put(
   })
 );
 
+workspacesRouter.get(
+  "/data-controls",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      res.json({ controls: await workspaceDataControlsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace data controls." });
+    }
+  })
+);
+
+workspacesRouter.put(
+  "/data-controls",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (context.membership.member_role !== "owner") {
+        return res.status(403).json({ error: "Workspace owner permission required." });
+      }
+
+      const adminsCanManageMembers = req.body?.adminsCanManageMembers !== false;
+      const allowAdminExports = req.body?.allowAdminExports !== false;
+      const auditVisibilityDays = clampAuditDays(req.body?.auditVisibilityDays);
+
+      await ensureWorkspaceDataControlsSchema();
+      await dbRun(
+        `INSERT INTO account_workspace_data_controls(
+          workspace_id,admins_can_manage_members,allow_admin_exports,audit_visibility_days,updated_by,updated_at
+        ) VALUES(?,?,?,?,?,datetime('now'))
+        ON CONFLICT(workspace_id) DO UPDATE SET
+          admins_can_manage_members=excluded.admins_can_manage_members,
+          allow_admin_exports=excluded.allow_admin_exports,
+          audit_visibility_days=excluded.audit_visibility_days,
+          updated_by=excluded.updated_by,
+          updated_at=datetime('now')`,
+        [
+          context.workspace.id,
+          adminsCanManageMembers ? 1 : 0,
+          allowAdminExports ? 1 : 0,
+          auditVisibilityDays,
+          req.userId!,
+        ]
+      );
+      await audit(context.workspace.id, req.userId!, "workspace_data_controls_updated", null, {
+        adminsCanManageMembers,
+        allowAdminExports,
+        auditVisibilityDays,
+      });
+      res.json({ controls: await workspaceDataControlsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not update workspace data controls." });
+    }
+  })
+);
+
 workspacesRouter.post(
   "/enterprise-domain/start",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
@@ -978,6 +1083,11 @@ workspacesRouter.get(
       if (!["owner", "admin"].includes(context.membership.member_role)) {
         return res.status(403).json({ error: "Workspace admin permission required." });
       }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+      await audit(context.workspace.id, req.userId!, "workspace_audit_exported");
       const rows = await dbAll<any>(
         `SELECT a.created_at,a.action,u.name AS actor_name,u.email AS actor_email,
                 t.name AS target_name,t.email AS target_email,a.details
@@ -999,6 +1109,81 @@ workspacesRouter.get(
       res.send(csv);
     } catch (error: any) {
       res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace audit." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/data-export.json",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+
+      const accountId = context.workspace.owner_id;
+      const members = await dbAll<any>(
+        `SELECT m.user_id,m.member_role,m.status,m.created_at,m.updated_at,
+                u.name,u.email,u.title,u.organization,u.role
+           FROM account_workspace_members m
+           JOIN users u ON u.id=m.user_id
+          WHERE m.workspace_id=?
+          ORDER BY m.created_at ASC`,
+        [context.workspace.id]
+      );
+
+      let records: Record<string, unknown[]> = {};
+      if (context.workspace.account_role === "organizer") {
+        const [conferences, needs, inquiries, deals] = await Promise.all([
+          dbAll<any>("SELECT * FROM created_conferences WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_needs WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>(
+            `SELECT i.* FROM sponsorship_need_inquiries i
+               JOIN sponsorship_needs n ON n.id=i.need_id
+              WHERE n.organizer_id=? ORDER BY i.created_at DESC`,
+            [accountId]
+          ),
+          dbAll<any>("SELECT * FROM sponsorship_deals WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+        ]);
+        records = { conferences, sponsorshipNeeds: needs, sponsorshipInquiries: inquiries, sponsorshipDeals: deals };
+      } else {
+        const [preferences, saved, inquiries, deals, requests] = await Promise.all([
+          dbAll<any>("SELECT * FROM sponsor_preferences WHERE sponsor_id=?", [accountId]),
+          dbAll<any>("SELECT * FROM sponsor_saved_opportunities WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_need_inquiries WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsor_requests WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+        ]);
+        records = { sponsorPreferences: preferences, savedOpportunities: saved, sponsorshipInquiries: inquiries, sponsorshipDeals: deals, sponsorRequests: requests };
+      }
+
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        workspace: {
+          id: context.workspace.id,
+          name: context.workspace.name,
+          accountRole: context.workspace.account_role,
+          ownerId: context.workspace.owner_id,
+          seatLimit: context.workspace.seat_limit,
+        },
+        controls,
+        members,
+        records,
+      };
+
+      await audit(context.workspace.id, req.userId!, "workspace_data_exported", null, {
+        accountRole: context.workspace.account_role,
+      });
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="conferencegate-workspace-data.json"`);
+      res.send(JSON.stringify(payload, null, 2));
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace data." });
     }
   })
 );
@@ -1062,8 +1247,8 @@ workspacesRouter.post(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
 
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
@@ -1135,8 +1320,8 @@ workspacesRouter.patch(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
     if (req.params.userId === context.workspace.owner_id) {
       return res.status(409).json({ error: "The owner role cannot be changed." });
@@ -1171,8 +1356,8 @@ workspacesRouter.delete(
     } catch (error: any) {
       return res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace." });
     }
-    if (!["owner", "admin"].includes(context.membership.member_role)) {
-      return res.status(403).json({ error: "Workspace admin permission required." });
+    if (!(await canManageWorkspaceMembers(context))) {
+      return res.status(403).json({ error: "Workspace member-management permission required." });
     }
     if (req.params.userId === context.workspace.owner_id) {
       return res.status(409).json({ error: "The workspace owner cannot be removed." });
