@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import crypto from "crypto";
+import { promises as dns } from "dns";
 import { asyncHandler } from "./asyncHandler";
 import { AuthedRequest, requireAuth } from "./auth";
 import { isOwnerPreviewEmail } from "./ownerPreview";
@@ -135,6 +136,37 @@ async function ensureEnterpriseSettingsSchema() {
   `);
 }
 
+async function ensureEnterpriseDomainVerificationSchema() {
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS account_workspace_domain_verifications (
+      workspace_id TEXT PRIMARY KEY,
+      domain TEXT NOT NULL,
+      token TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','verified')),
+      verified_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES account_workspaces(id) ON DELETE CASCADE
+    )
+  `);
+}
+
+async function enterpriseDomainVerificationDTO(workspaceId: string) {
+  await ensureEnterpriseDomainVerificationSchema();
+  const row = await dbGet<any>(
+    "SELECT * FROM account_workspace_domain_verifications WHERE workspace_id=?",
+    [workspaceId]
+  );
+  if (!row) return null;
+  return {
+    domain: String(row.domain),
+    status: row.status === "verified" ? "verified" : "pending",
+    txtName: `_conferencegate.${row.domain}`,
+    txtValue: `conferencegate-verification=${row.token}`,
+    verifiedAt: row.verified_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
 function normalizeDomain(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const domain = value.trim().toLowerCase().replace(/^@+/, "");
@@ -159,6 +191,7 @@ async function enterpriseSettingsDTO(workspaceId: string) {
   return {
     requireAllowedDomain: Boolean(row?.require_allowed_domain),
     allowedEmailDomains: domains,
+    domainVerification: await enterpriseDomainVerificationDTO(workspaceId),
     updatedAt: row?.updated_at || null,
   };
 }
@@ -859,6 +892,80 @@ workspacesRouter.put(
       res.json({ settings: await enterpriseSettingsDTO(context.workspace.id) });
     } catch (error: any) {
       res.status(error?.status || 500).json({ error: error?.message || "Could not update enterprise settings." });
+    }
+  })
+);
+
+workspacesRouter.post(
+  "/enterprise-domain/start",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (context.membership.member_role !== "owner") {
+        return res.status(403).json({ error: "Workspace owner permission required." });
+      }
+      const domain = normalizeDomain(req.body?.domain);
+      if (!domain) return res.status(400).json({ error: "Provide a valid company domain." });
+
+      await ensureEnterpriseDomainVerificationSchema();
+      const token = crypto.randomBytes(24).toString("base64url");
+      await dbRun(
+        `INSERT INTO account_workspace_domain_verifications(
+          workspace_id,domain,token,status,verified_at,updated_at
+        ) VALUES(?,?,?,'pending',NULL,datetime('now'))
+        ON CONFLICT(workspace_id) DO UPDATE SET
+          domain=excluded.domain,token=excluded.token,status='pending',
+          verified_at=NULL,updated_at=datetime('now')`,
+        [context.workspace.id, domain, token]
+      );
+      await audit(context.workspace.id, req.userId!, "enterprise_domain_verification_started", null, { domain });
+      res.status(201).json({
+        verification: await enterpriseDomainVerificationDTO(context.workspace.id),
+      });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not start domain verification." });
+    }
+  })
+);
+
+workspacesRouter.post(
+  "/enterprise-domain/check",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (context.membership.member_role !== "owner") {
+        return res.status(403).json({ error: "Workspace owner permission required." });
+      }
+      await ensureEnterpriseDomainVerificationSchema();
+      const row = await dbGet<any>(
+        "SELECT * FROM account_workspace_domain_verifications WHERE workspace_id=?",
+        [context.workspace.id]
+      );
+      if (!row) return res.status(404).json({ error: "Start domain verification first." });
+
+      const expected = `conferencegate-verification=${row.token}`;
+      let records: string[][] = [];
+      try {
+        records = await dns.resolveTxt(`_conferencegate.${row.domain}`);
+      } catch {
+        records = [];
+      }
+      const found = records.map((parts) => parts.join("")).some((value) => value === expected);
+      if (!found) {
+        return res.status(409).json({
+          error: "Verification TXT record not found yet. DNS changes can take time to propagate.",
+          verification: await enterpriseDomainVerificationDTO(context.workspace.id),
+        });
+      }
+
+      await dbRun(
+        "UPDATE account_workspace_domain_verifications SET status='verified',verified_at=datetime('now'),updated_at=datetime('now') WHERE workspace_id=?",
+        [context.workspace.id]
+      );
+      await audit(context.workspace.id, req.userId!, "enterprise_domain_verified", null, { domain: row.domain });
+      res.json({ verification: await enterpriseDomainVerificationDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not verify company domain." });
     }
   })
 );
