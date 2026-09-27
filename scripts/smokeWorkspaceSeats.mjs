@@ -222,6 +222,22 @@ try {
     throw new Error('Member-created conference was not stored in the shared owner workspace.');
   }
 
+  const adminEnterpriseReport = await request('/api/workspaces/enterprise-report', {
+    cookie: member.cookie,
+  });
+  if (adminEnterpriseReport?.report?.workspace?.accountRole !== 'organizer' ||
+      Number(adminEnterpriseReport?.report?.productMetrics?.conferences || 0) < 1 ||
+      Number(adminEnterpriseReport?.report?.workspace?.seatsUsed || 0) < 2) {
+    throw new Error('Enterprise workspace report did not reflect shared workspace activity.');
+  }
+
+  const blockedAdminReportCsv = await fetch(base + '/api/workspaces/enterprise-report.csv', {
+    headers: { cookie: member.cookie },
+  });
+  if (blockedAdminReportCsv.status !== 403) {
+    throw new Error('Admin enterprise report export was not blocked by owner policy.');
+  }
+
   const roleChange = await request(`/api/workspaces/members/${member.user.id}`, {
     method: 'PATCH',
     cookie: owner.cookie,
@@ -255,6 +271,14 @@ try {
     throw new Error('Removed team seat still has inherited paid access.');
   }
 
+  const ownerReportCsv = await fetch(base + '/api/workspaces/enterprise-report.csv', {
+    headers: { cookie: owner.cookie },
+  });
+  const ownerReportText = await ownerReportCsv.text();
+  if (!ownerReportCsv.ok || !ownerReportText.includes('seat_utilization_pct') || !ownerReportText.includes('conferences')) {
+    throw new Error('Owner enterprise report CSV was not generated correctly.');
+  }
+
   const ownerDataExport = await fetch(base + '/api/workspaces/data-export.json', {
     headers: { cookie: owner.cookie },
   });
@@ -285,6 +309,8 @@ try {
     enterpriseDataControls: true,
     adminExportPolicy: true,
     workspaceDataExport: true,
+    enterpriseReporting: true,
+    enterpriseReportExportPolicy: true,
   }));
 } finally {
   child.kill('SIGTERM');
