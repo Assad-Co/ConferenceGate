@@ -257,15 +257,16 @@ async function workspaceDTO(context: {
       ORDER BY CASE m.member_role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END, u.name ASC`,
     [context.workspace.id]
   );
+  const dataControls = await workspaceDataControlsDTO(context.workspace.id);
   const auditRows = await dbAll<any>(
     `SELECT a.*,u.name as actor_name,t.name as target_name
        FROM account_workspace_audit a
        JOIN users u ON u.id=a.actor_id
        LEFT JOIN users t ON t.id=a.target_user_id
-      WHERE a.workspace_id=?
+      WHERE a.workspace_id=? AND a.created_at >= datetime('now', ?)
       ORDER BY a.created_at DESC
       LIMIT 100`,
-    [context.workspace.id]
+    [context.workspace.id, `-${dataControls.auditVisibilityDays} days`]
   );
   return {
     id: context.workspace.id,
@@ -274,6 +275,7 @@ async function workspaceDTO(context: {
     ownerId: context.workspace.owner_id,
     seatLimit: context.workspace.seat_limit,
     myRole: context.membership.member_role,
+    dataControls,
     members: rows.map((row: any) => ({
       id: row.user_id,
       name: row.name,
