@@ -26,9 +26,12 @@ import {
   fetchWorkspaceEnterpriseSettings,
   updateWorkspaceEnterpriseSettings,
   downloadWorkspaceAuditCsv,
+  downloadWorkspaceDataJson,
+  updateWorkspaceDataControls,
   startWorkspaceDomainVerification,
   checkWorkspaceDomainVerification,
   type WorkspaceEnterpriseSettings,
+  type WorkspaceDataControls,
   type AccountWorkspace,
   type WorkspaceActivation,
   type WorkspaceMemberRole,
@@ -65,8 +68,16 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [savingEnterprise, setSavingEnterprise] = useState(false);
   const [enterpriseDomain, setEnterpriseDomain] = useState('');
   const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
+  const [dataControls, setDataControls] = useState<WorkspaceDataControls | null>(null);
+  const [savingDataControls, setSavingDataControls] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
+  const canManageMembers = workspace
+    ? workspace.myRole === 'owner' || (workspace.myRole === 'admin' && (dataControls?.adminsCanManageMembers ?? true))
+    : false;
+  const canExport = workspace
+    ? workspace.myRole === 'owner' || (workspace.myRole === 'admin' && (dataControls?.allowAdminExports ?? true))
+    : false;
   const seatsUsed = workspace?.members.length || 0;
   const seatPercent = workspace ? Math.min(100, Math.round((seatsUsed / Math.max(1, workspace.seatLimit)) * 100)) : 0;
 
@@ -92,6 +103,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
       const data = await fetchMyWorkspace();
       setWorkspace(data);
       setWorkspaceName(data.name);
+      setDataControls(data.dataControls || null);
       await refreshActivation();
       if (data.myRole === 'owner' || data.myRole === 'admin') {
         try {
