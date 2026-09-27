@@ -26,6 +26,8 @@ import {
   fetchWorkspaceEnterpriseSettings,
   updateWorkspaceEnterpriseSettings,
   downloadWorkspaceAuditCsv,
+  startWorkspaceDomainVerification,
+  checkWorkspaceDomainVerification,
   type WorkspaceEnterpriseSettings,
   type AccountWorkspace,
   type WorkspaceActivation,
@@ -61,6 +63,8 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [enterpriseSettings, setEnterpriseSettings] = useState<WorkspaceEnterpriseSettings | null>(null);
   const [enterpriseDomains, setEnterpriseDomains] = useState('');
   const [savingEnterprise, setSavingEnterprise] = useState(false);
+  const [enterpriseDomain, setEnterpriseDomain] = useState('');
+  const [domainVerificationBusy, setDomainVerificationBusy] = useState(false);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const seatsUsed = workspace?.members.length || 0;
@@ -94,6 +98,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
           const settings = await fetchWorkspaceEnterpriseSettings();
           setEnterpriseSettings(settings);
           setEnterpriseDomains(settings.allowedEmailDomains.join(', '));
+          setEnterpriseDomain(settings.domainVerification?.domain || settings.allowedEmailDomains[0] || '');
         } catch {
           setEnterpriseSettings(null);
         }
