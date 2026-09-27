@@ -82,6 +82,25 @@ The report includes:
 
 A CSV export is available to owners and to admins only when the owner has enabled admin exports.
 
-## Next Phase 10 slice
+## Phase 10.5 — Enterprise Validation
 
-- **10.5 Enterprise Validation** — dedicated end-to-end validation of enterprise permissions, identity, exports, reporting, and policy enforcement.
+A dedicated built-server smoke test now validates the enterprise layer end to end against an isolated database.
+
+It verifies:
+
+1. only the workspace owner can change enterprise identity and data-governance policy;
+2. a DNS verification challenge can be created for a company domain;
+3. the owner can add an admin seat;
+4. owner policy can block admins from member management;
+5. owner policy can block admin audit/data/report exports;
+6. admins can still view the non-destructive enterprise report;
+7. owners can export workspace data and the enterprise report;
+8. governance changes and export actions appear in the workspace audit trail.
+
+The full Application Validation workflow runs this smoke together with the existing billing, lifecycle, growth, marketplace, owner-preview, workspace-seat, database, and built-server checks.
+
+## Phase 10 completion state
+
+Repository implementation for Phases **10.1–10.5** is complete when the enterprise smoke and the full Application Validation workflow are green.
+
+Production activation is separate from repository completion. The deployed service must still be able to read its configured production database before the Phase 10 release can become live.
