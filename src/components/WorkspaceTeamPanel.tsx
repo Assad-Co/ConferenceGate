@@ -211,6 +211,30 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
     }
   };
 
+  const saveDataControls = async () => {
+    if (!dataControls) return;
+    setSavingDataControls(true);
+    setError(null);
+    try {
+      const updated = await updateWorkspaceDataControls({
+        adminsCanManageMembers: dataControls.adminsCanManageMembers,
+        allowAdminExports: dataControls.allowAdminExports,
+        auditVisibilityDays: dataControls.auditVisibilityDays,
+      });
+      setDataControls(updated);
+      setWorkspace((prev) => prev ? { ...prev, dataControls: updated } : prev);
+      showToast({
+        type: 'success',
+        title: 'Governance controls saved',
+        message: 'Workspace permissions, export policy, and audit visibility are updated.',
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not save workspace data controls.');
+    } finally {
+      setSavingDataControls(false);
+    }
+  };
+
   const addMember = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email.trim()) return;
