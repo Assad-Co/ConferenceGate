@@ -1083,6 +1083,11 @@ workspacesRouter.get(
       if (!["owner", "admin"].includes(context.membership.member_role)) {
         return res.status(403).json({ error: "Workspace admin permission required." });
       }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+      await audit(context.workspace.id, req.userId!, "workspace_audit_exported");
       const rows = await dbAll<any>(
         `SELECT a.created_at,a.action,u.name AS actor_name,u.email AS actor_email,
                 t.name AS target_name,t.email AS target_email,a.details
@@ -1104,6 +1109,81 @@ workspacesRouter.get(
       res.send(csv);
     } catch (error: any) {
       res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace audit." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/data-export.json",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+
+      const accountId = context.workspace.owner_id;
+      const members = await dbAll<any>(
+        `SELECT m.user_id,m.member_role,m.status,m.created_at,m.updated_at,
+                u.name,u.email,u.title,u.organization,u.role
+           FROM account_workspace_members m
+           JOIN users u ON u.id=m.user_id
+          WHERE m.workspace_id=?
+          ORDER BY m.created_at ASC`,
+        [context.workspace.id]
+      );
+
+      let records: Record<string, unknown[]> = {};
+      if (context.workspace.account_role === "organizer") {
+        const [conferences, needs, inquiries, deals] = await Promise.all([
+          dbAll<any>("SELECT * FROM created_conferences WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_needs WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>(
+            `SELECT i.* FROM sponsorship_need_inquiries i
+               JOIN sponsorship_needs n ON n.id=i.need_id
+              WHERE n.organizer_id=? ORDER BY i.created_at DESC`,
+            [accountId]
+          ),
+          dbAll<any>("SELECT * FROM sponsorship_deals WHERE organizer_id=? ORDER BY created_at DESC", [accountId]),
+        ]);
+        records = { conferences, sponsorshipNeeds: needs, sponsorshipInquiries: inquiries, sponsorshipDeals: deals };
+      } else {
+        const [preferences, saved, inquiries, deals, requests] = await Promise.all([
+          dbAll<any>("SELECT * FROM sponsor_preferences WHERE sponsor_id=?", [accountId]),
+          dbAll<any>("SELECT * FROM sponsor_saved_opportunities WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_need_inquiries WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsorship_deals WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+          dbAll<any>("SELECT * FROM sponsor_requests WHERE sponsor_id=? ORDER BY created_at DESC", [accountId]),
+        ]);
+        records = { sponsorPreferences: preferences, savedOpportunities: saved, sponsorshipInquiries: inquiries, sponsorshipDeals: deals, sponsorRequests: requests };
+      }
+
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        workspace: {
+          id: context.workspace.id,
+          name: context.workspace.name,
+          accountRole: context.workspace.account_role,
+          ownerId: context.workspace.owner_id,
+          seatLimit: context.workspace.seat_limit,
+        },
+        controls,
+        members,
+        records,
+      };
+
+      await audit(context.workspace.id, req.userId!, "workspace_data_exported", null, {
+        accountRole: context.workspace.account_role,
+      });
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="conferencegate-workspace-data.json"`);
+      res.send(JSON.stringify(payload, null, 2));
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not export workspace data." });
     }
   })
 );
