@@ -1301,6 +1301,64 @@ workspacesRouter.get(
 );
 
 workspacesRouter.get(
+  "/enterprise-report",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      res.json({ report: await buildWorkspaceEnterpriseReport(context) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load enterprise workspace report." });
+    }
+  })
+);
+
+workspacesRouter.get(
+  "/enterprise-report.csv",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      const controls = await workspaceDataControlsDTO(context.workspace.id);
+      if (context.membership.member_role === "admin" && !controls.allowAdminExports) {
+        return res.status(403).json({ error: "Workspace owner has disabled admin exports." });
+      }
+      const report = await buildWorkspaceEnterpriseReport(context);
+      const rows: Array<[string, unknown]> = [
+        ["generated_at", report.generatedAt],
+        ["workspace_name", report.workspace.name],
+        ["account_role", report.workspace.accountRole],
+        ["seat_limit", report.workspace.seatLimit],
+        ["seats_used", report.workspace.seatsUsed],
+        ["seat_utilization_pct", report.workspace.seatUtilizationPct],
+        ["owners", report.workspace.roleCounts.owner],
+        ["admins", report.workspace.roleCounts.admin],
+        ["members", report.workspace.roleCounts.member],
+        ["viewers", report.workspace.roleCounts.viewer],
+        ["audit_events_30d", report.activity.auditEvents30d],
+        ["last_workspace_change_at", report.activity.lastWorkspaceChangeAt],
+        ["domain", report.governance.domainVerification?.domain || ""],
+        ["domain_status", report.governance.domainVerification?.status || "not_configured"],
+      ];
+      for (const [key, value] of Object.entries(report.productMetrics)) {
+        rows.push([key, value]);
+      }
+      const csv = ["metric,value", ...rows.map(([key, value]) => [csvCell(key), csvCell(value)].join(","))].join("\n");
+      await audit(context.workspace.id, req.userId!, "enterprise_report_exported");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="conferencegate-enterprise-report.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not export enterprise workspace report." });
+    }
+  })
+);
+
+workspacesRouter.get(
   "/activation",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     try {
