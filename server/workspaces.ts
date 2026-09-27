@@ -305,6 +305,118 @@ async function count(sql: string, args: any[] = []): Promise<number> {
   return Number(row?.count || 0);
 }
 
+async function buildWorkspaceEnterpriseReport(context: {
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}) {
+  const workspaceId = context.workspace.id;
+  const accountId = context.workspace.owner_id;
+  const role = context.workspace.account_role;
+
+  const [memberRows, audit30d, lastAudit, auditActions, controls, domainVerification] = await Promise.all([
+    dbAll<any>(
+      `SELECT member_role,COUNT(*) AS count
+         FROM account_workspace_members
+        WHERE workspace_id=? AND status='active'
+        GROUP BY member_role`,
+      [workspaceId]
+    ),
+    count(
+      "SELECT COUNT(*) AS count FROM account_workspace_audit WHERE workspace_id=? AND created_at>=datetime('now','-30 days')",
+      [workspaceId]
+    ),
+    dbGet<any>(
+      "SELECT created_at,action FROM account_workspace_audit WHERE workspace_id=? ORDER BY created_at DESC LIMIT 1",
+      [workspaceId]
+    ),
+    dbAll<any>(
+      `SELECT action,COUNT(*) AS count
+         FROM account_workspace_audit
+        WHERE workspace_id=? AND created_at>=datetime('now','-30 days')
+        GROUP BY action
+        ORDER BY count DESC,action ASC
+        LIMIT 10`,
+      [workspaceId]
+    ),
+    workspaceDataControlsDTO(workspaceId),
+    enterpriseDomainVerificationDTO(workspaceId),
+  ]);
+
+  const roleCounts: Record<string, number> = { owner: 0, admin: 0, member: 0, viewer: 0 };
+  for (const row of memberRows) roleCounts[String(row.member_role)] = Number(row.count || 0);
+  const seatsUsed = Object.values(roleCounts).reduce((sum, value) => sum + value, 0);
+  const seatUtilizationPct = Math.round((seatsUsed / Math.max(1, context.workspace.seat_limit)) * 1000) / 10;
+
+  let productMetrics: Record<string, number> = {};
+  if (role === "organizer") {
+    const [conferences, activeNeeds, inquiries, activeDeals] = await Promise.all([
+      count("SELECT COUNT(*) AS count FROM created_conferences WHERE organizer_id=?", [accountId]),
+      count(
+        `SELECT COUNT(*) AS count FROM sponsorship_needs
+          WHERE organizer_id=? AND status='active'
+            AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))`,
+        [accountId]
+      ),
+      count(
+        `SELECT COUNT(*) AS count
+           FROM sponsorship_need_inquiries i
+           JOIN sponsorship_needs n ON n.id=i.need_id
+          WHERE n.organizer_id=?`,
+        [accountId]
+      ),
+      count(
+        "SELECT COUNT(*) AS count FROM sponsorship_deals WHERE organizer_id=? AND status NOT IN ('completed','canceled')",
+        [accountId]
+      ),
+    ]);
+    productMetrics = { conferences, activeSponsorshipNeeds: activeNeeds, sponsorInquiries: inquiries, activeDealRooms: activeDeals };
+  } else {
+    const [saved, inquiries, activeDeals, requests] = await Promise.all([
+      count("SELECT COUNT(*) AS count FROM sponsor_saved_opportunities WHERE sponsor_id=?", [accountId]),
+      count("SELECT COUNT(*) AS count FROM sponsorship_need_inquiries WHERE sponsor_id=?", [accountId]),
+      count(
+        "SELECT COUNT(*) AS count FROM sponsorship_deals WHERE sponsor_id=? AND status NOT IN ('completed','canceled')",
+        [accountId]
+      ),
+      count("SELECT COUNT(*) AS count FROM sponsor_requests WHERE sponsor_id=? AND status='active'", [accountId]),
+    ]);
+    productMetrics = { savedOpportunities: saved, sponsorshipInquiries: inquiries, activeDealRooms: activeDeals, activeSponsorRequests: requests };
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    workspace: {
+      id: workspaceId,
+      name: context.workspace.name,
+      accountRole: role,
+      seatLimit: context.workspace.seat_limit,
+      seatsUsed,
+      seatUtilizationPct,
+      roleCounts,
+    },
+    governance: {
+      dataControls: controls,
+      domainVerification: domainVerification
+        ? {
+            domain: domainVerification.domain,
+            status: domainVerification.status,
+            verifiedAt: domainVerification.verifiedAt,
+          }
+        : null,
+    },
+    activity: {
+      auditEvents30d: audit30d,
+      lastWorkspaceChangeAt: lastAudit?.created_at || null,
+      lastWorkspaceChangeAction: lastAudit?.action || null,
+      topActions30d: auditActions.map((row) => ({
+        action: String(row.action),
+        count: Number(row.count || 0),
+      })),
+    },
+    productMetrics,
+  };
+}
+
 function cleanAttribution(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
