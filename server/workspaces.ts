@@ -942,6 +942,65 @@ workspacesRouter.put(
   })
 );
 
+workspacesRouter.get(
+  "/data-controls",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (!["owner", "admin"].includes(context.membership.member_role)) {
+        return res.status(403).json({ error: "Workspace admin permission required." });
+      }
+      res.json({ controls: await workspaceDataControlsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not load workspace data controls." });
+    }
+  })
+);
+
+workspacesRouter.put(
+  "/data-controls",
+  asyncHandler(async (req: AuthedRequest, res: Response) => {
+    try {
+      const context = await ensurePaidWorkspace(req.userId!);
+      if (context.membership.member_role !== "owner") {
+        return res.status(403).json({ error: "Workspace owner permission required." });
+      }
+
+      const adminsCanManageMembers = req.body?.adminsCanManageMembers !== false;
+      const allowAdminExports = req.body?.allowAdminExports !== false;
+      const auditVisibilityDays = clampAuditDays(req.body?.auditVisibilityDays);
+
+      await ensureWorkspaceDataControlsSchema();
+      await dbRun(
+        `INSERT INTO account_workspace_data_controls(
+          workspace_id,admins_can_manage_members,allow_admin_exports,audit_visibility_days,updated_by,updated_at
+        ) VALUES(?,?,?,?,?,datetime('now'))
+        ON CONFLICT(workspace_id) DO UPDATE SET
+          admins_can_manage_members=excluded.admins_can_manage_members,
+          allow_admin_exports=excluded.allow_admin_exports,
+          audit_visibility_days=excluded.audit_visibility_days,
+          updated_by=excluded.updated_by,
+          updated_at=datetime('now')`,
+        [
+          context.workspace.id,
+          adminsCanManageMembers ? 1 : 0,
+          allowAdminExports ? 1 : 0,
+          auditVisibilityDays,
+          req.userId!,
+        ]
+      );
+      await audit(context.workspace.id, req.userId!, "workspace_data_controls_updated", null, {
+        adminsCanManageMembers,
+        allowAdminExports,
+        auditVisibilityDays,
+      });
+      res.json({ controls: await workspaceDataControlsDTO(context.workspace.id) });
+    } catch (error: any) {
+      res.status(error?.status || 500).json({ error: error?.message || "Could not update workspace data controls." });
+    }
+  })
+);
+
 workspacesRouter.post(
   "/enterprise-domain/start",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
