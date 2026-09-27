@@ -49,8 +49,23 @@ The verification state is shown in Team & Access. A failed DNS check does not ch
 
 This is an identity-readiness layer only. It does not automatically enable SAML/OIDC SSO, change passwords, or take over existing accounts.
 
+## Phase 10.3 — Governance & Data Controls
+
+Workspace owners now control delegated administration and exports without changing the core Organizer Pro / Sponsor Pro permission model.
+
+Available controls:
+
+- allow or block admin seats from adding, removing, or changing workspace members;
+- allow or block admin seats from downloading workspace exports;
+- choose a 30-day to 10-year audit-history window for the Team & Access dashboard;
+- download the complete audit history as CSV when export permission allows it;
+- download a structured JSON workspace export containing workspace metadata, roster, and role-specific commercial records.
+
+The audit dashboard window is a visibility control only. It does not silently delete historical audit records.
+
+All policy changes and exports are themselves written to the workspace audit trail.
+
 ## Next Phase 10 slices
 
-- **10.3 Governance & Data Controls** — controlled exports, retention controls, and admin visibility.
 - **10.4 Enterprise Reporting** — organization-level usage and activity reporting.
 - **10.5 Enterprise Validation** — end-to-end permissions, audit, and policy smoke tests.
