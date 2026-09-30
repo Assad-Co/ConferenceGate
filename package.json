@@ -52,7 +52,8 @@
     "database:restore-legacy-professional": "node scripts/restoreLegacyProfessionalProfile.mjs",
     "database:reconcile-legacy": "node scripts/reconcileLegacyProductionData.mjs",
     "growth:automation-smoke": "node scripts/smokeGrowthAutomation.mjs",
-    "enterprise:smoke": "node scripts/smokeEnterpriseGovernance.mjs"
+    "enterprise:smoke": "node scripts/smokeEnterpriseGovernance.mjs",
+    "launch:verify-live": "node scripts/verifyLiveLaunch.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
