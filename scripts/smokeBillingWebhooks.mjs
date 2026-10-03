@@ -8,6 +8,8 @@ const fsSecret = 'fastspring-test-secret';
 const paddleSecret = 'paddle-test-secret';
 const organizerPriceId = 'pri_organizer_smoke_1';
 const sponsorPriceId = 'pri_sponsor_smoke_1';
+const organizerFastSpringProduct = 'organizer-pro-smoke';
+const sponsorFastSpringProduct = 'sponsor-pro-smoke';
 
 for (const suffix of ['', '-wal', '-shm']) {
   try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
@@ -20,6 +22,8 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     NODE_ENV: 'test',
     TEST_DATABASE_PATH: dbPath,
     FASTSPRING_WEBHOOK_SECRET: fsSecret,
+    FASTSPRING_ORGANIZER_PRODUCT_PATH: organizerFastSpringProduct,
+    FASTSPRING_SPONSOR_PRODUCT_PATH: sponsorFastSpringProduct,
     PADDLE_WEBHOOK_SECRET: paddleSecret,
     PADDLE_WEBHOOK_TOLERANCE_SECONDS: '60',
     PADDLE_ORGANIZER_PRICE_ID: organizerPriceId,
@@ -120,12 +124,44 @@ try {
   const sponsor = await signup('sponsor', 'billing-smoke-sponsor@example.com');
   const organizer = await signup('organizer', 'billing-smoke-organizer@example.com');
   const roleMismatchSponsor = await signup('sponsor', 'billing-smoke-role-mismatch@example.com');
+  const fastSpringMismatchOrganizer = await signup('organizer', 'billing-smoke-fastspring-mismatch@example.com');
 
   const sponsorBefore = await billingStatus(sponsor.cookie);
   const organizerBefore = await billingStatus(organizer.cookie);
   const mismatchBefore = await billingStatus(roleMismatchSponsor.cookie);
-  if (sponsorBefore.hasPaidAccess || organizerBefore.hasPaidAccess || mismatchBefore.hasPaidAccess) {
+  const fastSpringMismatchBefore = await billingStatus(fastSpringMismatchOrganizer.cookie);
+  if (
+    sponsorBefore.hasPaidAccess ||
+    organizerBefore.hasPaidAccess ||
+    mismatchBefore.hasPaidAccess ||
+    fastSpringMismatchBefore.hasPaidAccess
+  ) {
     throw new Error('New paid-role accounts unexpectedly started with paid access.');
+  }
+
+  // A correctly signed FastSpring event may identify a first-time account by purchaser email, but
+  // the purchased product still has to be the product configured for that ConferenceGate role.
+  await sendFastSpring({
+    id: 'fs_smoke_role_mismatch_1',
+    type: 'subscription.activated',
+    data: {
+      id: 'sub_fs_smoke_role_mismatch_1',
+      state: 'active',
+      active: true,
+      account: {
+        id: 'acc_fs_smoke_role_mismatch_1',
+        contact: { email: 'billing-smoke-fastspring-mismatch@example.com' },
+      },
+      product: { path: sponsorFastSpringProduct },
+    },
+  });
+
+  const fastSpringMismatchAfter = await billingStatus(fastSpringMismatchOrganizer.cookie);
+  if (fastSpringMismatchAfter.hasPaidAccess || fastSpringMismatchAfter.status === 'active') {
+    throw new Error(
+      'FastSpring role/product mismatch unexpectedly activated paid access: ' +
+        JSON.stringify(fastSpringMismatchAfter)
+    );
   }
 
   const fastSpringEvent = {
@@ -139,7 +175,7 @@ try {
         id: 'acc_fs_smoke_1',
         contact: { email: 'billing-smoke-sponsor@example.com' },
       },
-      product: { path: 'sponsor-pro-smoke' },
+      product: { path: sponsorFastSpringProduct },
     },
   };
   await sendFastSpring(fastSpringEvent);
@@ -205,6 +241,7 @@ try {
       sponsorAccess: sponsorAfter.hasPaidAccess,
       provider: sponsorAfter.provider,
       status: sponsorAfter.status,
+      roleAndProductBindingRejectedMismatch: !fastSpringMismatchAfter.hasPaidAccess,
     },
     paddle: {
       organizerAccess: organizerAfter.hasPaidAccess,
