@@ -416,7 +416,7 @@ function configuredOwnerPasswordResetTokenMatches(candidate: unknown): boolean {
 
 function ownerPasswordResetUseKey(token: string): string {
   const digest = crypto.createHash("sha256").update(token).digest("hex");
-  return `owner_password_reset_used_\${digest.slice(0, 40)}`;
+  return `owner_password_reset_used_${digest.slice(0, 40)}`;
 }
 
 // Emergency one-time owner recovery. The secret token is supplied only through Render's

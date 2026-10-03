@@ -73,6 +73,11 @@ async function main() {
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
   // Firecrawl/direct deep research, Apify fallback, logo recovery and coverage reporting.
+  if (process.env.ENABLE_WEB_ENRICHMENT_LOOP !== '1') {
+    console.log('[background-bootstrap] web enrichment loop disabled; scheduled automation owns the discovery pipeline.');
+    return;
+  }
+
   console.log('[background-bootstrap] starting continuous conference enrichment loop');
   const loop = spawn(process.execPath, ['scripts/runConferenceEnrichmentLoop.mjs'], {
     stdio: 'inherit',
