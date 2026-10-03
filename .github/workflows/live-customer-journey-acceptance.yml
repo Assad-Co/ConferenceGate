@@ -1,0 +1,28 @@
+name: Live Customer Journey Acceptance
+
+on:
+  push:
+    branches:
+      - phase-11-5-live-customer-acceptance
+    paths:
+      - .github/workflows/live-customer-journey-acceptance.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-live-customer-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run live Organizer and Sponsor acceptance
+        env:
+          PHASE11_BASE_URL: https://conferencegate.onrender.com
+        run: node scripts/verifyLiveCustomerJourneys.mjs
