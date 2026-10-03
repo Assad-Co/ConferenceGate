@@ -1,0 +1,113 @@
+name: Phase 12 Product Depth Patch
+
+on:
+  push:
+    branches: [phase-12-product-depth-and-coverage]
+    paths:
+      - '.github/workflows/phase-12-product-depth-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-12-product-depth-and-coverage
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply Phase 12 product depth improvements
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceOnce(file, before, after, label) {
+            let source = fs.readFileSync(file, 'utf8');
+            if (source.includes(after)) {
+              console.log(`[phase12] ${label} already applied`);
+              return;
+            }
+            const hits = source.split(before).length - 1;
+            if (hits !== 1) throw new Error(`[phase12] ${label}: expected one anchor, found ${hits}`);
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+            console.log(`[phase12] applied ${label}`);
+          }
+
+          // 1) Keep the coverage-driven harvester aligned with the complete customer-facing
+          // category list. These five categories already had authoritative source maps but were
+          // missing from CATEGORIES, so the deficit engine could never select them for crawling.
+          replaceOnce(
+            'scripts/coverageDrivenCategoryHarvest.mjs',
+            "  'Petroleum & Geoscience','Renewable Energy','Hydrogen & CCUS','Mining & Minerals','Environment',\n  'Climate & Sustainability','Healthcare','Public Health','Pharmaceuticals & Biotechnology','Nursing',",
+            "  'Petroleum & Geoscience','Geoscience','Geology','Organic Geochemistry','Renewable Energy','Hydrogen & CCUS','Mining & Minerals','Environment',\n  'Climate & Sustainability','Healthcare','Health','Public Health','Pharmaceuticals & Biotechnology','Nursing',",
+            'restore geoscience/health coverage categories'
+          );
+          replaceOnce(
+            'scripts/coverageDrivenCategoryHarvest.mjs',
+            "  'Architecture & Urbanism','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',",
+            "  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',",
+            'restore architecture coverage category'
+          );
+
+          // 2) Home: turn a quiet feed into an action surface and expose the broad conference
+          // catalogue from the home screen. onSearchQuery existed as a prop but had no user path.
+          replaceOnce(
+            'src/components/HomeLanding.tsx',
+            "  const quickLinks = [\n    { label: 'Discover Conferences', icon: Layers, tab: 'discover' },\n    { label: 'My Abstracts', icon: FileText, tab: 'abstracts' },\n    { label: 'Reviewer Portal', icon: Award, tab: 'reviewer' },\n    { label: 'Certificates', icon: BadgeCheck, tab: 'certificates' },\n  ];",
+            "  const quickLinks = [\n    { label: 'Discover Conferences', icon: Layers, tab: 'discover' },\n    { label: 'My Abstracts', icon: FileText, tab: 'abstracts' },\n    { label: 'Reviewer Portal', icon: Award, tab: 'reviewer' },\n    { label: 'Certificates', icon: BadgeCheck, tab: 'certificates' },\n  ];\n\n  const exploreFields = [\n    'Artificial Intelligence',\n    'Petroleum & Geoscience',\n    'Healthcare',\n    'Engineering',\n    'Energy',\n    'Business',\n    'Cybersecurity',\n    'Materials Science',\n    'Finance',\n    'Climate & Sustainability',\n    'Real Estate',\n    'Open call for papers',\n  ];\n\n  const exploreField = (field: string) => {\n    onSearchQuery(field);\n    onNavigateTab('discover');\n  };",
+            'add home discovery field shortcuts'
+          );
+
+          replaceOnce(
+            'src/components/HomeLanding.tsx',
+            "            <p className=\"text-xs text-slate-500 max-w-sm mx-auto\">\n              Share a paper acceptance, CFP alert, or milestone above — or follow more conferences to see activity here.\n            </p>",
+            "            <p className=\"text-xs text-slate-500 max-w-sm mx-auto\">\n              Share a paper acceptance, CFP alert, or milestone above — or explore active conferences to build your network.\n            </p>\n            <div className=\"flex items-center justify-center gap-2 pt-2\">\n              <button\n                type=\"button\"\n                onClick={() => onNavigateTab('discover')}\n                className=\"px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors\"\n              >\n                Browse conferences\n              </button>\n              <button\n                type=\"button\"\n                onClick={() => setPostText('📢 CFP Update: ')}\n                className=\"px-3.5 py-2 rounded-full border border-slate-200 hover:border-blue-300 hover:text-blue-700 text-slate-700 text-xs font-bold transition-colors\"\n              >\n                Share a CFP\n              </button>\n            </div>",
+            'make quiet-feed state actionable'
+          );
+
+          {
+            const file = 'src/components/HomeLanding.tsx';
+            let source = fs.readFileSync(file, 'utf8');
+            if (!source.includes('Explore conference fields')) {
+              const endAside = source.lastIndexOf('      </aside>');
+              if (endAside < 0) throw new Error('[phase12] home explore fields: right aside end not found');
+              const card = `        <div className=\"bg-white rounded-lg border border-slate-200 shadow-xs\">\n          <div className=\"px-4 py-3 border-b border-slate-100\">\n            <div className=\"font-bold text-sm text-slate-900\">Explore conference fields</div>\n            <div className=\"text-[10px] text-slate-400 mt-0.5\">Jump directly into the worldwide catalogue</div>\n          </div>\n          <div className=\"p-3 flex flex-wrap gap-1.5\">\n            {exploreFields.map((field) => (\n              <button\n                key={field}\n                type=\"button\"\n                onClick={() => exploreField(field)}\n                className=\"px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors text-left\"\n              >\n                {field}\n              </button>\n            ))}\n          </div>\n        </div>\n\n`;
+              source = source.slice(0, endAside) + card + source.slice(endAside);
+              fs.writeFileSync(file, source);
+              console.log('[phase12] added home explore fields card');
+            }
+          }
+
+          // 3) Discover: a zero-result search should help the visitor recover immediately rather
+          // than leave a large blank card. Suggested searches submit the real search path.
+          replaceOnce(
+            'src/components/DiscoveryEngine.tsx',
+            "        {!webSearchLoading && !webSearchError && webResults && visibleWebResults.length === 0 && (\n          <div className=\"bg-white rounded-2xl border border-slate-200 p-12 text-center\">\n            <p className=\"text-xs text-slate-400\">No current or upcoming conference websites found. Try different keywords or broader filters.</p>\n          </div>\n        )}",
+            "        {!webSearchLoading && !webSearchError && webResults && visibleWebResults.length === 0 && (\n          <div className=\"bg-white rounded-2xl border border-slate-200 p-8 md:p-12 text-center\">\n            <div className=\"w-11 h-11 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center mb-3\">\n              <Search className=\"w-5 h-5\" />\n            </div>\n            <h3 className=\"text-sm font-bold text-slate-900\">No upcoming matches with these filters</h3>\n            <p className=\"text-xs text-slate-500 mt-1 max-w-lg mx-auto\">\n              Broaden the date or location filters, or jump into one of the worldwide fields below.\n            </p>\n            <div className=\"flex flex-wrap items-center justify-center gap-2 mt-4\">\n              {DISCOVERY_SUGGESTIONS.slice(0, 8).map((suggestion) => (\n                <button\n                  key={suggestion}\n                  type=\"button\"\n                  onClick={() => {\n                    setSearchInput(suggestion);\n                    setSubmittedSearchTerm(suggestion);\n                    lastWebQueryRef.current = null;\n                    setSearchSubmitCount((count) => count + 1);\n                  }}\n                  className=\"px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[11px] font-bold text-slate-600 transition-colors\"\n                >\n                  {suggestion}\n                </button>\n              ))}\n            </div>\n          </div>\n        )}",
+            'make discover zero-result state actionable'
+          );
+
+          // 4) Sponsor Pro: connect the most common empty state directly to its remedy.
+          replaceOnce(
+            'src/components/SponsorPortal.tsx',
+            "              <p className=\"text-xs text-slate-500 mt-1\">\n                Complete Matching Preferences and ConferenceGate will rank new organizer opportunities here.\n              </p>",
+            "              <p className=\"text-xs text-slate-500 mt-1\">\n                Complete Matching Preferences and ConferenceGate will rank new organizer opportunities here.\n              </p>\n              <button\n                type=\"button\"\n                onClick={() => setActiveTab('preferences')}\n                className=\"mt-4 px-4 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors\"\n              >\n                Set matching preferences\n              </button>",
+            'add Sponsor Pro empty-state action'
+          );
+          NODE
+      - name: Commit Phase 12 patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/coverageDrivenCategoryHarvest.mjs src/components/HomeLanding.tsx src/components/DiscoveryEngine.tsx src/components/SponsorPortal.tsx
+          if git diff --cached --quiet; then
+            echo "No Phase 12 source changes to commit."
+          else
+            git commit -m "Phase 12 — Expand conference coverage and product depth"
+            git push origin HEAD:phase-12-product-depth-and-coverage
+          fi
