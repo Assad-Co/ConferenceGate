@@ -9,7 +9,7 @@
     "start": "node scripts/prepareLocalDatabase.mjs && sh -c 'node scripts/runBackgroundBootstrap.mjs & exec node dist/server.cjs'",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "postinstall": "node scripts/patchOwnerPasswordRecoveryKey.mjs && node scripts/installBrowser.mjs",
+    "postinstall": "node scripts/installBrowser.mjs",
     "install:browser": "playwright-core install chromium",
     "discovery": "tsx server/discovery/cli.ts",
     "automation": "node scripts/automationEntry.mjs",
