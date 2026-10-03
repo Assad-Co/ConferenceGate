@@ -2230,7 +2230,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   {myConferenceSubmissions.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-6 text-center text-xs text-slate-400 font-medium">
-                        No abstract submissions yet for your conferences.
+                        <div className="space-y-3">
+                          <p className="text-xs text-slate-500 font-medium">No abstract submissions yet for your conferences.</p>
+                          <button type="button" onClick={() => setActiveTab('wizard')} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Open Conference Wizard</button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -2608,8 +2611,13 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <div className="overflow-x-auto p-6">
               {committeeRoster.length === 0 ? (
                 <div className="text-xs text-slate-400 font-medium py-6 text-center">
-                  No technical committee members yet. Nominate candidates above or add members via the Conference
-                  Wizard.
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-500 font-medium">No technical committee members yet. Nominate candidates above or add members via the Conference Wizard.</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <button type="button" onClick={() => setActiveTab('professionals')} className="px-3.5 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">Search professionals</button>
+                      <button type="button" onClick={() => setActiveTab('wizard')} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Open Conference Wizard</button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <table className="w-full text-left text-xs text-slate-700">
@@ -4228,7 +4236,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
             {sponsorRevenueByTier.length === 0 ? (
               <div className="text-xs text-slate-400 font-medium py-4 text-center">
-                No sponsorship packages published yet.
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500 font-medium">No sponsorship packages published yet.</p>
+                  <button type="button" onClick={() => setActiveTab('sponsors')} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Build sponsor inventory</button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
