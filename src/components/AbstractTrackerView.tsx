@@ -145,6 +145,27 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
         </div>
 
         {/* Right Submission Detail & Real-Time Status Timeline */}
+        {!currentSub && (
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-xs text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-900">Submit your first abstract</h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
+                Choose a conference, submit your abstract, and ConferenceGate will track screening, reviewer assignment, decisions, and revisions here.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenNewSubmission}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold shadow-xs transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Submit New Abstract
+            </button>
+          </div>
+        )}
         {currentSub && (
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
