@@ -34,11 +34,10 @@ jobs:
             console.log(`[phase12.2] applied ${label}`);
           }
 
-          // Community: replace four decorative "coming soon" icons with real quick-start actions.
           replaceOnce(
             'src/components/CommunityFeed.tsx',
             `                <div className="flex items-center gap-1">\n                  <span className="p-2 rounded-lg text-slate-400" title="Add photo (coming soon)">\n                    <ImageIcon className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Attach document (coming soon)">\n                    <FileText className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Tag a conference (coming soon)">\n                    <MapPin className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Celebrate a milestone (coming soon)">\n                    <PartyPopper className="w-4 h-4" />\n                  </span>\n                </div>`,
-            `                <div className="flex flex-wrap items-center gap-1.5">\n                  {[\n                    { label: 'CFP', icon: FileText, text: '📢 Call for Papers: ' },\n                    { label: 'Paper', icon: Award, text: '🎉 Paper accepted: ' },\n                    { label: 'Speaker', icon: Mic, text: '🎤 Speaker update: ' },\n                    { label: 'Question', icon: MessageSquare, text: '💬 Technical question: ' },\n                  ].map(({ label, icon: QuickIcon, text }) => (\n                    <button\n                      key={label}\n                      type="button"\n                      onClick={() => { setNewPostText(text); setComposerOpen(true); }}\n                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors"\n                      title={`Start a ${label.toLowerCase()} post`}\n                    >\n                      <QuickIcon className="w-3.5 h-3.5" />\n                      <span>{label}</span>\n                    </button>\n                  ))}\n                </div>`,
+            `                <div className="flex flex-wrap items-center gap-1.5">\n                  {[\n                    { label: 'CFP', icon: FileText, text: '📢 Call for Papers: ' },\n                    { label: 'Paper', icon: Award, text: '🎉 Paper accepted: ' },\n                    { label: 'Speaker', icon: Mic, text: '🎤 Speaker update: ' },\n                    { label: 'Question', icon: MessageSquare, text: '💬 Technical question: ' },\n                  ].map(({ label, icon: QuickIcon, text }) => (\n                    <button\n                      key={label}\n                      type="button"\n                      onClick={() => { setNewPostText(text); setComposerOpen(true); }}\n                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors"\n                      title={'Start a ' + label.toLowerCase() + ' post'}\n                    >\n                      <QuickIcon className="w-3.5 h-3.5" />\n                      <span>{label}</span>\n                    </button>\n                  ))}\n                </div>`,
             'community quick post actions'
           );
 
@@ -49,7 +48,6 @@ jobs:
             'community empty feed action'
           );
 
-          // Abstract tracker: make a new author's empty portal an onboarding state, not a blank 2/3 column.
           replaceOnce(
             'src/components/AbstractTrackerView.tsx',
             `        {/* Right Submission Detail & Real-Time Status Timeline */}\n        {currentSub && (`,
