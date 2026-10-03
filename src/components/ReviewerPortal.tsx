@@ -667,6 +667,12 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 <p className="text-xs text-slate-500 mt-1">
                   Try a different search term or check again when organizers publish new calls for reviewers.
                 </p>
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  {opportunitySearch.trim() && (
+                    <button type="button" onClick={() => setOpportunitySearch('')} className="px-3.5 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50">Clear search</button>
+                  )}
+                  <button type="button" onClick={() => setRoleFilter('recommended')} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Show recommendations</button>
+                </div>
               </div>
             ) : null
           )}
@@ -771,6 +777,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
                   ConferenceGate will show a role here only after an organizer explicitly publishes that opening.
                 </p>
+                <button type="button" onClick={() => setRoleFilter('recommended')} className="mt-4 px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">View all recommendations</button>
               </div>
             ) : null
           )}
@@ -784,6 +791,12 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
                   Complete your expertise and availability profile, or check the individual role tabs to see all organizer-published openings.
                 </p>
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  <button type="button" onClick={() => { setOpportunitySearch(''); setRoleFilter('reviewer'); }} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Show reviewer calls</button>
+                  {!availableToReview && (
+                    <button type="button" onClick={onToggleAvailability} className="px-3.5 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100">Turn on reviewer availability</button>
+                  )}
+                </div>
               </div>
             )}
         </div>
@@ -791,8 +804,9 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
       {/* Tab 2: Evaluate Assigned Abstract Form */}
       {activeTab === 'evaluate' && !selectedSub && (
-        <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
-          No abstract is currently assigned to you for review. Once an organizer invites you to review a paper, it'll show up here and in Review Opportunities.
+        <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center space-y-3">
+          <p className="text-xs text-slate-500 font-medium">No abstract is currently assigned to you for review. Once an organizer invites you to review a paper, it'll show up here and in Review Opportunities.</p>
+          <button type="button" onClick={() => setActiveTab('opportunities')} className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold">Browse professional opportunities</button>
         </div>
       )}
       {activeTab === 'evaluate' && selectedSub && (

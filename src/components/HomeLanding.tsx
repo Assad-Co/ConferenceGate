@@ -426,7 +426,13 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             Upcoming Abstract Deadlines
           </div>
           <div className="divide-y divide-slate-100">
-            {upcomingDeadlines.map((conf) => (
+            {upcomingDeadlines.length === 0 ? (
+              <div className="px-4 py-5 text-center space-y-2">
+                <Clock className="w-5 h-5 text-slate-300 mx-auto" />
+                <p className="text-[11px] text-slate-500">No upcoming abstract deadlines in your current feed.</p>
+                <button type="button" onClick={() => exploreField('Open call for papers')} className="text-[11px] font-bold text-blue-700 hover:text-blue-900">Find open CFPs</button>
+              </div>
+            ) : upcomingDeadlines.map((conf) => (
               <button
                 key={conf.id}
                 onClick={() => onSelectConference(conf)}
@@ -446,7 +452,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             onClick={() => onNavigateTab('discover')}
             className="w-full text-center text-xs font-bold text-slate-500 hover:text-blue-600 py-2.5 border-t border-slate-100 cursor-pointer"
           >
-            Show more
+            {upcomingDeadlines.length === 0 ? 'Browse calls for papers' : 'Show more'}
           </button>
         </div>
 
@@ -455,7 +461,13 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             Upcoming Conferences
           </div>
           <div className="divide-y divide-slate-100">
-            {upcomingConferences.map((conf) => (
+            {upcomingConferences.length === 0 ? (
+              <div className="px-4 py-5 text-center space-y-2">
+                <Calendar className="w-5 h-5 text-slate-300 mx-auto" />
+                <p className="text-[11px] text-slate-500">Your followed-conference list is quiet.</p>
+                <button type="button" onClick={() => onNavigateTab('discover')} className="text-[11px] font-bold text-blue-700 hover:text-blue-900">Browse worldwide conferences</button>
+              </div>
+            ) : upcomingConferences.map((conf) => (
               <div key={conf.id} className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors group">
                 {conf.logo && !logoErrorIds[conf.id] ? (
                   <img
