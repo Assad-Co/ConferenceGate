@@ -61,6 +61,19 @@ The workflow requires the deployed release to match the exact Git commit and cap
 - public application reachability;
 - unauthenticated protection of the private Growth Operations API.
 
+The first live Phase 11.2 validation passed on commit `81917b53f39d84c6588f4cd44d6f33255e38ff57` and confirmed:
+
+- HTTP health status 200;
+- `database: "ready"`;
+- `databaseBackend: "turso"`;
+- `databasePersistenceConfigured: true`;
+- `tursoRuntimeConfigured: true`;
+- deployed release matched the expected Git commit;
+- the application shell returned HTTP 200;
+- the unauthenticated private Growth Operations API returned HTTP 401.
+
+Because Turso is the active production backend, legacy Turso-to-SQLite recovery is migration-only and is skipped unless an explicit `DATABASE_PATH` SQLite target is configured.
+
 Before commercial launch, the deployed Render service must additionally show:
 
 - the intended Organizer/Sponsor billing mode;
@@ -160,6 +173,6 @@ A ConferenceGate release can be called commercially launch-ready only when all o
 
 ## Phase 11 status
 
-- **Phase 11.1 repository implementation: complete.**
-- **Phase 11.2 production-evidence automation: implemented in this phase; live result must be green before Phase 11.2 is called complete.**
+- **Phase 11.1: complete.**
+- **Phase 11.2: live production evidence passed; Turso persistence and release identity are verified. Startup hardening prevents obsolete Turso-to-SQLite recovery from running against the active production backend.**
 - Phases 11.3–11.8 require controlled production evidence and must not be marked complete from repository CI alone.
