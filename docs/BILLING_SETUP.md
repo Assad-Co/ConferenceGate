@@ -19,17 +19,19 @@ Set these in the Render service environment. Never commit their values.
 | `SPONSOR_CHECKOUT_URL` | Hosted Sponsor Pro checkout URL when not using server-created Paddle checkout |
 | `PADDLE_API_KEY` | Server-side Paddle API key used only when `BILLING_CHECKOUT_PROVIDER=paddle` |
 | `PADDLE_ENV` | `sandbox` or `live`; defaults to live |
-| `PADDLE_ORGANIZER_PRICE_ID` | Recurring Paddle price ID for Organizer Pro |
-| `PADDLE_SPONSOR_PRICE_ID` | Recurring Paddle price ID for Sponsor Pro |
+| `PADDLE_ORGANIZER_PRICE_ID` | Recurring Paddle price ID for Organizer Pro; also used to bind signed events to the Organizer role |
+| `PADDLE_SPONSOR_PRICE_ID` | Recurring Paddle price ID for Sponsor Pro; also used to bind signed events to the Sponsor role |
 | `BILLING_SYNC_SECRET` | Secret for the protected server-to-server normalization and payout-confirmation endpoints |
 | `SPONSORSHIP_PLATFORM_FEE_BPS` | Optional platform fee in basis points applied when a sponsor payment creates an organizer payout obligation; defaults to 0 |
 | `FASTSPRING_WEBHOOK_SECRET` | FastSpring HMAC SHA-256 webhook secret, if FastSpring is used |
+| `FASTSPRING_ORGANIZER_PRODUCT_PATH` | Exact FastSpring product path that grants Organizer Pro |
+| `FASTSPRING_SPONSOR_PRODUCT_PATH` | Exact FastSpring product path that grants Sponsor Pro |
 | `PADDLE_WEBHOOK_SECRET` | Paddle notification-destination secret, if Paddle is used |
 | `PADDLE_WEBHOOK_TOLERANCE_SECONDS` | Optional signature timestamp tolerance; defaults to 5 seconds |
 | `TURSO_DATABASE_URL` | Persistent production database |
 | `TURSO_AUTH_TOKEN` | Persistent production database credential |
 
-You only need the provider-specific webhook secret for providers you actually enable.
+You only need the provider-specific webhook configuration for providers you actually enable. A provider is not considered production-ready until both its signature secret and its Organizer/Sponsor product bindings are configured.
 
 ## FastSpring
 
@@ -41,9 +43,9 @@ https://<conferencegate-domain>/api/billing/webhooks/fastspring
 
 ConferenceGate verifies the `X-FS-Signature` HMAC against the exact raw request body before processing any event.
 
-For first-time account linking, enable **webhook expansion for the account object/contact details** in FastSpring so the signed subscription event contains the purchaser's account contact email. ConferenceGate matches that email to the existing paid-role account and then stores FastSpring's account ID as the durable billing customer reference. After that first link, later lifecycle events can resolve the account by the stored provider ID.
+For first-time account linking, enable **webhook expansion for the account object/contact details** in FastSpring so the signed subscription event contains the purchaser's account contact email. ConferenceGate matches that email to the existing paid-role account, then verifies that the event's exact FastSpring product path matches either `FASTSPRING_ORGANIZER_PRODUCT_PATH` or `FASTSPRING_SPONSOR_PRODUCT_PATH` for that account's role. Only after both identity and product match does it store FastSpring's account ID as the durable billing customer reference and grant paid access.
 
-Do not rely on an unexpanded first subscription event that contains only an opaque account ID; ConferenceGate cannot safely guess which user owns it.
+Do not rely on an unexpanded first subscription event that contains only an opaque account ID; ConferenceGate cannot safely guess which user owns it. Do not configure the same FastSpring product path for both paid roles.
 
 Recommended subscription events:
 
@@ -57,7 +59,7 @@ Recommended subscription events:
 - `subscription.payment.overdue`
 - `subscription.charge.failed`
 
-For first-time account linking, the FastSpring account contact email should match the Organizer/Sponsor ConferenceGate account email. Once linked, ConferenceGate stores the FastSpring account ID as the billing customer reference.
+For first-time account linking, the FastSpring account contact email should match the Organizer/Sponsor ConferenceGate account email and the product path must match that role's configured product. Once linked, ConferenceGate stores the FastSpring account ID as the billing customer reference. Later lifecycle events can resolve by that durable provider ID; any product path included later must still match the linked role.
 
 Webhook events are idempotent: the same FastSpring event ID is processed only once.
 
@@ -73,7 +75,7 @@ PADDLE_ORGANIZER_PRICE_ID=pri_...
 PADDLE_SPONSOR_PRICE_ID=pri_...
 ```
 
-ConferenceGate then creates the checkout transaction server-side and stores `conferencegate_user_id` and the account role in Paddle `custom_data`. Paddle carries transaction custom data onto the resulting subscription, allowing verified subscription webhooks to activate the correct ConferenceGate account without relying on browser state.
+ConferenceGate then creates the checkout transaction server-side and stores `conferencegate_user_id` and the account role in Paddle `custom_data`. Paddle carries transaction custom data onto the resulting subscription. A first-time signed subscription event is accepted only when the ConferenceGate user ID, declared role, and exact configured role price all agree.
 
 Webhook destination:
 
@@ -94,15 +96,16 @@ Recommended subscription events:
 - `subscription.resumed`
 - `subscription.canceled`
 
-For the first subscription checkout, include this Paddle custom data:
+For the first subscription checkout, ConferenceGate creates this Paddle custom data server-side:
 
 ```json
 {
-  "conferencegate_user_id": "<signed-in ConferenceGate user id>"
+  "conferencegate_user_id": "<signed-in ConferenceGate user id>",
+  "conferencegate_role": "organizer|sponsor"
 }
 ```
 
-ConferenceGate then stores Paddle's `customer_id` as the billing customer reference for later lifecycle events.
+ConferenceGate also verifies the subscription item price against `PADDLE_ORGANIZER_PRICE_ID` or `PADDLE_SPONSOR_PRICE_ID` before linking the first purchase. It then stores Paddle's `customer_id` as the billing customer reference for later lifecycle events.
 
 ### Sponsorship Deal Room payments with Paddle
 
@@ -187,7 +190,7 @@ For a strict pass/fail check:
 npm run production:readiness:strict
 ```
 
-The script prints only booleans/configuration status; it never prints secret values.
+The script prints only booleans/configuration status; it never prints secret values. It treats a billing provider as ready only when its verified webhook and role/product bindings are both configured.
 
 ## Deployment validation
 
@@ -203,7 +206,7 @@ node scripts/smokeWorkspaceSeats.mjs
 node scripts/smokeBuiltServer.mjs
 ```
 
-The workspace smoke test verifies inherited paid access, shared organizer data, viewer read-only enforcement, and revocation after seat removal.
+The billing webhook smoke test includes negative role/product-binding checks for both FastSpring and Paddle. The workspace smoke test verifies inherited paid access, shared organizer data, viewer read-only enforcement, and revocation after seat removal.
 
 For the final Render/environment audit and release acceptance criteria, use `docs/PHASE5_PRODUCTION_CHECKLIST.md`.
 
