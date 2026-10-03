@@ -6,6 +6,8 @@ const port = Number(process.env.BILLING_SMOKE_PORT || 3111);
 const dbPath = process.env.BILLING_SMOKE_DB || '/tmp/conferencegate-billing-smoke.db';
 const fsSecret = 'fastspring-test-secret';
 const paddleSecret = 'paddle-test-secret';
+const organizerPriceId = 'pri_organizer_smoke_1';
+const sponsorPriceId = 'pri_sponsor_smoke_1';
 
 for (const suffix of ['', '-wal', '-shm']) {
   try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
@@ -20,6 +22,8 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     FASTSPRING_WEBHOOK_SECRET: fsSecret,
     PADDLE_WEBHOOK_SECRET: paddleSecret,
     PADDLE_WEBHOOK_TOLERANCE_SECONDS: '60',
+    PADDLE_ORGANIZER_PRICE_ID: organizerPriceId,
+    PADDLE_SPONSOR_PRICE_ID: sponsorPriceId,
     BILLING_SYNC_SECRET: 'billing-smoke-secret',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -115,10 +119,12 @@ try {
 
   const sponsor = await signup('sponsor', 'billing-smoke-sponsor@example.com');
   const organizer = await signup('organizer', 'billing-smoke-organizer@example.com');
+  const roleMismatchSponsor = await signup('sponsor', 'billing-smoke-role-mismatch@example.com');
 
   const sponsorBefore = await billingStatus(sponsor.cookie);
   const organizerBefore = await billingStatus(organizer.cookie);
-  if (sponsorBefore.hasPaidAccess || organizerBefore.hasPaidAccess) {
+  const mismatchBefore = await billingStatus(roleMismatchSponsor.cookie);
+  if (sponsorBefore.hasPaidAccess || organizerBefore.hasPaidAccess || mismatchBefore.hasPaidAccess) {
     throw new Error('New paid-role accounts unexpectedly started with paid access.');
   }
 
@@ -144,6 +150,29 @@ try {
     throw new Error('FastSpring webhook did not activate Sponsor Pro: ' + JSON.stringify(sponsorAfter));
   }
 
+  // A correctly signed Paddle event must still not activate an account when its role/product
+  // evidence conflicts with the ConferenceGate account referenced in custom_data.
+  await sendPaddle({
+    event_id: 'evt_paddle_role_mismatch_1',
+    event_type: 'subscription.activated',
+    occurred_at: new Date().toISOString(),
+    data: {
+      id: 'sub_paddle_role_mismatch_1',
+      status: 'active',
+      customer_id: 'ctm_paddle_role_mismatch_1',
+      custom_data: {
+        conferencegate_user_id: roleMismatchSponsor.user.id,
+        conferencegate_role: 'organizer',
+      },
+      items: [{ price: { id: organizerPriceId } }],
+    },
+  });
+
+  const mismatchAfter = await billingStatus(roleMismatchSponsor.cookie);
+  if (mismatchAfter.hasPaidAccess || mismatchAfter.status === 'active') {
+    throw new Error('Paddle role/product mismatch unexpectedly activated paid access: ' + JSON.stringify(mismatchAfter));
+  }
+
   const paddleEvent = {
     event_id: 'evt_paddle_smoke_1',
     event_type: 'subscription.activated',
@@ -156,7 +185,7 @@ try {
         conferencegate_user_id: organizer.user.id,
         conferencegate_role: 'organizer',
       },
-      items: [{ price: { id: 'pri_organizer_smoke_1' } }],
+      items: [{ price: { id: organizerPriceId } }],
       current_billing_period: {
         ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -181,6 +210,7 @@ try {
       organizerAccess: organizerAfter.hasPaidAccess,
       provider: organizerAfter.provider,
       status: organizerAfter.status,
+      roleAndProductBindingRejectedMismatch: !mismatchAfter.hasPaidAccess,
     },
     idempotency: 'duplicate provider events accepted without duplicate processing',
   }));
