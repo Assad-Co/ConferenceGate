@@ -1,0 +1,70 @@
+name: Phase 12.2 Community Author Depth
+
+on:
+  push:
+    branches: [phase-12-2-community-author-depth]
+    paths:
+      - '.github/workflows/phase-12-2-product-depth-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-12-2-community-author-depth
+      - name: Replace dead community controls and author blanks
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceOnce(file, before, after, label) {
+            let source = fs.readFileSync(file, 'utf8');
+            if (source.includes(after)) {
+              console.log(`[phase12.2] ${label} already applied`);
+              return;
+            }
+            const hits = source.split(before).length - 1;
+            if (hits !== 1) throw new Error(`[phase12.2] ${label}: expected one anchor, found ${hits}`);
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+            console.log(`[phase12.2] applied ${label}`);
+          }
+
+          // Community: replace four decorative "coming soon" icons with real quick-start actions.
+          replaceOnce(
+            'src/components/CommunityFeed.tsx',
+            `                <div className="flex items-center gap-1">\n                  <span className="p-2 rounded-lg text-slate-400" title="Add photo (coming soon)">\n                    <ImageIcon className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Attach document (coming soon)">\n                    <FileText className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Tag a conference (coming soon)">\n                    <MapPin className="w-4 h-4" />\n                  </span>\n                  <span className="p-2 rounded-lg text-slate-400" title="Celebrate a milestone (coming soon)">\n                    <PartyPopper className="w-4 h-4" />\n                  </span>\n                </div>`,
+            `                <div className="flex flex-wrap items-center gap-1.5">\n                  {[\n                    { label: 'CFP', icon: FileText, text: '📢 Call for Papers: ' },\n                    { label: 'Paper', icon: Award, text: '🎉 Paper accepted: ' },\n                    { label: 'Speaker', icon: Mic, text: '🎤 Speaker update: ' },\n                    { label: 'Question', icon: MessageSquare, text: '💬 Technical question: ' },\n                  ].map(({ label, icon: QuickIcon, text }) => (\n                    <button\n                      key={label}\n                      type="button"\n                      onClick={() => { setNewPostText(text); setComposerOpen(true); }}\n                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors"\n                      title={`Start a ${label.toLowerCase()} post`}\n                    >\n                      <QuickIcon className="w-3.5 h-3.5" />\n                      <span>{label}</span>\n                    </button>\n                  ))}\n                </div>`,
+            'community quick post actions'
+          );
+
+          replaceOnce(
+            'src/components/CommunityFeed.tsx',
+            `          <p className="text-xs text-slate-400 max-w-sm mx-auto">\n            Be the first to share an update — a paper acceptance, a call for papers, or a technical question.\n          </p>\n        </div>`,
+            `          <p className="text-xs text-slate-400 max-w-sm mx-auto">\n            Be the first to share an update — a paper acceptance, a call for papers, or a technical question.\n          </p>\n          <button\n            type="button"\n            onClick={() => setComposerOpen(true)}\n            className="mt-3 px-4 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors"\n          >\n            Start a conference post\n          </button>\n        </div>`,
+            'community empty feed action'
+          );
+
+          // Abstract tracker: make a new author's empty portal an onboarding state, not a blank 2/3 column.
+          replaceOnce(
+            'src/components/AbstractTrackerView.tsx',
+            `        {/* Right Submission Detail & Real-Time Status Timeline */}\n        {currentSub && (`,
+            `        {/* Right Submission Detail & Real-Time Status Timeline */}\n        {!currentSub && (\n          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-xs text-center space-y-4">\n            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center">\n              <FileText className="w-6 h-6" />\n            </div>\n            <div>\n              <h2 className="text-lg font-extrabold text-slate-900">Submit your first abstract</h2>\n              <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">\n                Choose a conference, submit your abstract, and ConferenceGate will track screening, reviewer assignment, decisions, and revisions here.\n              </p>\n            </div>\n            <button\n              type="button"\n              onClick={onOpenNewSubmission}\n              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold shadow-xs transition-colors"\n            >\n              <Plus className="w-4 h-4" />\n              Submit New Abstract\n            </button>\n          </div>\n        )}\n        {currentSub && (`,
+            'abstract tracker first submission state'
+          );
+          NODE
+      - name: Commit Phase 12.2 source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/CommunityFeed.tsx src/components/AbstractTrackerView.tsx
+          if git diff --cached --quiet; then
+            echo "No Phase 12.2 source changes to commit."
+          else
+            git commit -m "Phase 12.2 — Replace dead community controls and author blanks"
+            git push origin HEAD:phase-12-2-community-author-depth
+          fi
