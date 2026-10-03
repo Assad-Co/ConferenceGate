@@ -6,6 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
+import { authRecoveryRouter } from "./server/authRecovery";
 import {
   braveSearchRouter,
   searchConferences,
@@ -408,6 +409,7 @@ async function startServer() {
 
   // Auth routes
   app.use("/api/auth", authRouter);
+  app.use("/api/auth", authRecoveryRouter);
 
   // Live conference search (Brave Search API)
   app.use("/api/search", braveSearchRouter);

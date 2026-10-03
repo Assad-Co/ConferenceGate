@@ -224,11 +224,16 @@ async function notify(db, sponsorId, title, message) {
 }
 
 async function main() {
+  const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
+  const tursoToken = process.env.TURSO_AUTH_TOKEN?.trim();
   const localPath = path.resolve(
     process.env.DATABASE_PATH?.trim() || path.join(process.cwd(), 'data', 'app.db')
   );
-  fs.mkdirSync(path.dirname(localPath), { recursive: true });
-  const db = createClient({ url: 'file:' + localPath });
+  if (tursoUrl && !tursoToken) throw new Error('TURSO_DATABASE_URL is configured but TURSO_AUTH_TOKEN is missing.');
+  if (!tursoUrl) fs.mkdirSync(path.dirname(localPath), { recursive: true });
+  const db = tursoUrl
+    ? createClient({ url: tursoUrl, authToken: tursoToken })
+    : createClient({ url: 'file:' + localPath });
 
   try {
     await ensureTables(db);

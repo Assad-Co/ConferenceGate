@@ -3,11 +3,17 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
+const tursoToken = process.env.TURSO_AUTH_TOKEN?.trim();
 const dbPath = path.resolve(
   process.env.DATABASE_PATH?.trim() || path.join(process.cwd(), 'data', 'app.db')
 );
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-const db = createClient({ url: 'file:' + dbPath });
+if (tursoUrl && !tursoToken) throw new Error('TURSO_DATABASE_URL is configured but TURSO_AUTH_TOKEN is missing.');
+if (!tursoUrl) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+const db = tursoUrl
+  ? createClient({ url: tursoUrl, authToken: tursoToken })
+  : createClient({ url: 'file:' + dbPath });
+const databaseLabel = tursoUrl ? 'turso' : dbPath;
 
 function n(value) {
   const parsed = Number(value ?? 0);
@@ -270,7 +276,7 @@ async function main() {
 
     console.log(JSON.stringify({
       marketplaceActionAlerts: 'completed',
-      database: dbPath,
+      database: databaseLabel,
       organizerAccounts,
       sponsorAccounts,
       notificationsEmitted: emitted,
