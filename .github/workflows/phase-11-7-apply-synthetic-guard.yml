@@ -5,6 +5,7 @@ on:
     branches: [phase-11-7-synthetic-metrics-guard]
     paths:
       - 'scripts/patchPhase117SyntheticMetricsGuard.mjs'
+      - '.github/workflows/phase-11-7-apply-synthetic-guard.yml'
 
 permissions:
   contents: write
