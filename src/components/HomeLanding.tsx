@@ -165,6 +165,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   onSelectConference,
   onNavigateTab,
   onOpenSubmitAbstract,
+  onSearchQuery,
   userProfile,
   posts,
   onAddPost,
