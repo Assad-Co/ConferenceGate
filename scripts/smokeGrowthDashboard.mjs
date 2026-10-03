@@ -119,6 +119,22 @@ try {
   const organizer = await signupOrganizer();
   const sponsor = await signupSponsor();
 
+  const syntheticResponse = await fetch(base + '/api/auth/signup', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      role: 'organizer',
+      name: 'Synthetic Acceptance Organizer',
+      email: 'growth-dashboard-acceptance@example.invalid',
+      password: 'GrowthDashboard123!',
+      organization: 'Synthetic Acceptance Only',
+    }),
+  });
+  const syntheticBody = await syntheticResponse.json();
+  if (!syntheticResponse.ok || !syntheticBody?.user?.id) {
+    throw new Error('Could not create synthetic acceptance account for exclusion test.');
+  }
+
   const sponsorFirstTouch = await jsonRequest('/api/workspaces/acquisition', {
     method: 'POST',
     cookie: sponsor.cookie,
@@ -241,6 +257,16 @@ try {
   });
   if (!need.response.ok || !need.data?.need?.id) {
     throw new Error(`Could not create organizer sponsorship inventory: ${need.response.status} ${JSON.stringify(need.data)}`);
+  }
+
+  const rejectSyntheticCohort = await jsonRequest('/api/admin/discovery/launch-cohort/members', {
+    method: 'POST',
+    cookie: organizer.cookie,
+    token: adminToken,
+    body: { email: 'growth-dashboard-acceptance@example.invalid', segment: 'must-not-enroll' },
+  });
+  if (rejectSyntheticCohort.response.status !== 400) {
+    throw new Error('Synthetic acceptance account must be rejected from the real-customer launch cohort.');
   }
 
   const addOrganizerCohort = await jsonRequest('/api/admin/discovery/launch-cohort/members', {
@@ -375,6 +401,10 @@ try {
       revenueOptimization: true,
       paidOrganizerAccounts: dashboard.revenueOptimization.organizerPro.paidAccounts,
       experimentalAddOnsRemainDisabled: true,
+    },
+    syntheticAcceptanceExclusion: {
+      dashboardMetrics: true,
+      launchCohortEnrollmentRejected: true,
     },
     phase78: {
       firstCustomerLaunchCohort: true,

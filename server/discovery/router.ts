@@ -301,6 +301,12 @@ discoveryRouter.post(
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
     if (!email) return res.status(400).json({ error: "email is required." });
+    const emailDomain = email.includes("@") ? email.slice(email.lastIndexOf("@") + 1) : "";
+    if (emailDomain === "invalid" || emailDomain.endsWith(".invalid")) {
+      return res.status(400).json({
+        error: "Synthetic acceptance accounts cannot join a real-customer launch cohort.",
+      });
+    }
 
     const user = await dbGet<any>("SELECT id,email,name,organization,role FROM users WHERE lower(email)=?", [email]);
     if (!user) return res.status(404).json({ error: "ConferenceGate account not found for that email." });

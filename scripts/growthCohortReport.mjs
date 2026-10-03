@@ -68,6 +68,7 @@ try {
            END) AS paid_and_activated
       FROM users u
      WHERE u.role IN ('organizer','sponsor')
+       AND lower(u.email) NOT LIKE '%.invalid'
      GROUP BY substr(u.created_at,1,7),u.role
      ORDER BY cohort_month DESC,u.role ASC
   `);
@@ -95,7 +96,7 @@ try {
   let acquisitionCoverage = { paidRoleSignups: 0, attributedSignups: 0, coveragePct: null };
 
   const paidRoleSignupsResult = await rows(
-    "SELECT COUNT(*) AS count FROM users WHERE role IN ('organizer','sponsor')"
+    "SELECT COUNT(*) AS count FROM users WHERE role IN ('organizer','sponsor') AND lower(email) NOT LIKE '%.invalid'"
   );
   const paidRoleSignups = n(paidRoleSignupsResult[0]?.count);
 
@@ -109,6 +110,7 @@ try {
              SUM(CASE WHEN u.subscription_status IN ('active','trialing') THEN 1 ELSE 0 END) AS currently_paid
         FROM account_acquisition a
         JOIN users u ON u.id=a.user_id
+       WHERE lower(u.email) NOT LIKE '%.invalid'
        GROUP BY a.role,a.source,COALESCE(a.medium,''),COALESCE(a.campaign,'')
        ORDER BY signups DESC,a.role,a.source
     `);
@@ -125,7 +127,7 @@ try {
         currentPaidConversionPct: pct(currentlyPaid, signups),
       };
     });
-    const attributedRows = await rows('SELECT COUNT(*) AS count FROM account_acquisition');
+    const attributedRows = await rows("SELECT COUNT(*) AS count FROM account_acquisition a JOIN users u ON u.id=a.user_id WHERE lower(u.email) NOT LIKE '%.invalid'");
     const attributedSignups = n(attributedRows[0]?.count);
     acquisitionCoverage = {
       paidRoleSignups,
@@ -151,7 +153,7 @@ try {
       ? await rows("SELECT value FROM growth_schema_meta WHERE key='subscription_history_started_at'")
       : [];
     const baselineRows = await rows(
-      "SELECT COUNT(DISTINCT user_id) AS count FROM subscription_status_history WHERE reason='baseline_observed_state'"
+      "SELECT COUNT(DISTINCT h.user_id) AS count FROM subscription_status_history h JOIN users u ON u.id=h.user_id WHERE h.reason='baseline_observed_state' AND lower(u.email) NOT LIKE '%.invalid'"
     );
     const transitionRows = await rows(`
       SELECT role,
@@ -160,8 +162,10 @@ try {
              SUM(CASE WHEN reason='status_change' AND to_status='canceled' THEN 1 ELSE 0 END) AS cancellations,
              SUM(CASE WHEN reason='status_change' AND to_status='past_due' THEN 1 ELSE 0 END) AS past_due,
              SUM(CASE WHEN reason='period_end_changed' THEN 1 ELSE 0 END) AS period_end_changes
-        FROM subscription_status_history
-       WHERE changed_at >= datetime('now','-30 days')
+        FROM subscription_status_history h
+        JOIN users u ON u.id=h.user_id
+       WHERE lower(u.email) NOT LIKE '%.invalid'
+         AND changed_at >= datetime('now','-30 days')
          AND reason <> 'baseline_observed_state'
        GROUP BY role
        ORDER BY role

@@ -40,17 +40,17 @@ async function grouped(sql, args = []) {
 }
 
 async function roleFunnel(role) {
-  const signups = await scalar('SELECT COUNT(*) AS value FROM users WHERE role=?', [role]);
+  const signups = await scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid'", [role]);
   const signups7d = await scalar(
-    "SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-7 days')",
+    "SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-7 days')",
     [role]
   );
   const signups30d = await scalar(
-    "SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-30 days')",
+    "SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-30 days')",
     [role]
   );
   const paid = await scalar(
-    "SELECT COUNT(*) AS value FROM users WHERE role=? AND subscription_status IN ('active','trialing')",
+    "SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND subscription_status IN ('active','trialing')",
     [role]
   );
 
@@ -58,6 +58,7 @@ async function roleFunnel(role) {
     const activated = await scalar(
       `SELECT COUNT(*) AS value FROM users u
        WHERE u.role='organizer'
+         AND lower(u.email) NOT LIKE '%.invalid'
          AND EXISTS (SELECT 1 FROM created_conferences c WHERE c.organizer_id=u.id)`
     );
     const activatedPaid = await scalar(
@@ -68,6 +69,7 @@ async function roleFunnel(role) {
     const commercialInventory = await scalar(
       `SELECT COUNT(*) AS value FROM users u
        WHERE u.role='organizer'
+         AND lower(u.email) NOT LIKE '%.invalid'
          AND EXISTS (SELECT 1 FROM sponsorship_needs n WHERE n.organizer_id=u.id)`
     );
     const sponsorInterest = await scalar(
@@ -109,6 +111,7 @@ async function roleFunnel(role) {
   const activated = await scalar(
     `SELECT COUNT(*) AS value FROM users u
      WHERE u.role='sponsor'
+       AND lower(u.email) NOT LIKE '%.invalid'
        AND (
          EXISTS (SELECT 1 FROM sponsor_preferences p WHERE p.sponsor_id=u.id)
          OR EXISTS (SELECT 1 FROM sponsor_saved_opportunities s WHERE s.sponsor_id=u.id)
@@ -118,6 +121,7 @@ async function roleFunnel(role) {
   const activatedPaid = await scalar(
     `SELECT COUNT(*) AS value FROM users u
      WHERE u.role='sponsor' AND u.subscription_status IN ('active','trialing')
+       AND lower(u.email) NOT LIKE '%.invalid'
        AND (
          EXISTS (SELECT 1 FROM sponsor_preferences p WHERE p.sponsor_id=u.id)
          OR EXISTS (SELECT 1 FROM sponsor_saved_opportunities s WHERE s.sponsor_id=u.id)
@@ -175,6 +179,7 @@ async function checkoutOperations() {
       WHERE e.event_type='subscription.checkout.started'
         AND e.created_at >= datetime('now','-30 days')
         AND u.role IN ('organizer','sponsor')
+        AND lower(u.email) NOT LIKE '%.invalid'
       GROUP BY u.role,e.provider
       ORDER BY u.role,e.provider`
   );
@@ -187,7 +192,8 @@ async function checkoutOperations() {
          JOIN users u ON u.id=e.subject_id
         WHERE e.event_type='subscription.checkout.started'
           AND e.created_at >= datetime('now','-30 days')
-          AND u.role=?`,
+          AND u.role=?
+          AND lower(u.email) NOT LIKE '%.invalid'`,
       [role]
     );
     const uniqueAccounts30d = await scalar(
@@ -196,7 +202,8 @@ async function checkoutOperations() {
          JOIN users u ON u.id=e.subject_id
         WHERE e.event_type='subscription.checkout.started'
           AND e.created_at >= datetime('now','-30 days')
-          AND u.role=?`,
+          AND u.role=?
+          AND lower(u.email) NOT LIKE '%.invalid'`,
       [role]
     );
     const currentlyPaidAccounts = await scalar(
