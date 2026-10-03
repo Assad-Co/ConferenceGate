@@ -1,0 +1,34 @@
+name: Phase 11.8 Apply Runtime Patches
+
+on:
+  push:
+    branches: [phase-11-8-deterministic-runtime]
+    paths:
+      - '.github/workflows/phase-11-8-apply-runtime-patches.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-runtime-patches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-11-8-deterministic-runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply the existing production runtime patches once
+        run: node scripts/patchOwnerPasswordRecoveryKey.mjs
+      - name: Commit patched source as canonical repository state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/auth.ts server.ts scripts/refreshMarketplaceActionAlerts.mjs scripts/refreshSponsorWatchlistAlerts.mjs scripts/runBackgroundBootstrap.mjs package.json
+          if git diff --cached --quiet; then
+            echo "No runtime source changes to commit."
+          else
+            git commit -m "Phase 11.8 — Make production runtime patches canonical source"
+            git push origin HEAD:phase-11-8-deterministic-runtime
+          fi
