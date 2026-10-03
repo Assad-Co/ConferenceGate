@@ -210,19 +210,24 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
               ></textarea>
 
               <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1">
-                  <span className="p-2 rounded-lg text-slate-400" title="Add photo (coming soon)">
-                    <ImageIcon className="w-4 h-4" />
-                  </span>
-                  <span className="p-2 rounded-lg text-slate-400" title="Attach document (coming soon)">
-                    <FileText className="w-4 h-4" />
-                  </span>
-                  <span className="p-2 rounded-lg text-slate-400" title="Tag a conference (coming soon)">
-                    <MapPin className="w-4 h-4" />
-                  </span>
-                  <span className="p-2 rounded-lg text-slate-400" title="Celebrate a milestone (coming soon)">
-                    <PartyPopper className="w-4 h-4" />
-                  </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { label: 'CFP', icon: FileText, text: '📢 Call for Papers: ' },
+                    { label: 'Paper', icon: Award, text: '🎉 Paper accepted: ' },
+                    { label: 'Speaker', icon: Mic, text: '🎤 Speaker update: ' },
+                    { label: 'Question', icon: MessageSquare, text: '💬 Technical question: ' },
+                  ].map(({ label, icon: QuickIcon, text }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => { setNewPostText(text); setComposerOpen(true); }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors"
+                      title={'Start a ' + label.toLowerCase() + ' post'}
+                    >
+                      <QuickIcon className="w-3.5 h-3.5" />
+                      <span>{label}</span>
+                    </button>
+                  ))}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -258,6 +263,13 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Be the first to share an update — a paper acceptance, a call for papers, or a technical question.
           </p>
+          <button
+            type="button"
+            onClick={() => setComposerOpen(true)}
+            className="mt-3 px-4 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors"
+          >
+            Start a conference post
+          </button>
         </div>
       ) : (
         <div className="space-y-4">

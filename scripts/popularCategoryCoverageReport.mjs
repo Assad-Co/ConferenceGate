@@ -11,7 +11,7 @@ const CATEGORIES=[
   'Dentistry','Cardiology','Oncology','Neuroscience','Life Sciences','Chemistry','Physics',
   'Mathematics & Statistics','Science','Education','Business','Finance','Economics','Marketing',
   'Supply Chain & Logistics','Manufacturing','Aviation & Aerospace','Maritime','Automotive & Mobility',
-  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
+  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Politics','Social Sciences',
   'Arts & Culture','Tourism & Hospitality','Blockchain & Web3','Real Estate','Virtual conferences','Open call for papers'
 ];
 const TARGET=Math.max(1,Number(process.env.POPULAR_CATEGORY_RICH_TARGET||25));

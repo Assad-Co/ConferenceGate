@@ -12,7 +12,7 @@ const CATEGORIES = [
   'Dentistry','Cardiology','Oncology','Neuroscience','Life Sciences','Chemistry','Physics',
   'Mathematics & Statistics','Science','Education','Business','Finance','Economics','Marketing',
   'Supply Chain & Logistics','Manufacturing','Aviation & Aerospace','Maritime','Automotive & Mobility',
-  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Social Sciences',
+  'Architecture & Urbanism','Architecture','Agriculture & Food','Law & Regulation','Government & Policy','Politics','Social Sciences',
   'Arts & Culture','Tourism & Hospitality','Blockchain & Web3','Real Estate','Virtual conferences',
   'Open call for papers'
 ]
@@ -137,6 +137,7 @@ const CATEGORY_SPONSOR_SOURCES = {
   'Agriculture & Food':['agritechnica.com','gulfood.com','worldagritechinnovation.com','ifama.org'],
   'Law & Regulation':['legalweekshow.com','ibanet.org','iapp.org','americanbar.org'],
   'Government & Policy':['worldgovernmentsummit.org','milkeninstitute.org','smartcityexpo.com','aspanet.org'],
+  'Politics':['apsanet.org','milkeninstitute.org','worldgovernmentsummit.org','aspanet.org'],
   'Social Sciences':['isa-sociology.org','apsanet.org','aspanet.org','aeaweb.org'],
   'Arts & Culture':['sxsw.com','artbasel.com','frieze.com','aaslh.org'],
   'Tourism & Hospitality':['itb.com','wtm.com','arabiantravelmarket.com','phocuswrightconference.com'],
