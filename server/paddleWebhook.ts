@@ -50,7 +50,24 @@ function paddleSubscriptionStatus(value: unknown): string | null {
   return null;
 }
 
-async function findPaddleUser(data: any): Promise<UserRow | undefined> {
+function paddlePriceId(data: any): string {
+  return Array.isArray(data?.items) && typeof data.items?.[0]?.price?.id === "string"
+    ? data.items[0].price.id.trim()
+    : "";
+}
+
+function expectedPaddlePriceId(role: string): string {
+  if (role === "organizer") return process.env.PADDLE_ORGANIZER_PRICE_ID?.trim() || "";
+  if (role === "sponsor") return process.env.PADDLE_SPONSOR_PRICE_ID?.trim() || "";
+  return "";
+}
+
+type PaddleUserMatch = {
+  user: UserRow;
+  source: "explicit_user_id" | "customer_ref";
+};
+
+async function findPaddleUser(data: any): Promise<PaddleUserMatch | undefined> {
   const explicitUserId =
     typeof data?.custom_data?.conferencegate_user_id === "string"
       ? data.custom_data.conferencegate_user_id
@@ -60,17 +77,48 @@ async function findPaddleUser(data: any): Promise<UserRow | undefined> {
       "SELECT * FROM users WHERE id=? AND role IN ('organizer','sponsor') LIMIT 1",
       [explicitUserId]
     );
-    if (byId) return byId;
+    if (byId) return { user: byId, source: "explicit_user_id" };
   }
 
   const customerId = typeof data?.customer_id === "string" ? data.customer_id : "";
   if (customerId) {
-    return dbGet<UserRow>(
+    const byCustomer = await dbGet<UserRow>(
       "SELECT * FROM users WHERE billing_customer_ref=? AND role IN ('organizer','sponsor') LIMIT 1",
       [customerId]
     );
+    if (byCustomer) return { user: byCustomer, source: "customer_ref" };
   }
   return undefined;
+}
+
+function paddleSubscriptionMatchesAccount(data: any, match: PaddleUserMatch): boolean {
+  const declaredRole =
+    typeof data?.custom_data?.conferencegate_role === "string"
+      ? data.custom_data.conferencegate_role.trim().toLowerCase()
+      : "";
+  const priceId = paddlePriceId(data);
+  const expectedPriceId = expectedPaddlePriceId(match.user.role);
+
+  // A first-time link is accepted only when it carries all three pieces of evidence created by
+  // ConferenceGate's server-side checkout: the user id, the matching role, and that role's exact
+  // configured Paddle price. This prevents a valid Paddle event for one product/role from being
+  // replayed as paid access for the other ConferenceGate role.
+  if (match.source === "explicit_user_id") {
+    return Boolean(
+      declaredRole &&
+      declaredRole === match.user.role &&
+      priceId &&
+      expectedPriceId &&
+      priceId === expectedPriceId
+    );
+  }
+
+  // After the customer id has been durably linked by a validated first purchase, lifecycle events
+  // can resolve the account by that provider id. If Paddle includes a role or price again, it must
+  // still agree with the linked ConferenceGate account.
+  if (declaredRole && declaredRole !== match.user.role) return false;
+  if (priceId && expectedPriceId && priceId !== expectedPriceId) return false;
+  return true;
 }
 
 async function recordProviderEvent(
@@ -121,17 +169,15 @@ paddleWebhookRouter.post(
 
     if (eventType.startsWith("subscription.")) {
       const status = paddleSubscriptionStatus(data?.status);
-      const user = await findPaddleUser(data);
-      if (!status || !user) {
+      const match = await findPaddleUser(data);
+      const user = match?.user;
+      if (!status || !match || !paddleSubscriptionMatchesAccount(data, match)) {
         await recordProviderEvent(eventId, eventType, user?.id || null, payloadHash, "ignored");
         return res.status(200).send("ok");
       }
 
       const customerId = typeof data?.customer_id === "string" ? data.customer_id : "";
-      const priceId =
-        Array.isArray(data?.items) && typeof data.items?.[0]?.price?.id === "string"
-          ? data.items[0].price.id
-          : "";
+      const priceId = paddlePriceId(data);
       const periodEnd =
         typeof data?.current_billing_period?.ends_at === "string"
           ? data.current_billing_period.ends_at
