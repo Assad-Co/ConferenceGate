@@ -1,0 +1,113 @@
+name: Phase 12.1 UX Depth Patch
+
+on:
+  push:
+    branches: [phase-12-1-empty-state-depth]
+    paths:
+      - '.github/workflows/phase-12-1-ux-depth-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-12-1-empty-state-depth
+      - name: Apply actionable empty states
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceOnce(file, before, after, label) {
+            let source = fs.readFileSync(file, 'utf8');
+            if (source.includes(after)) {
+              console.log(`[phase12.1] ${label} already applied`);
+              return;
+            }
+            const hits = source.split(before).length - 1;
+            if (hits !== 1) throw new Error(`[phase12.1] ${label}: expected one anchor, found ${hits}`);
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+            console.log(`[phase12.1] applied ${label}`);
+          }
+
+          // Home: never leave the two high-value sidebar modules as blank white boxes.
+          replaceOnce(
+            'src/components/HomeLanding.tsx',
+            `          <div className="divide-y divide-slate-100">\n            {upcomingDeadlines.map((conf) => (`,
+            `          <div className="divide-y divide-slate-100">\n            {upcomingDeadlines.length === 0 ? (\n              <div className="px-4 py-5 text-center space-y-2">\n                <Clock className="w-5 h-5 text-slate-300 mx-auto" />\n                <p className="text-[11px] text-slate-500">No upcoming abstract deadlines in your current feed.</p>\n                <button\n                  type="button"\n                  onClick={() => exploreField('Open call for papers')}\n                  className="text-[11px] font-bold text-blue-700 hover:text-blue-900"\n                >\n                  Find open CFPs\n                </button>\n              </div>\n            ) : upcomingDeadlines.map((conf) => (`,
+            'home deadline fallback'
+          );
+          replaceOnce(
+            'src/components/HomeLanding.tsx',
+            `            ))}\n          </div>\n          <button\n            onClick={() => onNavigateTab('discover')}\n            className="w-full text-center text-xs font-bold text-slate-500 hover:text-blue-600 py-2.5 border-t border-slate-100 cursor-pointer"\n          >\n            Show more\n          </button>`,
+            `            ))}\n          </div>\n          <button\n            onClick={() => onNavigateTab('discover')}\n            className="w-full text-center text-xs font-bold text-slate-500 hover:text-blue-600 py-2.5 border-t border-slate-100 cursor-pointer"\n          >\n            {upcomingDeadlines.length === 0 ? 'Browse calls for papers' : 'Show more'}\n          </button>`,
+            'home deadline footer action'
+          );
+          replaceOnce(
+            'src/components/HomeLanding.tsx',
+            `          <div className="divide-y divide-slate-100">\n            {upcomingConferences.map((conf) => (`,
+            `          <div className="divide-y divide-slate-100">\n            {upcomingConferences.length === 0 ? (\n              <div className="px-4 py-5 text-center space-y-2">\n                <Calendar className="w-5 h-5 text-slate-300 mx-auto" />\n                <p className="text-[11px] text-slate-500">Your followed-conference list is quiet.</p>\n                <button\n                  type="button"\n                  onClick={() => onNavigateTab('discover')}\n                  className="text-[11px] font-bold text-blue-700 hover:text-blue-900"\n                >\n                  Browse worldwide conferences\n                </button>\n              </div>\n            ) : upcomingConferences.map((conf) => (`,
+            'home upcoming conferences fallback'
+          );
+
+          // Reviewer / Professional Opportunity Center: every empty result should offer a real next action.
+          replaceOnce(
+            'src/components/ReviewerPortal.tsx',
+            `                <p className="text-xs text-slate-500 mt-1">\n                  Try a different search term or check again when organizers publish new calls for reviewers.\n                </p>\n              </div>`,
+            `                <p className="text-xs text-slate-500 mt-1">\n                  Try a different search term or check again when organizers publish new calls for reviewers.\n                </p>\n                <div className="flex flex-wrap justify-center gap-2 mt-4">\n                  {opportunitySearch.trim() && (\n                    <button\n                      type="button"\n                      onClick={() => setOpportunitySearch('')}\n                      className="px-3.5 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50"\n                    >\n                      Clear search\n                    </button>\n                  )}\n                  <button\n                    type="button"\n                    onClick={() => setRoleFilter('recommended')}\n                    className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                  >\n                    Show recommendations\n                  </button>\n                </div>\n              </div>`,
+            'reviewer empty search actions'
+          );
+          replaceOnce(
+            'src/components/ReviewerPortal.tsx',
+            `                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">\n                  ConferenceGate will show a role here only after an organizer explicitly publishes that opening.\n                </p>\n              </div>`,
+            `                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">\n                  ConferenceGate will show a role here only after an organizer explicitly publishes that opening.\n                </p>\n                <button\n                  type="button"\n                  onClick={() => setRoleFilter('recommended')}\n                  className="mt-4 px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                >\n                  View all recommendations\n                </button>\n              </div>`,
+            'professional role empty action'
+          );
+          replaceOnce(
+            'src/components/ReviewerPortal.tsx',
+            `                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">\n                  Complete your expertise and availability profile, or check the individual role tabs to see all organizer-published openings.\n                </p>\n              </div>`,
+            `                <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">\n                  Complete your expertise and availability profile, or check the individual role tabs to see all organizer-published openings.\n                </p>\n                <div className="flex flex-wrap justify-center gap-2 mt-4">\n                  <button\n                    type="button"\n                    onClick={() => { setOpportunitySearch(''); setRoleFilter('reviewer'); }}\n                    className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                  >\n                    Show reviewer calls\n                  </button>\n                  {!availableToReview && (\n                    <button\n                      type="button"\n                      onClick={onToggleAvailability}\n                      className="px-3.5 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100"\n                    >\n                      Turn on reviewer availability\n                    </button>\n                  )}\n                </div>\n              </div>`,
+            'recommended opportunities empty actions'
+          );
+          replaceOnce(
+            'src/components/ReviewerPortal.tsx',
+            `      {activeTab === 'evaluate' && !selectedSub && (\n        <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs text-slate-400 font-medium">\n          No abstract is currently assigned to you for review. Once an organizer invites you to review a paper, it'll show up here and in Review Opportunities.\n        </div>\n      )}`,
+            `      {activeTab === 'evaluate' && !selectedSub && (\n        <div className="p-6 bg-white rounded-2xl border border-slate-200 text-center space-y-3">\n          <p className="text-xs text-slate-500 font-medium">\n            No abstract is currently assigned to you for review. Once an organizer invites you to review a paper, it'll show up here and in Review Opportunities.\n          </p>\n          <button\n            type="button"\n            onClick={() => setActiveTab('opportunities')}\n            className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n          >\n            Browse professional opportunities\n          </button>\n        </div>\n      )}`,
+            'evaluate tab empty action'
+          );
+
+          // Organizer: turn the main dead ends into launch/setup actions rather than passive blanks.
+          replaceOnce(
+            'src/components/OrganizerDashboard.tsx',
+            `                      <td colSpan={7} className="p-8 text-center text-xs text-slate-400 font-medium">\n                        No abstract submissions yet for your conferences.\n                      </td>`,
+            `                      <td colSpan={7} className="p-8 text-center">\n                        <div className="space-y-3">\n                          <p className="text-xs text-slate-500 font-medium">No abstract submissions yet for your conferences.</p>\n                          <button\n                            type="button"\n                            onClick={() => setActiveTab('wizard')}\n                            className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                          >\n                            Open Conference Wizard\n                          </button>\n                        </div>\n                      </td>`,
+            'organizer abstracts empty action'
+          );
+          replaceOnce(
+            'src/components/OrganizerDashboard.tsx',
+            `                <div className="text-xs text-slate-400 font-medium py-6 text-center">\n                  No technical committee members yet. Nominate candidates above or add members via the Conference\n                  Wizard.\n                </div>`,
+            `                <div className="py-6 text-center space-y-3">\n                  <p className="text-xs text-slate-500 font-medium">\n                    No technical committee members yet. Nominate candidates above or add members via the Conference Wizard.\n                  </p>\n                  <div className="flex flex-wrap justify-center gap-2">\n                    <button\n                      type="button"\n                      onClick={() => setActiveTab('professionals')}\n                      className="px-3.5 py-2 rounded-full border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50"\n                    >\n                      Search professionals\n                    </button>\n                    <button\n                      type="button"\n                      onClick={() => setActiveTab('wizard')}\n                      className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                    >\n                      Open Conference Wizard\n                    </button>\n                  </div>\n                </div>`,
+            'committee roster empty actions'
+          );
+          replaceOnce(
+            'src/components/OrganizerDashboard.tsx',
+            `              <div className="text-xs text-slate-400 font-medium py-4 text-center">\n                No sponsorship packages published yet.\n              </div>`,
+            `              <div className="py-4 text-center space-y-3">\n                <p className="text-xs text-slate-500 font-medium">No sponsorship packages published yet.</p>\n                <button\n                  type="button"\n                  onClick={() => setActiveTab('sponsors')}\n                  className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold"\n                >\n                  Build sponsor inventory\n                </button>\n              </div>`,
+            'organizer sponsorship analytics action'
+          );
+          NODE
+      - name: Commit Phase 12.1 source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/HomeLanding.tsx src/components/ReviewerPortal.tsx src/components/OrganizerDashboard.tsx
+          if git diff --cached --quiet; then
+            echo "No Phase 12.1 source changes to commit."
+          else
+            git commit -m "Phase 12.1 — Make empty states actionable"
+            git push origin HEAD:phase-12-1-empty-state-depth
+          fi
