@@ -13,8 +13,6 @@ declare global {
   }
 }
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-
 let scriptLoadPromise: Promise<void> | null = null;
 
 function loadGoogleScript(): Promise<void> {
@@ -34,24 +32,26 @@ function loadGoogleScript(): Promise<void> {
 }
 
 interface GoogleSignInButtonProps {
+  clientId: string;
   onCredential: (credential: string) => void;
   text?: 'signin_with' | 'signup_with' | 'continue_with';
 }
 
-export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCredential, text = 'continue_with' }) => {
+export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ clientId, onCredential, text = 'continue_with' }) => {
   const buttonRef = useRef<HTMLDivElement>(null);
   const onCredentialRef = useRef(onCredential);
   onCredentialRef.current = onCredential;
 
   useEffect(() => {
-    if (!CLIENT_ID) return;
+    if (!clientId) return;
     let cancelled = false;
 
     loadGoogleScript()
       .then(() => {
         if (cancelled || !window.google || !buttonRef.current) return;
+        buttonRef.current.innerHTML = '';
         window.google.accounts.id.initialize({
-          client_id: CLIENT_ID,
+          client_id: clientId,
           callback: (response) => onCredentialRef.current(response.credential),
         });
         window.google.accounts.id.renderButton(buttonRef.current, {
@@ -68,9 +68,9 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCreden
     return () => {
       cancelled = true;
     };
-  }, [text]);
+  }, [clientId, text]);
 
-  if (!CLIENT_ID) return null;
+  if (!clientId) return null;
 
   return <div ref={buttonRef} className="flex justify-center [&>div]:!w-full" />;
 };

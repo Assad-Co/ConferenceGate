@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { UserCheck, Building2, Briefcase, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import {
+  UserCheck,
+  Building2,
+  Briefcase,
+  Loader2,
+  AlertCircle,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  Mail,
+  KeyRound,
+} from 'lucide-react';
 import { Logo } from '../Logo';
 import {
   signup,
@@ -12,12 +24,27 @@ import {
   SignupPayload,
   PendingLinkedInProfile,
 } from '../../api/auth';
+import {
+  AuthCapabilities,
+  confirmPasswordReset,
+  fetchAuthCapabilities,
+  requestPasswordReset,
+} from '../../api/authRecovery';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { LinkedInSignInButton } from './LinkedInSignInButton';
 
 interface AuthScreenProps {
   onAuthenticated: (user: AuthUser) => void;
 }
+
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
+
+const EMPTY_CAPABILITIES: AuthCapabilities = {
+  googleClientId: null,
+  linkedin: false,
+  passwordReset: false,
+  passwordResetTtlMinutes: 30,
+};
 
 const ROLE_OPTIONS: Array<{
   value: AuthRole;
@@ -57,8 +84,36 @@ const ROLE_OPTIONS: Array<{
   },
 ];
 
+function PasswordVisibilityButton({ visible, onClick, label }: { visible: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-700 cursor-pointer"
+    >
+      {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    </button>
+  );
+}
+
+function PasswordChecks({ password, confirmPassword }: { password: string; confirmPassword: string }) {
+  const longEnough = password.length >= 8;
+  const matches = Boolean(confirmPassword) && password === confirmPassword;
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] mt-2">
+      <span className={`inline-flex items-center gap-1 ${longEnough ? 'text-emerald-700' : 'text-slate-400'}`}>
+        <CheckCircle2 className="w-3.5 h-3.5" /> 8+ characters
+      </span>
+      <span className={`inline-flex items-center gap-1 ${matches ? 'text-emerald-700' : 'text-slate-400'}`}>
+        <CheckCircle2 className="w-3.5 h-3.5" /> Passwords match
+      </span>
+    </div>
+  );
+}
+
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<AuthMode>('signin');
   const [selectedRole, setSelectedRole] = useState<AuthRole>('professional');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -68,33 +123,51 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [title, setTitle] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<AuthCapabilities>(EMPTY_CAPABILITIES);
 
   const [pendingGoogleCredential, setPendingGoogleCredential] = useState<string | null>(null);
-  const [googleProfile, setGoogleProfile] = useState<{ name: string; email: string; avatar: string | null } | null>(
-    null
-  );
+  const [googleProfile, setGoogleProfile] = useState<{ name: string; email: string; avatar: string | null } | null>(null);
   const [pendingLinkedIn, setPendingLinkedIn] = useState<PendingLinkedInProfile | null>(null);
   const [oauthRole, setOauthRole] = useState<AuthRole>('professional');
 
   const activeRoleConfig = ROLE_OPTIONS.find((r) => r.value === selectedRole)!;
+  const oauthAvailable = Boolean(capabilities.googleClientId || capabilities.linkedin);
 
-  // Picking up after the LinkedIn OAuth redirect round trip, or surfacing an error from it —
-  // both arrive as query params on the page LinkedIn (or our own callback) sends the browser back to.
   useEffect(() => {
+    fetchAuthCapabilities().then(setCapabilities).catch(() => setCapabilities(EMPTY_CAPABILITIES));
+  }, []);
+
+  useEffect(() => {
+    const hash = window.location.hash || '';
+    if (hash.startsWith('#password-reset=')) {
+      const token = decodeURIComponent(hash.slice('#password-reset='.length));
+      if (token) {
+        setResetToken(token);
+        setMode('reset');
+        setError(null);
+        setNotice(null);
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      }
+    }
+
     const params = new URLSearchParams(window.location.search);
     const authError = params.get('authError');
     const needsRole = params.get('linkedinNeedsRole');
     if (!authError && !needsRole) return;
 
     window.history.replaceState(null, '', window.location.pathname);
-
     if (authError === 'linkedin_not_configured') {
-      setError('LinkedIn Sign-In is not configured yet.');
+      setError('LinkedIn Sign-In is not available right now. Please use email or another sign-in method.');
       return;
     }
     if (authError === 'linkedin_failed') {
-      setError('Could not sign in with LinkedIn. Please try again.');
+      setError('Could not sign in with LinkedIn. Please try again or use email.');
       return;
     }
     if (needsRole) {
@@ -116,11 +189,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     pendingGoogleCredential && googleProfile
       ? { kind: 'google', profile: googleProfile }
       : pendingLinkedIn
-      ? { kind: 'linkedin', profile: pendingLinkedIn }
-      : null;
+        ? { kind: 'linkedin', profile: pendingLinkedIn }
+        : null;
+
+  const clearSensitiveFields = () => {
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setError(null);
+    setNotice(null);
+    setExistingAccount(false);
+  };
+
+  const switchMode = (next: AuthMode) => {
+    setMode(next);
+    clearSensitiveFields();
+    if (next !== 'signup') {
+      setName('');
+      setOrganization('');
+      setTitle('');
+      setLinkedinUrl('');
+    }
+  };
 
   const handleGoogleCredential = async (credential: string) => {
     setError(null);
+    setNotice(null);
     setLoading(true);
     try {
       const result = await googleAuth(credential);
@@ -146,9 +241,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       if (oauthPending.kind === 'google') {
         if (!pendingGoogleCredential) return;
         const result = await googleAuth(pendingGoogleCredential, oauthRole);
-        if (!('needsRole' in result)) {
-          onAuthenticated(result);
-        }
+        if (!('needsRole' in result)) onAuthenticated(result);
       } else {
         const user = await completeLinkedInSignup(oauthRole);
         onAuthenticated(user);
@@ -167,24 +260,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     setError(null);
   };
 
-  const resetFormFields = () => {
-    setName('');
-    setPassword('');
-    setConfirmPassword('');
-    setOrganization('');
-    setTitle('');
-    setLinkedinUrl('');
-    setError(null);
-  };
-
-  const switchMode = (next: 'signin' | 'signup') => {
-    setMode(next);
-    resetFormFields();
-  };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     if (!email.trim() || !password) {
       setError('Please enter your email and password.');
       return;
@@ -195,9 +274,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       onAuthenticated(user);
     } catch (err: any) {
       if (err?.code === 'OWNER_ACCOUNT_NOT_INITIALIZED') {
-        setError(
-          'Your owner account was not found in the active production database. Do not create a duplicate account. Verify the production database connection and try again.'
-        );
+        setError('Your account could not be found in the active production database. Please contact ConferenceGate support.');
       } else {
         setError(err.message || 'Unable to sign in.');
       }
@@ -209,6 +286,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
+    setExistingAccount(false);
     if (!name.trim() || !email.trim() || !password) {
       setError('Please fill in your name, email, and password.');
       return;
@@ -235,10 +314,108 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       const user = await signup(payload);
       onAuthenticated(user);
     } catch (err: any) {
-      setError(err.message || 'Unable to create your account.');
+      if (err?.status === 409) {
+        setExistingAccount(true);
+        setError('You already have a ConferenceGate account with this email.');
+      } else {
+        setError(err.message || 'Unable to create your account.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    if (!email.trim()) {
+      setError('Enter the email address you use for ConferenceGate.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const message = await requestPasswordReset(email.trim());
+      setNotice(message);
+    } catch (err: any) {
+      setError(err.message || 'Unable to request a password reset right now.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    if (!resetToken) {
+      setError('This password reset link is invalid or expired.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await confirmPasswordReset(resetToken, password);
+      setEmail(result.email || email);
+      setResetToken(null);
+      setMode('signin');
+      setPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+      setNotice('Password updated successfully. Sign in with your new password.');
+    } catch (err: any) {
+      setError(err.message || 'Unable to reset your password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderMessage = () => (
+    <>
+      {notice && (
+        <div className="flex items-start gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{notice}</span>
+        </div>
+      )}
+      {error && (
+        <div className="flex items-start gap-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+    </>
+  );
+
+  const renderOauth = (text: 'signin_with' | 'signup_with') => {
+    if (!oauthAvailable) return null;
+    return (
+      <>
+        <div className="flex items-center gap-3 my-5">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+        <div className="space-y-2.5">
+          {capabilities.googleClientId && (
+            <GoogleSignInButton
+              clientId={capabilities.googleClientId}
+              onCredential={handleGoogleCredential}
+              text={text}
+            />
+          )}
+          {capabilities.linkedin && <LinkedInSignInButton text={text} />}
+        </div>
+      </>
+    );
   };
 
   return (
@@ -248,308 +425,204 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
         {oauthPending ? (
           <div className="p-6 sm:p-8">
-            <button
-              onClick={cancelOauthRolePicker}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 mb-4 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
+            <button onClick={cancelOauthRolePicker} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 mb-4 cursor-pointer">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
-
             <div className="flex items-center gap-3 mb-5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-              {oauthPending.profile.avatar && (
-                <img
-                  src={oauthPending.profile.avatar}
-                  alt={oauthPending.profile.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              )}
+              {oauthPending.profile.avatar && <img src={oauthPending.profile.avatar} alt={oauthPending.profile.name} className="w-10 h-10 rounded-full object-cover" />}
               <div className="min-w-0">
                 <div className="text-sm font-bold text-slate-900 truncate">{oauthPending.profile.name}</div>
                 <div className="text-xs text-slate-500 truncate">{oauthPending.profile.email}</div>
               </div>
             </div>
-
             <h1 className="text-xl font-extrabold text-slate-900 mb-1">One last step</h1>
             <p className="text-sm text-slate-500 mb-5">Choose the account type that fits you best.</p>
-
             <div className="grid grid-cols-3 gap-2 mb-6">
               {ROLE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
-                const isActive = oauthRole === opt.value;
+                const active = oauthRole === opt.value;
                 return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setOauthRole(opt.value)}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors cursor-pointer ${
-                      isActive
-                        ? 'border-blue-600 bg-blue-50 text-blue-900'
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-blue-700' : 'text-slate-400'}`} />
+                  <button key={opt.value} type="button" onClick={() => setOauthRole(opt.value)} className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors cursor-pointer ${active ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                    <Icon className={`w-5 h-5 ${active ? 'text-blue-700' : 'text-slate-400'}`} />
                     <span className="text-[11px] font-bold leading-tight">{opt.label}</span>
                   </button>
                 );
               })}
             </div>
-
-            {error && (
-              <div className="flex items-start gap-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5 mb-4">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button
-              onClick={handleConfirmOauthRole}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Create Account
+            {renderMessage()}
+            <button onClick={handleConfirmOauthRole} disabled={loading} className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer">
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />} Create Account
             </button>
           </div>
         ) : (
           <>
-        <div className="flex border-b border-slate-100">
-          <button
-            onClick={() => switchMode('signin')}
-            className={`flex-1 py-3.5 text-sm font-bold cursor-pointer transition-colors ${
-              mode === 'signin' ? 'text-blue-900 border-b-2 border-blue-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => switchMode('signup')}
-            className={`flex-1 py-3.5 text-sm font-bold cursor-pointer transition-colors ${
-              mode === 'signup' ? 'text-blue-900 border-b-2 border-blue-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            Join Now
-          </button>
-        </div>
-
-        <div className="p-6 sm:p-8">
-          {mode === 'signin' ? (
-            <>
-              <h1 className="text-xl font-extrabold text-slate-900 mb-1">Welcome back</h1>
-              <p className="text-sm text-slate-500 mb-6">Sign in to your Conference Gate account.</p>
-
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                </div>
-
-                {error && (
-                  <div className="flex items-start gap-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer"
-                >
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {(mode === 'signin' || mode === 'signup') && (
+              <div className="flex border-b border-slate-100">
+                <button onClick={() => switchMode('signin')} className={`flex-1 py-3.5 text-sm font-bold cursor-pointer transition-colors ${mode === 'signin' ? 'text-blue-900 border-b-2 border-blue-900' : 'text-slate-400 hover:text-slate-600'}`}>
                   Sign In
                 </button>
-              </form>
-
-              <div className="flex items-center gap-3 my-5">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-              <div className="space-y-2.5">
-                <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
-                <LinkedInSignInButton text="signin_with" />
-              </div>
-
-              <p className="text-center text-xs text-slate-500 mt-5">
-                New to Conference Gate?{' '}
-                <button onClick={() => switchMode('signup')} className="text-blue-700 font-bold hover:underline cursor-pointer">
-                  Create an account
+                <button onClick={() => switchMode('signup')} className={`flex-1 py-3.5 text-sm font-bold cursor-pointer transition-colors ${mode === 'signup' ? 'text-blue-900 border-b-2 border-blue-900' : 'text-slate-400 hover:text-slate-600'}`}>
+                  Join Now
                 </button>
-              </p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-xl font-extrabold text-slate-900 mb-1">Join Conference Gate</h1>
-              <p className="text-sm text-slate-500 mb-5">Choose the account type that fits you best.</p>
+              </div>
+            )}
 
-              <div className="grid grid-cols-3 gap-2 mb-5">
-                {ROLE_OPTIONS.map((opt) => {
-                  const Icon = opt.icon;
-                  const isActive = selectedRole === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setSelectedRole(opt.value)}
-                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors cursor-pointer ${
-                        isActive
-                          ? 'border-blue-600 bg-blue-50 text-blue-900'
-                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                      }`}
-                    >
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-blue-700' : 'text-slate-400'}`} />
-                      <span className="text-[11px] font-bold leading-tight">{opt.label}</span>
+            <div className="p-6 sm:p-8">
+              {mode === 'signin' && (
+                <>
+                  <h1 className="text-xl font-extrabold text-slate-900 mb-1">Welcome back</h1>
+                  <p className="text-sm text-slate-500 mb-6">Sign in to your ConferenceGate account.</p>
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-slate-600">Password</label>
+                        {capabilities.passwordReset && (
+                          <button type="button" onClick={() => switchMode('forgot')} className="text-[11px] font-bold text-blue-700 hover:underline cursor-pointer">Forgot password?</button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600" />
+                        <PasswordVisibilityButton visible={showPassword} onClick={() => setShowPassword((v) => !v)} label={showPassword ? 'Hide password' : 'Show password'} />
+                      </div>
+                    </div>
+                    {renderMessage()}
+                    {error && capabilities.passwordReset && (
+                      <button type="button" onClick={() => switchMode('forgot')} className="text-xs font-bold text-blue-700 hover:underline cursor-pointer">Reset your password</button>
+                    )}
+                    <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer">
+                      {loading && <Loader2 className="w-4 h-4 animate-spin" />} Sign In
                     </button>
-                  );
-                })}
-              </div>
+                  </form>
+                  {renderOauth('signin_with')}
+                  <p className="text-center text-xs text-slate-500 mt-5">New to ConferenceGate?{' '}<button onClick={() => switchMode('signup')} className="text-blue-700 font-bold hover:underline cursor-pointer">Create an account</button></p>
+                </>
+              )}
 
-              <form onSubmit={handleSignUp} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Ann Doe"
-                    autoComplete="name"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                  {selectedRole === 'professional' && (
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      Include your middle name if you have one — conference papers are matched to
-                      your full name, and a middle name (or initial) helps tell you apart from
-                      others who share your first and last name.
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1.5">{activeRoleConfig.orgLabel}</label>
-                    <input
-                      type="text"
-                      value={organization}
-                      onChange={(e) => setOrganization(e.target.value)}
-                      placeholder={activeRoleConfig.orgPlaceholder}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    />
+              {mode === 'signup' && (
+                <>
+                  <h1 className="text-xl font-extrabold text-slate-900 mb-1">Join ConferenceGate</h1>
+                  <p className="text-sm text-slate-500 mb-5">Choose the account type that fits you best.</p>
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    {ROLE_OPTIONS.map((opt) => {
+                      const Icon = opt.icon;
+                      const active = selectedRole === opt.value;
+                      return (
+                        <button key={opt.value} type="button" onClick={() => setSelectedRole(opt.value)} className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-center transition-colors cursor-pointer ${active ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                          <Icon className={`w-5 h-5 ${active ? 'text-blue-700' : 'text-slate-400'}`} />
+                          <span className="text-[11px] font-bold leading-tight">{opt.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1.5">{activeRoleConfig.titleLabel}</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder={activeRoleConfig.titlePlaceholder}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">
-                    LinkedIn Username or URL <span className="font-normal text-slate-400">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                    placeholder="e.g. jane-smith or linkedin.com/in/jane-smith"
-                    autoComplete="url"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">Shown on your public profile.</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1.5">Password</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 8 characters"
-                      autoComplete="new-password"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1.5">Confirm Password</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter password"
-                      autoComplete="new-password"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    />
-                  </div>
-                </div>
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">Full Name</label>
+                      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Ann Doe" autoComplete="name" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      <p className="text-[11px] text-slate-400 mt-1.5">Include your middle name when possible so publications and conference records can be matched more accurately.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
+                      <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setExistingAccount(false); }} placeholder="you@example.com" autoComplete="email" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">{activeRoleConfig.orgLabel}</label>
+                        <input value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder={activeRoleConfig.orgPlaceholder} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">{activeRoleConfig.titleLabel}</label>
+                        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={activeRoleConfig.titlePlaceholder} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">LinkedIn Username or URL <span className="font-normal text-slate-400">(optional)</span></label>
+                      <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="e.g. jane-smith or linkedin.com/in/jane-smith" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">Password</label>
+                        <div className="relative">
+                          <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" autoComplete="new-password" className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                          <PasswordVisibilityButton visible={showPassword} onClick={() => setShowPassword((v) => !v)} label={showPassword ? 'Hide password' : 'Show password'} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5">Confirm Password</label>
+                        <div className="relative">
+                          <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter password" autoComplete="new-password" className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                          <PasswordVisibilityButton visible={showConfirmPassword} onClick={() => setShowConfirmPassword((v) => !v)} label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} />
+                        </div>
+                      </div>
+                    </div>
+                    <PasswordChecks password={password} confirmPassword={confirmPassword} />
+                    {renderMessage()}
+                    {existingAccount && (
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => switchMode('signin')} className="px-3 py-2 rounded-lg bg-blue-50 text-blue-800 text-xs font-bold hover:bg-blue-100 cursor-pointer">Sign in instead</button>
+                        {capabilities.passwordReset && <button type="button" onClick={() => switchMode('forgot')} className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer">Reset password</button>}
+                      </div>
+                    )}
+                    <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer">
+                      {loading && <Loader2 className="w-4 h-4 animate-spin" />} Create Account
+                    </button>
+                  </form>
+                  {renderOauth('signup_with')}
+                  <p className="text-center text-xs text-slate-500 mt-5">Already have an account?{' '}<button onClick={() => switchMode('signin')} className="text-blue-700 font-bold hover:underline cursor-pointer">Sign in</button></p>
+                </>
+              )}
 
-                {error && (
-                  <div className="flex items-start gap-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
+              {mode === 'forgot' && (
+                <>
+                  <button type="button" onClick={() => switchMode('signin')} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 mb-5 cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back to sign in</button>
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center mb-4"><Mail className="w-5 h-5" /></div>
+                  <h1 className="text-xl font-extrabold text-slate-900 mb-1">Reset your password</h1>
+                  <p className="text-sm text-slate-500 mb-6">Enter the email address for your ConferenceGate account. We will send a secure reset link that expires in {capabilities.passwordResetTtlMinutes || 30} minutes.</p>
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                    </div>
+                    {renderMessage()}
+                    <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer">
+                      {loading && <Loader2 className="w-4 h-4 animate-spin" />} Send reset link
+                    </button>
+                  </form>
+                </>
+              )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer"
-                >
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Create Account
-                </button>
-              </form>
-
-              <div className="flex items-center gap-3 my-5">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-              <div className="space-y-2.5">
-                <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
-                <LinkedInSignInButton text="signup_with" />
-              </div>
-
-              <p className="text-center text-xs text-slate-500 mt-5">
-                Already have an account?{' '}
-                <button onClick={() => switchMode('signin')} className="text-blue-700 font-bold hover:underline cursor-pointer">
-                  Sign in
-                </button>
-              </p>
-            </>
-          )}
-        </div>
+              {mode === 'reset' && (
+                <>
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center mb-4"><KeyRound className="w-5 h-5" /></div>
+                  <h1 className="text-xl font-extrabold text-slate-900 mb-1">Choose a new password</h1>
+                  <p className="text-sm text-slate-500 mb-6">Create a new password for your ConferenceGate account.</p>
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">New password</label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                        <PasswordVisibilityButton visible={showPassword} onClick={() => setShowPassword((v) => !v)} label={showPassword ? 'Hide password' : 'Show password'} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">Confirm new password</label>
+                      <div className="relative">
+                        <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                        <PasswordVisibilityButton visible={showConfirmPassword} onClick={() => setShowConfirmPassword((v) => !v)} label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'} />
+                      </div>
+                      <PasswordChecks password={password} confirmPassword={confirmPassword} />
+                    </div>
+                    {renderMessage()}
+                    <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white text-sm font-bold rounded-full transition-colors cursor-pointer">
+                      {loading && <Loader2 className="w-4 h-4 animate-spin" />} Update password
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
