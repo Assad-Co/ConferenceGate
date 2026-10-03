@@ -27,27 +27,49 @@ The live gate verifies:
 2. `GET /api/health` returns HTTP 200;
 3. health reports `status: "ok"`;
 4. health reports `database: "ready"`;
-5. health exposes a non-empty release identifier;
-6. when `EXPECTED_RELEASE` is supplied, the deployed release matches that Git commit prefix;
-7. the public application shell is reachable;
-8. the private Growth Operations API remains protected without a signed-in session and admin token.
+5. health reports the active database backend;
+6. durable database persistence is configured;
+7. SQLite uses a configured persistent path when SQLite is the live backend, or Turso reports a complete runtime configuration when Turso is the live backend;
+8. health exposes a non-empty release identifier;
+9. when `EXPECTED_RELEASE` is supplied, the deployed release matches that Git commit prefix;
+10. the public application shell is reachable;
+11. the private Growth Operations API remains protected without a signed-in session and admin token.
 
 The command prints a structured result and exits non-zero when a required launch check fails.
 
 ## Phase 11.2 — Production Configuration Evidence
 
-Before commercial launch, the deployed Render service must show:
+ConferenceGate now has a dedicated GitHub Actions workflow:
 
-- the intended Git release;
-- durable production database configuration;
-- successful database connectivity;
+```text
+Live Production Validation
+```
+
+It runs after every push to `main` and can also be started manually. The workflow waits for Render to deploy the pushed commit, then runs the non-destructive live launch gate against:
+
+```text
+https://conferencegate.onrender.com
+```
+
+The workflow requires the deployed release to match the exact Git commit and captures safe production evidence from `/api/health`, including:
+
+- active database backend;
+- durable database persistence status;
+- persistent SQLite-path status when applicable;
+- Turso runtime status when applicable;
+- release identifier;
+- public application reachability;
+- unauthenticated protection of the private Growth Operations API.
+
+Before commercial launch, the deployed Render service must additionally show:
+
 - the intended Organizer/Sponsor billing mode;
 - a configured signed subscription webhook provider;
 - `PUBLIC_BASE_URL` and `APP_BASE_URL`;
 - production OAuth settings for any enabled identity provider;
 - `DISCOVERY_ADMIN_TOKEN` for the private operator dashboard.
 
-Run inside the production environment:
+Run inside the production environment when shell access is available:
 
 ```text
 npm run production:readiness:strict
@@ -127,7 +149,7 @@ A ConferenceGate release can be called commercially launch-ready only when all o
 
 - GitHub Application Validation is green on the release commit;
 - Render is serving that same release;
-- `npm run launch:verify-live` passes against production;
+- Live Production Validation passes against production;
 - `npm run production:readiness:strict` reports `ready: true` in production;
 - persistent database configuration has been confirmed;
 - identity/profile acceptance is complete;
@@ -138,6 +160,6 @@ A ConferenceGate release can be called commercially launch-ready only when all o
 
 ## Phase 11 status
 
-**Phase 11.1 repository implementation is introduced by this phase.**
-
-Phases 11.2–11.8 require evidence from the actual production environment and controlled real-account testing. They must not be marked complete from repository CI alone.
+- **Phase 11.1 repository implementation: complete.**
+- **Phase 11.2 production-evidence automation: implemented in this phase; live result must be green before Phase 11.2 is called complete.**
+- Phases 11.3–11.8 require controlled production evidence and must not be marked complete from repository CI alone.
