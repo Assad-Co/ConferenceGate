@@ -203,6 +203,26 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
     { label: 'Certificates', icon: BadgeCheck, tab: 'certificates' },
   ];
 
+  const exploreFields = [
+    'Artificial Intelligence',
+    'Petroleum & Geoscience',
+    'Healthcare',
+    'Engineering',
+    'Energy',
+    'Business',
+    'Cybersecurity',
+    'Materials Science',
+    'Finance',
+    'Climate & Sustainability',
+    'Real Estate',
+    'Open call for papers',
+  ];
+
+  const exploreField = (field: string) => {
+    onSearchQuery(field);
+    onNavigateTab('discover');
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_300px] gap-4 items-start">
       {/* Left Sidebar: Profile + Quick Links */}
@@ -331,8 +351,24 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </div>
             <h3 className="text-sm font-bold text-slate-900">Your feed is quiet right now</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Share a paper acceptance, CFP alert, or milestone above — or follow more conferences to see activity here.
+              Share a paper acceptance, CFP alert, or milestone above — or explore active conferences to build your network.
             </p>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => onNavigateTab('discover')}
+                className="px-3.5 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors"
+              >
+                Browse conferences
+              </button>
+              <button
+                type="button"
+                onClick={() => setPostText('📢 CFP Update: ')}
+                className="px-3.5 py-2 rounded-full border border-slate-200 hover:border-blue-300 hover:text-blue-700 text-slate-700 text-xs font-bold transition-colors"
+              >
+                Share a CFP
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -451,6 +487,25 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             ))}
           </div>
         </div>
+        <div className="bg-white rounded-lg border border-slate-200 shadow-xs">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <div className="font-bold text-sm text-slate-900">Explore conference fields</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Jump directly into the worldwide catalogue</div>
+          </div>
+          <div className="p-3 flex flex-wrap gap-1.5">
+            {exploreFields.map((field) => (
+              <button
+                key={field}
+                type="button"
+                onClick={() => exploreField(field)}
+                className="px-2.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[10px] font-bold text-slate-600 transition-colors text-left"
+              >
+                {field}
+              </button>
+            ))}
+          </div>
+        </div>
+
       </aside>
     </div>
   );

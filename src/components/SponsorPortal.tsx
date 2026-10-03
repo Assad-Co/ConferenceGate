@@ -744,6 +744,13 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               <p className="text-xs text-slate-500 mt-1">
                 Complete Matching Preferences and ConferenceGate will rank new organizer opportunities here.
               </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('preferences')}
+                className="mt-4 px-4 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors"
+              >
+                Set matching preferences
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
