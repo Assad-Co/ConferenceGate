@@ -34,9 +34,10 @@ async function main() {
   // forward-looking subscription-status history trigger after the server has initialized users.
   await runScript('scripts/ensureGrowthSchema.mjs');
 
-  // Restore legacy conference/discovery records and stage the owner's original Professional
-  // identity before any newer enrichment jobs run. Safe no-op when legacy Turso is not configured.
-  await runScript('scripts/reconcileLegacyProductionData.mjs');
+  // Legacy Turso -> SQLite recovery is migration-only. When Turso itself is the active production
+  // backend and no explicit DATABASE_PATH migration target exists, the guard exits cleanly instead
+  // of trying to copy the live database into an unused ephemeral SQLite file.
+  await runScript('scripts/reconcileLegacyProductionDataIfNeeded.mjs');
 
   // Fast DB-only reconciliation first: make the complete AAPG set and its reliable local
   // logo visible within seconds of a deploy, before slower imports and network image work.
