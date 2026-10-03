@@ -27,17 +27,18 @@ async function tableExists(name: string): Promise<boolean> {
 
 async function roleSummary(role: "organizer" | "sponsor") {
   const [signups, signups7d, signups30d, paid, checkoutStarts30d, checkoutAccounts30d] = await Promise.all([
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role=?", [role]),
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-7 days')", [role]),
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-30 days')", [role]),
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND subscription_status IN ('active','trialing')", [role]),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid'", [role]),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-7 days')", [role]),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-30 days')", [role]),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND subscription_status IN ('active','trialing')", [role]),
     scalar(
       `SELECT COUNT(*) AS value
          FROM billing_provider_events e
          JOIN users u ON u.id=e.subject_id
         WHERE e.event_type='subscription.checkout.started'
           AND e.created_at >= datetime('now','-30 days')
-          AND u.role=?`,
+          AND u.role=?
+          AND lower(u.email) NOT LIKE '%.invalid'`,
       [role]
     ),
     scalar(
@@ -46,7 +47,8 @@ async function roleSummary(role: "organizer" | "sponsor") {
          JOIN users u ON u.id=e.subject_id
         WHERE e.event_type='subscription.checkout.started'
           AND e.created_at >= datetime('now','-30 days')
-          AND u.role=?`,
+          AND u.role=?
+          AND lower(u.email) NOT LIKE '%.invalid'`,
       [role]
     ),
   ]);
@@ -55,11 +57,13 @@ async function roleSummary(role: "organizer" | "sponsor") {
     ? await scalar(
         `SELECT COUNT(*) AS value FROM users u
           WHERE u.role='organizer'
+            AND lower(u.email) NOT LIKE '%.invalid'
             AND EXISTS (SELECT 1 FROM created_conferences c WHERE c.organizer_id=u.id)`
       )
     : await scalar(
         `SELECT COUNT(*) AS value FROM users u
           WHERE u.role='sponsor'
+            AND lower(u.email) NOT LIKE '%.invalid'
             AND (
               EXISTS (SELECT 1 FROM sponsor_preferences p WHERE p.sponsor_id=u.id)
               OR EXISTS (SELECT 1 FROM sponsor_saved_opportunities s WHERE s.sponsor_id=u.id)
@@ -111,6 +115,7 @@ async function retention() {
        JOIN users u ON u.id=w.owner_id
        LEFT JOIN last_activity la ON la.account_id=w.owner_id AND la.role=w.account_role
       WHERE u.subscription_status IN ('active','trialing')
+        AND lower(u.email) NOT LIKE '%.invalid'
       GROUP BY w.account_role`
   );
 
@@ -151,12 +156,14 @@ async function acquisition() {
   }
 
   const [paidRoleSignups, attributedSignups, topSources, organizerSources, organizerCampaigns] = await Promise.all([
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role IN ('organizer','sponsor')"),
-    scalar("SELECT COUNT(*) AS value FROM account_acquisition"),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role IN ('organizer','sponsor') AND lower(email) NOT LIKE '%.invalid'"),
+    scalar("SELECT COUNT(*) AS value FROM account_acquisition a JOIN users u ON u.id=a.user_id WHERE lower(u.email) NOT LIKE '%.invalid'"),
     dbAll<any>(
-      `SELECT source,role,COUNT(*) AS signups
-         FROM account_acquisition
-        GROUP BY source,role
+      `SELECT a.source AS source,a.role AS role,COUNT(*) AS signups
+         FROM account_acquisition a
+         JOIN users u ON u.id=a.user_id
+        WHERE lower(u.email) NOT LIKE '%.invalid'
+        GROUP BY a.source,a.role
         ORDER BY signups DESC,source ASC
         LIMIT 12`
     ),
@@ -174,6 +181,7 @@ async function acquisition() {
          FROM account_acquisition a
          JOIN users u ON u.id=a.user_id
         WHERE a.role='organizer'
+          AND lower(u.email) NOT LIKE '%.invalid'
         GROUP BY a.source,COALESCE(a.medium,'')
         ORDER BY signups DESC,paid DESC,activated DESC,a.source ASC
         LIMIT 20`
@@ -189,6 +197,7 @@ async function acquisition() {
          FROM account_acquisition a
          JOIN users u ON u.id=a.user_id
         WHERE a.role='organizer'
+          AND lower(u.email) NOT LIKE '%.invalid'
         GROUP BY COALESCE(NULLIF(a.campaign,''),'(no campaign)'),a.source
         ORDER BY signups DESC,paid DESC,activated DESC,campaign ASC
         LIMIT 20`
@@ -278,8 +287,8 @@ async function revenueOptimization() {
     settledDeals,
     checkoutStarts30d,
   ] = await Promise.all([
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role='organizer' AND subscription_status IN ('active','trialing')"),
-    scalar("SELECT COUNT(*) AS value FROM users WHERE role='sponsor' AND subscription_status IN ('active','trialing')"),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role='organizer' AND lower(email) NOT LIKE '%.invalid' AND subscription_status IN ('active','trialing')"),
+    scalar("SELECT COUNT(*) AS value FROM users WHERE role='sponsor' AND lower(email) NOT LIKE '%.invalid' AND subscription_status IN ('active','trialing')"),
     scalar(
       `SELECT COUNT(DISTINCT w.id) AS value
          FROM account_workspaces w
@@ -360,6 +369,7 @@ export async function buildLaunchCohort(cohort = "first_customer_launch") {
        FROM launch_cohort_members l
        JOIN users u ON u.id=l.user_id
       WHERE l.cohort=?
+        AND lower(u.email) NOT LIKE '%.invalid'
       ORDER BY l.role,l.created_at`,
     [cohort]
   );
@@ -487,10 +497,10 @@ async function movement() {
   const result: Record<string, any> = {};
   for (const role of labels) {
     const [current7d, prior7d, current30d, prior30d] = await Promise.all([
-      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-7 days')", [role]),
-      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-14 days') AND created_at < datetime('now','-7 days')", [role]),
-      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-30 days')", [role]),
-      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND created_at >= datetime('now','-60 days') AND created_at < datetime('now','-30 days')", [role]),
+      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-7 days')", [role]),
+      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-14 days') AND created_at < datetime('now','-7 days')", [role]),
+      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-30 days')", [role]),
+      scalar("SELECT COUNT(*) AS value FROM users WHERE role=? AND lower(email) NOT LIKE '%.invalid' AND created_at >= datetime('now','-60 days') AND created_at < datetime('now','-30 days')", [role]),
     ]);
     result[role] = { current7d, prior7d, current30d, prior30d };
   }
