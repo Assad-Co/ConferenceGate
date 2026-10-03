@@ -42,6 +42,7 @@ function releaseMatches(actual, expected) {
 
 const base = normalizeBaseUrl(rawBaseUrl);
 const checks = [];
+const evidence = {};
 const fail = (name, detail) => checks.push({ name, passed: false, detail });
 const pass = (name, detail) => checks.push({ name, passed: true, detail });
 
@@ -49,6 +50,14 @@ try {
   const healthUrl = new URL('/api/health', base);
   const response = await fetchWithTimeout(healthUrl);
   const body = await response.json().catch(() => ({}));
+
+  evidence.healthHttpStatus = response.status;
+  evidence.databaseBackend = body?.databaseBackend ?? null;
+  evidence.databasePersistentPathConfigured = body?.databasePersistentPathConfigured ?? null;
+  evidence.databasePersistenceConfigured = body?.databasePersistenceConfigured ?? null;
+  evidence.tursoRuntimeConfigured = body?.tursoRuntimeConfigured ?? null;
+  evidence.legacyRecoveryConfigured = body?.legacyRecoveryConfigured ?? null;
+  evidence.release = body?.release ?? null;
 
   if (response.ok) pass('health_http', 'GET /api/health returned HTTP ' + response.status);
   else fail('health_http', 'GET /api/health returned HTTP ' + response.status);
@@ -58,6 +67,32 @@ try {
 
   if (body?.database === 'ready') pass('database_ready', 'database=ready');
   else fail('database_ready', 'Expected database=ready; received ' + JSON.stringify(body?.database ?? null));
+
+  if (typeof body?.databaseBackend === 'string' && body.databaseBackend.trim()) {
+    pass('database_backend_reported', 'databaseBackend=' + body.databaseBackend);
+  } else {
+    fail('database_backend_reported', 'Health response did not report the database backend.');
+  }
+
+  if (body?.databasePersistenceConfigured === true) {
+    pass('database_persistence', 'Durable database persistence is configured.');
+  } else {
+    fail('database_persistence', 'The live process does not report durable database persistence.');
+  }
+
+  if (body?.databaseBackend === 'sqlite') {
+    if (body?.databasePersistentPathConfigured === true) {
+      pass('sqlite_persistent_path', 'SQLite is using a configured persistent path.');
+    } else {
+      fail('sqlite_persistent_path', 'SQLite is live without a configured persistent path.');
+    }
+  } else if (body?.databaseBackend === 'turso') {
+    if (body?.tursoRuntimeConfigured === true) {
+      pass('turso_runtime', 'Turso is configured as the durable runtime backend.');
+    } else {
+      fail('turso_runtime', 'Turso backend reported without a complete Turso runtime configuration.');
+    }
+  }
 
   const release = String(body?.release || '').trim();
   if (release) pass('release_present', 'release=' + release);
@@ -76,6 +111,7 @@ try {
 
 try {
   const response = await fetchWithTimeout(new URL('/', base));
+  evidence.applicationHttpStatus = response.status;
   if (response.ok) pass('application_shell', 'GET / returned HTTP ' + response.status);
   else fail('application_shell', 'GET / returned HTTP ' + response.status);
 } catch (error) {
@@ -84,6 +120,7 @@ try {
 
 try {
   const response = await fetchWithTimeout(new URL('/api/admin/discovery/growth-dashboard', base));
+  evidence.unauthenticatedGrowthDashboardStatus = response.status;
   if ([401, 403].includes(response.status)) {
     pass('growth_dashboard_protected', 'Unauthenticated private API returned HTTP ' + response.status);
   } else {
@@ -98,10 +135,11 @@ try {
 
 const failed = checks.filter((check) => !check.passed);
 const report = {
-  phase: '11.1',
+  phase: '11.2',
   target: base.origin,
   expectedRelease: expectedRelease || null,
   ready: failed.length === 0,
+  evidence,
   checks,
 };
 
