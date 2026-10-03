@@ -92,12 +92,27 @@ function patchWebEnrichmentOwnership() {
   console.log('[background-bootstrap-patch] Scheduled automation now owns discovery unless ENABLE_WEB_ENRICHMENT_LOOP=1.');
 }
 
+function patchAutomationCommand() {
+  const packagePath = resolve(process.cwd(), 'package.json');
+  const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+  const target = 'node scripts/automationEntry.mjs';
+  if (pkg?.scripts?.automation === target) {
+    console.log('[automation-patch] Guarded automation entrypoint already configured.');
+    return;
+  }
+  if (!pkg?.scripts?.automation) throw new Error('[automation-patch] package.json has no automation script.');
+  pkg.scripts.automation = target;
+  writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+  console.log('[automation-patch] npm run automation now uses the guarded entrypoint.');
+}
+
 try {
   patchOwnerRecoveryKey();
   mountAuthRecoveryRouter();
   patchWorkerDatabase('scripts/refreshMarketplaceActionAlerts.mjs', 'marketplace');
   patchWorkerDatabase('scripts/refreshSponsorWatchlistAlerts.mjs', 'watchlist');
   patchWebEnrichmentOwnership();
+  patchAutomationCommand();
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
