@@ -1390,8 +1390,31 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         )}
 
         {!webSearchLoading && !webSearchError && webResults && visibleWebResults.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <p className="text-xs text-slate-400">No current or upcoming conference websites found. Try different keywords or broader filters.</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-12 text-center">
+            <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center mb-3">
+              <Search className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">No upcoming matches with these filters</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-lg mx-auto">
+              Broaden the date or location filters, or jump into one of the worldwide fields below.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+              {DISCOVERY_SUGGESTIONS.slice(0, 8).map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setSearchInput(suggestion);
+                    setSubmittedSearchTerm(suggestion);
+                    lastWebQueryRef.current = null;
+                    setSearchSubmitCount((count) => count + 1);
+                  }}
+                  className="px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[11px] font-bold text-slate-600 transition-colors"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
