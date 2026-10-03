@@ -1,0 +1,34 @@
+name: Phase 11.7 Apply Synthetic Metrics Guard
+
+on:
+  push:
+    branches: [phase-11-7-synthetic-metrics-guard]
+    paths:
+      - 'scripts/patchPhase117SyntheticMetricsGuard.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-11-7-synthetic-metrics-guard
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply synthetic-customer metrics guard
+        run: node scripts/patchPhase117SyntheticMetricsGuard.mjs
+      - name: Commit generated source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/growthDashboard.ts server/discovery/router.ts scripts/growthCohortReport.mjs scripts/growthReport.mjs scripts/smokeGrowthDashboard.mjs
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+          else
+            git commit -m "Phase 11.7 — Exclude synthetic acceptance accounts from customer metrics"
+            git push origin HEAD:phase-11-7-synthetic-metrics-guard
+          fi
