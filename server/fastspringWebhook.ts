@@ -42,21 +42,57 @@ function accountIdentity(data: any): { accountId: string; email: string } {
   return { accountId, email };
 }
 
-async function findBillingUser(accountId: string, email: string): Promise<UserRow | undefined> {
+function fastSpringProductPath(data: any): string {
+  return typeof data?.product === "object"
+    ? String(data.product?.path || "").trim()
+    : "";
+}
+
+function expectedFastSpringProductPath(role: string): string {
+  if (role === "organizer") return process.env.FASTSPRING_ORGANIZER_PRODUCT_PATH?.trim() || "";
+  if (role === "sponsor") return process.env.FASTSPRING_SPONSOR_PRODUCT_PATH?.trim() || "";
+  return "";
+}
+
+type FastSpringUserMatch = {
+  user: UserRow;
+  source: "customer_ref" | "email";
+};
+
+async function findBillingUser(accountId: string, email: string): Promise<FastSpringUserMatch | undefined> {
   if (accountId) {
     const byCustomer = await dbGet<UserRow>(
       "SELECT * FROM users WHERE billing_customer_ref=? AND role IN ('organizer','sponsor') LIMIT 1",
       [accountId]
     );
-    if (byCustomer) return byCustomer;
+    if (byCustomer) return { user: byCustomer, source: "customer_ref" };
   }
   if (email) {
-    return dbGet<UserRow>(
+    const byEmail = await dbGet<UserRow>(
       "SELECT * FROM users WHERE lower(email)=? AND role IN ('organizer','sponsor') LIMIT 1",
       [email]
     );
+    if (byEmail) return { user: byEmail, source: "email" };
   }
   return undefined;
+}
+
+function fastSpringSubscriptionMatchesAccount(data: any, match: FastSpringUserMatch): boolean {
+  const productPath = fastSpringProductPath(data);
+  const expectedProductPath = expectedFastSpringProductPath(match.user.role);
+
+  // The first signed event can locate an account by purchaser email, but email alone does not prove
+  // which paid ConferenceGate product was purchased. Require the exact role-specific FastSpring
+  // product path before storing the provider account id and granting paid access.
+  if (match.source === "email") {
+    return Boolean(productPath && expectedProductPath && productPath === expectedProductPath);
+  }
+
+  // Once FastSpring's account id has been durably linked by a validated first purchase, later
+  // lifecycle events can omit product details. If a product is supplied, however, it must still
+  // agree with the linked ConferenceGate role.
+  if (productPath && expectedProductPath && productPath !== expectedProductPath) return false;
+  return true;
 }
 
 fastSpringWebhookRouter.post(
@@ -108,9 +144,10 @@ fastSpringWebhookRouter.post(
       const data = event?.data || {};
       const status = mapFastSpringSubscriptionStatus(eventType, data);
       const { accountId, email } = accountIdentity(data);
-      const user = await findBillingUser(accountId, email);
+      const match = await findBillingUser(accountId, email);
+      const user = match?.user;
 
-      if (!status || !user) {
+      if (!status || !match || !fastSpringSubscriptionMatchesAccount(data, match)) {
         await dbRun(
           "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,'fastspring',?,?,?,?, 'ignored')",
           [`bpe_${crypto.randomUUID()}`, eventId, eventType, user?.id || null, payloadHash]
@@ -120,9 +157,8 @@ fastSpringWebhookRouter.post(
 
       const subscriptionId = String(data?.id || data?.subscription || "");
       const productPath =
-        typeof data?.product === "object"
-          ? String(data.product?.path || data.product?.display || "")
-          : "";
+        fastSpringProductPath(data) ||
+        (typeof data?.product === "object" ? String(data.product?.display || "") : "");
 
       await dbRun(
         `UPDATE users

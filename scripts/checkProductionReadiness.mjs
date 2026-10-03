@@ -7,6 +7,19 @@ const tursoRequested = Boolean(tursoUrl || tursoToken);
 const tursoRuntimeConfigured = Boolean(tursoUrl && tursoToken);
 const databaseBackend = tursoUrl ? 'turso' : 'sqlite';
 
+const fastSpringWebhookConfigured = Boolean(process.env.FASTSPRING_WEBHOOK_SECRET?.trim());
+const fastSpringRoleBindingConfigured = Boolean(
+  fastSpringWebhookConfigured &&
+  process.env.FASTSPRING_ORGANIZER_PRODUCT_PATH?.trim() &&
+  process.env.FASTSPRING_SPONSOR_PRODUCT_PATH?.trim()
+);
+const paddleWebhookConfigured = Boolean(process.env.PADDLE_WEBHOOK_SECRET?.trim());
+const paddleRoleBindingConfigured = Boolean(
+  paddleWebhookConfigured &&
+  process.env.PADDLE_ORGANIZER_PRICE_ID?.trim() &&
+  process.env.PADDLE_SPONSOR_PRICE_ID?.trim()
+);
+
 const coreRequired = [
   'BILLING_SYNC_SECRET',
 ];
@@ -16,7 +29,16 @@ const checkoutRequired =
     ? ['PADDLE_API_KEY', 'PADDLE_ORGANIZER_PRICE_ID', 'PADDLE_SPONSOR_PRICE_ID', 'PADDLE_WEBHOOK_SECRET']
     : ['ORGANIZER_CHECKOUT_URL', 'SPONSOR_CHECKOUT_URL'];
 
-const required = [...coreRequired, ...checkoutRequired];
+const providerBindingRequired = [
+  ...(fastSpringWebhookConfigured
+    ? ['FASTSPRING_ORGANIZER_PRODUCT_PATH', 'FASTSPRING_SPONSOR_PRODUCT_PATH']
+    : []),
+  ...(paddleWebhookConfigured
+    ? ['PADDLE_ORGANIZER_PRICE_ID', 'PADDLE_SPONSOR_PRICE_ID']
+    : []),
+];
+
+const required = [...new Set([...coreRequired, ...checkoutRequired, ...providerBindingRequired])];
 
 const optionalIntegrations = [
   'JWT_SECRET',
@@ -39,8 +61,8 @@ const optionalIntegrations = [
 
 const missingRequired = required.filter((name) => !process.env[name]?.trim());
 const enabledBillingProviders = [
-  process.env.FASTSPRING_WEBHOOK_SECRET?.trim() ? 'fastspring' : null,
-  process.env.PADDLE_WEBHOOK_SECRET?.trim() ? 'paddle' : null,
+  fastSpringRoleBindingConfigured ? 'fastspring' : null,
+  paddleRoleBindingConfigured ? 'paddle' : null,
 ].filter(Boolean);
 
 function validHttpsUrl(value) {
@@ -116,6 +138,10 @@ const report = {
   checkoutProvider,
   required: Object.fromEntries(required.map((name) => [name, Boolean(process.env[name]?.trim())])),
   billingProviders: enabledBillingProviders,
+  providerRoleBindings: {
+    fastspring: fastSpringRoleBindingConfigured,
+    paddle: paddleRoleBindingConfigured,
+  },
   integrations: Object.fromEntries(optionalIntegrations.map((name) => [name, Boolean(process.env[name]?.trim())])),
   workspaceSeatLimit,
   payoutFeeBps,
@@ -140,10 +166,20 @@ if (tursoRuntimeConfigured) {
   report.warnings.push('Turso is configured as the active production database backend.');
 }
 if (enabledBillingProviders.length === 0) {
-  report.warnings.push('No verified subscription webhook provider is configured.');
+  report.warnings.push('No verified and role-bound subscription webhook provider is configured.');
+}
+if (fastSpringWebhookConfigured && !fastSpringRoleBindingConfigured) {
+  report.warnings.push(
+    'FastSpring webhook is configured but Organizer/Sponsor product-path bindings are incomplete.'
+  );
+}
+if (paddleWebhookConfigured && !paddleRoleBindingConfigured) {
+  report.warnings.push(
+    'Paddle webhook is configured but Organizer/Sponsor price bindings are incomplete.'
+  );
 }
 if (checkoutProvider === 'paddle' && !enabledBillingProviders.includes('paddle')) {
-  report.warnings.push('Paddle checkout is selected but the Paddle webhook secret is not configured.');
+  report.warnings.push('Paddle checkout is selected but a verified, role-bound Paddle webhook is not fully configured.');
 }
 if (!process.env.JWT_SECRET?.trim()) {
   report.warnings.push('JWT_SECRET is not set; ConferenceGate will use the persisted database secret.');
