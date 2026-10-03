@@ -11,7 +11,7 @@ if (String(process.env.AUTOMATION_DISABLED || '').trim() === '1') {
 // bounded limits prevent a thin category from turning one scheduled run into an unbounded crawl.
 const coverageEnv = {
   POPULAR_CATEGORY_RICH_TARGET: process.env.POPULAR_CATEGORY_RICH_TARGET || '25',
-  POPULAR_CATEGORY_SPONSOR_TARGET: process.env.POPULAR_CATEGORY_SPONSOR_TARGET || '10',
+  POPULAR_CATEGORY_SPONSOR_TARGET: process.env.POPULAR_CATEGORY_SPONSOR_TARGET || '12',
   CATEGORY_HARVEST_MAX_DOMAINS: process.env.CATEGORY_HARVEST_MAX_DOMAINS || '32',
   CATEGORY_HARVEST_MAX_PAGES: process.env.CATEGORY_HARVEST_MAX_PAGES || '220',
   CATEGORY_HARVEST_PAGES_PER_DOMAIN: process.env.CATEGORY_HARVEST_PAGES_PER_DOMAIN || '6',
