@@ -1,0 +1,41 @@
+name: Phase 12 Fix Home Search Wiring
+
+on:
+  push:
+    branches: [phase-12-product-depth-and-coverage]
+    paths:
+      - '.github/workflows/phase-12-fix-home-search.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-12-product-depth-and-coverage
+      - name: Fix Home search prop wiring
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'src/components/HomeLanding.tsx';
+          let source = fs.readFileSync(file, 'utf8');
+          const before = "  onNavigateTab,\n  onOpenSubmitAbstract,\n  userProfile,";
+          const after = "  onNavigateTab,\n  onOpenSubmitAbstract,\n  onSearchQuery,\n  userProfile,";
+          if (!source.includes(after)) {
+            if (!source.includes(before)) throw new Error('HomeLanding destructuring anchor not found');
+            source = source.replace(before, after);
+            fs.writeFileSync(file, source);
+          }
+          NODE
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/HomeLanding.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "Phase 12 — Wire Home field discovery search"
+            git push origin HEAD:phase-12-product-depth-and-coverage
+          fi
