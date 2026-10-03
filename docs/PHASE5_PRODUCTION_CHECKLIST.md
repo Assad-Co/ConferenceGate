@@ -6,25 +6,48 @@ This checklist closes the ConferenceGate paid Organizer/Sponsor workspace and sp
 
 - Runtime: Node.js 22.
 - Branch: `main`.
-- Build command: `npm ci --no-audit --no-fund && npm run build`.
-- Start command: `npm start`.
-- Health check path: `/api/health`.
+- Build command: use the repository production build (`npm run build` / equivalent Render package-manager command).
+- Start command: use the repository production start command (`npm start` / equivalent Render package-manager command).
+- Health check endpoint: `/api/health`.
 - Let Render provide `PORT`; do not hard-code it.
-- Keep the web service and discovery worker on the same persistent SQLite file.
+- The web service and all background workers must use the same durable production database backend.
 
 After deployment, `GET /api/health` must return HTTP 200 with:
 
 - `status: "ok"`
 - `database: "ready"`
+- `databasePersistenceConfigured: true`
 - a `release` value matching the deployed Git commit prefix
 
-## 2. Required production environment
+## 2. Required production database
 
-These must be configured in the Render web service:
+ConferenceGate supports one durable production backend at a time.
 
-- `DATABASE_PATH=/var/data/conferencegate.db`
-- a Render persistent disk mounted at `/var/data`
-- Turso is not part of the production runtime; remove `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` after any one-time recovery is complete
+### Current production architecture — Turso
+
+The live Phase 11 validation confirmed Turso as the active durable production backend. When Turso is active:
+
+- `TURSO_DATABASE_URL` must be configured;
+- `TURSO_AUTH_TOKEN` must be configured;
+- `/api/health` must report `databaseBackend: "turso"`;
+- `/api/health` must report `databasePersistenceConfigured: true`;
+- `/api/health` must report `tursoRuntimeConfigured: true`;
+- do **not** remove the Turso credentials or switch databases without a deliberate migration and production verification.
+
+### Alternative architecture — persistent SQLite
+
+Persistent SQLite remains supported only when intentionally configured:
+
+- `DATABASE_PATH=/var/data/conferencegate.db` (or another explicit persistent path);
+- a Render persistent disk mounted for that path;
+- `/api/health` must report `databaseBackend: "sqlite"`;
+- `/api/health` must report `databasePersistentPathConfigured: true`;
+- `/api/health` must report `databasePersistenceConfigured: true`.
+
+Legacy Turso-to-SQLite reconciliation is migration-only and must run only when an explicit SQLite `DATABASE_PATH` target is configured.
+
+Other required production configuration includes:
+
 - `BILLING_SYNC_SECRET`
 - `PUBLIC_BASE_URL=https://conferencegate.onrender.com`
 - `APP_BASE_URL=https://conferencegate.onrender.com`
@@ -109,9 +132,9 @@ CI must pass all of the following after the production build:
 
 No browser redirect or success page may activate a paid subscription or mark a Deal Room paid. Provider signatures or the protected server-to-server normalization routes remain the source of truth.
 
-## 6. Production readiness command
+## 6. Production readiness commands
 
-Run in the Render shell with the real service environment:
+Run with the real production environment:
 
 `npm run production:readiness:strict`
 
@@ -119,7 +142,7 @@ The command must exit successfully and report `ready: true`.
 
 It validates:
 
-- persistent SQLite path configuration;
+- durable database configuration (Turso or persistent SQLite);
 - checkout-provider requirements;
 - at least one signed subscription webhook provider;
 - valid HTTPS checkout/base URLs;
@@ -128,16 +151,19 @@ It validates:
 - Paddle webhook tolerance;
 - sponsorship platform fee range.
 
-It prints configuration state only and never secret values.
+For every `main` release, GitHub also runs **Live Production Validation** against the deployed site. It waits for Render to serve the exact commit and verifies health, durable database state, release identity, public reachability, and private Growth API protection.
+
+Both commands print configuration state only and never secret values.
 
 ## 7. Final release verification
 
-Before calling Phase 5 complete:
+Before calling the production release complete:
 
 - GitHub Application Validation workflow is green on the release commit.
 - Render deployment is built from that same commit.
-- `/api/health` is HTTP 200 and reports `database: "ready"`.
-- `npm run production:readiness:strict` reports `ready: true` in Render.
+- Live Production Validation is green for that commit.
+- `/api/health` is HTTP 200 and reports `database: "ready"` and `databasePersistenceConfigured: true`.
+- `npm run production:readiness:strict` reports `ready: true` with the production environment.
 - Test one Organizer Pro checkout and one Sponsor Pro checkout with the intended provider environment.
 - Confirm signed webhook delivery activates the correct account.
 - Confirm a paid owner can add a member, viewer restrictions apply, and removing the member revokes inherited access.
@@ -147,4 +173,4 @@ Before calling Phase 5 complete:
 
 ## Phase 5 completion rule
 
-Repository implementation is complete when CI passes the release commit. Production release is complete only after the Render-specific checks above pass against the deployed environment.
+Repository implementation is complete when CI passes the release commit. Production release is complete only after the live deployment and production-specific checks above pass against the deployed environment.

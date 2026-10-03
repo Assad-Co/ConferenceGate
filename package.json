@@ -50,7 +50,7 @@
     "database:prepare": "node scripts/prepareLocalDatabase.mjs",
     "database:migrate-from-turso": "node scripts/migrateTursoToSqlite.mjs",
     "database:restore-legacy-professional": "node scripts/restoreLegacyProfessionalProfile.mjs",
-    "database:reconcile-legacy": "node scripts/reconcileLegacyProductionData.mjs",
+    "database:reconcile-legacy": "node scripts/reconcileLegacyProductionDataIfNeeded.mjs",
     "growth:automation-smoke": "node scripts/smokeGrowthAutomation.mjs",
     "enterprise:smoke": "node scripts/smokeEnterpriseGovernance.mjs",
     "launch:verify-live": "node scripts/verifyLiveLaunch.mjs"
