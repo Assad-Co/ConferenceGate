@@ -127,7 +127,9 @@ try {
         currentPaidConversionPct: pct(currentlyPaid, signups),
       };
     });
-    const attributedRows = await rows("SELECT COUNT(*) AS count FROM account_acquisition a JOIN users u ON u.id=a.user_id WHERE lower(u.email) NOT LIKE '%.invalid'");
+    const attributedRows = await rows(
+      "SELECT COUNT(*) AS count FROM account_acquisition a JOIN users u ON u.id=a.user_id WHERE lower(u.email) NOT LIKE '%.invalid'"
+    );
     const attributedSignups = n(attributedRows[0]?.count);
     acquisitionCoverage = {
       paidRoleSignups,
@@ -156,30 +158,30 @@ try {
       "SELECT COUNT(DISTINCT h.user_id) AS count FROM subscription_status_history h JOIN users u ON u.id=h.user_id WHERE h.reason='baseline_observed_state' AND lower(u.email) NOT LIKE '%.invalid'"
     );
     const transitionRows = await rows(`
-      SELECT role,
-             SUM(CASE WHEN reason='status_change' AND to_status IN ('active','trialing') AND COALESCE(from_status,'required') NOT IN ('active','trialing') THEN 1 ELSE 0 END) AS activations,
-             SUM(CASE WHEN reason='status_change' AND from_status IN ('canceled','past_due') AND to_status IN ('active','trialing') THEN 1 ELSE 0 END) AS reactivations,
-             SUM(CASE WHEN reason='status_change' AND to_status='canceled' THEN 1 ELSE 0 END) AS cancellations,
-             SUM(CASE WHEN reason='status_change' AND to_status='past_due' THEN 1 ELSE 0 END) AS past_due,
-             SUM(CASE WHEN reason='period_end_changed' THEN 1 ELSE 0 END) AS period_end_changes
+      SELECT h.role AS role,
+             SUM(CASE WHEN h.reason='status_change' AND h.to_status IN ('active','trialing') AND COALESCE(h.from_status,'required') NOT IN ('active','trialing') THEN 1 ELSE 0 END) AS activations,
+             SUM(CASE WHEN h.reason='status_change' AND h.from_status IN ('canceled','past_due') AND h.to_status IN ('active','trialing') THEN 1 ELSE 0 END) AS reactivations,
+             SUM(CASE WHEN h.reason='status_change' AND h.to_status='canceled' THEN 1 ELSE 0 END) AS cancellations,
+             SUM(CASE WHEN h.reason='status_change' AND h.to_status='past_due' THEN 1 ELSE 0 END) AS past_due,
+             SUM(CASE WHEN h.reason='period_end_changed' THEN 1 ELSE 0 END) AS period_end_changes
         FROM subscription_status_history h
         JOIN users u ON u.id=h.user_id
        WHERE lower(u.email) NOT LIKE '%.invalid'
-         AND changed_at >= datetime('now','-30 days')
-         AND reason <> 'baseline_observed_state'
-       GROUP BY role
-       ORDER BY role
+         AND h.changed_at >= datetime('now','-30 days')
+         AND h.reason <> 'baseline_observed_state'
+       GROUP BY h.role
+       ORDER BY h.role
     `);
     const historyCohorts = await rows(`
       WITH history_by_user AS (
-        SELECT user_id,
-               MIN(CASE WHEN to_status IN ('active','trialing') THEN changed_at END) AS first_observed_paid_at,
-               MIN(CASE WHEN reason <> 'baseline_observed_state' AND to_status IN ('active','trialing') THEN changed_at END) AS first_instrumented_paid_at,
-               SUM(CASE WHEN reason='status_change' AND to_status='canceled' THEN 1 ELSE 0 END) AS cancellations,
-               SUM(CASE WHEN reason='status_change' AND from_status IN ('canceled','past_due') AND to_status IN ('active','trialing') THEN 1 ELSE 0 END) AS reactivations,
-               SUM(CASE WHEN reason='period_end_changed' THEN 1 ELSE 0 END) AS period_end_changes
-          FROM subscription_status_history
-         GROUP BY user_id
+        SELECT h.user_id,
+               MIN(CASE WHEN h.to_status IN ('active','trialing') THEN h.changed_at END) AS first_observed_paid_at,
+               MIN(CASE WHEN h.reason <> 'baseline_observed_state' AND h.to_status IN ('active','trialing') THEN h.changed_at END) AS first_instrumented_paid_at,
+               SUM(CASE WHEN h.reason='status_change' AND h.to_status='canceled' THEN 1 ELSE 0 END) AS cancellations,
+               SUM(CASE WHEN h.reason='status_change' AND h.from_status IN ('canceled','past_due') AND h.to_status IN ('active','trialing') THEN 1 ELSE 0 END) AS reactivations,
+               SUM(CASE WHEN h.reason='period_end_changed' THEN 1 ELSE 0 END) AS period_end_changes
+          FROM subscription_status_history h
+         GROUP BY h.user_id
       )
       SELECT substr(u.created_at,1,7) AS cohort_month,
              u.role AS role,
@@ -192,6 +194,7 @@ try {
         FROM users u
         LEFT JOIN history_by_user h ON h.user_id=u.id
        WHERE u.role IN ('organizer','sponsor')
+         AND lower(u.email) NOT LIKE '%.invalid'
        GROUP BY substr(u.created_at,1,7),u.role
        ORDER BY cohort_month DESC,u.role
     `);
