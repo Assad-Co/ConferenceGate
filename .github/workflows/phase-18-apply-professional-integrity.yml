@@ -1,0 +1,35 @@
+name: Phase 18 Apply Professional Record Integrity
+
+on:
+  push:
+    branches: [phase-18-professional-record-integrity]
+    paths:
+      - 'scripts/patchPhase18ProfessionalRecordIntegrity.mjs'
+      - '.github/workflows/phase-18-apply-professional-integrity.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-18-professional-record-integrity
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply Phase 18 patch
+        run: node scripts/patchPhase18ProfessionalRecordIntegrity.mjs
+      - name: Commit generated source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/AbstractTrackerView.tsx src/components/CertificatesView.tsx
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+          else
+            git commit -m "Phase 18 — Strengthen abstract onboarding and credential integrity"
+            git push origin HEAD:phase-18-professional-record-integrity
+          fi
