@@ -112,11 +112,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
     setNewPostText((current) => {
       const tag = 'Conference: ' + conference.title;
       if (current.includes(tag)) return current;
-      return current.trim() ? tag + '
-
-' + current : tag + '
-
-';
+      return current.trim() ? tag + '\n\n' + current : tag + '\n\n';
     });
   };
 
