@@ -9,7 +9,11 @@ function hostOf(url){ try{return new URL(url).hostname.replace(/^www\./,'');}cat
 function favicon(url){ try{return new URL('/favicon.ico',url).href;}catch{return null;} }
 function person(name,organization,role=null){ return {name,full_name:name,organization:organization||null,org:organization||null,role,title:null,email:null,photo_url:null}; }
 
-const EVENTS=[
+const PHASE12_EVENTS = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), 'data', 'phase12-verified-expansion.json'), 'utf8')
+);
+
+const EVENTS=[...PHASE12_EVENTS,
   {
     title:'33rd International Meeting on Organic Geochemistry (IMOG 2027)',
     url:'https://imogconference.org/',
@@ -142,7 +146,7 @@ function sectionAvailability(e){
   return {
     overview:'stated',
     call_for_papers:e.cfp?'stated':'not_announced',
-    fees_pricing:'not_announced',
+    fees_pricing:e.fees?'stated':'not_announced',
     program_agenda:e.program?'stated':'not_announced',
     keynote_speakers:Array.isArray(e.speakers)&&e.speakers.length?'stated':'not_announced',
     technical_committee:Array.isArray(e.committee)&&e.committee.length?'stated':'not_announced',
@@ -186,7 +190,7 @@ async function main(){
       await db.execute({sql:`INSERT INTO extracted_conferences(source_url,overview,call_for_papers,program_agenda,keynote_speakers,technical_committee,sponsors_exhibitors,venue_accommodation,fees_pricing,community,extraction_metadata,updated_at)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
         ON CONFLICT(source_url) DO UPDATE SET overview=excluded.overview,call_for_papers=excluded.call_for_papers,program_agenda=excluded.program_agenda,keynote_speakers=excluded.keynote_speakers,technical_committee=excluded.technical_committee,sponsors_exhibitors=excluded.sponsors_exhibitors,venue_accommodation=excluded.venue_accommodation,fees_pricing=excluded.fees_pricing,community=excluded.community,extraction_metadata=excluded.extraction_metadata,updated_at=datetime('now')`,
-        args:[e.url,JSON.stringify(overview),JSON.stringify(e.cfp||{}),JSON.stringify(e.program?{sessions:e.program.sessions||[],themes:e.program.themes||[],overview:e.program.overview||null}:{sessions:[],themes:[],overview:null}),JSON.stringify(e.speakers||[]),JSON.stringify(e.committee||[]),JSON.stringify(e.sponsors||[]),JSON.stringify(venue),JSON.stringify({}),JSON.stringify(e.community||{}),JSON.stringify(meta)]});
+        args:[e.url,JSON.stringify(overview),JSON.stringify(e.cfp||{}),JSON.stringify(e.program?{sessions:e.program.sessions||[],themes:e.program.themes||[],overview:e.program.overview||null}:{sessions:[],themes:[],overview:null}),JSON.stringify(e.speakers||[]),JSON.stringify(e.committee||[]),JSON.stringify(e.sponsors||[]),JSON.stringify(venue),JSON.stringify(e.fees||{}),JSON.stringify(e.community||{}),JSON.stringify(meta)]});
       synced++;
     }
     console.log('[requested-expansion] synced='+synced+' rich_6plus_tabs='+rich6+' total='+EVENTS.length);

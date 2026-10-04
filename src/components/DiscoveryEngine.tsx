@@ -367,6 +367,7 @@ const DISCOVERY_SUGGESTIONS = [
   'Materials Science',
   'Energy',
   'Petroleum & Geoscience',
+  'Natural Gas & LNG',
   'Renewable Energy',
   'Hydrogen & CCUS',
   'Mining & Minerals',
