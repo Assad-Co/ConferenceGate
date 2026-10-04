@@ -21,6 +21,8 @@ import {
   RefreshCw,
   Leaf,
   ArrowRight,
+  ArrowUpDown,
+  CheckCircle2,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange, formatDay, formatMonthShort, conferenceDurationDays } from '../utils/date';
@@ -305,6 +307,27 @@ function formatChipLabel(format?: string | null): string | null {
   return null;
 }
 
+function resultDetailCoverage(result: LiveSearchResult): number {
+  return Math.min(9, 1 + new Set(result.sections || []).size);
+}
+
+function preferredResultTab(result: LiveSearchResult): ExternalDetailTab {
+  if (result.cfpOpen && result.sections?.includes('cfp')) return 'cfp';
+  if (result.sections?.includes('fees')) return 'fees';
+  if (result.sections?.includes('agenda')) return 'agenda';
+  if (result.sections?.includes('speakers')) return 'speakers';
+  return 'overview';
+}
+
+function preferredResultAction(result: LiveSearchResult): string {
+  const tab = preferredResultTab(result);
+  if (tab === 'cfp') return 'Review Open CFP';
+  if (tab === 'fees') return 'Check Fees';
+  if (tab === 'agenda') return 'View Program';
+  if (tab === 'speakers') return 'View Speakers';
+  return 'View Details';
+}
+
 /** The host the organiser's mark came from, for the badge's tooltip. */
 function organiserHost(result: LiveSearchResult): string {
   try {
@@ -550,6 +573,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [timingFilter, setTimingFilter] = useState('');
   const [cfpOnly, setCfpOnly] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [richDetailsOnly, setRichDetailsOnly] = useState(false);
+  const [resultSort, setResultSort] = useState<'recommended' | 'soonest' | 'complete' | 'cfp'>('recommended');
 
   // The real lowest published registration price for a conference — the figure a reader actually
   // compares against when deciding whether an event is in their budget. Only conferences with at
@@ -701,6 +726,22 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     if (cfpOnly && result.cfpOpen !== true) return false;
     return true;
   });
+
+  const displayedWebResults = [...visibleWebResults]
+    .filter((result) => !richDetailsOnly || resultDetailCoverage(result) >= 6)
+    .sort((left, right) => {
+      if (resultSort === 'soonest') {
+        const leftDate = left.startDate ? Date.parse(left.startDate) : Number.POSITIVE_INFINITY;
+        const rightDate = right.startDate ? Date.parse(right.startDate) : Number.POSITIVE_INFINITY;
+        return leftDate - rightDate;
+      }
+      if (resultSort === 'complete') return resultDetailCoverage(right) - resultDetailCoverage(left);
+      if (resultSort === 'cfp') {
+        const cfpDifference = Number(right.cfpOpen === true) - Number(left.cfpOpen === true);
+        return cfpDifference || resultDetailCoverage(right) - resultDetailCoverage(left);
+      }
+      return 0;
+    });
 
   const locationOptions = useMemo(() => {
     // Built from the conferences actually loaded, never from the static table.
@@ -1145,6 +1186,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   setTimingFilter('');
                   setCategoryFilter('');
                   setCfpOnly(false);
+                  setRichDetailsOnly(false);
+                  setResultSort('recommended');
                   setPriceRange(null);
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
@@ -1376,6 +1419,45 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </button>
         </div>
 
+        {webResults && webResults.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900">{displayedWebResults.length} conference{displayedWebResults.length === 1 ? '' : 's'} ready to compare</div>
+                <div className="text-[10px] text-slate-500">Sort by timing, completeness or open CFP status before opening a conference.</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setRichDetailsOnly((value) => !value)}
+                className={richDetailsOnly
+                  ? 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-white border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-700'}
+              >
+                6+ detail sections
+              </button>
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={resultSort}
+                  onChange={(event) => setResultSort(event.target.value as typeof resultSort)}
+                  aria-label="Sort conference results"
+                  className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-hidden"
+                >
+                  <option value="recommended">Recommended</option>
+                  <option value="soonest">Soonest first</option>
+                  <option value="complete">Most complete</option>
+                  <option value="cfp">Open CFP first</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        )}
+
         {webSearchLoading && (!webResults || webResults.length === 0) && (
           <div className="bg-white rounded-2xl border border-slate-200 flex items-center justify-center gap-2 py-12 text-xs text-slate-400 font-semibold">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -1390,7 +1472,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         )}
 
-        {!webSearchLoading && !webSearchError && webResults && visibleWebResults.length === 0 && (
+        {!webSearchLoading && !webSearchError && webResults && displayedWebResults.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 md:p-12 text-center">
             <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center mb-3">
               <Search className="w-5 h-5" />
@@ -1419,9 +1501,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
         )}
 
-        {!webSearchError && webResults && visibleWebResults.length > 0 && (
+        {!webSearchError && webResults && displayedWebResults.length > 0 && (
           <div className="space-y-6">
-            {visibleWebResults.map((result, idx) => (
+            {displayedWebResults.map((result, idx) => (
               <div
                 key={idx}
                 onClick={() => onOpenExternalResult(result)}
@@ -1439,9 +1521,21 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
                 {/* Info Block */}
                 <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-                  <h2 className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">
-                    {result.title}
-                  </h2>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h2 className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug min-w-0 flex-1">
+                      {result.title}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                      {result.cfpOpen && (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">Open CFP</span>
+                      )}
+                      <span className={resultDetailCoverage(result) >= 6
+                        ? 'px-2.5 py-1 rounded-full border text-[10px] font-bold bg-indigo-50 border-indigo-200 text-indigo-700'
+                        : 'px-2.5 py-1 rounded-full border text-[10px] font-bold bg-slate-50 border-slate-200 text-slate-600'}>
+                        {resultDetailCoverage(result)}/9 details
+                      </span>
+                    </div>
+                  </div>
 
                   {/* When and where, as data rather than prose.
                       The card's one line was `snippet`, which for a catalogue record is exactly
@@ -1535,10 +1629,17 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 {/* The action sits beside the conference and vertically centred, rather than under
                     a rule at the bottom of a tall card. */}
                 <div className="shrink-0 flex sm:justify-end">
-                  <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-xl transition-colors">
-                    View Details
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenExternalResult(result, preferredResultTab(result));
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-xl transition-colors"
+                  >
+                    {preferredResultAction(result)}
                     <ArrowRight className="w-4 h-4 shrink-0" />
-                  </span>
+                  </button>
                 </div>
               </div>
             ))}
