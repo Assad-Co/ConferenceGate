@@ -85,6 +85,28 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
         </button>
       </div>
 
+      {submissions.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-xs text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mx-auto">
+            <FileText className="w-7 h-7" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold text-slate-900">Start your first abstract submission</h2>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Choose a ConferenceGate conference with an open call for papers, prepare the required author and abstract details, and submit it here. Once submitted, real status, reviewer assignments, decisions and revision requests will appear in this tracker.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenNewSubmission}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Submit Your First Abstract
+          </button>
+          <p className="text-[10px] text-slate-400">ConferenceGate will not invent review progress for submissions made outside the platform.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Submissions Sidebar */}
         <div className="space-y-3">
@@ -358,6 +380,7 @@ export const AbstractTrackerView: React.FC<AbstractTrackerViewProps> = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
