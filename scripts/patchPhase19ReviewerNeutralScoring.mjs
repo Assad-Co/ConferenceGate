@@ -62,7 +62,7 @@ replace(
 replace(
 `                      <span className="text-blue-700 font-extrabold">{(scores as any)[item.key]}/10</span>`,
 `                      <span className="text-blue-700 font-extrabold">
-                        {(scores as any)[item.key] > 0 ? `${(scores as any)[item.key]}/10` : 'Not scored'}
+                        {(scores as any)[item.key] > 0 ? String((scores as any)[item.key]) + '/10' : 'Not scored'}
                       </span>`,
 'score label'
 );
