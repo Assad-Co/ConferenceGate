@@ -516,6 +516,31 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     count > 0 ? `${name} (${count})` : name;
 
 
+  // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
+  // only true while polling is actually still happening. Once it's given up, say so and point at
+  // reloading, rather than spinning forever over a check that has already stopped.
+  const checkingOrGaveUp = (_checkingText: string) => (
+    <EmptyExtractState
+      message="This information is not available in the stored Conference Gate record yet."
+      sourceUrl={result.link}
+    />
+  );
+
+  const submissionLink = data?.submissionUrl || result.link;
+  const cfpClosed =
+    /\b(closed|ended|expired)\b/i.test(data?.cfpStatus || '') ||
+    Boolean(data?.cfpDeadline && /^\d{4}-\d{2}-\d{2}$/.test(data.cfpDeadline) && data.cfpDeadline < new Date().toISOString().slice(0, 10));
+  const upcomingImportantDates = (data?.importantDates || []).filter(
+    (entry) => !isOlderThanUpcomingCutoff(entry.date)
+  );
+  const upcomingRegistrationFees = (data?.registrationFees || []).filter(
+    (fee) => !fee.deadline || !isOlderThanUpcomingCutoff(fee.deadline)
+  );
+  const upcomingEarlyBirdDeadline =
+    data?.earlyBirdDeadline && !isOlderThanUpcomingCutoff(data.earlyBirdDeadline)
+      ? data.earlyBirdDeadline
+      : null;
+
   const detailTabs: Array<{ id: ExternalDetailTab; label: string }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'cfp', label: 'Call for Papers' },
@@ -542,30 +567,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     return 'Not retrieved';
   };
 
-  // Same honesty split as incompleteLabel above, but for the body of a section: a spinner is
-  // only true while polling is actually still happening. Once it's given up, say so and point at
-  // reloading, rather than spinning forever over a check that has already stopped.
-  const checkingOrGaveUp = (_checkingText: string) => (
-    <EmptyExtractState
-      message="This information is not available in the stored Conference Gate record yet."
-      sourceUrl={result.link}
-    />
-  );
-
-  const submissionLink = data?.submissionUrl || result.link;
-  const cfpClosed =
-    /\b(closed|ended|expired)\b/i.test(data?.cfpStatus || '') ||
-    Boolean(data?.cfpDeadline && /^\d{4}-\d{2}-\d{2}$/.test(data.cfpDeadline) && data.cfpDeadline < new Date().toISOString().slice(0, 10));
-  const upcomingImportantDates = (data?.importantDates || []).filter(
-    (entry) => !isOlderThanUpcomingCutoff(entry.date)
-  );
-  const upcomingRegistrationFees = (data?.registrationFees || []).filter(
-    (fee) => !fee.deadline || !isOlderThanUpcomingCutoff(fee.deadline)
-  );
-  const upcomingEarlyBirdDeadline =
-    data?.earlyBirdDeadline && !isOlderThanUpcomingCutoff(data.earlyBirdDeadline)
-      ? data.earlyBirdDeadline
-      : null;
   const upcomingEventDate = upcomingImportantDates.find((entry) =>
     /\b(conference|event|meeting|symposium|congress|start|opening|end|closing|dates?)\b/i.test(entry.label)
   )?.date;
