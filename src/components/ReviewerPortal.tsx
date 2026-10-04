@@ -245,20 +245,21 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   // Form State for Evaluation
   const [scores, setScores] = useState({
-    technicalQuality: 8,
-    originality: 9,
-    relevance: 9,
-    innovation: 8,
-    methodology: 8,
-    clarity: 9,
-    scientificValue: 9,
-    presentationPotential: 8,
+    technicalQuality: 0,
+    originality: 0,
+    relevance: 0,
+    innovation: 0,
+    methodology: 0,
+    clarity: 0,
+    scientificValue: 0,
+    presentationPotential: 0,
   });
   const [commentsToAuthor, setCommentsToAuthor] = useState('');
   const [confidentialComments, setConfidentialComments] = useState('');
   const [recommendation, setRecommendation] = useState<
-    'Accept' | 'Accept with Revision' | 'Oral Presentation' | 'Poster Presentation' | 'Major Revision' | 'Reject'
-  >('Oral Presentation');
+    '' | 'Accept' | 'Accept with Revision' | 'Oral Presentation' | 'Poster Presentation' | 'Major Revision' | 'Reject'
+  >('');
+  const scoringComplete = Object.values(scores).every((score) => score >= 1 && score <= 10);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const selectedSub = myAssignedSubmissions.find((s) => s.id === selectedAbstractId) || myAssignedSubmissions[0];
@@ -271,7 +272,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   const handleEvaluateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentsToAuthor.trim()) return;
+    if (!commentsToAuthor.trim() || !scoringComplete || !recommendation) return;
 
     const scoreValues = Object.values(scores) as number[];
     const overall = Number(
@@ -291,7 +292,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
       overallScore: overall,
       commentsToAuthor,
       confidentialComments,
-      recommendation,
+      recommendation: recommendation as Exclude<typeof recommendation, ''>,
       date: new Date().toISOString().split('T')[0],
     });
 
@@ -841,11 +842,13 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                   <div key={item.key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <span>{item.label}</span>
-                      <span className="text-blue-700 font-extrabold">{(scores as any)[item.key]}/10</span>
+                      <span className="text-blue-700 font-extrabold">
+                        {(scores as any)[item.key] > 0 ? String((scores as any)[item.key]) + '/10' : 'Not scored'}
+                      </span>
                     </div>
                     <input
                       type="range"
-                      min="1"
+                      min="0"
                       max="10"
                       value={(scores as any)[item.key]}
                       onChange={(e) =>
@@ -896,10 +899,12 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 Final Recommendation
               </label>
               <select
+                required
                 value={recommendation}
                 onChange={(e) => setRecommendation(e.target.value as any)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-bold text-slate-900"
               >
+                <option value="" disabled>Select a recommendation…</option>
                 <option value="Oral Presentation">Accept for Oral Presentation</option>
                 <option value="Poster Presentation">Accept for Poster Presentation</option>
                 <option value="Accept with Revision">Accept with Minor Revision</option>
@@ -915,10 +920,14 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
               </div>
             )}
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-[10px] text-slate-500">
+                Score all eight criteria, write author feedback, and choose a recommendation before submitting.
+              </p>
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-2"
+                disabled={!scoringComplete || !commentsToAuthor.trim() || !recommendation}
+                className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center gap-2 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
                 <span>Submit Official Review</span>
