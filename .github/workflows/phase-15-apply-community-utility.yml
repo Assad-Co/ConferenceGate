@@ -1,0 +1,29 @@
+name: Phase 15 Apply Community Utility
+
+on:
+  push:
+    branches: [phase-15-community-utility]
+    paths:
+      - 'scripts/patchPhase15CommunityUtility.mjs'
+      - '.github/workflows/phase-15-apply-community-utility.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-15-community-utility
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/patchPhase15CommunityUtility.mjs
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/CommunityFeed.tsx
+          git commit -m "Phase 15 — Make Community functional and filterable"
+          git push origin HEAD:phase-15-community-utility
