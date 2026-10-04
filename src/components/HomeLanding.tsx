@@ -25,6 +25,7 @@ import { ConferenceLink } from './ConferenceLink';
 import { ReactionType } from './reactionMeta';
 import { resolveAvatar } from '../utils/avatar';
 import { formatDate, formatDateRange } from '../utils/date';
+import type { LiveSearchResult } from '../api/search';
 
 interface HomeLandingProps {
   conferences: Conference[];
@@ -34,6 +35,8 @@ interface HomeLandingProps {
   onSearchQuery: (query: string) => void;
   userProfile: UserProfile;
   posts: Post[];
+  catalogueHighlights?: LiveSearchResult[];
+  onOpenCatalogueConference?: (result: LiveSearchResult) => void;
   onAddPost: (content: string) => void;
   onReact: (postId: string, reaction: ReactionType) => void;
   onToggleRepost: (postId: string) => void;
@@ -168,6 +171,8 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   onSearchQuery,
   userProfile,
   posts,
+  catalogueHighlights = [],
+  onOpenCatalogueConference,
   onAddPost,
   onReact,
   onToggleRepost,
@@ -196,6 +201,8 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   const featuredPool = [...safeConferences].sort(
     (a, b) => new Date(a.dates.start).getTime() - new Date(b.dates.start).getTime()
   );
+  const worldwideHighlights = catalogueHighlights.slice(0, 4);
+  const worldwideOpenCfps = catalogueHighlights.filter((item) => item.cfpOpen).slice(0, 4);
 
   const quickLinks = [
     { label: 'Discover Conferences', icon: Layers, tab: 'discover' },
@@ -359,6 +366,45 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
           </div>
         </div>
 
+        {worldwideHighlights.length > 0 && (
+          <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Worldwide Conference Radar</div>
+                <div className="text-sm font-bold text-slate-900 mt-0.5">Upcoming from the live ConferenceGate catalogue</div>
+              </div>
+              <button type="button" onClick={() => onNavigateTab('discover')} className="text-[11px] font-bold text-blue-700 hover:text-blue-900 shrink-0">View all</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:[&>*:nth-child(n+3)]:border-t divide-slate-100">
+              {worldwideHighlights.map((item) => (
+                <button
+                  key={item.link + item.title}
+                  type="button"
+                  onClick={() => onOpenCatalogueConference?.(item)}
+                  className="p-4 text-left hover:bg-slate-50 transition-colors border-slate-100 sm:odd:border-r group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 font-extrabold text-sm overflow-hidden">
+                      {item.favicon ? <img src={item.favicon} alt="" className="w-full h-full object-contain p-1" /> : item.title.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-blue-700 transition-colors">{item.title}</div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                        {item.startDate && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDateRange(item.startDate, item.endDate || item.startDate)}</span>}
+                        {(item.location?.city || item.location?.country) && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[item.location?.city, item.location?.country].filter(Boolean).join(', ')}</span>}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {item.cfpOpen && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold">Open CFP</span>}
+                        {item.category && <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[9px] font-bold">{item.category}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Highlights teaser: a couple of top posts, not the full feed (see Feed tab for that) */}
         {posts.length === 0 ? (
           <div className="bg-white rounded-lg border border-dashed border-slate-300 p-10 text-center space-y-2">
@@ -436,6 +482,23 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
 
       {/* Right Sidebar: Deadlines + Recommendations */}
       <aside className="hidden xl:flex flex-col gap-4 sticky top-[72px]">
+        {worldwideOpenCfps.length > 0 && (
+          <div className="bg-white rounded-lg border border-slate-200 shadow-xs">
+            <div className="px-4 py-3 border-b border-slate-100">
+              <div className="font-bold text-sm text-slate-900">Open CFPs worldwide</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Verified catalogue records currently accepting submissions</div>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {worldwideOpenCfps.map((item) => (
+                <button key={item.link + item.title} type="button" onClick={() => onOpenCatalogueConference?.(item)} className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="text-xs font-bold text-slate-900 line-clamp-2">{item.title}</div>
+                  <div className="text-[10px] text-emerald-700 font-bold mt-1">Open call for papers</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs">
           <div className="px-4 py-3 border-b border-slate-100 font-bold text-sm text-slate-900">
             Upcoming Abstract Deadlines
