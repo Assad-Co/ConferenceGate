@@ -4,7 +4,8 @@ on:
   push:
     branches: [phase-14-discovery-decision-tools]
     paths:
-      - 'scripts/patchPhase14DiscoveryDecisionTools.mjs'
+      - 'scripts/patchPhase14DiscoveryV2.mjs'
+      - 'scripts/patchPhase14DetailV2.mjs'
       - '.github/workflows/phase-14-apply-discovery-decision-tools.yml'
 
 permissions:
@@ -20,8 +21,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Apply Discovery and detail usability patch
-        run: node scripts/patchPhase14DiscoveryDecisionTools.mjs
+      - name: Apply Discovery decision tools
+        run: node scripts/patchPhase14DiscoveryV2.mjs
+      - name: Apply conference detail intelligence
+        run: node scripts/patchPhase14DetailV2.mjs
       - name: Commit generated source changes
         run: |
           git config user.name "github-actions[bot]"
