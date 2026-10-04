@@ -76,7 +76,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   const [hiddenPostIds, setHiddenPostIds] = useState<Record<string, boolean>>({});
   const [moreMenuOpenId, setMoreMenuOpenId] = useState<string | null>(null);
   const [feedSearch, setFeedSearch] = useState('');
-  const [feedFilter, setFeedFilter] = useState<'all' | 'cfp' | 'announcement' | 'speaker' | 'sponsorship' | 'review' | 'celebration' | 'saved'>('all');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'cfp' | 'announcement' | 'achievement' | 'speaker' | 'sponsorship' | 'review' | 'celebration' | 'saved'>('all');
   const [composerConferenceId, setComposerConferenceId] = useState('');
   const { showToast } = useToast();
 
@@ -127,6 +127,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
     try {
       await onAddPost(newPostText);
       setNewPostText('');
+      setComposerConferenceId('');
       setComposerOpen(false);
     } catch (error) {
       showToast({
@@ -307,6 +308,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
                     onClick={() => {
                       setComposerOpen(false);
                       setNewPostText('');
+                      setComposerConferenceId('');
                     }}
                     className="px-3 py-2 text-slate-500 hover:text-slate-800 font-bold text-xs rounded-xl cursor-pointer"
                   >
@@ -348,6 +350,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
             ['all', 'All'],
             ['cfp', 'CFPs'],
             ['announcement', 'Announcements'],
+            ['achievement', 'Achievements'],
             ['speaker', 'Speakers'],
             ['sponsorship', 'Sponsorship'],
             ['review', 'Peer Review'],
