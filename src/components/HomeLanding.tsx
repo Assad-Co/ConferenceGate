@@ -203,6 +203,9 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
   );
   const worldwideHighlights = catalogueHighlights.slice(0, 4);
   const worldwideOpenCfps = catalogueHighlights.filter((item) => item.cfpOpen).slice(0, 4);
+  const nextLocalDeadline = upcomingDeadlines[0] || null;
+  const openCfpCount = catalogueHighlights.filter((item) => item.cfpOpen).length + upcomingDeadlines.length;
+  const upcomingCount = catalogueHighlights.length + upcomingConferences.length;
 
   const quickLinks = [
     { label: 'Discover Conferences', icon: Layers, tab: 'discover' },
@@ -365,6 +368,51 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </button>
           </div>
         </div>
+
+        <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Your Conference Action Center</div>
+            <div className="text-sm font-bold text-slate-900 mt-0.5">Useful next steps from live conference data</div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => exploreField('Open call for papers')}
+              className="p-4 text-left hover:bg-emerald-50 transition-colors border-b sm:border-r xl:border-b-0 border-slate-100"
+            >
+              <div className="flex items-center gap-2 text-emerald-700"><FileText className="w-4 h-4" /><span className="text-[10px] font-bold uppercase">Open CFPs</span></div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">{openCfpCount}</div>
+              <div className="text-[11px] text-slate-500 mt-1">Find conferences accepting submissions now</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => nextLocalDeadline ? onSelectConference(nextLocalDeadline) : onNavigateTab('discover')}
+              className="p-4 text-left hover:bg-amber-50 transition-colors border-b xl:border-b-0 xl:border-r border-slate-100"
+            >
+              <div className="flex items-center gap-2 text-amber-700"><Clock className="w-4 h-4" /><span className="text-[10px] font-bold uppercase">Next deadline</span></div>
+              <div className="text-sm font-extrabold text-slate-900 mt-2 line-clamp-2">{nextLocalDeadline ? nextLocalDeadline.title : 'Browse deadlines'}</div>
+              <div className="text-[11px] text-slate-500 mt-1">{nextLocalDeadline ? formatDate(nextLocalDeadline.abstractDeadline) : 'See live CFP dates in Discover'}</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('discover')}
+              className="p-4 text-left hover:bg-blue-50 transition-colors border-b sm:border-b-0 sm:border-r border-slate-100"
+            >
+              <div className="flex items-center gap-2 text-blue-700"><Globe className="w-4 h-4" /><span className="text-[10px] font-bold uppercase">Worldwide radar</span></div>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">{upcomingCount}</div>
+              <div className="text-[11px] text-slate-500 mt-1">Upcoming conferences currently surfaced for you</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('profile')}
+              className="p-4 text-left hover:bg-indigo-50 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-indigo-700"><ShieldCheck className="w-4 h-4" /><span className="text-[10px] font-bold uppercase">Professional profile</span></div>
+              <div className="text-sm font-extrabold text-slate-900 mt-2">Strengthen your conference identity</div>
+              <div className="text-[11px] text-slate-500 mt-1">Keep expertise, publications and conference activity current</div>
+            </button>
+          </div>
+        </section>
 
         {worldwideHighlights.length > 0 && (
           <section className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
