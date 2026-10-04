@@ -21,6 +21,7 @@ const steps = [
   ['node', ['scripts/patchImportedPublicationGuards.mjs']],
   ['node', ['scripts/repairApifyDiscoveryEvidence.mjs']],
   ['node', ['scripts/syncRequestedCategoryExpansion.mjs']],
+  ['node', ['scripts/syncPhase13GlobalDepth.mjs']],
   ['node', ['scripts/coverageDrivenCategoryHarvest.mjs'], coverageEnv, true],
   ['node', ['scripts/enrichConferenceImages.mjs'], { IMAGE_ENRICH_LIMIT: '250' }, true],
   ['npx', ['tsx', 'server/discovery/cli.ts', 'automate', '--target', '5000', '--published-target', '5000', '--batch-pages', '500', '--enrichment-limit', '600', '--max-search-queries', '14', '--enrichment-search-queries', '6', '--max-jina-pages', '100', '--enrichment-jina-pages', '50', '--schedule-hours', '8', '--run-time-budget-ms', '3300000', '--repeat-for-ms', '25200000', '--quiet']],
