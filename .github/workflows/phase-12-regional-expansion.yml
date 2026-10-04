@@ -1,0 +1,35 @@
+name: Phase 12 Regional Conference Expansion
+
+on:
+  push:
+    branches: [phase-12-regional-conference-depth]
+    paths:
+      - '.github/workflows/phase-12-regional-expansion.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-12-regional-conference-depth
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply verified regional expansion
+        run: node scripts/phase12RegionalExpansionPatch.mjs
+      - name: Validate sync and production build
+        run: |
+          node --check scripts/syncRequestedCategoryExpansion.mjs
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Commit canonical regional expansion
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/phase12-regional-expansion.json scripts/syncRequestedCategoryExpansion.mjs
+          git commit -m "Phase 12 — Expand Gulf and Latin America conference coverage"
+          git push origin HEAD:phase-12-regional-conference-depth
