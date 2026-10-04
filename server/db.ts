@@ -378,6 +378,37 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS organizer_committee_tasks (
+      id TEXT PRIMARY KEY,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      assignee_name TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      due_date TEXT,
+      priority TEXT NOT NULL DEFAULT 'Medium' CHECK(priority IN ('Low','Medium','High')),
+      status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','In Progress','Completed')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_organizer_committee_tasks_owner
+      ON organizer_committee_tasks(organizer_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS organizer_meeting_plans (
+      id TEXT PRIMARY KEY,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      title TEXT NOT NULL,
+      attendees TEXT NOT NULL DEFAULT '[]',
+      meeting_date TEXT NOT NULL,
+      meeting_time TEXT NOT NULL,
+      organizer_timezone TEXT NOT NULL,
+      meeting_link TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_organizer_meeting_plans_owner
+      ON organizer_meeting_plans(organizer_id, meeting_date, meeting_time);
+
     CREATE TABLE IF NOT EXISTS created_conferences (
       id TEXT PRIMARY KEY,
       organizer_id TEXT NOT NULL REFERENCES users(id),

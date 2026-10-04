@@ -222,6 +222,51 @@ try {
     throw new Error('Member-created conference was not stored in the shared owner workspace.');
   }
 
+  const createdTask = await request('/api/activity/organizer/committee-tasks', {
+    method: 'POST',
+    cookie: member.cookie,
+    body: {
+      assignee: 'Technical Committee Chair',
+      title: 'Review Track 1 assignments',
+      description: 'Confirm reviewer coverage.',
+      dueDate: '2027-04-20',
+      priority: 'High',
+    },
+  });
+  if (!createdTask?.task?.id || createdTask.task.status !== 'Pending') {
+    throw new Error('Organizer committee task was not persisted.');
+  }
+  const ownerTasks = await request('/api/activity/organizer/committee-tasks', { cookie: owner.cookie });
+  if (!(ownerTasks.tasks || []).some((task) => task.id === createdTask.task.id)) {
+    throw new Error('Organizer task was not shared across workspace seats.');
+  }
+  const progressedTask = await request(`/api/activity/organizer/committee-tasks/${createdTask.task.id}`, {
+    method: 'PATCH',
+    cookie: owner.cookie,
+    body: { status: 'In Progress' },
+  });
+  if (progressedTask?.task?.status !== 'In Progress') {
+    throw new Error('Organizer task status was not persisted.');
+  }
+
+  const createdMeeting = await request('/api/activity/organizer/meeting-plans', {
+    method: 'POST',
+    cookie: member.cookie,
+    body: {
+      title: 'Committee Planning Sync',
+      attendees: ['Technical Committee Chair'],
+      date: '2027-04-21',
+      time: '10:00',
+      organizerTimezone: 'Asia/Dubai',
+      meetingLink: 'https://meet.example.com/conferencegate-smoke',
+    },
+  });
+  if (!createdMeeting?.meeting?.id) throw new Error('Organizer meeting plan was not persisted.');
+  const ownerMeetings = await request('/api/activity/organizer/meeting-plans', { cookie: owner.cookie });
+  if (!(ownerMeetings.meetings || []).some((meeting) => meeting.id === createdMeeting.meeting.id)) {
+    throw new Error('Organizer meeting plan was not shared across workspace seats.');
+  }
+
   const adminEnterpriseReport = await request('/api/workspaces/enterprise-report', {
     cookie: member.cookie,
   });
@@ -255,6 +300,21 @@ try {
     body: {
       id: 'conf_viewer_must_fail',
       title: 'Viewer Must Not Create',
+    },
+  });
+  await request('/api/activity/organizer/committee-tasks', {
+    method: 'POST',
+    cookie: member.cookie,
+    expectedStatus: 403,
+    body: { assignee: 'Blocked', title: 'Viewer must not write', priority: 'Low' },
+  });
+  await request('/api/activity/organizer/meeting-plans', {
+    method: 'POST',
+    cookie: member.cookie,
+    expectedStatus: 403,
+    body: {
+      title: 'Viewer must not schedule', attendees: ['Blocked'], date: '2027-04-22', time: '11:00',
+      organizerTimezone: 'UTC', meetingLink: 'https://meet.example.com/blocked'
     },
   });
 

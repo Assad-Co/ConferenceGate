@@ -55,6 +55,13 @@ import {
   searchProfessionals,
   createProfessionalInvitation,
   type ProfessionalDirectoryProfile,
+  fetchOrganizerCommitteeTasks,
+  createOrganizerCommitteeTask,
+  updateOrganizerCommitteeTaskStatus,
+  fetchOrganizerMeetingPlans,
+  createOrganizerMeetingPlan,
+  type OrganizerCommitteeTask,
+  type OrganizerMeetingPlan,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
 import {
@@ -831,35 +838,41 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     dueDate: '',
     priority: 'Medium',
   });
-  const [committeeTasks, setCommitteeTasks] = useState<
-    Array<{
-      id: string;
-      assignee: string;
-      title: string;
-      description: string;
-      dueDate: string;
-      priority: string;
-      status: 'Pending' | 'In Progress' | 'Completed';
-    }>
-  >([]);
+  const [committeeTasks, setCommitteeTasks] = useState<OrganizerCommitteeTask[]>([]);
 
-  const handleAssignTask = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchOrganizerCommitteeTasks().then(setCommitteeTasks).catch(() => {});
+  }, []);
+
+  const handleAssignTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskDraft.assignee || !taskDraft.title.trim()) return;
-    setCommitteeTasks((prev) => [
-      { id: `task_${Date.now()}`, ...taskDraft, status: 'Pending' },
-      ...prev,
-    ]);
-    setTaskDraft({ assignee: taskDraft.assignee, title: '', description: '', dueDate: '', priority: 'Medium' });
+    try {
+      const task = await createOrganizerCommitteeTask({
+        assignee: taskDraft.assignee,
+        title: taskDraft.title.trim(),
+        description: taskDraft.description.trim(),
+        dueDate: taskDraft.dueDate,
+        priority: taskDraft.priority as 'Low' | 'Medium' | 'High',
+      });
+      setCommitteeTasks((prev) => [task, ...prev]);
+      setTaskDraft({ assignee: taskDraft.assignee, title: '', description: '', dueDate: '', priority: 'Medium' });
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not save task', message: error instanceof Error ? error.message : 'Please try again.' });
+    }
   };
 
-  const handleCycleTaskStatus = (id: string) => {
-    const order: Array<'Pending' | 'In Progress' | 'Completed'> = ['Pending', 'In Progress', 'Completed'];
-    setCommitteeTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: order[(order.indexOf(t.status) + 1) % order.length] } : t
-      )
-    );
+  const handleCycleTaskStatus = async (id: string) => {
+    const order: Array<OrganizerCommitteeTask['status']> = ['Pending', 'In Progress', 'Completed'];
+    const current = committeeTasks.find((task) => task.id === id);
+    if (!current) return;
+    const status = order[(order.indexOf(current.status) + 1) % order.length];
+    try {
+      const updated = await updateOrganizerCommitteeTaskStatus(id, status);
+      setCommitteeTasks((prev) => prev.map((task) => task.id === id ? updated : task));
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not update task', message: error instanceof Error ? error.message : 'Please try again.' });
+    }
   };
 
   const [followUpDraft, setFollowUpDraft] = useState({
@@ -912,17 +925,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     organizerTimezone: 'Europe/London',
     meetingLink: '',
   });
-  const [scheduledMeetings, setScheduledMeetings] = useState<
-    Array<{
-      id: string;
-      title: string;
-      attendees: string[];
-      date: string;
-      time: string;
-      organizerTimezone: string;
-      meetingLink: string;
-    }>
-  >([]);
+  const [scheduledMeetings, setScheduledMeetings] = useState<OrganizerMeetingPlan[]>([]);
+
+  useEffect(() => {
+    fetchOrganizerMeetingPlans().then(setScheduledMeetings).catch(() => {});
+  }, []);
 
   const toggleMeetingAttendee = (name: string) => {
     setMeetingDraft((prev) => ({
@@ -966,7 +973,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     });
   }, [meetingDraft.date, meetingDraft.time, meetingDraft.organizerTimezone]);
 
-  const handleScheduleMeeting = (e: React.FormEvent) => {
+  const handleScheduleMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
       !meetingDraft.title.trim() ||
@@ -974,23 +981,21 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       !meetingDraft.time ||
       !meetingDraft.meetingLink.trim() ||
       meetingDraft.attendees.length === 0
-    )
-      return;
-    setScheduledMeetings((prev) => [
-      {
-        id: `mtg_${Date.now()}`,
-        ...meetingDraft,
-      },
-      ...prev,
-    ]);
-    setMeetingDraft({
-      title: '',
-      attendees: [],
-      date: '',
-      time: '',
-      organizerTimezone: meetingDraft.organizerTimezone,
-      meetingLink: '',
-    });
+    ) return;
+    try {
+      const meeting = await createOrganizerMeetingPlan({ ...meetingDraft, title: meetingDraft.title.trim(), meetingLink: meetingDraft.meetingLink.trim() });
+      setScheduledMeetings((prev) => [meeting, ...prev]);
+      setMeetingDraft({
+        title: '',
+        attendees: [],
+        date: '',
+        time: '',
+        organizerTimezone: meetingDraft.organizerTimezone,
+        meetingLink: '',
+      });
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not save meeting plan', message: error instanceof Error ? error.message : 'Please try again.' });
+    }
   };
 
   const verifiedSponsorCount = new Set(
@@ -2662,7 +2667,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               <ClipboardList className="w-5 h-5 text-blue-600" />
               <div>
                 <h3 className="font-bold text-sm text-slate-900">Committee Task Planning</h3>
-                <p className="text-[10px] text-amber-700 mt-0.5">Session-only planning board. Tasks are not yet persisted or delivered to members.</p>
+                <p className="text-[10px] text-amber-700 mt-0.5">Saved to this Organizer workspace. Task records persist across sessions; assigning a task here does not send it to the member yet.</p>
               </div>
             </div>
             <form onSubmit={handleAssignTask} className="space-y-3 text-xs">
@@ -3011,7 +3016,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
                 <p className="text-[10px] text-amber-700">
-                  Planning only: ConferenceGate does not create the room, send invitations, or persist this plan yet. Paste a real link from your conferencing account.
+                  Saved to this Organizer workspace. ConferenceGate does not create the external room or send invitations; paste a real link from your conferencing account.
                 </p>
               </div>
 
