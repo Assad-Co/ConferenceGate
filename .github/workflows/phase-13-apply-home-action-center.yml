@@ -1,0 +1,35 @@
+name: Phase 13 Apply Home Action Center
+
+on:
+  push:
+    branches: [phase-13-product-depth-and-catalogue]
+    paths:
+      - 'scripts/patchPhase13HomeActionCenter.mjs'
+      - '.github/workflows/phase-13-apply-home-action-center.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-13-product-depth-and-catalogue
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply home action center patch
+        run: node scripts/patchPhase13HomeActionCenter.mjs
+      - name: Commit generated source change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/HomeLanding.tsx
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Phase 13 — Add live conference action center to home"
+            git push origin HEAD:phase-13-product-depth-and-catalogue
+          fi
