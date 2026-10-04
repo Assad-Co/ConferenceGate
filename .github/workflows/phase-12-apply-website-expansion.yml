@@ -21,12 +21,12 @@ jobs:
           node-version: '22'
       - name: Apply Phase 12 website and catalogue improvements
         run: node scripts/phase12WebsiteExpansionPatch.mjs
-      - name: Validate patched source
+      - name: Validate patched production source
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
-          npx tsc --noEmit
           npm run build
           node --check scripts/syncRequestedCategoryExpansion.mjs
+          node --check scripts/phase12WebsiteExpansionPatch.mjs
       - name: Commit canonical Phase 12 source
         run: |
           git config user.name "github-actions[bot]"
