@@ -18,6 +18,7 @@ import {
   BadgeCheck,
   QrCode,
   ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { Conference, UserProfile, Post, PostAuthor } from '../types';
 import { CelebrationPostCard } from './CelebrationPostCard';
