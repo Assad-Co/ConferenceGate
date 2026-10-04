@@ -1263,6 +1263,154 @@ activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: 
   });
 }));
 
+
+// Persisted Organizer workspace planning. These records are shared across seats through the paid
+// account context but do not claim that an assignee was notified or that an external meeting was
+// booked. Delivery/invitation remains a separate explicit action.
+activityRouter.get("/organizer/committee-tasks", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const rows = await dbAll<any>(
+    "SELECT * FROM organizer_committee_tasks WHERE organizer_id = ? ORDER BY created_at DESC",
+    [organizerContext.accountId]
+  );
+  res.json({
+    tasks: rows.map((row) => ({
+      id: row.id,
+      assignee: row.assignee_name,
+      title: row.title,
+      description: row.description || "",
+      dueDate: row.due_date || "",
+      priority: row.priority,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })),
+  });
+}));
+
+activityRouter.post("/organizer/committee-tasks", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const body = req.body || {};
+  const assignee = typeof body.assignee === "string" ? body.assignee.trim() : "";
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const priority = ["Low", "Medium", "High"].includes(body.priority) ? body.priority : "Medium";
+  if (!assignee || !title) return res.status(400).json({ error: "Assignee and task title are required." });
+  const id = `oct_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO organizer_committee_tasks
+      (id, organizer_id, assignee_name, title, description, due_date, priority)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, organizerContext.accountId, assignee, title, body.description || null, body.dueDate || null, priority]
+  );
+  const row = await dbGet<any>("SELECT * FROM organizer_committee_tasks WHERE id = ?", [id]);
+  res.status(201).json({
+    task: {
+      id: row!.id,
+      assignee: row!.assignee_name,
+      title: row!.title,
+      description: row!.description || "",
+      dueDate: row!.due_date || "",
+      priority: row!.priority,
+      status: row!.status,
+      createdAt: row!.created_at,
+      updatedAt: row!.updated_at,
+    },
+  });
+}));
+
+activityRouter.patch("/organizer/committee-tasks/:id", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const status = req.body?.status;
+  if (!["Pending", "In Progress", "Completed"].includes(status)) {
+    return res.status(400).json({ error: "A valid task status is required." });
+  }
+  const existing = await dbGet<any>(
+    "SELECT * FROM organizer_committee_tasks WHERE id = ? AND organizer_id = ?",
+    [req.params.id, organizerContext.accountId]
+  );
+  if (!existing) return res.status(404).json({ error: "Task not found." });
+  await dbRun(
+    "UPDATE organizer_committee_tasks SET status = ?, updated_at = datetime('now') WHERE id = ? AND organizer_id = ?",
+    [status, req.params.id, organizerContext.accountId]
+  );
+  const row = await dbGet<any>("SELECT * FROM organizer_committee_tasks WHERE id = ?", [req.params.id]);
+  res.json({
+    task: {
+      id: row!.id,
+      assignee: row!.assignee_name,
+      title: row!.title,
+      description: row!.description || "",
+      dueDate: row!.due_date || "",
+      priority: row!.priority,
+      status: row!.status,
+      createdAt: row!.created_at,
+      updatedAt: row!.updated_at,
+    },
+  });
+}));
+
+activityRouter.get("/organizer/meeting-plans", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const rows = await dbAll<any>(
+    "SELECT * FROM organizer_meeting_plans WHERE organizer_id = ? ORDER BY meeting_date DESC, meeting_time DESC",
+    [organizerContext.accountId]
+  );
+  res.json({
+    meetings: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      attendees: JSON.parse(row.attendees || "[]"),
+      date: row.meeting_date,
+      time: row.meeting_time,
+      organizerTimezone: row.organizer_timezone,
+      meetingLink: row.meeting_link,
+      createdAt: row.created_at,
+    })),
+  });
+}));
+
+activityRouter.post("/organizer/meeting-plans", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const body = req.body || {};
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const date = typeof body.date === "string" ? body.date.trim() : "";
+  const time = typeof body.time === "string" ? body.time.trim() : "";
+  const timezone = typeof body.organizerTimezone === "string" ? body.organizerTimezone.trim() : "";
+  const link = typeof body.meetingLink === "string" ? body.meetingLink.trim() : "";
+  const attendees = Array.isArray(body.attendees) ? body.attendees.filter((item: unknown) => typeof item === "string") : [];
+  if (!title || !date || !time || !timezone || !link || attendees.length === 0) {
+    return res.status(400).json({ error: "Title, attendees, date, time, timezone, and meeting link are required." });
+  }
+  let parsed: URL;
+  try { parsed = new URL(link); } catch { return res.status(400).json({ error: "Meeting link must be a valid URL." }); }
+  if (!['https:', 'http:'].includes(parsed.protocol)) return res.status(400).json({ error: "Meeting link must use http or https." });
+  const id = `omp_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO organizer_meeting_plans
+      (id, organizer_id, title, attendees, meeting_date, meeting_time, organizer_timezone, meeting_link)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, organizerContext.accountId, title, JSON.stringify(attendees), date, time, timezone, link]
+  );
+  const row = await dbGet<any>("SELECT * FROM organizer_meeting_plans WHERE id = ?", [id]);
+  res.status(201).json({
+    meeting: {
+      id: row!.id,
+      title: row!.title,
+      attendees: JSON.parse(row!.attendees || "[]"),
+      date: row!.meeting_date,
+      time: row!.meeting_time,
+      organizerTimezone: row!.organizer_timezone,
+      meetingLink: row!.meeting_link,
+      createdAt: row!.created_at,
+    },
+  });
+}));
+
 activityRouter.get("/broadcasts/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const organizerContext = await organizerWorkspaceContext(req, res);
   if (!organizerContext) return;

@@ -370,6 +370,84 @@ export async function fetchFeedbackSummary(): Promise<{ averageScore: number; re
   return parseResponse(res);
 }
 
+
+export interface OrganizerCommitteeTask {
+  id: string;
+  assignee: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: 'Low' | 'Medium' | 'High';
+  status: 'Pending' | 'In Progress' | 'Completed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchOrganizerCommitteeTasks(): Promise<OrganizerCommitteeTask[]> {
+  const res = await fetch('/api/activity/organizer/committee-tasks', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.tasks;
+}
+
+export async function createOrganizerCommitteeTask(payload: {
+  assignee: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  priority: 'Low' | 'Medium' | 'High';
+}): Promise<OrganizerCommitteeTask> {
+  const res = await fetch('/api/activity/organizer/committee-tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.task;
+}
+
+export async function updateOrganizerCommitteeTaskStatus(
+  id: string,
+  status: OrganizerCommitteeTask['status']
+): Promise<OrganizerCommitteeTask> {
+  const res = await fetch(`/api/activity/organizer/committee-tasks/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ status }),
+  });
+  const data = await parseResponse(res);
+  return data.task;
+}
+
+export interface OrganizerMeetingPlan {
+  id: string;
+  title: string;
+  attendees: string[];
+  date: string;
+  time: string;
+  organizerTimezone: string;
+  meetingLink: string;
+  createdAt: string;
+}
+
+export async function fetchOrganizerMeetingPlans(): Promise<OrganizerMeetingPlan[]> {
+  const res = await fetch('/api/activity/organizer/meeting-plans', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.meetings;
+}
+
+export async function createOrganizerMeetingPlan(payload: Omit<OrganizerMeetingPlan, 'id' | 'createdAt'>): Promise<OrganizerMeetingPlan> {
+  const res = await fetch('/api/activity/organizer/meeting-plans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.meeting;
+}
+
 export interface OrganizerBroadcast {
   id: string;
   recipientGroup: string;
