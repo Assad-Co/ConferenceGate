@@ -1,0 +1,82 @@
+[
+  {
+    "title": "GeoGulf 2027 — 76th GCAGS/GCSSEPM Convention and Exposition",
+    "url": "https://geogulf.org/",
+    "start": "2027-04-18",
+    "end": "2027-04-20",
+    "city": "Houston",
+    "country": "United States",
+    "venue": "Houston, Texas",
+    "format": "in-person",
+    "organizer": "Houston Geological Society / GCAGS / GCSSEPM",
+    "categories": ["Petroleum & Geoscience", "Energy", "CCUS", "Geothermal", "Science"],
+    "description": "GeoGulf 2027 is the 76th GCAGS/GCSSEPM Convention and Exposition, hosted by the Houston Geological Society and focused on Gulf Coast geoscience, petroleum systems, subsurface technology, CCUS, geothermal and related energy topics.",
+    "cfp": {"status":"Open","abstract_submission_deadline":"2026-12-01","submission_guidelines":"GeoGulf 2027 has an open call for abstracts with an official submission deadline of 1 December 2026.","submission_url":"https://geogulf.org/"},
+    "program": {"overview":"GeoGulf combines technical geoscience sessions with a convention exposition and Gulf Coast professional networking.","themes":["Gulf Coast geology","Petroleum geoscience","Subsurface technology","CCUS","Geothermal","Energy minerals"]},
+    "fees": {"registration_url":"https://www.zeffy.com/en-US/ticketing/geogulf--2027","registration_fees":[{"category":"Full Conference — Early Bird","amount":395,"currency":"USD","deadline":"2027-03-01","notes":"Official registration listing includes technical sessions, exhibition floor and convention luncheons."}],"early_bird_deadline":"2027-03-01","pricing_text":"Official GeoGulf registration publishes early-bird, standard and onsite conference rates."},
+    "venueInfo": {"venue_name":"Houston, Texas","address":"Houston, Texas, United States","accommodation":null,"hotels":[]},
+    "community": {"overview":"Hosted by the Houston Geological Society for Gulf Coast geoscientists, academics, energy professionals and technology providers."},
+    "sourceUrls": ["https://geogulf.org/","https://gcags.org/","https://www.aapg.org/events/calendar/"]
+  },
+  {
+    "title": "Energy Opportunities Conference 2027",
+    "url": "https://www.aapg.org/news-and-media/events/energy-opportunities-returns-to-cartagena-in-2027/",
+    "start": "2027-05-18",
+    "end": "2027-05-20",
+    "city": "Cartagena",
+    "country": "Colombia",
+    "venue": "Hilton Cartagena",
+    "format": "in-person",
+    "organizer": "AAPG",
+    "categories": ["Petroleum & Geoscience", "Energy", "Renewable Energy", "Business", "Investment"],
+    "description": "AAPG Energy Opportunities Conference 2027 returns to Cartagena during an active period for Colombia's exploration and production sector, connecting oil and gas, renewable energy, investment and technology decision-makers across Latin America.",
+    "program": {"overview":"The 2027 event includes an executive programme, business-to-business sessions and an exhibition focused on technological advances and investment opportunities in Latin America and beyond.","themes":["Latin America exploration and production","Energy investment","Oil and gas","Renewable energy","Technology and commercial partnerships"]},
+    "venueInfo": {"venue_name":"Hilton Cartagena","address":"Cartagena, Colombia","accommodation":"The conference is hosted at Hilton Cartagena on the Laguito Peninsula.","hotels":[]},
+    "community": {"overview":"Energy Opportunities connects senior decision-makers across oil and gas, renewables, finance, technology and regional business development."},
+    "sourceUrls": ["https://www.aapg.org/news-and-media/events/energy-opportunities-returns-to-cartagena-in-2027/","https://www.aapg.org/events/calendar/","https://www.aapg.org/about/latin-america-caribbean-region/"]
+  },
+  {
+    "title": "MEOS GEO 2027",
+    "url": "https://www.meos-geo.com/",
+    "start": "2027-09-14",
+    "end": "2027-09-16",
+    "city": "Sakhir",
+    "country": "Bahrain",
+    "venue": "Exhibition World Bahrain",
+    "format": "in-person",
+    "organizer": "Informa Markets / MEOS GEO",
+    "categories": ["Petroleum & Geoscience", "Energy", "Artificial Intelligence", "Engineering", "Business"],
+    "description": "MEOS GEO 2027 is the Middle East's dedicated upstream oil, gas and geosciences conference and exhibition, connecting GCC operators, NOCs, IOCs, engineers, geoscientists, technology providers and decision-makers.",
+    "cfp": {"status":"Open","abstract_submission_deadline":null,"submission_guidelines":"The MEOS GEO 2027 Call for Proposals is open for technical contributions to the conference programme.","submission_url":"https://www.meos-geo.com/call-for-proposals/"},
+    "program": {"overview":"MEOS GEO combines strategic and peer-reviewed technical conference content shaped by SPE, AAPG, EAGE, SEG and regional experts, alongside the upstream exhibition.","themes":["Exploration and petroleum geoscience","Drilling and production","Reservoir management","Digital technology and AI","Subsurface development","Upstream commercial growth"]},
+    "committee": [
+      {"name":"Anas A. Alshuabi","full_name":"Anas A. Alshuabi","organization":"Aramco","role":"Conference Chair","title":"Director of Reservoir Management","email":null,"photo_url":null},
+      {"name":"Alexander van Veldhoven","full_name":"Alexander van Veldhoven","organization":"Bapco Energies","role":"Conference Co-Chair","title":"Group Chief Strategy Officer","email":null,"photo_url":null},
+      {"name":"Redha Kelkouli","full_name":"Redha Kelkouli","organization":"SLB","role":"Conference Co-Chair","title":"KSA & Bahrain Managing Director","email":null,"photo_url":null}
+    ],
+    "venueInfo": {"venue_name":"Exhibition World Bahrain","address":"Sakhir, Kingdom of Bahrain","accommodation":"Official attendee information and conference planning resources are published by MEOS GEO.","hotels":[]},
+    "community": {"overview":"MEOS GEO brings together the full Middle East upstream value chain and reported 17,400+ visits, 3,124 conference participants and 732 speakers at its 2025 edition."},
+    "sourceUrls": ["https://www.meos-geo.com/","https://www.meos-geo.com/call-for-proposals/","https://www.meos-geo.com/conference/meos-geo-2027-executive-committee/","https://www.meos-geo.com/exhibition/"]
+  },
+  {
+    "title": "GEO4.0 Symposium 2027",
+    "url": "https://geo4event.com/",
+    "start": "2027-12-07",
+    "end": "2027-12-09",
+    "city": "Al Khobar",
+    "country": "Saudi Arabia",
+    "venue": "Al Khobar",
+    "format": "in-person",
+    "organizer": "GEO4.0 Symposium",
+    "categories": ["Petroleum & Geoscience", "Artificial Intelligence", "Data Science", "Energy", "Software & Cloud"],
+    "description": "GEO4.0 Symposium 2027 focuses on the digital future of geoscience, bringing together subsurface experts, innovators and technology leaders around AI, machine learning, intelligent workflows and emerging computational methods for energy geoscience.",
+    "cfp": {"status":"Open","abstract_submission_deadline":"2027-03-19","submission_guidelines":"The official GEO4.0 2027 Call for Abstracts is open for research, applications, case studies and new approaches across the technical programme.","submission_url":"https://geo4event.com/"},
+    "program": {"overview":"The symposium covers digitalization and intelligent geoscience across exploration and production, subsurface modelling, seismic imaging, decision intelligence, computational methods, climate and energy solutions and technology adoption.","themes":["Artificial intelligence and machine learning","Subsurface exploration","Reservoir characterization","Seismic imaging","Decision intelligence","Digital geoscience workflows"]},
+    "committee": [
+      {"name":"Aiman Bakhorji","full_name":"Aiman Bakhorji","organization":"Aramco","role":"Committee Chair","title":"Director, Geophysical Imaging Department","email":null,"photo_url":null}
+    ],
+    "venueInfo": {"venue_name":"Al Khobar","address":"Al Khobar, Saudi Arabia","accommodation":null,"hotels":[]},
+    "community": {"overview":"GEO4.0 is supported across the regional geoscience community and focuses on technical exchange, collaboration and digital transformation in geoscience."},
+    "sourceUrls": ["https://geo4event.com/","https://www.aapg.org/events/calendar/"]
+  }
+]

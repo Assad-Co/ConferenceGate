@@ -12,8 +12,11 @@ function person(name,organization,role=null){ return {name,full_name:name,organi
 const PHASE12_EVENTS = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), 'data', 'phase12-verified-expansion.json'), 'utf8')
 );
+const PHASE12_REGIONAL_EVENTS = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), 'data', 'phase12-regional-expansion.json'), 'utf8')
+);
 
-const EVENTS=[...PHASE12_EVENTS,
+const EVENTS=[...PHASE12_EVENTS,...PHASE12_REGIONAL_EVENTS,
   {
     title:'33rd International Meeting on Organic Geochemistry (IMOG 2027)',
     url:'https://imogconference.org/',
