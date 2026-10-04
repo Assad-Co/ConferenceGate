@@ -1178,7 +1178,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   setSubmittedSearchTerm('');
                   lastWebQueryRef.current = null;
                   setSearchSubmitCount((count) => count + 1);
-                  setStartFromMonth(nextMonthValue());
+                  setStartFromMonth(DISCOVERY_MINIMUM_MONTH);
                   setEndAtMonth('');
                   setLocationFilter('');
                   setCountryFilter('');
@@ -1505,7 +1505,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           <div className="space-y-6">
             {displayedWebResults.map((result, idx) => (
               <div
-                key={idx}
+                key={`${result.link}|${result.title}`}
                 onClick={() => onOpenExternalResult(result)}
                 className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all p-5 sm:p-6 cursor-pointer flex flex-col sm:flex-row sm:items-center gap-5 group"
               >
@@ -1598,7 +1598,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                   <div className="flex flex-wrap items-center gap-2">
                       {(result.sections?.length ?? 0) > 0 && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700">
-                          Stored conference details
+                          Verified detail sections
                         </span>
                       )}
                       {(
@@ -1608,7 +1608,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                           { tab: 'speakers', label: 'Speakers', icon: Users },
                           { tab: 'committee', label: 'Committee', icon: UserCheck },
                           { tab: 'sponsors', label: 'Sponsors', icon: Briefcase },
-                          { tab: 'fees', label: 'Fees', icon: MapPin },
+                          { tab: 'fees', label: 'Fees', icon: DollarSign },
                         ] as { tab: ExternalDetailTab; label: string; icon: typeof FileText }[]
                       ).filter(({ tab }) => result.sections?.includes(tab)).map(({ tab, label, icon: Icon }) => (
                         <button
