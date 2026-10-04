@@ -109,7 +109,7 @@ import {
   toggleRepost as toggleRepostApi,
   toggleSave as toggleSaveApi,
 } from './api/posts';
-import { LiveSearchResult } from './api/search';
+import { LiveSearchResult, searchConferencesOnTheWeb } from './api/search';
 
 import {
   sampleConferences,
@@ -379,6 +379,7 @@ export function App() {
   const [conferences, setConferences] = useState<Conference[]>(sampleConferences);
   const [submissions, setSubmissions] = useState<AbstractSubmission[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [homeCatalogueHighlights, setHomeCatalogueHighlights] = useState<LiveSearchResult[]>([]);
   const [userProfile, setUserProfile] = useState(currentUserProfile);
 
   // Real tracked activity — persisted server-side, loaded once authenticated.
@@ -396,6 +397,22 @@ export function App() {
 
   useEffect(() => {
     if (!authUser) return;
+    // Home should feel alive even for a brand-new professional account. This is a stored-catalogue
+    // browse only: no visitor-triggered crawling and no static demo conference records.
+    if (authUser.role === 'professional') {
+      searchConferencesOnTheWeb('', 'low')
+        .then((results) => {
+          const today = new Date().toISOString().slice(0, 10);
+          const upcoming = (Array.isArray(results) ? results : [])
+            .filter((result) => !result.startDate || result.startDate >= today)
+            .sort((a, b) => String(a.startDate || '9999-12-31').localeCompare(String(b.startDate || '9999-12-31')))
+            .slice(0, 10);
+          setHomeCatalogueHighlights(upcoming);
+        })
+        .catch(() => setHomeCatalogueHighlights([]));
+    } else {
+      setHomeCatalogueHighlights([]);
+    }
     fetchSubmissions().then(setSubmissions).catch(() => {});
     fetchFeed().then(setPosts).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
@@ -1560,6 +1577,8 @@ export function App() {
             onSearchQuery={(q) => setSearchQuery(q)}
             userProfile={userProfile}
             posts={posts}
+            catalogueHighlights={homeCatalogueHighlights}
+            onOpenCatalogueConference={handleOpenExternalResult}
             onAddPost={handleAddPost}
             onReact={handleReactToPost}
             onToggleRepost={handleToggleRepost}
