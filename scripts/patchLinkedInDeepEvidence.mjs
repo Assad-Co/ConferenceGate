@@ -251,7 +251,7 @@ function sentenceWithEvent(value: string): string {`,
   ],
   [
 `      evidenceText: label,`,
-`      evidenceText: content.length > 900 ? `${content.slice(0, 897)}…` : content,`,
+`      evidenceText: content.length > 900 ? content.slice(0, 897) + "…" : content,`,
     'retain richer evidence text',
   ],
   [
@@ -311,13 +311,13 @@ patchFile('src/components/LinkedInProfilePanel.tsx', [
           <div className="flex items-center gap-2 mb-3"><Award className="w-4 h-4 text-amber-600" /><h3 className="text-sm font-extrabold text-slate-900">Certificates, credentials & honors</h3></div>
           <div className="space-y-2">
             {(profile?.certifications || []).map((item: any, index: number) => (
-              <div key={`cert-${index}`} className="rounded-xl border border-slate-200 p-3">
+              <div key={'cert-' + index} className="rounded-xl border border-slate-200 p-3">
                 <div className="text-sm font-semibold text-slate-800">{text(item?.name) || text(item?.title) || text(item?.credentialName) || 'LinkedIn certificate / credential'}</div>
                 <div className="text-[11px] text-slate-500 mt-1">{[text(item?.authority) || text(item?.issuer) || text(item?.organization), text(item?.date) || text(item?.issuedAt)].filter(Boolean).join(' · ')}</div>
               </div>
             ))}
             {(profile?.honorsAndAwards || []).map((item: any, index: number) => (
-              <div key={`honor-${index}`} className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+              <div key={'honor-' + index} className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
                 <div className="text-sm font-semibold text-slate-800">{text(item?.title) || text(item?.name) || 'LinkedIn honor / award'}</div>
                 <div className="text-[11px] text-slate-500 mt-1">{[text(item?.issuer) || text(item?.organization), text(item?.date)].filter(Boolean).join(' · ')}</div>
               </div>
@@ -393,7 +393,7 @@ patchFile('src/components/LinkedInImportedTabSections.tsx', [
               const number = textFrom(patent, ['patentNumber', 'number', 'applicationNumber']);
               const url = textFrom(patent, ['url', 'link', 'patentUrl']);
               return (
-                <div key={`${title}-${index}`} className="p-4 bg-violet-50/40 rounded-2xl border border-violet-100">
+                <div key={title + '-' + index} className="p-4 bg-violet-50/40 rounded-2xl border border-violet-100">
                   <h4 className="font-bold text-xs text-slate-900">{title}</h4>
                   <p className="text-[11px] text-slate-500 mt-0.5">{[number, yearFrom(patent)].filter(Boolean).join(' • ')}</p>
                   {sourceLink(url || profile?.linkedinUrl, url ? 'Patent source' : 'LinkedIn profile')}
@@ -421,7 +421,7 @@ patchFile('src/components/LinkedInImportedTabSections.tsx', [
         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Committee & Chair Evidence</h3>
         <div className="space-y-2">{committeeSignals.map((signal) => <SignalCard key={signal.id} signal={signal} />)}</div>
         {profileCommitteeEvidence.map((item: any, index: number) => (
-          <div key={`profile-committee-${index}`} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <div key={'profile-committee-' + index} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <h4 className="font-bold text-xs text-slate-900">{textFrom(item, ['position', 'title', 'role']) || 'Committee / chair role'}</h4>
             <p className="text-[11px] text-slate-500 mt-0.5">{[textFrom(item, ['companyName', 'company', 'organization']), yearFrom(item)].filter(Boolean).join(' • ')}</p>
             {sourceLink(profile?.linkedinUrl, 'LinkedIn profile evidence')}
@@ -447,7 +447,7 @@ patchFile('src/components/LinkedInImportedTabSections.tsx', [
         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Reviewer Evidence</h3>
         <div className="space-y-2">{reviewSignals.map((signal) => <SignalCard key={signal.id} signal={signal} />)}</div>
         {profileReviewEvidence.map((item: any, index: number) => (
-          <div key={`profile-review-${index}`} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <div key={'profile-review-' + index} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <h4 className="font-bold text-xs text-slate-900">{textFrom(item, ['position', 'title', 'role']) || 'Reviewer role'}</h4>
             <p className="text-[11px] text-slate-500 mt-0.5">{[textFrom(item, ['companyName', 'company', 'organization']), yearFrom(item)].filter(Boolean).join(' • ')}</p>
             {sourceLink(profile?.linkedinUrl, 'LinkedIn profile evidence')}
@@ -479,14 +479,14 @@ patchFile('src/components/LinkedInImportedTabSections.tsx', [
         </div>
         <div className="space-y-2">{badgeEvidence.map((signal) => <SignalCard key={signal.id} signal={signal} />)}</div>
         {(profile?.certifications || []).map((item: any, index: number) => (
-          <div key={`cert-${index}`} className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200">
+          <div key={'cert-' + index} className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200">
             <h4 className="font-bold text-xs text-slate-900">{textFrom(item, ['name', 'title', 'credentialName']) || 'LinkedIn certificate / credential'}</h4>
             <p className="text-[11px] text-slate-500 mt-0.5">{[textFrom(item, ['authority', 'issuer', 'organization']), yearFrom(item)].filter(Boolean).join(' • ')}</p>
             {sourceLink(profile?.linkedinUrl, 'LinkedIn profile evidence')}
           </div>
         ))}
         {(profile?.honorsAndAwards || []).map((item: any, index: number) => (
-          <div key={`honor-${index}`} className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200">
+          <div key={'honor-' + index} className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200">
             <h4 className="font-bold text-xs text-slate-900">{textFrom(item, ['title', 'name']) || 'LinkedIn honor / award'}</h4>
             <p className="text-[11px] text-slate-500 mt-0.5">{[textFrom(item, ['issuer', 'organization']), yearFrom(item)].filter(Boolean).join(' • ')}</p>
             {sourceLink(profile?.linkedinUrl, 'LinkedIn profile evidence')}
