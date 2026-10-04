@@ -1,0 +1,35 @@
+name: Phase 20 Apply Registration Attendance Integrity
+
+on:
+  push:
+    branches: [phase-20-registration-attendance-integrity]
+    paths:
+      - 'scripts/patchPhase20RegistrationAttendance.mjs'
+      - '.github/workflows/phase-20-apply-registration-attendance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-20-registration-attendance-integrity
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply Phase 20 patch
+        run: node scripts/patchPhase20RegistrationAttendance.mjs
+      - name: Commit generated source change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/UserProfileView.tsx
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+          else
+            git commit -m "Phase 20 — Separate registration from verified attendance"
+            git push origin HEAD:phase-20-registration-attendance-integrity
+          fi
