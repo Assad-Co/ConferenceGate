@@ -69,12 +69,12 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         .forEach((s) => {
           certs.push({
             id: `paper_${s.id}`,
-            title: 'Certificate of Paper Presentation',
+            title: 'Certificate of Accepted Abstract',
             event: s.conferenceTitle,
             conferenceId: s.conferenceId,
             paperTitle: s.title,
             date: s.submissionDate,
-            issuer: `Technical Committee, ${s.conferenceTitle}`,
+            issuer: `ConferenceGate submission record — ${s.conferenceTitle}`,
             verificationHash: certHash(s.id),
           });
         });
@@ -99,9 +99,9 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           title: 'Certificate of Peer Reviewer Service',
           event: conferenceTitle,
           conferenceId: info.conferenceId,
-          paperTitle: `Verified Peer Review of ${info.count} Technical Paper${info.count === 1 ? '' : 's'} (+${info.count * 20} Kudos)`,
+          paperTitle: `Completed peer review of ${info.count} submission${info.count === 1 ? '' : 's'}`,
           date: info.latestDate,
-          issuer: 'Conference Gate Global Reviewer Board',
+          issuer: 'ConferenceGate reviewer activity record',
           verificationHash: certHash(`review_${conferenceTitle}_${currentUserId}`),
         });
       });
@@ -110,12 +110,12 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
     registrations.forEach((r) => {
       certs.push({
         id: `attend_${r.conferenceId}`,
-        title: 'Certificate of Technical Conference Registration',
+        title: 'Conference Registration Record',
         event: r.conferenceTitle,
         conferenceId: r.conferenceId,
         paperTitle: r.packageName ? `Registered Attendee — ${r.packageName}` : 'Registered Attendee',
         date: r.registeredAt.split(' ')[0].split('T')[0],
-        issuer: 'Conference Gate',
+        issuer: 'ConferenceGate registration record',
         verificationHash: certHash(`attend_${r.conferenceId}_${currentUserId || 'anon'}`),
       });
     });
@@ -131,12 +131,12 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
               : 'Speaker / Keynote Service';
         certs.push({
           id: `role_${invitation.id}`,
-          title: `Certificate of ${roleLabel}`,
+          title: `Verified ${roleLabel} Record`,
           event: invitation.conferenceTitle,
           conferenceId: invitation.conferenceId,
           paperTitle: invitation.title,
           date: (invitation.completedAt || invitation.respondedAt || invitation.createdAt).split(' ')[0].split('T')[0],
-          issuer: `Verified by ConferenceGate organizer workflow — ${invitation.conferenceTitle}`,
+          issuer: `ConferenceGate organizer workflow — ${invitation.conferenceTitle}`,
           verificationHash: certHash(`role_${invitation.id}_${currentUserId || 'anon'}`),
         });
       });
@@ -176,18 +176,18 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4" />
-          <span>All Certificates Authenticated by Conference Gate</span>
+          <span>Generated from ConferenceGate activity records</span>
         </span>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-xs">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Official Certificates & Accredited Record
+            Certificates & Verified Activity Records
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Download PDF certificates generated from your real activity on Conference Gate — accepted papers,
-            completed peer reviews, and conference registrations.
+            Download PDF records generated from activity ConferenceGate can verify directly — accepted abstracts,
+            completed peer reviews, completed organizer roles, and conference registrations. A registration record does not claim attendance unless attendance is separately verified.
           </p>
         </div>
 
@@ -196,8 +196,8 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
             <Award className="w-10 h-10 text-slate-300 mx-auto" />
             <p className="text-sm font-bold text-slate-500">No certificates yet</p>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Certificates are generated automatically once you have an accepted paper, a completed peer review, or
-              a conference registration.
+              Records appear automatically once ConferenceGate can verify an accepted abstract, completed peer review,
+              completed organizer-assigned role, or conference registration.
             </p>
           </div>
         ) : (
@@ -207,7 +207,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-md">
-                      Official Credential
+                      Verified Activity Record
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">{cert.verificationHash}</span>
                   </div>
@@ -232,7 +232,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                   className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{downloadingId === cert.id ? 'Generating Verified PDF...' : 'Download Official Certificate (PDF)'}</span>
+                  <span>{downloadingId === cert.id ? 'Generating PDF...' : 'Download Record (PDF)'}</span>
                 </button>
               </div>
             ))}
