@@ -1317,23 +1317,31 @@ export function App() {
 
   const handleAddSubmission = async (newSubData: Partial<AbstractSubmission>) => {
     try {
+      const conferenceId = newSubData.conferenceId?.trim();
+      const conferenceTitle = newSubData.conferenceTitle?.trim();
+      const title = newSubData.title?.trim();
+      const abstractText = newSubData.abstractText?.trim();
+      if (!conferenceId || !conferenceTitle || !title || !abstractText) {
+        throw new Error('Choose a real conference and provide both an abstract title and abstract text before submitting.');
+      }
+      const primaryAuthor = {
+        name: newSubData.primaryAuthor?.name?.trim() || userProfile.name,
+        email: newSubData.primaryAuthor?.email?.trim() || authUser.email,
+        affiliation: newSubData.primaryAuthor?.affiliation?.trim() || userProfile.organization,
+        bio: newSubData.primaryAuthor?.bio?.trim() || userProfile.bio,
+      };
       const newSubmission = await createSubmission({
-        conferenceId: newSubData.conferenceId || 'conf_1',
-        conferenceTitle: newSubData.conferenceTitle || 'Conference Title',
-        title: newSubData.title || 'Untitled Abstract',
-        track: newSubData.track || 'General Track',
-        topic: newSubData.topic || 'General Topic',
+        conferenceId,
+        conferenceTitle,
+        title,
+        track: newSubData.track?.trim() || 'General Track',
+        topic: newSubData.topic?.trim() || 'General Topic',
         keywords: newSubData.keywords || [],
-        abstractText: newSubData.abstractText || '',
+        abstractText,
         preferredType: newSubData.preferredType || 'Oral',
-        primaryAuthor: newSubData.primaryAuthor || {
-          name: userProfile.name,
-          email: 'author@conferencegate.com',
-          affiliation: userProfile.organization,
-          bio: userProfile.bio,
-        },
+        primaryAuthor,
         coAuthors: newSubData.coAuthors || [],
-        conflictOfInterest: newSubData.conflictOfInterest || 'None declared.',
+        conflictOfInterest: newSubData.conflictOfInterest?.trim() || 'None declared.',
       });
 
       setSubmissions((prev) => [newSubmission, ...prev]);
@@ -1396,35 +1404,45 @@ export function App() {
   };
 
   const handleCreateConference = async (newConfData: Partial<Conference>): Promise<Conference> => {
+    const title = newConfData.title?.trim();
+    const location = newConfData.location;
+    const dates = newConfData.dates;
+    if (!title || !location?.city?.trim() || !location?.country?.trim() || !location?.venue?.trim() || !dates?.start || !dates?.end || !newConfData.format) {
+      throw new Error('Conference title, city, country, venue, dates and format are required before publishing.');
+    }
+    if (dates.end < dates.start) {
+      throw new Error('Conference end date cannot be earlier than its start date.');
+    }
     const newConf: Conference = {
       id: `conf_${Date.now()}`,
-      title: newConfData.title || 'New Conference',
-      organizerName: newConfData.organizerName || 'Conference Organizing Board',
+      title,
+      organizerName: newConfData.organizerName?.trim() || organizerNameOverride || authUser.organization || authUser.name,
       organizerLogo: newConfData.organizerLogo || '',
       banner: newConfData.banner || '',
       logo: newConfData.logo || '',
-      description: newConfData.description || '',
-      industry: newConfData.industry || 'General Science',
+      officialWebsite: newConfData.officialWebsite?.trim() || undefined,
+      description: newConfData.description?.trim() || '',
+      industry: newConfData.industry?.trim() || '',
       topics: newConfData.topics || [],
-      tracks: newConfData.tracks || ['Track 1'],
-      location: newConfData.location || { city: 'Paris', country: 'France', venue: 'Convention Center' },
-      dates: newConfData.dates || { start: '2026-10-15', end: '2026-10-18' },
-      format: newConfData.format || 'Hybrid',
-      priceRange: '$300 - $800',
-      registrationPackages: [],
-      earlyBirdDeadline: '2026-09-01',
-      abstractDeadline: '2026-08-01',
-      cfpStatus: 'Open',
+      tracks: newConfData.tracks || [],
+      location: { city: location.city.trim(), country: location.country.trim(), venue: location.venue.trim() },
+      dates,
+      format: newConfData.format,
+      priceRange: newConfData.priceRange?.trim() || 'Inquire now',
+      registrationPackages: newConfData.registrationPackages || [],
+      earlyBirdDeadline: newConfData.earlyBirdDeadline || '',
+      abstractDeadline: newConfData.abstractDeadline || '',
+      cfpStatus: newConfData.cfpStatus || 'Closed',
       attendeeCount: 0,
-      mainThemes: newConfData.mainThemes || ['Innovation'],
+      mainThemes: newConfData.mainThemes || [],
       submissionGuidelines: newConfData.submissionGuidelines ?? null,
       agendaDays: newConfData.agendaDays || [],
       speakers: newConfData.speakers || [],
       committee: newConfData.committee || [],
-      sponsors: [],
-      exhibitors: [],
-      accommodation: 'Partner Hotels',
-      travelInfo: 'City Airport Transit',
+      sponsors: newConfData.sponsors || [],
+      exhibitors: newConfData.exhibitors || [],
+      accommodation: newConfData.accommodation?.trim() || '',
+      travelInfo: newConfData.travelInfo?.trim() || '',
       communityPosts: 0,
     };
 
@@ -1648,7 +1666,7 @@ export function App() {
         {activeTab === 'abstracts' && authUser.role !== 'organizer' && authUser.role !== 'sponsor' && (
           <AbstractTrackerView
             submissions={submissions}
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onOpenNewSubmission={() => setIsSubmitAbstractOpen(true)}
             onSubmissionUpdated={(updated) =>
@@ -1667,7 +1685,7 @@ export function App() {
             professionalInvitations={professionalInvitations}
             onProfessionalInvitationDecision={handleProfessionalInvitationDecision}
             submissions={submissions}
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onCompleteReview={handleCompleteReview}
             volunteeredOpportunityIds={volunteeredOpportunityIds}
@@ -1757,7 +1775,7 @@ export function App() {
             onToggleSave={handleToggleSavePost}
             onFetchComments={handleFetchPostComments}
             onAddComment={handleAddPostComment}
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             userProfile={userProfile}
             onOpenProfile={handleOpenProfile}
@@ -1778,7 +1796,7 @@ export function App() {
             submissions={submissions}
             posts={posts}
             registrations={registrations}
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
             onOpenCertificates={() => setActiveTab('certificates')}
@@ -1799,7 +1817,7 @@ export function App() {
             userProfile={userProfile}
             submissions={submissions}
             registrations={registrations}
-            conferences={conferences}
+            conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             currentUserId={authUser?.id}
             currentUserEmail={authUser?.email}
