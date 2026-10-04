@@ -409,6 +409,18 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_organizer_meeting_plans_owner
       ON organizer_meeting_plans(organizer_id, meeting_date, meeting_time);
 
+    CREATE TABLE IF NOT EXISTS organizer_coordination_notes (
+      id TEXT PRIMARY KEY,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      author_label TEXT NOT NULL,
+      recipient_label TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_organizer_coordination_notes_owner
+      ON organizer_coordination_notes(organizer_id, created_at);
+
     CREATE TABLE IF NOT EXISTS created_conferences (
       id TEXT PRIMARY KEY,
       organizer_id TEXT NOT NULL REFERENCES users(id),
