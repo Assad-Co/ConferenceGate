@@ -173,9 +173,10 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
 
-  // Verified attendance is derived from real, persisted conference registrations —
-  // never fabricated, so it starts empty until the account actually registers for one.
-  const ATTENDED_CONFERENCES: AttendedConference[] = useMemo(
+  // A ConferenceGate registration proves enrollment, not actual attendance. Keep registrations
+  // separate from the self-reported attendance section so the profile never upgrades one fact
+  // into another without evidence.
+  const REGISTERED_CONFERENCES: AttendedConference[] = useMemo(
     () =>
       registrations.map((reg) => {
         const conf = conferences.find((c) => c.id === reg.conferenceId);
@@ -981,7 +982,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
         {/* Profile Tabs — organizers and sponsors already have a full dashboard elsewhere for
             everything else, so their profile page only needs Notifications and their own
-            conference attendance history. */}
+            conference registration/history view. */}
         <div className="px-6 sm:px-8 border-t border-slate-200 flex gap-6 overflow-x-auto text-xs font-semibold text-slate-600">
           {(variant === 'professional'
             ? [
@@ -1101,10 +1102,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
         {activeTab === 'conferences' && (
           <div className="space-y-4">
-            <h3 className="text-base font-bold text-slate-900">Verified Conferences Attended</h3>
-            {ATTENDED_CONFERENCES.length > 0 ? (
+            <div>
+              <h3 className="text-base font-bold text-slate-900">ConferenceGate Registrations</h3>
+              <p className="text-[11px] text-slate-500 mt-1">
+                These records confirm registration through ConferenceGate. They do not claim attendance unless attendance is verified separately.
+              </p>
+            </div>
+            {REGISTERED_CONFERENCES.length > 0 ? (
               <div className="space-y-3">
-                {ATTENDED_CONFERENCES.map((conf) => (
+                {REGISTERED_CONFERENCES.map((conf) => (
                   <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                     <div>
                       <ConferenceLink
@@ -1124,7 +1130,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                         Leave Feedback
                       </button>
                       <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
-                        Verified Attendance
+                        Registered
                       </span>
                     </div>
                   </div>
@@ -1132,8 +1138,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               </div>
             ) : (
               <p className="text-xs text-slate-400">
-                No verified conference attendance on record yet. Once you register for a conference through Conference
-                Gate, it'll appear here.
+                No ConferenceGate registrations on record yet. Registrations completed through ConferenceGate will appear here.
               </p>
             )}
           </div>
