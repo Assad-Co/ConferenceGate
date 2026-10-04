@@ -1704,7 +1704,7 @@ export function App() {
           authUser.hasPaidAccess ? (
           <SponsorPortal
             sponsorshipPackages={sponsorshipPackagesReal}
-            sponsorshipOpportunities={sampleSponsorshipOpportunities}
+            sponsorshipOpportunities={[]}
             myApplications={myApplications}
             sponsorProfile={sponsorProfileForPortal}
             sponsorAlerts={sponsorNotifications}

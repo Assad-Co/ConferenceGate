@@ -206,16 +206,31 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
 
   const exploreFields = [
     'Artificial Intelligence',
-    'Petroleum & Geoscience',
-    'Healthcare',
-    'Engineering',
-    'Energy',
-    'Business',
+    'Data Science',
     'Cybersecurity',
+    'Robotics & Automation',
+    'Telecommunications',
+    'Software & Cloud',
+    'Petroleum & Geoscience',
+    'Energy',
+    'Natural Gas & LNG',
+    'Hydrogen & CCUS',
+    'Renewable Energy',
+    'Healthcare',
+    'Public Health',
+    'Pharmaceuticals & Biotechnology',
+    'Engineering',
     'Materials Science',
+    'Manufacturing',
+    'Automotive & Mobility',
     'Finance',
+    'Business',
     'Climate & Sustainability',
+    'Government & Policy',
+    'Education',
+    'Blockchain & Web3',
     'Real Estate',
+    'Virtual conferences',
     'Open call for papers',
   ];
 
@@ -352,7 +367,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </div>
             <h3 className="text-sm font-bold text-slate-900">Your feed is quiet right now</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Share a paper acceptance, CFP alert, or milestone above — or explore active conferences to build your network.
+              Start with a live CFP, conference field, or research milestone. ConferenceGate now spans global technology, energy, geoscience, health, engineering and business events.
             </p>
             <div className="flex items-center justify-center gap-2 pt-2">
               <button
@@ -491,7 +506,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs">
           <div className="px-4 py-3 border-b border-slate-100">
             <div className="font-bold text-sm text-slate-900">Explore conference fields</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Jump directly into the worldwide catalogue</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">Explore the growing worldwide catalogue across research, technology, energy, health and business</div>
           </div>
           <div className="p-3 flex flex-wrap gap-1.5">
             {exploreFields.map((field) => (
