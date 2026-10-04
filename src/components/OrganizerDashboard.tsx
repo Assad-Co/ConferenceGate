@@ -732,7 +732,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
   const [committeeMatchLoading, setCommitteeMatchLoading] = useState(false);
   const [committeeMatches, setCommitteeMatches] = useState<
-    Array<{ reviewerId: string; matchPercentage: number; reason: string }> | null
+    Array<{ reviewerId: string; matchPercentage: number | null; reason: string }> | null
   >(null);
   const [committeeMatchIsFallback, setCommitteeMatchIsFallback] = useState(false);
   const [invitedCandidateIds, setInvitedCandidateIds] = useState<Record<string, boolean>>({});
@@ -792,7 +792,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       setCommitteeMatches(
         committeeCandidatePool.map((c, idx) => ({
           reviewerId: c.id,
-          matchPercentage: Math.min(98, 95 - idx * 6),
+          matchPercentage: null,
           reason: `${c.reviewCount} completed peer review${c.reviewCount === 1 ? '' : 's'} on Conference Gate${
             c.expertise[0] ? `, including work in ${c.expertise[0]}` : ''
           }.`,
@@ -866,15 +866,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     from: 'Conference Organizer',
     to: 'Technical Committee Chair',
     message: '',
-    sendEmail: true,
   });
   const [committeeFollowUps, setCommitteeFollowUps] = useState<
-    Array<{ id: string; from: string; to: string; message: string; date: string; sendEmail: boolean }>
+    Array<{ id: string; from: string; to: string; message: string; date: string }>
   >([]);
-  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
-
-  const followUpRecipientEmail = (to: string) =>
-    `${to.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '')}@conferencegate.app`;
 
   const handleSendFollowUp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -884,13 +879,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       { id, ...followUpDraft, date: new Date().toLocaleString() },
       ...prev,
     ]);
-    // In-app notification is always sent — it's the source of truth for delivery in Conference Gate.
-    onAddNotification({
-      title: `Follow-Up from ${followUpDraft.from}`,
-      message: followUpDraft.message,
-      type: 'followup',
-    });
-    setExpandedEmailId(followUpDraft.sendEmail ? id : null);
+    // This is a local coordination note only. Do not claim delivery to a committee member unless
+    // the recipient is linked to a real ConferenceGate identity and a server delivery route.
     setFollowUpDraft({ ...followUpDraft, message: '' });
   };
 
@@ -1189,7 +1179,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       setAiMatches(
         candidatePool.map((c, idx) => ({
           reviewerId: c.id,
-          matchPercentage: Math.min(97, 94 - idx * 5),
+          matchPercentage: null,
           reason: `${c.reviewCount} completed peer review${c.reviewCount === 1 ? '' : 's'} on Conference Gate${
             c.expertise[0] ? `, including work in ${c.expertise[0]}` : ''
           }.`,
@@ -1251,7 +1241,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             id: `sess_${date}_${idx}`,
             time: item.time,
             title: item.title,
-            hall: item.type === 'Technical Session' ? 'Main Hall' : item.type,
+            hall: '',
             speakerName: '',
             speakerTitle: '',
             speakerAvatar: '',
@@ -2310,9 +2300,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           <p className="text-[11px] text-slate-600">{match.reason}</p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
-                            {match.matchPercentage}% Match
-                          </span>
+                          {typeof match.matchPercentage === 'number' ? (
+                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
+                              {match.matchPercentage}% AI Match
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-full">
+                              Review-history candidate
+                            </span>
+                          )}
                           {invitedReviewerIds[candidate.id] ? (
                             <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5">
                               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -2570,9 +2566,15 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
-                          {match.matchPercentage}% Match
-                        </span>
+                        {typeof match.matchPercentage === 'number' ? (
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full">
+                            {match.matchPercentage}% AI Match
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-full">
+                            Review-history candidate
+                          </span>
+                        )}
                         {invitedCandidateIds[candidate.id] ? (
                           <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -2658,7 +2660,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <ClipboardList className="w-5 h-5 text-blue-600" />
-              <h3 className="font-bold text-sm text-slate-900">Assign Tasks to Committee Members</h3>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Committee Task Planning</h3>
+                <p className="text-[10px] text-amber-700 mt-0.5">Session-only planning board. Tasks are not yet persisted or delivered to members.</p>
+              </div>
             </div>
             <form onSubmit={handleAssignTask} className="space-y-3 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2719,7 +2724,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Assign Task</span>
+                  <span>Add Planning Task</span>
                 </button>
               </div>
             </form>
@@ -2805,19 +2810,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
 
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
-                    <Bell className="w-3 h-3" />
-                    In-app notification always sent
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                    <ShieldAlert className="w-3 h-3" />
+                    Coordination note only — no email or member notification is sent
                   </span>
-                  <label className="flex items-center gap-1.5 cursor-pointer font-semibold text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={followUpDraft.sendEmail}
-                      onChange={(e) => setFollowUpDraft({ ...followUpDraft, sendEmail: e.target.checked })}
-                      className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer"
-                    />
-                    Also send email copy (optional)
-                  </label>
                 </div>
               </div>
 
@@ -2826,7 +2822,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Send Follow-Up</span>
+                <span>Save Coordination Note</span>
               </button>
             </form>
 
@@ -2843,46 +2839,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <p className="text-[11px] text-slate-600 mt-1">{fu.message}</p>
 
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
-                        <Bell className="w-3 h-3" />
-                        In-app notification sent
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        <ShieldAlert className="w-3 h-3" />
+                        Session-only coordination note
                       </span>
-                      {fu.sendEmail ? (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedEmailId((cur) => (cur === fu.id ? null : fu.id))}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer transition-colors"
-                        >
-                          <Mail className="w-3 h-3" />
-                          Email sent{expandedEmailId === fu.id ? ' — hide' : ' — view'}
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400">
-                          <Mail className="w-3 h-3" />
-                          No email sent
-                        </span>
-                      )}
                     </div>
-
-                    {fu.sendEmail && expandedEmailId === fu.id && (
-                      <div className="mt-2 bg-white border border-slate-200 rounded-xl overflow-hidden">
-                        <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 space-y-0.5">
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                            <span className="font-bold text-slate-700 w-12 shrink-0">From:</span>
-                            {followUpRecipientEmail(fu.from)}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                            <span className="font-bold text-slate-700 w-12 shrink-0">To:</span>
-                            {followUpRecipientEmail(fu.to)}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                            <span className="font-bold text-slate-700 w-12 shrink-0">Subject:</span>
-                            Follow-Up: {fu.from} → {fu.to}
-                          </div>
-                        </div>
-                        <p className="p-3 text-[11px] text-slate-700 leading-relaxed">{fu.message}</p>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -3049,9 +3010,8 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   onChange={(e) => setMeetingDraft({ ...meetingDraft, meetingLink: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 />
-                <p className="text-[10px] text-slate-400">
-                  Conference Gate doesn't generate meeting rooms — paste the link from your own video conferencing
-                  account.
+                <p className="text-[10px] text-amber-700">
+                  Planning only: ConferenceGate does not create the room, send invitations, or persist this plan yet. Paste a real link from your conferencing account.
                 </p>
               </div>
 
@@ -3060,7 +3020,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 <Video className="w-3.5 h-3.5" />
-                <span>Schedule Meeting</span>
+                <span>Add Meeting Plan</span>
               </button>
             </form>
 
