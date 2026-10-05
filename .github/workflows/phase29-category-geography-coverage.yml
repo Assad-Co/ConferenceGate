@@ -44,6 +44,9 @@ jobs:
           if(q.some(x=>!['Middle East','Africa'].includes(x.region))) throw new Error('non-target region leaked into plan');
           console.log(JSON.stringify(q.map(x=>({subject:x.subject,region:x.region,country:x.country,year:x.year}))));"
 
+      - name: Prepare local smoke database
+        run: npm run database:prepare
+
       - name: Coverage planner local smoke
         run: npm run discovery -- coverage-plan --years 2026,2027 --top 5 --allow-local-db
 
