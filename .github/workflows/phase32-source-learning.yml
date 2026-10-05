@@ -1,0 +1,31 @@
+name: Phase 32 Source Learning Validation
+
+on:
+  push:
+    branches:
+      - phase-32-source-performance-learning
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Clean install
+        run: npm ci
+      - name: Source learning syntax
+        run: node --check scripts/sourcePerformanceLearning.mjs
+      - name: Automation entry syntax
+        run: node --check scripts/automationEntry.mjs
+      - name: TypeScript
+        run: npm run lint
+      - name: Production build
+        run: npm run build
