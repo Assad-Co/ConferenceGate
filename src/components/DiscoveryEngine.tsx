@@ -1218,6 +1218,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           {filtered.map((conf) => {
             const isSaved = savedIds.includes(conf.id);
             const isFollowed = followedIds.includes(conf.id);
+            const cfpAcceptingSubmissions = conf.cfpStatus === 'Open' || conf.cfpStatus === 'Extended';
 
             return (
               <div
@@ -1349,7 +1350,15 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     <div className="grid grid-cols-1 gap-2 text-xs pt-1">
                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Call for Papers:</span>
-                        <span className="font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md text-[11px]">
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                            conf.cfpStatus === 'Open'
+                              ? 'text-emerald-700 bg-emerald-100/60'
+                              : conf.cfpStatus === 'Extended'
+                                ? 'text-amber-800 bg-amber-100/70'
+                                : 'text-slate-600 bg-slate-200/80'
+                          }`}
+                        >
                           {conf.cfpStatus}
                         </span>
                       </div>
@@ -1369,13 +1378,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onOpenSubmitAbstract(conf.id);
+                          if (cfpAcceptingSubmissions) onOpenSubmitAbstract(conf.id);
                         }}
-                        className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                        disabled={!cfpAcceptingSubmissions}
+                        className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        title={cfpAcceptingSubmissions ? 'Submit an abstract' : 'This conference is not accepting submissions'}
                       >
-                        Submit Abstract
+                        {cfpAcceptingSubmissions ? 'Submit Abstract' : 'CFP Closed'}
                       </button>
                       <button
                         onClick={() => onSelectConference(conf)}
@@ -1435,8 +1447,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 type="button"
                 onClick={() => setRichDetailsOnly((value) => !value)}
                 className={richDetailsOnly
-                  ? 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-emerald-50 border-emerald-200 text-emerald-700'
-                  : 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-white border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-700'}
+                  ? 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-emerald-50 border-emerald-200 text-emerald-700 cursor-pointer'
+                  : 'px-3 py-2 rounded-xl border text-[11px] font-bold bg-white border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-700 cursor-pointer'}
               >
                 6+ detail sections
               </button>
@@ -1482,6 +1494,29 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               Broaden the date or location filters, or jump into one of the worldwide fields below.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  setSubmittedSearchTerm('');
+                  lastWebQueryRef.current = null;
+                  setSearchSubmitCount((count) => count + 1);
+                  setStartFromMonth(DISCOVERY_MINIMUM_MONTH);
+                  setEndAtMonth('');
+                  setLocationFilter('');
+                  setCountryFilter('');
+                  setFormatFilter('');
+                  setTimingFilter('');
+                  setCategoryFilter('');
+                  setCfpOnly(false);
+                  setRichDetailsOnly(false);
+                  setResultSort('recommended');
+                  setPriceRange(null);
+                }}
+                className="px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[11px] font-bold text-blue-700 transition-colors cursor-pointer"
+              >
+                Clear all filters
+              </button>
               {DISCOVERY_SUGGESTIONS.slice(0, 8).map((suggestion) => (
                 <button
                   key={suggestion}
@@ -1492,7 +1527,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     lastWebQueryRef.current = null;
                     setSearchSubmitCount((count) => count + 1);
                   }}
-                  className="px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[11px] font-bold text-slate-600 transition-colors"
+                  className="px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-[11px] font-bold text-slate-600 transition-colors cursor-pointer"
                 >
                   {suggestion}
                 </button>
@@ -1635,7 +1670,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       event.stopPropagation();
                       onOpenExternalResult(result, preferredResultTab(result));
                     }}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-xl transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-xl transition-colors cursor-pointer"
                   >
                     {preferredResultAction(result)}
                     <ArrowRight className="w-4 h-4 shrink-0" />
