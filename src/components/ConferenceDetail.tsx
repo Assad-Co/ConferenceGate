@@ -373,14 +373,21 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                     </div>
 
                     <button
-                      onClick={() => onRegister?.(conference.id, conference.title, pkg.id, pkg.name)}
-                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                      type="button"
+                      onClick={() => {
+                        if (registeredPackage !== pkg.id) {
+                          onRegister?.(conference.id, conference.title, pkg.id, pkg.name);
+                        }
+                      }}
+                      disabled={registeredPackage === pkg.id}
+                      title={registeredPackage === pkg.id ? 'You are already registered for this conference' : `Register with the ${pkg.name} package`}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors ${
                         registeredPackage === pkg.id
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-blue-900 hover:bg-blue-950 text-white'
+                          ? 'bg-emerald-600 text-white cursor-default'
+                          : 'bg-blue-900 hover:bg-blue-950 text-white cursor-pointer'
                       }`}
                     >
-                      {registeredPackage === pkg.id ? 'Registered ✓ — Verified Attendance' : 'Register Package'}
+                      {registeredPackage === pkg.id ? 'Registered ✓' : 'Register Package'}
                     </button>
                   </div>
                 ))}
@@ -523,7 +530,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <h3 className="text-lg font-bold text-slate-900">Technical Committee & Advisory Board</h3>
               <button
                 onClick={() => onExpressCommitteeInterest(conference.id)}
-                className="px-3.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors"
+                className="px-3.5 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-xl hover:bg-blue-100 transition-colors cursor-pointer"
               >
                 + Express Committee Interest
               </button>
