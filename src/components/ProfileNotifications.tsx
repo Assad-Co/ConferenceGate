@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Search,
   UserPlus,
+  ChevronRight,
 } from 'lucide-react';
 import { NotificationItem } from '../types';
 
@@ -22,6 +23,7 @@ const TYPE_META: Record<
   sponsorship: { icon: Briefcase, bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Sponsorship' },
   agenda: { icon: Calendar, bg: 'bg-sky-100', text: 'text-sky-700', label: 'Agenda' },
   followup: { icon: MessageCircle, bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Follow-up' },
+  achievement: { icon: Award, bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Achievements' },
 };
 
 type NotificationFilter = 'all' | 'unread' | NotificationItem['type'];
@@ -30,12 +32,14 @@ interface ProfileNotificationsProps {
   notifications: NotificationItem[];
   onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
+  onOpenNotification: (notification: NotificationItem) => void;
 }
 
 export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
   notifications,
   onMarkRead,
   onMarkAllRead,
+  onOpenNotification,
 }) => {
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const [query, setQuery] = useState('');
@@ -169,16 +173,16 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
               <button
                 key={notification.id}
                 type="button"
-                disabled={notification.read}
                 onClick={() => {
                   if (!notification.read) onMarkRead(notification.id);
+                  onOpenNotification(notification);
                 }}
-                className={`w-full text-left p-4 rounded-2xl border flex items-start gap-3 transition-colors ${
+                className={`w-full text-left p-4 rounded-2xl border flex items-start gap-3 transition-colors cursor-pointer ${
                   notification.read
-                    ? 'bg-white border-slate-200 cursor-default'
-                    : 'bg-blue-50/40 border-blue-200 hover:bg-blue-50 cursor-pointer'
+                    ? 'bg-white border-slate-200 hover:bg-slate-50'
+                    : 'bg-blue-50/40 border-blue-200 hover:bg-blue-50'
                 }`}
-                title={notification.read ? 'Already read' : 'Mark as read'}
+                title="Open related ConferenceGate workspace"
               >
                 <span className={`w-9 h-9 rounded-xl ${meta.bg} ${meta.text} flex items-center justify-center shrink-0`}>
                   <Icon className="w-4.5 h-4.5" />
@@ -197,6 +201,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
                   <p className="text-[11px] text-slate-600 leading-relaxed mt-1">{notification.message}</p>
                   <span className="text-[10px] text-slate-400 font-medium mt-1.5 block">{notification.timestamp}</span>
                 </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-2" aria-hidden="true" />
               </button>
             );
           })}

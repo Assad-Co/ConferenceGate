@@ -462,7 +462,7 @@ export interface NotificationItem {
   message: string;
   timestamp: string;
   read: boolean;
-  type: 'review' | 'abstract' | 'invitation' | 'sponsorship' | 'agenda' | 'followup';
+  type: 'review' | 'abstract' | 'invitation' | 'sponsorship' | 'agenda' | 'followup' | 'achievement';
   actionUrl?: string;
 }
 

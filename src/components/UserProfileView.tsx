@@ -90,6 +90,7 @@ interface UserProfileViewProps {
   notifications: NotificationItem[];
   onMarkNotificationRead: (id: string) => void;
   onMarkAllNotificationsRead: () => void;
+  onOpenNotification: (notification: NotificationItem) => void;
   onAvatarChange?: (dataUrl: string | null) => void | Promise<void>;
   hasCustomAvatar?: boolean;
   onEditProfile?: (payload: {
@@ -158,6 +159,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   notifications,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
+  onOpenNotification,
   onAvatarChange,
   hasCustomAvatar = false,
   onEditProfile,
@@ -1029,6 +1031,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             notifications={notifications}
             onMarkRead={onMarkNotificationRead}
             onMarkAllRead={onMarkAllNotificationsRead}
+            onOpenNotification={onOpenNotification}
           />
         )}
 
