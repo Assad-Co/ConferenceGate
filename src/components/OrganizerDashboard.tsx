@@ -896,6 +896,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       const note = await createOrganizerCoordinationNote({ ...followUpDraft, message: followUpDraft.message.trim() });
       setCommitteeFollowUps((prev) => [note, ...prev]);
       setFollowUpDraft({ ...followUpDraft, message: '' });
+      showToast({
+        type: 'success',
+        title: 'Coordination note saved',
+        message: 'The note is persisted in the organizer workspace for the committee team.',
+      });
     } catch (error) {
       showToast({ type: 'info', title: 'Could not save coordination note', message: error instanceof Error ? error.message : 'Please try again.' });
     }
@@ -996,6 +1001,11 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
         time: '',
         organizerTimezone: meetingDraft.organizerTimezone,
         meetingLink: '',
+      });
+      showToast({
+        type: 'success',
+        title: 'Meeting plan saved',
+        message: 'The committee meeting plan is persisted in the organizer workspace.',
       });
     } catch (error) {
       showToast({ type: 'info', title: 'Could not save meeting plan', message: error instanceof Error ? error.message : 'Please try again.' });
@@ -2773,12 +2783,12 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             )}
           </div>
 
-          {/* Follow-Up Notifications */}
+          {/* Persisted coordination notes */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-blue-600" />
               <h3 className="font-bold text-sm text-slate-900">
-                Follow-Up Notifications — Organizer, Chair & Co-Chair
+                Coordination Notes — Organizer, Chair & Co-Chair
               </h3>
             </div>
             <form onSubmit={handleSendFollowUp} className="space-y-3 text-xs">
@@ -3486,7 +3496,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                                 <button
                                   key={status}
                                   type="button"
-                                  disabled={savingDealId === deal.id || deal.status === 'paid' && status === 'payment_pending'}
+                                  disabled={savingDealId === deal.id || deal.status === status || (deal.status === 'paid' && status === 'payment_pending')}
                                   onClick={() => handleDealStatus(deal, status as any)}
                                   className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold border cursor-pointer disabled:opacity-50 ${
                                     deal.status === status
