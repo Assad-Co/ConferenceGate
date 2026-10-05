@@ -20,6 +20,7 @@ import {
   BookmarkCheck,
   BellOff,
   Trash2,
+  ChevronRight,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile, NotificationItem } from '../types';
 import { sponsorOpportunityMatch } from '../utils/sponsorVerification';
@@ -63,9 +64,9 @@ interface SponsorPortalProps {
   /** This sponsor's real notifications — application decisions, organizer reviews, and new
    * opportunity alerts an organizer actually published, all backed by real data. */
   sponsorAlerts?: NotificationItem[];
-  onMarkAlertRead?: (id: string) => void;
-  onMarkAllAlertsRead?: () => void;
-  onApplyForSponsorship?: (packageId: string) => void;
+  onMarkAlertRead: (id: string) => void;
+  onMarkAllAlertsRead: () => void;
+  onApplyForSponsorship: (packageId: string) => void | Promise<void>;
   ownerPreview?: boolean;
 }
 
@@ -86,9 +87,9 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   myApplications,
   sponsorProfile,
   sponsorAlerts = [],
-  onMarkAlertRead = (_id: string) => {},
-  onMarkAllAlertsRead = () => {},
-  onApplyForSponsorship = (_packageId: string) => {},
+  onMarkAlertRead,
+  onMarkAllAlertsRead,
+  onApplyForSponsorship,
   ownerPreview = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
@@ -116,6 +117,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [inquiredNeedIds, setInquiredNeedIds] = useState<Record<string, boolean>>({});
   const [inquiringNeedId, setInquiringNeedId] = useState<string | null>(null);
+  const [applyingPackageId, setApplyingPackageId] = useState<string | null>(null);
   const [savedOpportunities, setSavedOpportunities] = useState<SponsorSavedOpportunity[]>([]);
   const [watchlistBusyKey, setWatchlistBusyKey] = useState<string | null>(null);
   const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
@@ -419,6 +421,26 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     setTimeout(() => alertsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
+
+  const handleSponsorAlertOpen = (alert: NotificationItem) => {
+    onMarkAlertRead(alert.id);
+    const signal = `${alert.actionUrl || ''} ${alert.title || ''} ${alert.message || ''}`.toLowerCase();
+
+    if (/deal|contract|payment|invoice/.test(signal)) {
+      setActiveTab('deals');
+    } else if (/request|proposal/.test(signal)) {
+      setActiveTab('requests');
+    } else if (/review|rating|reputation/.test(signal)) {
+      setActiveTab('profile');
+    } else if (/saved|watchlist/.test(signal)) {
+      setActiveTab('saved');
+    } else if (/match|new sponsorship opportunity|opportunit/.test(signal)) {
+      setActiveTab('matches');
+    } else {
+      setActiveTab('marketplace');
+    }
+  };
+
   const hasOrganizerReviews = sponsorProfile.reviewsCount > 0;
 
   const applicationByPackageId = useMemo(() => {
@@ -427,9 +449,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     return map;
   }, [myApplications]);
 
-  const handleApplySponsorship = (packageId: string) => {
-    if (applicationByPackageId.has(packageId)) return;
-    onApplyForSponsorship(packageId);
+  const handleApplySponsorship = async (packageId: string) => {
+    if (applicationByPackageId.has(packageId) || applyingPackageId === packageId) return;
+    setApplyingPackageId(packageId);
+    try {
+      await onApplyForSponsorship(packageId);
+    } finally {
+      setApplyingPackageId(null);
+    }
   };
 
   const opportunityById = useMemo(
@@ -484,12 +511,15 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       );
     }
+    const applying = applyingPackageId === packageId;
     return (
       <button
+        type="button"
         onClick={() => handleApplySponsorship(packageId)}
-        className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer"
+        disabled={applying}
+        className="w-full py-3 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
       >
-        Apply for Sponsorship
+        {applying ? 'Submitting…' : 'Apply for Sponsorship'}
       </button>
     );
   };
@@ -874,7 +904,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 {sponsorAlerts.map((alert) => (
                   <button
                     key={alert.id}
-                    onClick={() => onMarkAlertRead(alert.id)}
+                    onClick={() => handleSponsorAlertOpen(alert)}
                     className={`w-full text-left p-4 rounded-2xl border flex items-start justify-between gap-3 transition-colors cursor-pointer ${
                       alert.read ? 'bg-white border-slate-200' : 'bg-blue-50/60 border-blue-200 hover:bg-blue-50'
                     }`}
@@ -887,6 +917,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                       <p className="text-[11px] text-slate-600 mt-0.5">{alert.message}</p>
                       <div className="text-[10px] text-slate-400 mt-1">{alert.timestamp}</div>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-1" aria-hidden="true" />
                   </button>
                 ))}
               </div>
