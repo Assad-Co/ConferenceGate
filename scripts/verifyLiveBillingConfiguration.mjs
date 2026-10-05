@@ -40,15 +40,21 @@ if (!paddle.safe || !fastspring.safe) {
   throw new Error(`Unexpected webhook probe response: ${JSON.stringify({ paddle, fastspring })}`);
 }
 
+const configuredProviders = [paddle, fastspring]
+  .filter((provider) => provider.configured)
+  .map((provider) => provider.provider);
+
 const report = {
-  phase: '11.6',
+  phase: '33.1',
   target: base,
   release: health.release || null,
   database: health.database || null,
   databaseBackend: health.databaseBackend || null,
   webhookConfiguration: { paddle, fastspring },
-  atLeastOneVerifiedWebhookProviderConfigured: paddle.configured || fastspring.configured,
-  note: 'Unsigned probes cannot process billing events; HTTP 400 means a secret is configured and signature verification rejected the probe. HTTP 503 means the provider secret is absent.',
+  configuredWebhookProviders: configuredProviders,
+  atLeastOneVerifiedWebhookProviderConfigured: configuredProviders.length > 0,
+  checkoutCredentialAudit: 'requires_server_environment_or_real_provider_checkout; unsigned webhook probes intentionally cannot inspect API keys or price/product bindings',
+  note: 'Unsigned probes cannot process billing events. HTTP 400 means a provider webhook secret is configured and signature verification rejected the probe. HTTP 503 means that provider webhook secret is absent. A configured webhook secret alone does not prove checkout API keys or Organizer/Sponsor price/product bindings are present.',
 };
 
 console.log(JSON.stringify(report, null, 2));
