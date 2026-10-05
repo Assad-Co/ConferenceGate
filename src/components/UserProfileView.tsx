@@ -36,6 +36,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
 import { LinkedInProfilePanel } from './LinkedInProfilePanel';
 import { LinkedInImportedTabSections } from './LinkedInImportedTabSections';
+import { ConferenceGateIndexCard } from './ConferenceGateIndexCard';
 import {
   fetchLinkedInConferenceActivity,
   type LinkedInConferenceActivity,
@@ -1404,13 +1405,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                           </a>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleDecideExternalPaper(paper, 'dismissed')}
+                      <select
+                        defaultValue="approved"
                         disabled={decidingDoi === paper.doi}
-                        className="px-2.5 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer disabled:opacity-50 shrink-0"
+                        onChange={(e) => { if (e.target.value === 'remove') handleDecideExternalPaper(paper, 'dismissed'); }}
+                        className="px-2.5 py-1.5 text-[11px] font-bold text-slate-700 bg-white border border-slate-200 rounded-lg cursor-pointer disabled:opacity-50 shrink-0"
+                        aria-label={`Publication status for ${paper.title}`}
                       >
-                        Remove confirmation
-                      </button>
+                        <option value="approved">Approved</option>
+                        <option value="remove">Remove</option>
+                      </select>
                     </div>
                   ))}
                 </div>
@@ -1646,6 +1650,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 ConferenceGate separates platform-verified activity, official-source evidence, and self-reported history.
               </p>
             </div>
+
+            <ConferenceGateIndexCard />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">

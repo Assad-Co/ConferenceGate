@@ -20,6 +20,7 @@ export interface CreateSubmissionPayload {
   primaryAuthor: { name: string; email: string; affiliation: string; bio: string };
   coAuthors: Array<{ name: string; affiliation: string; email: string }>;
   conflictOfInterest: string;
+  attachment?: { fileName: string; mimeType: string; dataBase64: string };
 }
 
 export interface SubmitReviewPayload {
@@ -147,6 +148,13 @@ export interface ProfessionalDirectoryProfile {
   verifiedReviews: number;
   verifiedCompletedRoles: number;
   matchScore: number;
+  reviewerEligible?: boolean;
+  reviewerEligibilityReason?: string;
+  conferenceGateIndex?: number;
+  experienceYears?: number;
+  publicationCount?: number;
+  recentPositions?: string[];
+  certifications?: string[];
 }
 
 export async function searchProfessionals(params: {

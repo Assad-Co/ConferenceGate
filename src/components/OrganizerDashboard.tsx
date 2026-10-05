@@ -45,6 +45,7 @@ import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
+import { ProfessionalRecruitmentPanel } from './ProfessionalRecruitmentPanel';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -1453,9 +1454,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
         {[
           { id: 'overview', label: 'Dashboard Overview' },
+          { id: 'professionals', label: 'Professional Network & Committee Recruitment' },
           { id: 'wizard', label: 'Conference Wizard' },
           { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
-          { id: 'professionals', label: 'Professional Network' },
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
           { id: 'communications', label: 'Communications Hub' },
@@ -2363,10 +2364,23 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
       {/* Paid Organizer Pro: Professional Network */}
       {activeTab === 'professionals' && (
         <div className="space-y-6">
+          <ProfessionalRecruitmentPanel
+            conferences={conferences}
+            onContinueToWizard={(draft) => {
+              setNewConfTitle(draft.title || '');
+              setNewConfDescription(draft.description || '');
+              setNewConfStartDate(draft.startDate || '');
+              setNewConfEndDate(draft.endDate || '');
+              setNewConfLocation([draft.city, draft.country].filter(Boolean).join(', '));
+              setNewConfMainThemes((draft.topics || []).join(', '));
+              setNewConfOfficialWebsite(draft.officialUrl || '');
+              setActiveTab('wizard');
+            }}
+          />
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
             <div>
               <span className="text-[10px] font-bold uppercase text-blue-600">Organizer Pro</span>
-              <h2 className="text-xl font-bold text-slate-900">Professional Network</h2>
+              <h2 className="text-xl font-bold text-slate-900">Published Conference Professional Search</h2>
               <p className="text-xs text-slate-500 mt-1 max-w-3xl">
                 Search free Professional profiles by role and expertise, then send a real ConferenceGate invitation.
                 Match percentages use the professional's stored expertise, verified platform activity, and profile completeness.

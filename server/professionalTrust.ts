@@ -159,7 +159,7 @@ async function loadLinkedInEvidence(userId: string) {
   };
 }
 
-async function buildProfessionalTrust(userId: string) {
+export async function buildProfessionalTrust(userId: string) {
   await initProfessionalTrustSchema();
   const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
   if (!user || user.role !== "professional") return null;
@@ -351,6 +351,8 @@ function draftDTO(row: any) {
     finalConferenceId: row.final_conference_id || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    acceptedCount: Number(row.accepted_count || 0),
+    pendingCount: Number(row.pending_count || 0),
   };
 }
 
@@ -358,7 +360,12 @@ professionalTrustRouter.get("/recruitment-drafts", asyncHandler(async (req: Auth
   const context = await organizerContext(req, res);
   if (!context) return;
   await initProfessionalTrustSchema();
-  const rows = await dbAll<any>("SELECT * FROM conference_recruitment_drafts WHERE organizer_id=? AND status!='archived' ORDER BY created_at DESC", [context.accountId]);
+  const rows = await dbAll<any>(`SELECT d.*,
+      (SELECT COUNT(*) FROM professional_invitations i WHERE i.conference_id=d.id AND i.status IN ('accepted','completed')) AS accepted_count,
+      (SELECT COUNT(*) FROM professional_invitations i WHERE i.conference_id=d.id AND i.status='pending') AS pending_count
+    FROM conference_recruitment_drafts d
+    WHERE d.organizer_id=? AND d.status!='archived'
+    ORDER BY d.created_at DESC`, [context.accountId]);
   res.json({ drafts: rows.map(draftDTO) });
 }));
 

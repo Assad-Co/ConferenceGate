@@ -55,6 +55,7 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
   const [conflictOfInterest, setConflictOfInterest] = useState('None declared.');
   const [aiChecking, setAiChecking] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<any>(null);
+  const [abstractFile, setAbstractFile] = useState<File | null>(null);
 
   const filteredConferences = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -106,9 +107,19 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !abstractText.trim() || !selectedConf) return;
+    let attachment: any = undefined;
+    if (abstractFile) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read abstract file.'));
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.readAsDataURL(abstractFile);
+      });
+      attachment = { fileName: abstractFile.name, mimeType: abstractFile.type, dataBase64: dataUrl.split(',').pop() || '' };
+    }
 
     onSubmit({
       conferenceId: selectedConf.id,
@@ -133,7 +144,8 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
         { label: 'Final Decision', status: 'upcoming' },
       ],
       reviews: [],
-    });
+      attachment,
+    } as any);
     onClose();
   };
 
@@ -294,6 +306,12 @@ export const AbstractSubmissionModal: React.FC<AbstractSubmissionModalProps> = (
               placeholder="Machine Learning, Geochemistry, Neural Networks"
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl font-medium focus:outline-hidden text-xs"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Abstract File for Review</label>
+            <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setAbstractFile(e.target.files?.[0] || null)} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs" />
+            <p className="text-[10px] text-slate-500">Optional PDF/DOC/DOCX, max 5 MB. Assigned reviewers receive secure access; returned review files go back through the organizer.</p>
           </div>
 
           {/* Co-Authors List */}

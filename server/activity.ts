@@ -33,6 +33,7 @@ import { searchDblpConferencePapers } from "./dblp";
 import { searchOpenAlexConferencePapers } from "./openalex";
 import { searchWebForConferenceFacts } from "./braveSearch";
 import { resolvePaidAccountContext, canOperateWorkspace } from "./workspaceAccess";
+import { buildProfessionalTrust } from "./professionalTrust";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -172,6 +173,12 @@ activityRouter.post(
     if (!reviewer) {
       return res.status(404).json({ error: "Reviewer account not found" });
     }
+    const reviewerTrust = await buildProfessionalTrust(reviewerId);
+    if (!reviewerTrust?.reviewerEligible) {
+      return res.status(409).json({
+        error: reviewerTrust?.eligibilityReason || "This Professional is not eligible for the reviewer pool."
+      });
+    }
 
     // Only the conference's own organizer may invite reviewers to its submissions. Conferences
     // outside the organizer-wizard catalog (created_conferences) have no owner account to check
@@ -283,6 +290,17 @@ activityRouter.post("/submissions", asyncHandler(async (req: AuthedRequest, res:
       body.conflictOfInterest || null,
     ]
   );
+
+  if (body.attachment && typeof body.attachment === "object") {
+    const fileName = String(body.attachment.fileName || "").trim().slice(0, 240);
+    const mimeType = String(body.attachment.mimeType || "").trim().toLowerCase();
+    const dataBase64 = String(body.attachment.dataBase64 || "").replace(/^data:[^;]+;base64,/, "").trim();
+    const allowedMime = new Set(["application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
+    const byteSize = Math.floor((dataBase64.length * 3) / 4);
+    if (fileName && dataBase64 && allowedMime.has(mimeType) && byteSize > 0 && byteSize <= 5 * 1024 * 1024) {
+      await dbRun("INSERT INTO submission_documents(id,submission_id,uploader_id,kind,file_name,mime_type,byte_size,data_base64) VALUES(?,?,?,?,?,?,?,?)", [`doc_${crypto.randomUUID()}`,id,req.userId!,"author_original",fileName,mimeType,byteSize,dataBase64]);
+    }
+  }
 
   const row = (await dbGet<SubmissionRow>("SELECT * FROM submissions WHERE id = ?", [id]))!;
   res.status(201).json({ submission: toSubmissionDTO(row, [], []) });
@@ -652,69 +670,66 @@ activityRouter.get(
       const specialization = parseStringArray(professional.technical_specialization);
       const interests = parseStringArray(professional.research_interests);
       const regions = parseStringArray(professional.preferred_regions);
+      const linkedin = await dbGet<any>(
+        "SELECT experience,publications,certifications FROM linkedin_profile_enrichment WHERE user_id=?",
+        [professional.id]
+      ).catch(() => undefined);
+      const parseEvidence = (value: unknown): any[] => {
+        if (Array.isArray(value)) return value;
+        if (typeof value !== "string") return [];
+        try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+      };
+      const positionRows = parseEvidence(linkedin?.experience);
+      const publicationRows = parseEvidence(linkedin?.publications);
+      const certificationRows = parseEvidence(linkedin?.certifications);
+      const cutoffYear = new Date().getUTCFullYear() - 7;
+      const evidenceText = (item: any) => typeof item === "string" ? item : [item?.title,item?.position,item?.role,item?.companyName,item?.company,item?.organization,item?.name,item?.issuer,item?.authority,item?.dateRange,item?.startDate,item?.endDate].filter(Boolean).join(" · ");
+      const evidenceYear = (item: any) => {
+        const text = evidenceText(item);
+        const years = text.match(/\b(?:19|20)\d{2}\b/g) || [];
+        return years.length ? Math.max(...years.map(Number)) : new Date().getUTCFullYear();
+      };
+      const recentPositions = positionRows.filter((item: any) => evidenceYear(item) >= cutoffYear).map(evidenceText).filter(Boolean).slice(0, 12);
+      const certifications = certificationRows.map(evidenceText).filter(Boolean).slice(0, 20);
       const profileTokens = tokenSet([
-        professional.name,
-        professional.title,
-        professional.organization,
-        professional.bio,
-        ...expertise,
-        ...specialization,
-        ...interests,
-        ...regions,
+        professional.name, professional.title, professional.organization, professional.bio,
+        ...expertise, ...specialization, ...interests, ...regions, ...recentPositions, ...certifications,
       ]);
 
       if (q && !String([
         professional.name,professional.title,professional.organization,professional.country,
-        ...expertise,...specialization,...interests,
+        ...expertise,...specialization,...interests,...recentPositions,...certifications,
       ].filter(Boolean).join(" ")).toLowerCase().includes(q.toLowerCase()) && queryTokens.size > 0) {
-        const overlap = [...queryTokens].some((token) => profileTokens.has(token));
-        if (!overlap) continue;
+        const hasOverlap = [...queryTokens].some((token) => profileTokens.has(token));
+        if (!hasOverlap) continue;
       }
 
       let overlap = 0;
       for (const token of queryTokens) if (profileTokens.has(token)) overlap += 1;
       const relevance = queryTokens.size ? overlap / queryTokens.size : 0.5;
 
-      const [reviewCountRow, roleCountRow] = await Promise.all([
-        dbGet<{ count: number }>(
-          "SELECT COUNT(*) as count FROM submission_reviews WHERE reviewer_id = ?",
-          [professional.id]
-        ),
-        dbGet<{ count: number }>(
-          "SELECT COUNT(*) as count FROM professional_invitations WHERE professional_id = ? AND status = 'completed'",
-          [professional.id]
-        ),
+      const [reviewCountRow, roleCountRow, trust] = await Promise.all([
+        dbGet<{ count: number }>("SELECT COUNT(*) as count FROM submission_reviews WHERE reviewer_id = ?", [professional.id]),
+        dbGet<{ count: number }>("SELECT COUNT(*) as count FROM professional_invitations WHERE professional_id = ? AND status = 'completed'", [professional.id]),
+        buildProfessionalTrust(professional.id),
       ]);
       const reviewCount = reviewCountRow?.count || 0;
       const completedRoleCount = roleCountRow?.count || 0;
-      const evidenceScore = Math.min(1, (reviewCount / 10) * 0.6 + (completedRoleCount / 5) * 0.4);
-      const profileCompleteness = [
-        professional.title, professional.organization, professional.bio, professional.country,
-        expertise.length, specialization.length, interests.length, regions.length
-      ].filter(Boolean).length / 8;
-      const score = Math.round(
-        Math.max(0, Math.min(1, relevance * 0.65 + evidenceScore * 0.2 + profileCompleteness * 0.15)) * 100
-      );
+      const evidenceScore = Math.min(1, (reviewCount / 10) * 0.5 + (completedRoleCount / 5) * 0.3 + Math.min(0.2, (trust?.conferenceGateIndex || 0) / 500));
+      const profileCompleteness = [professional.title, professional.organization, professional.bio, professional.country, expertise.length, specialization.length, interests.length, regions.length, recentPositions.length, certifications.length].filter(Boolean).length / 10;
+      const score = Math.round(Math.max(0, Math.min(1, relevance * 0.6 + evidenceScore * 0.25 + profileCompleteness * 0.15)) * 100);
 
       results.push({
-        id: professional.id,
-        name: professional.name,
-        title: professional.title || "",
-        organization: professional.organization || "",
-        country: professional.country || "",
-        avatar: professional.avatar || null,
-        expertise,
-        technicalSpecialization: specialization,
-        researchInterests: interests,
-        preferredRegions: regions,
+        id: professional.id, name: professional.name, title: professional.title || "",
+        organization: professional.organization || "", country: professional.country || "", avatar: professional.avatar || null,
+        expertise, technicalSpecialization: specialization, researchInterests: interests, preferredRegions: regions,
         identityVerified: Boolean(professional.linkedin_id || professional.google_id),
-        reviewerAvailable: Boolean(professional.reviewer_available),
-        committeeAvailable: Boolean(professional.committee_available),
-        sessionChairAvailable: Boolean(professional.session_chair_available),
-        speakerAvailable: Boolean(professional.speaker_available),
-        verifiedReviews: reviewCount,
-        verifiedCompletedRoles: completedRoleCount,
-        matchScore: score,
+        reviewerAvailable: Boolean(professional.reviewer_available), committeeAvailable: Boolean(professional.committee_available),
+        sessionChairAvailable: Boolean(professional.session_chair_available), speakerAvailable: Boolean(professional.speaker_available),
+        verifiedReviews: reviewCount, verifiedCompletedRoles: completedRoleCount, matchScore: score,
+        reviewerEligible: Boolean(trust?.reviewerEligible), reviewerEligibilityReason: trust?.eligibilityReason || "",
+        conferenceGateIndex: trust?.conferenceGateIndex || 0, experienceYears: trust?.evidence.experienceYears || 0,
+        publicationCount: publicationRows.length, recentPositions, certifications,
       });
     }
 
@@ -988,8 +1003,12 @@ activityRouter.post(
       "SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?",
       [body.conferenceId, accountId]
     );
-    if (!conference) {
-      return res.status(404).json({ error: "You can only invite professionals to conferences in this workspace." });
+    const recruitmentDraft = conference ? undefined : await dbGet<any>(
+      "SELECT * FROM conference_recruitment_drafts WHERE id=? AND organizer_id=? AND status IN ('recruiting','ready')",
+      [body.conferenceId, accountId]
+    ).catch(() => undefined);
+    if (!conference && !recruitmentDraft) {
+      return res.status(404).json({ error: "You can only invite Professionals to a published conference or pre-wizard recruitment draft in this workspace." });
     }
     const professional = await dbGet<{ role: string; name: string }>(
       "SELECT role,name FROM users WHERE id = ?",
@@ -999,7 +1018,7 @@ activityRouter.post(
       return res.status(404).json({ error: "Professional account not found." });
     }
 
-    const conferenceData = JSON.parse(conference.data);
+    const conferenceData = conference ? JSON.parse(conference.data) : { title: recruitmentDraft.title };
     const existing = await dbGet<ProfessionalInvitationRow>(
       `SELECT * FROM professional_invitations
         WHERE organizer_id = ? AND professional_id = ? AND conference_id = ? AND role_type = ?
@@ -1067,6 +1086,10 @@ activityRouter.post(
 );
 
 activityRouter.post("/reviews/volunteer", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const trust = await buildProfessionalTrust(req.userId!);
+  if (!trust?.reviewerEligible) {
+    return res.status(403).json({ error: trust?.eligibilityReason || "Reviewer eligibility requirements are not met." });
+  }
   const body = req.body || {};
   if (typeof body.opportunityId !== "string" || !body.opportunityId) {
     return res.status(400).json({ error: "opportunityId is required" });

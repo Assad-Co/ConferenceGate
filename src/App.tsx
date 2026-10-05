@@ -1378,6 +1378,7 @@ export function App() {
         primaryAuthor,
         coAuthors: newSubData.coAuthors || [],
         conflictOfInterest: newSubData.conflictOfInterest?.trim() || 'None declared.',
+        attachment: (newSubData as any).attachment,
       });
 
       setSubmissions((prev) => [newSubmission, ...prev]);

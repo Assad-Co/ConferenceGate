@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Award, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { AbstractSubmission, UserProfile, Conference, ProfessionalInvitation } from '../types';
 import { ConferenceRegistration } from '../api/activity';
 import { downloadCertificatePDF } from '../utils/certificatePdf';
 import { ConferenceLink } from './ConferenceLink';
+import { fetchMyProfessionalTrust, type ProfessionalTrustSummary } from '../api/professionalTrust';
 
 interface CertificatesViewProps {
   userProfile: UserProfile;
@@ -51,6 +52,8 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   onBack,
 }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [professionalTrust, setProfessionalTrust] = useState<ProfessionalTrustSummary | null>(null);
+  useEffect(() => { fetchMyProfessionalTrust().then(setProfessionalTrust).catch(() => setProfessionalTrust(null)); }, [currentUserId]);
 
   const certificates = useMemo<Certificate[]>(() => {
     const certs: Certificate[] = [];
@@ -141,8 +144,20 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         });
       });
 
+    if (professionalTrust && professionalTrust.evidence.organizerEvaluations > 0 && professionalTrust.evidence.evaluationAverage >= 3.5) {
+      certs.unshift({
+        id: `professional_credential_${currentUserId || 'me'}`,
+        title: `ConferenceGate ${professionalTrust.credentialLevel[0].toUpperCase() + professionalTrust.credentialLevel.slice(1)} Professional Credential`,
+        event: 'ConferenceGate Professional Network',
+        conferenceId: '',
+        paperTitle: `ConferenceGate Index ${professionalTrust.conferenceGateIndex}/100 · organizer evaluation ${professionalTrust.evidence.evaluationAverage.toFixed(2)}/5`,
+        date: new Date().toISOString().split('T')[0],
+        issuer: 'ConferenceGate verified professional evaluation system',
+        verificationHash: certHash(`professional_${currentUserId}_${professionalTrust.conferenceGateIndex}_${professionalTrust.evidence.organizerEvaluations}`),
+      });
+    }
     return certs;
-  }, [submissions, registrations, professionalInvitations, currentUserId, currentUserEmail]);
+  }, [submissions, registrations, professionalInvitations, currentUserId, currentUserEmail, professionalTrust]);
 
   const handleDownload = (certId: string) => {
     const cert = certificates.find((c) => c.id === certId);
@@ -187,7 +202,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Download PDF records generated from activity ConferenceGate can verify directly — accepted abstracts,
-            completed peer reviews, completed organizer roles, and conference registrations. A registration record does not claim attendance unless attendance is separately verified.
+            completed peer reviews, completed organizer roles, conference registrations, and evaluation-based Professional credentials. A registration record does not claim attendance unless attendance is separately verified.
           </p>
         </div>
 
@@ -203,7 +218,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {certificates.map((cert) => (
-              <div key={cert.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 flex flex-col justify-between">
+              <div key={cert.id} className="p-6 bg-white rounded-2xl border border-slate-200 space-y-4 flex flex-col justify-between shadow-xs">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-md">
