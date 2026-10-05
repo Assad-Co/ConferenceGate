@@ -168,8 +168,14 @@ async function main(){
   try{
     const tables=await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('discovery_events','extracted_conferences','discovery_event_categories')");
     if((tables.rows||[]).length<3){ console.log('[requested-expansion] schema unavailable; skipping'); return; }
-    let synced=0,rich6=0;
+    let synced=0,rich6=0,skippedPast=0;
+    const today=new Date().toISOString().slice(0,10);
     for(const e of EVENTS){
+      // Phase 28: this manifest is an upcoming-conference expansion. Keep historical records in
+      // their existing tables, but do not keep re-inserting a verified manifest item after its
+      // stated event dates have passed.
+      const lastDate=String(e.end||e.start||'').slice(0,10);
+      if(lastDate && /^\d{4}-\d{2}-\d{2}$/.test(lastDate) && lastDate<today){ skippedPast++; continue; }
       const now=new Date().toISOString();
       const normalized=normalizeTitle(e.title);
       const year=Number(e.start.slice(0,4));
@@ -196,7 +202,7 @@ async function main(){
         args:[e.url,JSON.stringify(overview),JSON.stringify(e.cfp||{}),JSON.stringify(e.program?{sessions:e.program.sessions||[],themes:e.program.themes||[],overview:e.program.overview||null}:{sessions:[],themes:[],overview:null}),JSON.stringify(e.speakers||[]),JSON.stringify(e.committee||[]),JSON.stringify(e.sponsors||[]),JSON.stringify(venue),JSON.stringify(e.fees||{}),JSON.stringify(e.community||{}),JSON.stringify(meta)]});
       synced++;
     }
-    console.log('[requested-expansion] synced='+synced+' rich_6plus_tabs='+rich6+' total='+EVENTS.length);
+    console.log('[requested-expansion] synced='+synced+' rich_6plus_tabs='+rich6+' skipped_past='+skippedPast+' total='+EVENTS.length);
   }catch(error){ console.warn('[requested-expansion] failed:',error?.message||error); }
   finally{ try{db.close();}catch{} }
 }
