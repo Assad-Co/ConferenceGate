@@ -29,6 +29,8 @@ export interface PublishOptions {
   dryRun?: boolean;
   /** Restrict publication to events attributed to one discovery batch. */
   runId?: string;
+  /** Restrict publication to an explicit event set. Intersects with runId when both are present. */
+  eventIds?: string[];
   /** Tests may disable the production audit gate explicitly; production defaults to required. */
   requirePassingAudit?: boolean;
 }
@@ -408,12 +410,16 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
   const runJoin = options.runId
     ? " JOIN discovery_run_events re ON re.event_id=e.id AND re.run_id=?"
     : "";
+  const eventIds = [...new Set((options.eventIds || []).map(String).filter(Boolean))];
+  const eventIdClause = options.eventIds
+    ? eventIds.length ? ` AND e.id IN (${eventIds.map(() => "?").join(",")})` : " AND 1=0"
+    : "";
 
   const rows = await dbAll<Record<string, any>>(
     `SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN (${placeholders})
         AND e.publish_readiness = 'publish_ready'
-        AND e.confidence_score >= ?
+        AND e.confidence_score >= ?${eventIdClause}
         AND e.title IS NOT NULL AND e.title <> ''
         AND e.official_url IS NOT NULL AND e.official_url <> ''
         AND (e.official_url LIKE 'https://%' OR e.official_url LIKE 'http://%')
@@ -433,7 +439,7 @@ export async function publishDiscoveredConferences(options: PublishOptions = {})
         )
       ORDER BY e.confidence_score DESC
       LIMIT ?`,
-    [...(options.runId ? [options.runId] : []), ...statuses, minConfidence, options.limit ?? 500]
+    [...(options.runId ? [options.runId] : []), ...statuses, minConfidence, ...eventIds, options.limit ?? 500]
   );
 
   const result: PublishResult = {
