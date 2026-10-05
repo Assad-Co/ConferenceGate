@@ -1,0 +1,28 @@
+name: Phase 24 Notification Actionability
+
+on:
+  push:
+    branches:
+      - phase-24-notification-actionability
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-24-notification-actionability
+          fetch-depth: 0
+      - name: Apply Phase 24 patch
+        run: node scripts/applyPhase24NotificationActionability.mjs
+      - name: Commit canonical Phase 24 changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Phase 24 — Make notifications actionable" || exit 0
+          git push origin HEAD:phase-24-notification-actionability
