@@ -232,8 +232,31 @@ export async function updateWorkspaceEnterpriseSettings(
   return data.settings;
 }
 
-export function downloadWorkspaceAuditCsv(): void {
-  window.location.assign('/api/workspaces/audit.csv');
+async function downloadWorkspaceFile(url: string, fallbackName: string): Promise<void> {
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    let message = `Workspace export failed (HTTP ${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.error) message = String(data.error);
+    } catch {}
+    throw new Error(message);
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const disposition = res.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  link.href = objectUrl;
+  link.download = match ? decodeURIComponent(match[1].replace(/"/g, '').trim()) : fallbackName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+export function downloadWorkspaceAuditCsv(): Promise<void> {
+  return downloadWorkspaceFile('/api/workspaces/audit.csv', 'conferencegate-workspace-audit.csv');
 }
 
 
@@ -277,8 +300,8 @@ export async function updateWorkspaceDataControls(
   return data.controls;
 }
 
-export function downloadWorkspaceDataJson(): void {
-  window.location.assign('/api/workspaces/data-export.json');
+export function downloadWorkspaceDataJson(): Promise<void> {
+  return downloadWorkspaceFile('/api/workspaces/data-export.json', 'conferencegate-workspace-data.json');
 }
 
 
@@ -316,6 +339,6 @@ export async function fetchWorkspaceEnterpriseReport(): Promise<WorkspaceEnterpr
   return data.report;
 }
 
-export function downloadWorkspaceEnterpriseReportCsv(): void {
-  window.location.assign('/api/workspaces/enterprise-report.csv');
+export function downloadWorkspaceEnterpriseReportCsv(): Promise<void> {
+  return downloadWorkspaceFile('/api/workspaces/enterprise-report.csv', 'conferencegate-enterprise-report.csv');
 }

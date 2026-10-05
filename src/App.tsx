@@ -920,8 +920,10 @@ export function App() {
         next[idx] = updated;
         return next;
       });
+      return true;
     } catch (err: any) {
       showToast({ type: 'info', title: 'Message not sent', message: err.message || 'Please try again.' });
+      return false;
     }
   };
 

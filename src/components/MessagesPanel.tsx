@@ -7,6 +7,7 @@ import {
   Send,
   UserPlus,
   X,
+  Loader2,
 } from 'lucide-react';
 import { ConversationSummary, MessageItem, PublicUser, searchUsers } from '../api/messages';
 import { resolveAvatar } from '../utils/avatar';
@@ -20,7 +21,7 @@ interface MessagesPanelProps {
   activeMessages: MessageItem[];
   currentUserId: string;
   onSelectConversation: (partnerId: string) => void;
-  onSendMessage: (partnerId: string, text: string) => void;
+  onSendMessage: (partnerId: string, text: string) => Promise<boolean>;
   onStartNewConversation: (user: PublicUser) => void;
 }
 
@@ -66,6 +67,9 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
   const [conversationQuery, setConversationQuery] = useState('');
   const [conversationFilter, setConversationFilter] = useState<ConversationFilter>('all');
   const [mobileThreadOpen, setMobileThreadOpen] = useState(Boolean(activePartnerId || pendingPartner));
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [memberSearchError, setMemberSearchError] = useState<string | null>(null);
   const searchSequence = useRef(0);
 
   useEffect(() => {
@@ -100,17 +104,31 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSend = (event: React.FormEvent) => {
+  const handleSend = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!draft.trim() || !activePartnerId) return;
-    onSendMessage(activePartnerId, draft.trim());
-    setDraft('');
+    const text = draft.trim();
+    if (!text || !activePartnerId || sending) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const sent = await onSendMessage(activePartnerId, text);
+      if (sent) {
+        setDraft('');
+      } else {
+        setSendError('Message was not sent. Your draft has been kept so you can try again.');
+      }
+    } catch (error: any) {
+      setSendError(error?.message || 'Message was not sent. Your draft has been kept so you can try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleSearchChange = (value: string) => {
     setQuery(value);
     const sequence = ++searchSequence.current;
 
+    setMemberSearchError(null);
     if (!value.trim()) {
       setResults([]);
       setSearching(false);
@@ -122,8 +140,11 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
       .then((users) => {
         if (sequence === searchSequence.current) setResults(users);
       })
-      .catch(() => {
-        if (sequence === searchSequence.current) setResults([]);
+      .catch((error: any) => {
+        if (sequence === searchSequence.current) {
+          setResults([]);
+          setMemberSearchError(error?.message || 'Member search is temporarily unavailable.');
+        }
       })
       .finally(() => {
         if (sequence === searchSequence.current) setSearching(false);
@@ -288,6 +309,8 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
               <div className="absolute z-10 left-3 right-3 bottom-[58px] max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                 {searching ? (
                   <p className="text-[11px] text-slate-400 p-3">Searching…</p>
+                ) : memberSearchError ? (
+                  <p className="text-[11px] text-rose-600 p-3">{memberSearchError}</p>
                 ) : results.length === 0 ? (
                   <p className="text-[11px] text-slate-400 p-3">No registered members match “{query}”.</p>
                 ) : (
@@ -409,22 +432,30 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
           </div>
 
           {activePartner && activePartnerId && (
-            <form onSubmit={handleSend} className="p-3 border-t border-slate-100 flex items-center gap-2 bg-white">
+            <form onSubmit={handleSend} className="p-3 border-t border-slate-100 bg-white">
+              {sendError && (
+                <div className="mb-2 px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-[10px] text-rose-700">
+                  {sendError}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => { setDraft(event.target.value); if (sendError) setSendError(null); }}
+                disabled={sending}
                 placeholder={`Message ${activePartner.name}...`}
                 className="flex-1 rounded-full border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-shadow"
               />
               <button
                 type="submit"
-                disabled={!draft.trim()}
+                disabled={!draft.trim() || sending}
                 className="p-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-40 text-white rounded-full transition-colors cursor-pointer shrink-0"
-                aria-label="Send message"
+                aria-label={sending ? 'Sending message' : 'Send message'}
               >
-                <Send className="w-4 h-4" />
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
+              </div>
             </form>
           )}
         </div>
