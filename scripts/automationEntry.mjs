@@ -5,11 +5,11 @@ if (String(process.env.AUTOMATION_DISABLED || '').trim() === '1') {
   process.exit(0);
 }
 
-// The authoritative 8-hour worker now starts with a short coverage-specific production pass.
-// Phase 31 reads the live category × region × year gaps, promotes conferences already sitting in
-// those cells, chooses proven healthy official domains where new inventory is actually needed,
-// then runs the Phase 30 controlled closure loop. The long generic automation pass remains after
-// it, so global verification/recovery work continues without allowing it to starve the known gaps.
+// The authoritative 8-hour worker starts with coverage-specific production intelligence.
+// Phase 32 learns which official sources actually create accepted, publish-ready and rich published
+// conferences, cools repeated no-gain sources, and keeps a bounded exploration share. Phase 31 then
+// applies the live category × region × year closure strategy. The long generic automation pass
+// remains afterward so global verification/recovery continues without starving known catalogue gaps.
 const coverageEnv = {
   POPULAR_CATEGORY_RICH_TARGET: process.env.POPULAR_CATEGORY_RICH_TARGET || '25',
   POPULAR_CATEGORY_SPONSOR_TARGET: process.env.POPULAR_CATEGORY_SPONSOR_TARGET || '12',
@@ -32,11 +32,24 @@ const phase31Env = {
   PHASE31_PUBLISH: process.env.PHASE31_PUBLISH || '1',
 };
 
+const phase32Env = {
+  ...phase31Env,
+  PHASE32_YEARS: process.env.PHASE32_YEARS || process.env.PHASE31_YEARS || '2026,2027',
+  PHASE32_GAP_CELLS: process.env.PHASE32_GAP_CELLS || '16',
+  PHASE32_MAX_DOMAINS: process.env.PHASE32_MAX_DOMAINS || '14',
+  PHASE32_MAX_PAGES: process.env.PHASE32_MAX_PAGES || '72',
+  PHASE32_PAGES_PER_DOMAIN: process.env.PHASE32_PAGES_PER_DOMAIN || '4',
+  PHASE32_EXPLORATION_SHARE: process.env.PHASE32_EXPLORATION_SHARE || '0.2',
+  PHASE32_EWMA_ALPHA: process.env.PHASE32_EWMA_ALPHA || '0.32',
+  PHASE32_COOLDOWN_NO_GAIN: process.env.PHASE32_COOLDOWN_NO_GAIN || '3',
+};
+
 const steps = [
   ['node', ['scripts/patchImportedPublicationGuards.mjs']],
   ['node', ['scripts/repairApifyDiscoveryEvidence.mjs']],
   ['node', ['scripts/syncRequestedCategoryExpansion.mjs']],
   ['node', ['scripts/syncPhase13GlobalDepth.mjs']],
+  ['node', ['scripts/sourcePerformanceLearning.mjs'], phase32Env, true],
   ['node', ['scripts/adaptiveCoverageExecution.mjs'], phase31Env, true],
   ['node', ['scripts/enrichConferenceImages.mjs'], { IMAGE_ENRICH_LIMIT: '250' }, true],
   ['npx', ['tsx', 'server/discovery/cli.ts', 'automate', '--target', '5000', '--published-target', '5000', '--batch-pages', '500', '--enrichment-limit', '600', '--max-search-queries', '14', '--enrichment-search-queries', '6', '--max-jina-pages', '100', '--enrichment-jina-pages', '50', '--schedule-hours', '8', '--run-time-budget-ms', '3300000', '--repeat-for-ms', '25200000', '--quiet']],
