@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, ReviewOpportunity, ProfessionalOpportunity, ProfessionalInvitation, AbstractSubmission, Conference } from '../types';
 import { ConferenceLink } from './ConferenceLink';
+import { ProfessionalConferenceEvaluation, ReviewerDocumentWorkflow, ReviewerEligibilityCard } from './ReviewerTrustWorkflow';
 
 interface ReviewerPortalProps {
   userProfile: UserProfile;
@@ -305,6 +306,8 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
 
   return (
     <div className="space-y-8">
+      <ReviewerEligibilityCard />
+      <ProfessionalConferenceEvaluation conferences={conferences} />
       {/* Top Banner & Reviewer Availability Toggle */}
       <div className="bg-blue-50 text-slate-900 rounded-3xl p-6 sm:p-8 shadow-xs border border-blue-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -798,6 +801,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
       )}
       {activeTab === 'evaluate' && selectedSub && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+          <ReviewerDocumentWorkflow submission={selectedSub} />
           <div className="pb-4 border-b border-slate-100 space-y-2">
             <span className="text-[10px] font-bold uppercase text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">
               Evaluating Paper #{selectedSub.id}

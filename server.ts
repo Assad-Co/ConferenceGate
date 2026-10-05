@@ -19,6 +19,7 @@ import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
 import { workspacesRouter } from "./server/workspaces";
+import { professionalTrustRouter, initProfessionalTrustSchema } from "./server/professionalTrust";
 import { marketplaceIntelligenceRouter } from "./server/marketplaceIntelligence";
 import { initGrowthAutomationSchema } from "./server/growthAutomation";
 import { fastSpringWebhookRouter } from "./server/fastspringWebhook";
@@ -70,6 +71,7 @@ async function startServer() {
   // be ready before any request can be handled.
   await initDb();
   await initGrowthAutomationSchema();
+  await initProfessionalTrustSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
     try {
@@ -346,7 +348,7 @@ async function startServer() {
   app.use("/api/billing/webhooks/fastspring", fastSpringWebhookRouter);
   app.use("/api/billing/webhooks/paddle", paddleWebhookRouter);
 
-  app.use(express.json({ limit: "3mb" }));
+  app.use(express.json({ limit: "8mb" }));
   app.use(cookieParser());
 
   // Browser state-changing requests must originate from this ConferenceGate host. Provider and
@@ -428,6 +430,9 @@ async function startServer() {
 
   // Paid organizer/sponsor team workspaces, seats, roles, and audit trail
   app.use("/api/workspaces", workspacesRouter);
+
+  // Phase 34: Professional trust, reviewer eligibility, pre-wizard recruitment and secure review files.
+  app.use("/api/professional-trust", professionalTrustRouter);
 
   // Phase 8 marketplace intelligence: deterministic account action queues from real marketplace state.
   app.use("/api/marketplace-intelligence", marketplaceIntelligenceRouter);

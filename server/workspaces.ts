@@ -768,13 +768,18 @@ workspacesRouter.post(
       .slice()
       .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
 
-    if (!best || importExtractionScore(best.raw) === 0) {
+    if (!best) {
       return res.status(422).json({
         code: "IMPORT_PAGE_UNREADABLE",
-        error:
-          "ConferenceGate could not extract conference details from this page. " +
-          "The page may be blocking automated readers or may require a login. You can still enter the details manually.",
+        error: "ConferenceGate could not read this page through direct, rendered, or readable-page routes. You can still enter the details manually.",
         attempts,
+      });
+    }
+    if (importExtractionScore(best.raw) === 0) {
+      return res.json({
+        draft: { sourceUrl: best.sourceUrl || url.href, title: null, description: null, startDate: null, endDate: null, location: null, topics: [], bannerUrl: null, format: null, priceRange: null, organizer: null, confidence: 0, extractedFields: [] },
+        method: best.route, attempts,
+        note: "The official page was reachable but did not expose structured conference facts. ConferenceGate kept the source URL and opened an empty reviewable draft instead of failing; enter the missing fields manually or try a conference-specific page."
       });
     }
 

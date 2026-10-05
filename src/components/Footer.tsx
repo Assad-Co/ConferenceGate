@@ -39,7 +39,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
-              <span>Verified Conference Activity Records</span>
+              <span>ConferenceGate Index · Verified Professional Records</span>
             </div>
           </div>
 
@@ -47,14 +47,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
           {role === 'professional' && (
             <div>
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">
-                For Researchers & Reviewers
+                For Professionals & Reviewers
               </h4>
               <ul className="space-y-2 text-xs">
                 <li><button onClick={() => onNavigateTab('discover')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Discover Conferences</button></li>
                 <li><button onClick={() => onNavigateTab('abstracts')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Submit Abstracts & Track Status</button></li>
                 <li><button onClick={() => onNavigateTab('reviewer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Reviewer Opportunity Marketplace</button></li>
                 <li><button onClick={() => onNavigateTab('profile')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Professional History & Badges</button></li>
-                <li><button onClick={() => onNavigateTab('certificates')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Verified Digital Certificates</button></li>
+                <li><button onClick={() => onNavigateTab('certificates')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">ConferenceGate Index & Digital Credentials</button></li>
               </ul>
             </div>
           )}
