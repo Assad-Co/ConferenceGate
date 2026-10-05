@@ -62,6 +62,9 @@ import {
   createOrganizerMeetingPlan,
   type OrganizerCommitteeTask,
   type OrganizerMeetingPlan,
+  fetchOrganizerCoordinationNotes,
+  createOrganizerCoordinationNote,
+  type OrganizerCoordinationNote,
 } from '../api/activity';
 import { sendMessage } from '../api/messages';
 import {
@@ -880,21 +883,22 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     to: 'Technical Committee Chair',
     message: '',
   });
-  const [committeeFollowUps, setCommitteeFollowUps] = useState<
-    Array<{ id: string; from: string; to: string; message: string; date: string }>
-  >([]);
+  const [committeeFollowUps, setCommitteeFollowUps] = useState<OrganizerCoordinationNote[]>([]);
 
-  const handleSendFollowUp = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchOrganizerCoordinationNotes().then(setCommitteeFollowUps).catch(() => {});
+  }, []);
+
+  const handleSendFollowUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!followUpDraft.message.trim()) return;
-    const id = `fu_${Date.now()}`;
-    setCommitteeFollowUps((prev) => [
-      { id, ...followUpDraft, date: new Date().toLocaleString() },
-      ...prev,
-    ]);
-    // This is a local coordination note only. Do not claim delivery to a committee member unless
-    // the recipient is linked to a real ConferenceGate identity and a server delivery route.
-    setFollowUpDraft({ ...followUpDraft, message: '' });
+    try {
+      const note = await createOrganizerCoordinationNote({ ...followUpDraft, message: followUpDraft.message.trim() });
+      setCommitteeFollowUps((prev) => [note, ...prev]);
+      setFollowUpDraft({ ...followUpDraft, message: '' });
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not save coordination note', message: error instanceof Error ? error.message : 'Please try again.' });
+    }
   };
 
   // World Clock timezones offered when scheduling a cross-border committee meeting
@@ -2817,7 +2821,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                 <div className="flex items-center gap-2 text-[11px] text-slate-500">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
                     <ShieldAlert className="w-3 h-3" />
-                    Coordination note only — no email or member notification is sent
+                    Saved to this Organizer workspace — no email or member notification is sent
                   </span>
                 </div>
               </div>
@@ -2846,7 +2850,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <div className="flex items-center gap-2 mt-2">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
                         <ShieldAlert className="w-3 h-3" />
-                        Session-only coordination note
+                        Workspace coordination note
                       </span>
                     </div>
                   </div>

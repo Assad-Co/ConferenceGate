@@ -249,6 +249,16 @@ try {
     throw new Error('Organizer task status was not persisted.');
   }
 
+  const createdNote = await request('/api/activity/organizer/coordination-notes', {
+    method: 'POST', cookie: member.cookie,
+    body: { from: 'Conference Organizer', to: 'Technical Committee Chair', message: 'Please confirm reviewer coverage.' },
+  });
+  if (!createdNote?.note?.id) throw new Error('Organizer coordination note was not persisted.');
+  const ownerNotes = await request('/api/activity/organizer/coordination-notes', { cookie: owner.cookie });
+  if (!(ownerNotes.notes || []).some((note) => note.id === createdNote.note.id)) {
+    throw new Error('Organizer coordination note was not shared across workspace seats.');
+  }
+
   const createdMeeting = await request('/api/activity/organizer/meeting-plans', {
     method: 'POST',
     cookie: member.cookie,
@@ -307,6 +317,10 @@ try {
     cookie: member.cookie,
     expectedStatus: 403,
     body: { assignee: 'Blocked', title: 'Viewer must not write', priority: 'Low' },
+  });
+  await request('/api/activity/organizer/coordination-notes', {
+    method: 'POST', cookie: member.cookie, expectedStatus: 403,
+    body: { from: 'Blocked', to: 'Blocked', message: 'Viewer must not write' },
   });
   await request('/api/activity/organizer/meeting-plans', {
     method: 'POST',

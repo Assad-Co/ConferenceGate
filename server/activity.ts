@@ -1352,6 +1352,34 @@ activityRouter.patch("/organizer/committee-tasks/:id", asyncHandler(async (req: 
   });
 }));
 
+
+activityRouter.get("/organizer/coordination-notes", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const rows = await dbAll<any>(
+    "SELECT * FROM organizer_coordination_notes WHERE organizer_id = ? ORDER BY created_at DESC",
+    [organizerContext.accountId]
+  );
+  res.json({ notes: rows.map((row) => ({ id: row.id, from: row.author_label, to: row.recipient_label, message: row.message, date: row.created_at })) });
+}));
+
+activityRouter.post("/organizer/coordination-notes", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const body = req.body || {};
+  const from = typeof body.from === "string" ? body.from.trim() : "";
+  const to = typeof body.to === "string" ? body.to.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+  if (!from || !to || !message) return res.status(400).json({ error: "From, recipient, and message are required." });
+  const id = `ocn_${crypto.randomUUID()}`;
+  await dbRun(
+    "INSERT INTO organizer_coordination_notes (id, organizer_id, author_label, recipient_label, message) VALUES (?, ?, ?, ?, ?)",
+    [id, organizerContext.accountId, from, to, message]
+  );
+  const row = await dbGet<any>("SELECT * FROM organizer_coordination_notes WHERE id = ?", [id]);
+  res.status(201).json({ note: { id: row!.id, from: row!.author_label, to: row!.recipient_label, message: row!.message, date: row!.created_at } });
+}));
+
 activityRouter.get("/organizer/meeting-plans", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const organizerContext = await organizerWorkspaceContext(req, res);
   if (!organizerContext) return;

@@ -371,6 +371,29 @@ export async function fetchFeedbackSummary(): Promise<{ averageScore: number; re
 }
 
 
+
+export interface OrganizerCoordinationNote {
+  id: string;
+  from: string;
+  to: string;
+  message: string;
+  date: string;
+}
+
+export async function fetchOrganizerCoordinationNotes(): Promise<OrganizerCoordinationNote[]> {
+  const res = await fetch('/api/activity/organizer/coordination-notes', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.notes;
+}
+
+export async function createOrganizerCoordinationNote(payload: { from: string; to: string; message: string }): Promise<OrganizerCoordinationNote> {
+  const res = await fetch('/api/activity/organizer/coordination-notes', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.note;
+}
+
 export interface OrganizerCommitteeTask {
   id: string;
   assignee: string;
