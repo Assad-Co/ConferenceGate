@@ -107,7 +107,7 @@ try {
 
   const pageResponse = await fetch(base + '/growth.html');
   const pageHtml = await pageResponse.text();
-  if (!pageResponse.ok || !pageHtml.includes('Growth Operations') || !pageHtml.includes('/api/admin/discovery/growth-dashboard')) {
+  if (!pageResponse.ok || !pageHtml.includes('Growth Operations') || !pageHtml.includes('/api/admin/discovery/growth-dashboard') || !pageHtml.includes('Phase 33 — Production Intelligence')) {
     throw new Error(`Built server did not serve the private growth dashboard page correctly: ${pageResponse.status}`);
   }
 
@@ -304,6 +304,15 @@ try {
   const dashboard = allowed.data?.dashboard;
   if (!dashboard || dashboard.deployment?.database !== 'ready') {
     throw new Error('Dashboard deployment readiness is missing: ' + JSON.stringify(dashboard?.deployment));
+  }
+  if (!dashboard.sourceIntelligence || dashboard.sourceIntelligence.phase !== 33) {
+    throw new Error('Phase 33 source intelligence is missing: ' + JSON.stringify(dashboard.sourceIntelligence));
+  }
+  if (!dashboard.sourceIntelligence.coverage || !Array.isArray(dashboard.sourceIntelligence.coverage.nextAutomationBudget)) {
+    throw new Error('Phase 33 coverage/budget intelligence is missing: ' + JSON.stringify(dashboard.sourceIntelligence.coverage));
+  }
+  if (dashboard.sourceIntelligence.available !== false || dashboard.sourceIntelligence.learningStatus !== 'awaiting_first_phase32_run') {
+    throw new Error('Fresh database should expose a safe Phase 32 waiting state: ' + JSON.stringify(dashboard.sourceIntelligence));
   }
   if (dashboard.organizer?.signups !== 1 || dashboard.organizer?.paid !== 1 || dashboard.organizer?.activated !== 1) {
     throw new Error('Organizer dashboard funnel is incorrect: ' + JSON.stringify(dashboard?.organizer));
