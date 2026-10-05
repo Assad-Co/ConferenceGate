@@ -75,6 +75,7 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   const [savingDataControls, setSavingDataControls] = useState(false);
   const [enterpriseReport, setEnterpriseReport] = useState<WorkspaceEnterpriseReport | null>(null);
   const [enterpriseReportLoading, setEnterpriseReportLoading] = useState(false);
+  const [exportingKey, setExportingKey] = useState<'audit' | 'data' | 'report' | null>(null);
 
   const canAdmin = workspace ? workspace.myRole === 'owner' || workspace.myRole === 'admin' : false;
   const canManageMembers = workspace
@@ -283,7 +284,14 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
     setBusyUserId(userId);
     setError(null);
     try {
-      setWorkspace(await updateWorkspaceMemberRole(userId, role));
+      const updated = await updateWorkspaceMemberRole(userId, role);
+      setWorkspace(updated);
+      const member = updated.members.find((item) => item.id === userId);
+      showToast({
+        type: 'success',
+        title: 'Workspace role updated',
+        message: `${member?.name || 'Team member'} is now ${role}.`,
+      });
     } catch (err: any) {
       setError(err?.message || 'Could not update team role.');
     } finally {
@@ -292,15 +300,39 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
   };
 
   const removeMember = async (userId: string) => {
+    const member = workspace?.members.find((item) => item.id === userId);
+    const confirmed = window.confirm(`Remove ${member?.name || 'this team member'} from the paid workspace? Their ConferenceGate account will remain active.`);
+    if (!confirmed) return;
     setBusyUserId(userId);
     setError(null);
     try {
       setWorkspace(await removeWorkspaceMember(userId));
       await refreshActivation();
+      showToast({
+        type: 'success',
+        title: 'Team member removed',
+        message: `${member?.name || 'The team member'} no longer has access to this paid workspace.`,
+      });
     } catch (err: any) {
       setError(err?.message || 'Could not remove team member.');
     } finally {
       setBusyUserId(null);
+    }
+  };
+
+  const runExport = async (key: 'audit' | 'data' | 'report', action: () => Promise<void>) => {
+    if (exportingKey) return;
+    setExportingKey(key);
+    setError(null);
+    try {
+      await action();
+      showToast({ type: 'success', title: 'Export ready', message: 'The workspace export was generated successfully.' });
+    } catch (err: any) {
+      const message = err?.message || 'Could not generate the workspace export.';
+      setError(message);
+      showToast({ type: 'info', title: 'Export failed', message });
+    } finally {
+      setExportingKey(null);
     }
   };
 
@@ -499,16 +531,18 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
               <div className="flex flex-wrap gap-2 self-start">
                 <button
                   type="button"
-                  onClick={downloadWorkspaceAuditCsv}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => runExport('audit', downloadWorkspaceAuditCsv)}
+                  disabled={exportingKey !== null}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Audit CSV
                 </button>
                 <button
                   type="button"
-                  onClick={downloadWorkspaceDataJson}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => runExport('data', downloadWorkspaceDataJson)}
+                  disabled={exportingKey !== null}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Workspace Data
@@ -714,8 +748,9 @@ export const WorkspaceTeamPanel: React.FC<WorkspaceTeamPanelProps> = ({ accountL
               {canExport && (
                 <button
                   type="button"
-                  onClick={downloadWorkspaceEnterpriseReportCsv}
-                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => runExport('report', downloadWorkspaceEnterpriseReportCsv)}
+                  disabled={exportingKey !== null}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Report CSV
