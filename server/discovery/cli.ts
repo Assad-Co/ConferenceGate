@@ -31,6 +31,7 @@ import { isPublishEnabled, publishDiscoveredConferences, syncPublishedDeepSectio
 import { formatPreflightReport, runPreflight } from "./preflight";
 import { initDiscoverySchema } from "./schema";
 import { runProductionScale } from "./scale";
+import { buildCoveragePlan, coverageTargets } from "./coveragePlanner";
 import {
   readPipelineLock, releaseStalePipelineLock, runProductionAutomation, withPipelineLease,
 } from "./automation";
@@ -124,6 +125,16 @@ const HELP = `Conference Gate — discovery engine
   enable   --domain d       Enable a domain.
   disable  --domain d       Disable a domain.
   add      --domain d --name "…" --type university [--country … --region … --trust 0.9]
+  coverage-plan [--years 2026,2027] [--target-rich-per-cell 2] [--target-rich-per-category 25]
+                [--top 60] [--allow-local-db]
+                            Measure upcoming rich-conference coverage by category × region × year,
+                            and rank the cells where Conference Gate is thinnest. Reads stored data
+                            only; no providers, no writes, no publication.
+  coverage-expand [--years 2026,2027] [--gap-cells 12] [--max-search-queries 36]
+                  [--max-pages 180] [--enrichment-limit 250] [--allow-local-db] [--quiet]
+                            Spend search and enrichment only on the highest-priority category ×
+                            geography gaps from coverage-plan. Search results still pass robots,
+                            validation, dedupe and first-party enrichment. Never auto-publishes.
   run      [--domains a,b] [--years 2026,2027,2028] [--max-pages 100] [--max-candidates 1000]
            [--time-budget-ms 300000] [--max-ai-calls 0] [--allow-auto-publish] [--quiet]
   enrich   [--limit 500] [--max-search-queries 500] [--max-jina-pages 200]
@@ -293,6 +304,108 @@ async function main(): Promise<void> {
         crawlFrequencyHours: flags.frequency ? Number(flags.frequency) : undefined,
       });
       console.log(`Added ${domain}.`);
+      break;
+    }
+
+    case "coverage-plan": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error("TURSO_DATABASE_URL is not set. Coverage planning must read the durable production catalogue. Pass --allow-local-db only for an intentional local smoke test.");
+        process.exitCode = 3;
+        break;
+      }
+      const years = list(flags.years).map(Number).filter(Number.isInteger);
+      const plan = await buildCoveragePlan({
+        years,
+        targetRichPerCell: numberFlag(flags["target-rich-per-cell"], 2),
+        targetRichPerCategory: numberFlag(flags["target-rich-per-category"], 25),
+        top: numberFlag(flags.top, 60),
+      });
+      console.log(JSON.stringify(plan, null, 2));
+      break;
+    }
+
+    case "coverage-expand": {
+      if (!process.env.TURSO_DATABASE_URL && flags["allow-local-db"] !== true) {
+        console.error("TURSO_DATABASE_URL is not set. Coverage expansion must use the durable production catalogue. Pass --allow-local-db only for an intentional local smoke test.");
+        process.exitCode = 3;
+        break;
+      }
+      if (process.env.DISCOVERY_PUBLISH_TO_CONFERENCES === "1") {
+        throw new Error("Coverage expansion discovers and enriches only. Set DISCOVERY_PUBLISH_TO_CONFERENCES=0 so publication remains a separate controlled gate.");
+      }
+      const years = list(flags.years).map(Number).filter(Number.isInteger);
+      const before = await buildCoveragePlan({
+        years,
+        targetRichPerCell: numberFlag(flags["target-rich-per-cell"], 2),
+        targetRichPerCategory: numberFlag(flags["target-rich-per-category"], 25),
+        top: Math.max(numberFlag(flags["gap-cells"], 12) * 4, 60),
+      });
+      const targets = coverageTargets(before, numberFlag(flags["gap-cells"], 12));
+      if (targets.length === 0) {
+        console.log(JSON.stringify({ status: "already_covered", before }, null, 2));
+        break;
+      }
+      const work = await withPipelineLease("coverage_gap_expansion", async () => {
+        const discovery = await runDiscovery({
+          targetYears: before.years,
+          searchTargets: targets,
+          searchOnly: true,
+          enableSearchDiscovery: true,
+          maxSearchQueries: numberFlag(flags["max-search-queries"], Math.max(24, targets.length * 3)),
+          maxPages: numberFlag(flags["max-pages"], 180),
+          maxCandidates: numberFlag(flags["max-candidates"], 1500),
+          maxJinaPages: numberFlag(flags["max-jina-pages"], 50),
+          maxAlternateUrls: numberFlag(flags["max-alternate-urls"], 80),
+          domainConcurrency: numberFlag(flags["domain-concurrency"], 4),
+          maxCandidatesPerDomain: numberFlag(flags["max-per-domain"], 12),
+          acceptedTarget: Number(flags["accepted-target"] ?? 0),
+          maxAiCalls: 0,
+          timeBudgetMs: numberFlag(flags["time-budget-ms"], 25 * 60 * 1000),
+          allowAutoPublish: false,
+          quiet: flags.quiet === true,
+          trigger: "coverage_gap_expansion",
+        });
+        const enrichment = await runEnrichment({
+          runId: discovery.runId,
+          limit: numberFlag(flags["enrichment-limit"], 250),
+          maxSearchQueries: numberFlag(flags["enrichment-search-queries"], 60),
+          maxJinaPages: numberFlag(flags["enrichment-jina-pages"], 80),
+          maxDeepPagesPerEvent: Number(flags["max-deep-pages"] ?? 6),
+          missingDeepSectionsOnly: true,
+          requireOfficialUrl: true,
+          timeBudgetMs: numberFlag(flags["enrichment-time-budget-ms"], 25 * 60 * 1000),
+          quiet: flags.quiet === true,
+        });
+        return { discovery, enrichment };
+      });
+      const after = await buildCoveragePlan({
+        years: before.years,
+        targetRichPerCell: before.targetRichPerCell,
+        targetRichPerCategory: before.targetRichPerCategory,
+        top: 60,
+      });
+      const { events, ...discoverySummary } = work.discovery;
+      console.log(JSON.stringify({
+        status: "completed",
+        targets,
+        discovery: { ...discoverySummary, eventsAccepted: events.length },
+        enrichment: work.enrichment,
+        coverageBefore: {
+          coveredCells: before.coveredCells,
+          richPublished: before.richPublished,
+          accepted: before.accepted,
+          publishReady: before.publishReady,
+          topGaps: before.topGaps.slice(0, 20),
+        },
+        coverageAfter: {
+          coveredCells: after.coveredCells,
+          richPublished: after.richPublished,
+          accepted: after.accepted,
+          publishReady: after.publishReady,
+          topGaps: after.topGaps.slice(0, 20),
+        },
+        publication: "not_performed",
+      }, null, 2));
       break;
     }
 
