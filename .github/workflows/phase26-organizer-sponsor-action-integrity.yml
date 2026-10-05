@@ -1,0 +1,52 @@
+name: Phase 26 Organizer Sponsor Action Integrity
+
+on:
+  push:
+    branches:
+      - phase-26-organizer-sponsor-action-integrity
+    paths:
+      - scripts/phase26_organizer_sponsor_action_integrity.py
+      - .github/workflows/phase26-organizer-sponsor-action-integrity.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: phase-26-organizer-sponsor-action-integrity
+          fetch-depth: 0
+
+      - name: Apply Phase 26 patch
+        run: python scripts/phase26_organizer_sponsor_action_integrity.py
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit Phase 26 changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/SponsorPortal.tsx src/components/OrganizerDashboard.tsx
+          if git diff --cached --quiet; then
+            echo "No Phase 26 changes to commit"
+            exit 1
+          fi
+          git commit -m "Phase 26 — Harden organizer and sponsor actions"
+          git push origin phase-26-organizer-sponsor-action-integrity
