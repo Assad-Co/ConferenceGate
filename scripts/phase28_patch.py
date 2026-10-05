@@ -89,9 +89,9 @@ replace_once(
 
 replace_once(
     "scripts/syncRequestedCategoryExpansion.mjs",
-    """    console.log(`[requested-expansion] synced=${synced} rich_6plus_tabs=${rich6}`);
+    """    console.log('[requested-expansion] synced='+synced+' rich_6plus_tabs='+rich6+' total='+EVENTS.length);
 """,
-    """    console.log(`[requested-expansion] synced=${synced} rich_6plus_tabs=${rich6} skipped_past=${skippedPast}`);
+    """    console.log('[requested-expansion] synced='+synced+' rich_6plus_tabs='+rich6+' skipped_past='+skippedPast+' total='+EVENTS.length);
 """,
     "requested expansion reporting",
 )
