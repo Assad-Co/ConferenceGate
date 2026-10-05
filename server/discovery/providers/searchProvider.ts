@@ -119,6 +119,15 @@ function subjectPhrases(): string[] {
 
 const EVENT_WORDS = ["conference", "congress", "symposium", "summit"];
 
+export interface CoverageSearchTarget {
+  /** Conference Gate category/subject to search for. */
+  subject: string;
+  /** One of the seven search-provider regions. */
+  region: string;
+  /** Exact upcoming year this gap belongs to. */
+  year: number;
+}
+
 export interface PlannedQuery {
   /** Brave supports advanced operators and keeps the precision-oriented form. */
   query: string;
@@ -142,12 +151,17 @@ export function planSearchQueries(context: {
   targetYears: number[];
   priorityYear?: number;
   topics?: string[];
+  /** Exact category × region × year cells selected from the stored coverage audit. */
+  targets?: CoverageSearchTarget[];
   maxQueries: number;
   /** Share of queries that must name the priority year. Defaults to 0.6 for a 2027-first run. */
   priorityYearShare?: number;
 }): PlannedQuery[] {
   const subjects = context.topics?.length ? context.topics : subjectPhrases();
   const regions = Object.keys(QUERY_COUNTRIES_BY_REGION);
+  const targets = (context.targets || []).filter((target) =>
+    target.subject?.trim() && QUERY_COUNTRIES_BY_REGION[target.region]?.length && Number.isInteger(target.year)
+  );
   const years = context.targetYears.length > 0 ? context.targetYears : [new Date().getUTCFullYear() + 1];
   const priorityYear = context.priorityYear ?? (years.includes(2027) ? 2027 : years[Math.floor(years.length / 2)]);
   const otherYears = years.filter((year) => year !== priorityYear);
@@ -163,16 +177,19 @@ export function planSearchQueries(context: {
   // year is chosen by remaining budget, which is what actually enforces the 2027 priority
   // instead of merely hoping the rotation lands there.
   for (let index = 0; planned.length < context.maxQueries && index < context.maxQueries * 12; index += 1) {
-    const region = regions[index % regions.length];
+    const target = targets.length ? targets[index % targets.length] : null;
+    const region = target?.region || regions[index % regions.length];
     const countries = QUERY_COUNTRIES_BY_REGION[region];
-    const country = countries[Math.floor(index / regions.length) % countries.length];
-    const subject = subjects[(index * 3) % subjects.length];
+    const stride = targets.length || regions.length;
+    const country = countries[Math.floor(index / stride) % countries.length];
+    const subject = target?.subject || subjects[(index * 3) % subjects.length];
     const eventWord = EVENT_WORDS[(index * 2) % EVENT_WORDS.length];
 
     const priorityRemaining = priorityBudget - priorityUsed;
     const otherRemaining = context.maxQueries - planned.length - priorityRemaining;
-    const year =
-      otherYears.length === 0 || priorityRemaining > 0 && (otherRemaining <= 0 || index % 5 !== 4)
+    const year = target?.year && years.includes(target.year)
+      ? target.year
+      : otherYears.length === 0 || priorityRemaining > 0 && (otherRemaining <= 0 || index % 5 !== 4)
         ? priorityYear
         : otherYears[Math.floor(index / 5) % otherYears.length];
 
@@ -255,6 +272,8 @@ export interface SearchProviderOptions {
    * everything, which is what makes it complementary instead of merely a second bill.
    */
   gapThresholdPerCell?: number;
+  /** Exact coverage cells to search instead of the generic global matrix. */
+  targets?: CoverageSearchTarget[];
   /** Known URLs, so "new candidate" means new to the database and not just new to this run. */
   isKnownUrl?: (url: string) => Promise<boolean>;
   /** Fixture seams; production uses the existing rate-limited clients. */
@@ -295,6 +314,7 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
     const planned = planSearchQueries({
       targetYears: context.targetYears,
       topics: context.topics,
+      targets: this.options.targets,
       maxQueries,
     });
     this.accounting.queriesPlanned = planned.length;

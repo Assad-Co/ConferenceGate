@@ -44,7 +44,7 @@ import {
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
 import { limitPerDomain } from "./sitemaps";
 import { allProviders } from "./providers";
-import { SearchDiscoveryProvider, type SearchAccounting } from "./providers/searchProvider";
+import { SearchDiscoveryProvider, type CoverageSearchTarget, type SearchAccounting } from "./providers/searchProvider";
 import { SitemapDiscoveryProvider } from "./providers/sitemapProvider";
 import {
   OrganizationDiscoveryProvider, type OrganizationHarvestStats,
@@ -82,6 +82,12 @@ export interface RunOptions {
   /** Subject terms, for query-driven providers only. Left empty, the search provider builds its
    *  own matrix from the platform's category taxonomy and a global country spread. */
   topics?: string[];
+  /** Exact category × region × year gaps to search. When present, the search provider spends its
+   * quota on these cells instead of building the generic global matrix. */
+  searchTargets?: CoverageSearchTarget[];
+  /** Run only the search provider. Used by gap expansion so unrelated sitemap work cannot consume
+   * the page budget reserved for the deficient category/geography cells. */
+  searchOnly?: boolean;
   /** Total search queries the run may spend across Brave and Serper together. */
   maxSearchQueries?: number;
   /** Explicitly enable or disable paid search discovery for this run. */
@@ -356,6 +362,7 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
       logger,
       enabled: options.enableSearchDiscovery,
       maxQueries: options.maxSearchQueries ?? 24,
+      targets: options.searchTargets,
     });
     // Organisation first: a society's own events index costs no quota and carries its identity.
     const organizationProvider = new OrganizationDiscoveryProvider({
@@ -380,13 +387,15 @@ export async function runDiscovery(options: RunOptions = {}): Promise<RunSummary
 
     const providers = options.organizationsOnly
       ? [organizationProvider]
-      : [
-        ...(options.enableDirectoryIngest ? [directoryProvider] : []),
-        ...(options.enableOrganizationHarvest ? [organizationProvider] : []),
-        sitemapProvider,
-        searchProvider,
-        ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
-      ];
+      : options.searchOnly
+        ? [searchProvider]
+        : [
+          ...(options.enableDirectoryIngest ? [directoryProvider] : []),
+          ...(options.enableOrganizationHarvest ? [organizationProvider] : []),
+          sitemapProvider,
+          searchProvider,
+          ...allProviders({ search: { logger } }).filter((p) => p.name !== "sitemap" && p.name !== "search"),
+        ];
 
     summary.organizationHarvest = organizationProvider.stats;
     const candidates: DiscoveryCandidate[] = [];
