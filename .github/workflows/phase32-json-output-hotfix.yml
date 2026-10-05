@@ -1,0 +1,81 @@
+name: Phase 32 JSON Output Hotfix
+
+on:
+  push:
+    branches:
+      - phase-32-json-output-hotfix
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: phase-32-json-output-hotfix
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Patch robust JSON extraction
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          old = """function parseJsonOutput(text) {
+            const first = text.indexOf('{');
+            const last = text.lastIndexOf('}');
+            if (first < 0 || last < first) throw new Error('coverage-plan did not emit JSON');
+            return JSON.parse(text.slice(first, last + 1));
+          }"""
+          new = """function parseJsonOutput(text) {
+            // Database/bootstrap diagnostics can precede the CLI's pretty-printed JSON and may
+            // themselves contain braces. Only a top-level JSON object starts at column zero;
+            // walk those candidates from the end and parse the first complete one that succeeds.
+            const clean = String(text || '').replace(/\\u001b\\[[0-9;]*m/g, '').trim();
+            const lines = clean.split(/\\r?\\n/);
+            let lastError = null;
+            for (let line = lines.length - 1; line >= 0; line -= 1) {
+              if (!lines[line].startsWith('{')) continue;
+              const candidate = lines.slice(line).join('\\n').trim();
+              try {
+                const parsed = JSON.parse(candidate);
+                if (parsed && typeof parsed === 'object') return parsed;
+              } catch (error) {
+                lastError = error;
+              }
+            }
+            const detail = lastError instanceof Error ? `: ${lastError.message}` : '';
+            throw new Error(`coverage-plan did not emit a parseable JSON object${detail}`);
+          }"""
+          for name in ['scripts/adaptiveCoverageExecution.mjs', 'scripts/sourcePerformanceLearning.mjs']:
+              p = Path(name)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'expected parser block not found in {name}')
+              p.write_text(text.replace(old, new, 1))
+          PY
+      - name: Clean install
+        run: npm ci
+      - name: Syntax checks
+        run: |
+          node --check scripts/adaptiveCoverageExecution.mjs
+          node --check scripts/sourcePerformanceLearning.mjs
+          node --check scripts/automationEntry.mjs
+      - name: TypeScript
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Commit hotfix and remove one-time workflow
+        shell: bash
+        run: |
+          rm .github/workflows/phase32-json-output-hotfix.yml
+          git config user.name "Assad-Co"
+          git config user.email "72738542+Assad-Co@users.noreply.github.com"
+          git add scripts/adaptiveCoverageExecution.mjs scripts/sourcePerformanceLearning.mjs .github/workflows/phase32-json-output-hotfix.yml
+          git commit -m "Hotfix coverage-plan JSON parsing for automation"
+          git push origin HEAD:phase-32-json-output-hotfix
