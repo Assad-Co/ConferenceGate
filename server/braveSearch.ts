@@ -990,11 +990,32 @@ export async function browseStoredConferences(limit = 10000): Promise<LiveSearch
   });
   // Soonest upcoming first; a record whose date has passed or was never stated goes last rather
   // than being dropped, because a missing date is not evidence the conference is over.
-  const upcoming = withDates.filter((entry) => entry.time >= startOfToday.getTime() && Number.isFinite(entry.time));
-  const rest = withDates.filter((entry) => !(entry.time >= startOfToday.getTime() && Number.isFinite(entry.time)));
-  upcoming.sort((left, right) => left.time - right.time);
+  // Phase 28: the empty-query Discover view is an *upcoming* catalogue. Known-past
+  // conferences are useful historical records and remain searchable by name, but they should not
+  // occupy browse slots ahead of conferences a customer can still attend. The primary window is
+  // the current calendar year plus the next one (2026-2027 at launch); later future records remain
+  // available underneath it, and undated records are last rather than being mistaken for upcoming.
+  const primaryWindowEnd = new Date(startOfToday.getFullYear() + 2, 0, 1).getTime();
+  const primaryUpcoming = withDates.filter((entry) =>
+    Number.isFinite(entry.time) && entry.time >= startOfToday.getTime() && entry.time < primaryWindowEnd
+  );
+  const laterUpcoming = withDates.filter((entry) =>
+    Number.isFinite(entry.time) && entry.time >= primaryWindowEnd
+  );
+  const undated = withDates.filter((entry) => !Number.isFinite(entry.time));
+  const depth = (entry: { result: LiveSearchResult; time: number }) =>
+    (entry.result.prepared ? 10 : 0) +
+    Math.min(8, new Set(entry.result.sections || []).size) +
+    (entry.result.cfpHasData ? 1 : 0);
+  const compareUpcoming = (
+    left: { result: LiveSearchResult; time: number },
+    right: { result: LiveSearchResult; time: number }
+  ) => left.time - right.time || depth(right) - depth(left) || left.result.title.localeCompare(right.result.title);
+  primaryUpcoming.sort(compareUpcoming);
+  laterUpcoming.sort(compareUpcoming);
+  undated.sort((left, right) => depth(right) - depth(left) || left.result.title.localeCompare(right.result.title));
   const results = deduplicateStoredConferences(
-    [...upcoming, ...rest].map((entry) => entry.result)
+    [...primaryUpcoming, ...laterUpcoming, ...undated].map((entry) => entry.result)
   ).slice(0, Math.max(1, Math.min(limit, 10000)));
 
   cache.set(cacheKey, { data: results, expiresAt: Date.now() + CACHE_TTL_MS });

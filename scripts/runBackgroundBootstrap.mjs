@@ -59,6 +59,14 @@ async function main() {
   // categories are available without waiting for the long discovery/enrichment cycle.
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
+  // Phase 28: the verified expansion is inserted after the first fast normalisation pass, so run
+  // the DB-only quality pipeline again here. This makes newly added conferences customer-ready on
+  // the same deploy instead of waiting for a later enrichment cycle, and records a depth/coverage
+  // audit without deleting any historical data.
+  await runScript('scripts/sanitizeConferenceDetailData.mjs');
+  await runScript('scripts/finalizeConferenceCoverage.mjs');
+  await runScript('scripts/upgradeConferenceIdentityAndTabs.mjs');
+  await runScript('scripts/auditConferenceDepth.mjs');
   // Populate the stored sponsorship catalog immediately from conferences already in Turso.
   // This is DB-only and gives the Organizer page cards before slower website enrichment runs.
   await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
