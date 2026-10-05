@@ -96,10 +96,24 @@ function runCli(args, { capture = false, allowFailure = false } = {}) {
 }
 
 function parseJsonOutput(text) {
-  const first = text.indexOf('{');
-  const last = text.lastIndexOf('}');
-  if (first < 0 || last < first) throw new Error('coverage-plan did not emit JSON');
-  return JSON.parse(text.slice(first, last + 1));
+  // Database/bootstrap diagnostics can precede the CLI's pretty-printed JSON and may
+  // themselves contain braces. Only a top-level JSON object starts at column zero;
+  // walk those candidates from the end and parse the first complete one that succeeds.
+  const clean = String(text || '').replace(/\u001b\[[0-9;]*m/g, '').trim();
+  const lines = clean.split(/\r?\n/);
+  let lastError = null;
+  for (let line = lines.length - 1; line >= 0; line -= 1) {
+    if (!lines[line].startsWith('{')) continue;
+    const candidate = lines.slice(line).join('\n').trim();
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  const detail = lastError instanceof Error ? `: ${lastError.message}` : '';
+  throw new Error(`coverage-plan did not emit a parseable JSON object${detail}`);
 }
 
 async function ensureTables(db) {
