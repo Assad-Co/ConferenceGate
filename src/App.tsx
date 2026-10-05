@@ -369,6 +369,40 @@ export function App() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     markAllNotificationsRead().catch(() => {});
   };
+  const handleOpenNotification = (notification: NotificationItem) => {
+    switch (notification.type) {
+      case 'abstract':
+        setActiveTab(activeRole === 'Organizer' ? 'organizer' : 'abstracts');
+        return;
+      case 'review':
+        setActiveTab('abstracts');
+        return;
+      case 'invitation':
+        setActiveTab(activeRole === 'Organizer' ? 'organizer' : 'reviewer');
+        return;
+      case 'sponsorship':
+        setActiveTab(activeRole === 'Organizer' ? 'organizer' : 'sponsor');
+        return;
+      case 'agenda':
+        setActiveTab('discover');
+        return;
+      case 'followup':
+        if (activeRole === 'Organizer') {
+          setActiveTab('organizer');
+        } else {
+          setProfileInitialTab('notifications');
+          setActiveTab('profile');
+        }
+        return;
+      case 'achievement':
+        setProfileInitialTab('conferences');
+        setActiveTab('profile');
+        return;
+      default:
+        setProfileInitialTab('notifications');
+        setActiveTab('profile');
+    }
+  };
   const handleAddNotification = (notif: Omit<NotificationItem, 'id' | 'timestamp' | 'read'>) =>
     setNotifications((prev) => [
       { id: `notif_${Date.now()}`, timestamp: 'Just now', read: false, ...notif },
@@ -1805,6 +1839,7 @@ export function App() {
             notifications={displayedNotifications}
             onMarkNotificationRead={displayedOnMarkNotificationRead}
             onMarkAllNotificationsRead={displayedOnMarkAllNotificationsRead}
+            onOpenNotification={handleOpenNotification}
             onAvatarChange={handleAvatarChange}
             hasCustomAvatar={!!authUser.avatar}
             onEditProfile={handleEditProfile}
