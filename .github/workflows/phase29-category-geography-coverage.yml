@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply Phase 29 patch
-        run: python scripts/phase29_patch.py
+        run: |
+          python scripts/phase29_patch.py
+          python scripts/phase29_schema_patch.py
 
       - name: Set up Node
         uses: actions/setup-node@v4
