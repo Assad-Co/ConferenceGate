@@ -126,6 +126,9 @@ export interface EnrichmentOptions {
   quiet?: boolean;
   /** Restrict a batch pass to events attributed to one discovery run. */
   runId?: string;
+  /** Restrict a pass to an explicit accepted-event set. Useful for coverage-gap promotion where
+   * records already exist and therefore do not belong to the new discovery run. */
+  eventIds?: string[];
   /** Prefer a durable readiness backlog instead of repeatedly re-reading already-ready rows. */
   readiness?: PublishReadiness[];
   /**
@@ -324,6 +327,10 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     const runJoin = options.runId
       ? " JOIN discovery_run_events re ON re.event_id=e.id AND re.run_id=?"
       : "";
+    const eventIds = [...new Set((options.eventIds || []).map(String).filter(Boolean))];
+    const eventIdClause = options.eventIds
+      ? eventIds.length ? ` AND e.id IN (${eventIds.map(() => "?").join(",")})` : " AND 1=0"
+      : "";
     const readinessFilter = options.readiness?.length ? options.readiness : null;
     const readinessClause = readinessFilter
       ? ` AND e.publish_readiness IN (${readinessFilter.map(() => "?").join(",")})`
@@ -352,13 +359,13 @@ export async function runEnrichment(options: EnrichmentOptions = {}): Promise<En
     ]);
     const rows = await dbAll<EventRow>(`SELECT DISTINCT e.* FROM discovery_events e${runJoin}
       WHERE e.status IN ('validated','published','needs_review')
-      ${readinessClause}${deepClause}${officialUrlClause}${hostClause}
+      ${readinessClause}${deepClause}${officialUrlClause}${hostClause}${eventIdClause}
       ORDER BY e.last_checked IS NOT NULL, e.last_checked ASC,
                e.last_verified IS NOT NULL, e.last_verified ASC,
                e.confidence_score DESC, e.date_discovered ASC LIMIT ?`,
       // Placeholder order follows the clause order above: the run join, then readiness, then
-      // the host scope, then the limit.
-      [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), ...hostParams, limit]);
+      // the host scope, then the explicit event ids, then the limit.
+      [...(options.runId ? [options.runId] : []), ...(readinessFilter || []), ...hostParams, ...eventIds, limit]);
     const concurrency = Math.max(1, Math.min(
       options.conferenceConcurrency ?? Number(process.env.DISCOVERY_GLOBAL_CONCURRENCY || 4), 16));
     let cursor = 0;
