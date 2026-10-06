@@ -20,7 +20,9 @@ jobs:
       - name: Clean install
         run: npm ci
       - name: Apply Phase 35 patches
-        run: node scripts/phase35MeetingMinutesSponsorWizard.mjs
+        run: |
+          sed -i 's/Sponsor Pro matching preferences/Sponsor Pro sponsor wizard profile/' scripts/phase35MeetingMinutesSponsorWizard.mjs
+          node scripts/phase35MeetingMinutesSponsorWizard.mjs
       - name: TypeScript
         run: npm run lint
       - name: Production build
