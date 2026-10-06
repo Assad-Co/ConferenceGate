@@ -35,22 +35,21 @@ jobs:
 
           old_import = "import { OrganizerReviewMaterials } from './ReviewerTrustWorkflow';"
           new_import = old_import + "\nimport { OrganizerReviewerQuickUpload } from './OrganizerReviewerQuickUpload';"
-          if old_import not in text:
-              raise SystemExit('Organizer review materials import not found')
-          text = text.replace(old_import, new_import, 1)
+          if "OrganizerReviewerQuickUpload" not in text:
+              if old_import not in text:
+                  raise SystemExit('Organizer review materials import not found')
+              text = text.replace(old_import, new_import, 1)
 
-          old_block = '''            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
-              Review documents are attached to each submitted abstract below. Add a PDF, DOC, or DOCX and assigned reviewers will receive secure access in their Reviewer Portal.
-            </div>'''
-          new_block = '''            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
-              <div className="font-semibold">
+          sentence = 'Review documents are attached to each submitted abstract below. Add a PDF, DOC, or DOCX and assigned reviewers will receive secure access in their Reviewer Portal.'
+          replacement = '''<div className="font-semibold">
                 Place the review file here so assigned reviewers can open it, work on it, and return their reviewed file securely through the Reviewer Portal.
               </div>
-              <OrganizerReviewerQuickUpload submissions={myConferenceSubmissions} />
-            </div>'''
-          if old_block not in text:
-              raise SystemExit('Reviewer document callout block not found')
-          text = text.replace(old_block, new_block, 1)
+              <OrganizerReviewerQuickUpload submissions={myConferenceSubmissions} />'''
+          if sentence not in text:
+              if '<OrganizerReviewerQuickUpload submissions={myConferenceSubmissions} />' not in text:
+                  raise SystemExit('Reviewer document callout text not found')
+          else:
+              text = text.replace(sentence, replacement, 1)
 
           path.write_text(text)
           PY
@@ -72,12 +71,14 @@ jobs:
           grep -q "OrganizerReviewerQuickUpload" src/components/OrganizerDashboard.tsx
           grep -q "Add Review File" src/components/OrganizerReviewerQuickUpload.tsx
           grep -q "uploadSubmissionDocument" src/components/OrganizerReviewerQuickUpload.tsx
+          grep -q "assigned reviewers can open it" src/components/OrganizerDashboard.tsx
 
       - name: Commit integrated changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/components/OrganizerDashboard.tsx src/components/OrganizerReviewerQuickUpload.tsx .github/workflows/phase38-reviewer-quick-upload.yml
+          git add src/components/OrganizerDashboard.tsx src/components/OrganizerReviewerQuickUpload.tsx
+          git add -u .github/workflows/phase38-reviewer-quick-upload.yml
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
