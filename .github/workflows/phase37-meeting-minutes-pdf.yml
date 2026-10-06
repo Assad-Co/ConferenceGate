@@ -1,0 +1,42 @@
+name: Phase 37 Meeting Minutes PDF
+
+on:
+  push:
+    branches:
+      - phase-37-meeting-minutes-pdf-email
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[phase37-integrated]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Clean install
+        run: npm ci
+      - name: Apply Phase 37 UI integration
+        run: node scripts/phase37MeetingMinutesPdf.mjs
+      - name: Verify requested wiring
+        run: |
+          grep -q 'meetingMinutesPdfRouter' server.ts
+          grep -q 'Save as PDF' src/components/MeetingMinutesPanel.tsx
+          grep -q 'Send PDF to All Members' src/components/MeetingMinutesPanel.tsx
+          grep -q 'Open Gmail' src/components/MeetingMinutesPanel.tsx
+          grep -q '/send-pdf' server/meetingMinutesPdf.ts
+      - name: TypeScript
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Commit integrated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f scripts/phase37MeetingMinutesPdf.mjs .github/workflows/phase37-meeting-minutes-pdf.yml
+          git add -A
+          git commit -m "Phase 37 — branded PDF meeting minutes and member email [phase37-integrated]"
+          git push
