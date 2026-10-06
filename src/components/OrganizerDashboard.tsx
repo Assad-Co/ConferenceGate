@@ -48,6 +48,7 @@ import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 import { ProfessionalRecruitmentPanel } from './ProfessionalRecruitmentPanel';
 import { MeetingMinutesPanel } from './MeetingMinutesPanel';
 import { OrganizerReviewMaterials } from './ReviewerTrustWorkflow';
+import { OrganizerReviewerQuickUpload } from './OrganizerReviewerQuickUpload';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -2210,7 +2211,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </form>
 
             <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
-              Review documents are attached to each submitted abstract below. Add a PDF, DOC, or DOCX and assigned reviewers will receive secure access in their Reviewer Portal.
+              <div className="font-semibold">
+      Place the review file here so assigned reviewers can open it, work on it, and return their reviewed file securely through the Reviewer Portal.
+    </div>
+    <OrganizerReviewerQuickUpload submissions={myConferenceSubmissions} />
             </div>
 
             {myReviewOpportunities.length > 0 && (
