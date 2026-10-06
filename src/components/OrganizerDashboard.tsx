@@ -47,6 +47,7 @@ import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 import { ProfessionalRecruitmentPanel } from './ProfessionalRecruitmentPanel';
 import { MeetingMinutesPanel } from './MeetingMinutesPanel';
+import { OrganizerReviewMaterials } from './ReviewerTrustWorkflow';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -1272,8 +1273,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   };
 
   const handleOfficialConferenceImport = async () => {
-    const url = officialImportUrl.trim();
-    if (!url || officialImportLoading) return;
+    const rawUrl = officialImportUrl.trim();
+    if (!rawUrl || officialImportLoading) return;
+    const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    setOfficialImportUrl(url);
     setOfficialImportLoading(true);
     setOfficialImportMessage(null);
     try {
@@ -1610,9 +1613,19 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
-                type="url"
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={officialImportUrl}
                 onChange={(e) => setOfficialImportUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleOfficialConferenceImport();
+                  }
+                }}
                 placeholder="https://official-conference-site.org/2027"
                 className="flex-1 p-3 bg-white border border-blue-200 rounded-xl font-medium"
               />
@@ -2196,6 +2209,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </button>
             </form>
 
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
+              Review documents are attached to each submitted abstract below. Add a PDF, DOC, or DOCX and assigned reviewers will receive secure access in their Reviewer Portal.
+            </div>
+
             {myReviewOpportunities.length > 0 && (
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -2234,13 +2251,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                     <th className="p-4">Author</th>
                     <th className="p-4">Track</th>
                     <th className="p-4">Status</th>
+                    <th className="p-4">Review Files</th>
                     <th className="p-4">AI Reviewer Match</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {myConferenceSubmissions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-xs text-slate-400 font-medium">
+                      <td colSpan={6} className="p-6 text-center text-xs text-slate-400 font-medium">
                         No abstract submissions yet for your conferences.
                       </td>
                     </tr>
@@ -2254,6 +2272,9 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
                             {sub.status}
                           </span>
+                        </td>
+                        <td className="p-4 align-top">
+                          <OrganizerReviewMaterials submission={sub} />
                         </td>
                         <td className="p-4">
                           <button
