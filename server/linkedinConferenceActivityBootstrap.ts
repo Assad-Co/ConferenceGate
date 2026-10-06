@@ -10,7 +10,8 @@ import express, { Router, type NextFunction, type Request, type Response } from 
 
 const POSTS_ACTOR_ID = "harvestapi~linkedin-profile-posts";
 const SOURCE_ACTOR = "harvestapi/linkedin-profile-posts";
-const MAX_POSTS = 100;
+const MAX_POSTS = 400;
+const LOOKBACK_YEARS = 7;
 
 type AuthedRequest = Request & { linkedinConferenceUserId?: string };
 
@@ -150,8 +151,81 @@ function parseArray(value: string | null | undefined): any[] {
   }
 }
 
-function postText(post: Record<string, any>): string {
+function postPrimaryText(post: Record<string, any>): string {
   return clean(post.content || post.text || post.commentary || post.description || post.title || "");
+}
+
+function collectLinkedInEvidenceText(value: unknown, depth = 0, out: string[] = []): string[] {
+  if (value == null || depth > 5 || out.length >= 80) return out;
+  if (Array.isArray(value)) {
+    for (const item of value) collectLinkedInEvidenceText(item, depth + 1, out);
+    return out;
+  }
+  if (typeof value !== "object") return out;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (out.length >= 80) break;
+    const normalized = key.toLowerCase();
+    if (typeof child === "string") {
+      if (/alt|caption|description|title|headline|text|name|ocr|transcript|accessibility/.test(normalized) &&
+          !/url|uri|id|urn/.test(normalized)) {
+        const candidate = clean(child);
+        if (candidate && candidate.length <= 1200) out.push(candidate);
+      }
+    } else if (child && (Array.isArray(child) || typeof child === "object")) {
+      collectLinkedInEvidenceText(child, depth + 1, out);
+    }
+  }
+  return out;
+}
+
+function postText(post: Record<string, any>): string {
+  const primary = postPrimaryText(post);
+  const mediaText: string[] = [];
+  for (const root of [post.media, post.images, post.image, post.attachments, post.document, post.article, post.carousel, post.contentEntities]) {
+    collectLinkedInEvidenceText(root, 0, mediaText);
+  }
+  return clean([primary, ...new Set(mediaText)].filter(Boolean).join(" | "));
+}
+
+function yearFromPostDateValue(value: unknown, depth = 0): number | null {
+  if (value == null || depth > 3) return null;
+  if (typeof value === "number") {
+    const millis = value > 1_000_000_000_000 ? value : value > 1_000_000_000 ? value * 1000 : NaN;
+    if (Number.isFinite(millis)) {
+      const year = new Date(millis).getUTCFullYear();
+      return Number.isFinite(year) ? year : null;
+    }
+    return null;
+  }
+  if (typeof value === "string") {
+    const explicit = /\b(20\d{2})\b/.exec(value);
+    if (explicit) return Number(explicit[1]);
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return new Date(parsed).getUTCFullYear();
+    return null;
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["date", "text", "timestamp", "time", "value", "startDate", "publishedAt"]) {
+      const year = yearFromPostDateValue(record[key], depth + 1);
+      if (year) return year;
+    }
+  }
+  return null;
+}
+
+function postWithinSevenYears(post: Record<string, any>): boolean {
+  const candidates = [
+    post.postedAt, post.postedDate, post.publishedAt, post.createdAt, post.date,
+    post.timestamp, post.postedAtTimestamp, post.createdAtTimestamp, post.time,
+  ];
+  for (const candidate of candidates) {
+    const year = yearFromPostDateValue(candidate);
+    if (year) return year >= new Date().getUTCFullYear() - LOOKBACK_YEARS;
+  }
+  // Some LinkedIn exports omit timestamps. Keep those posts and rely on the event/publication year
+  // when one is present rather than discarding potentially useful member evidence.
+  return true;
 }
 
 function postUrl(post: Record<string, any>): string | null {
@@ -237,11 +311,12 @@ function classifyPosts(posts: any[], requestedUrl: string) {
 
   posts.forEach((raw, index) => {
     const post = raw && typeof raw === "object" ? raw as Record<string, any> : {};
+    if (!postWithinSevenYears(post)) return;
     const content = postText(post);
     if (!content) return;
 
-    const hasEvent = /\b(conference|congress|symposium|summit|workshop|annual meeting|scientific meeting|forum|convention)\b/i.test(content);
-    const hasPaper = /\b(abstract|paper|poster|oral presentation|presentation)\b/i.test(content);
+    const hasEvent = /\b(conference|congress|symposium|summit|workshop|annual meeting|scientific meeting|technical meeting|professional meeting|forum|convention|colloquium|roundtable|expo|exhibition|webinar|geoscience technology workshop|gtw)\b/i.test(content) || /#[A-Za-z][A-Za-z0-9_-]{2,40}20\d{2}\b/.test(content);
+    const hasPaper = /\b(abstract|paper|poster|oral presentation|technical presentation|presentation|manuscript|journal article|peer[- ]reviewed article|publication|published)\b/i.test(content);
     const callForPapers = /\b(call for papers?|cfp|paper submissions?|submit (?:your )?paper)\b/i.test(content);
     const callForAbstracts = /\b(call for abstracts?|abstract submissions?|submit (?:your )?abstract)\b/i.test(content);
     const registration = /\b(registration (?:is )?open|register now|early[- ]bird registration|conference registration)\b/i.test(content);
@@ -249,6 +324,7 @@ function classifyPosts(posts: any[], requestedUrl: string) {
     const selfClaim = explicitSelfClaim(content);
     const repostOrQuote = isRepostOrQuote(post, requestedUrl);
     const year = extractYear(content);
+    if (year && year < nowYear - LOOKBACK_YEARS) return;
     const sourceUrl = postUrl(post);
     const label = sentenceWithEvent(content);
     const id = postId(post, index);
@@ -321,8 +397,8 @@ function classifyPosts(posts: any[], requestedUrl: string) {
   };
 
   return {
-    conferenceActivity: dedupe(conferenceActivity).slice(0, 100),
-    callsForPapers: dedupe(callsForPapers).slice(0, 100),
+    conferenceActivity: dedupe(conferenceActivity).slice(0, 400),
+    callsForPapers: dedupe(callsForPapers).slice(0, 250),
   };
 }
 
@@ -452,7 +528,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180_000);
+  const timeout = setTimeout(() => controller.abort(), 300_000);
   let response: globalThis.Response;
 
   try {
@@ -460,7 +536,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     endpoint.searchParams.set("format", "json");
     endpoint.searchParams.set("clean", "true");
     endpoint.searchParams.set("maxItems", String(MAX_POSTS));
-    endpoint.searchParams.set("maxTotalChargeUsd", "0.30");
+    endpoint.searchParams.set("maxTotalChargeUsd", "1.20");
 
     response = await fetch(endpoint, {
       method: "POST",

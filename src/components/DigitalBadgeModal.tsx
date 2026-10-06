@@ -38,30 +38,30 @@ export const DigitalBadgeModal: React.FC<DigitalBadgeModalProps> = ({
         </div>
 
         {/* Live Badge Preview Card */}
-        <div className="p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-2xl border border-slate-800 text-white space-y-4 shadow-xl relative overflow-hidden">
+        <div className="p-6 bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 rounded-2xl border border-blue-200 text-slate-900 space-y-4 shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-blue-400 bg-blue-500/20 px-2.5 py-0.5 rounded-full border border-blue-400/30">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-blue-700 bg-white/80 px-2.5 py-0.5 rounded-full border border-blue-200">
               <Award className="w-3 h-3" />
               Verified Conference Identity
             </div>
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
           </div>
 
           <div className="flex items-center gap-4">
             <img src={userProfile.avatar} alt={userProfile.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-400/50" />
             <div>
-              <h4 className="font-extrabold text-base text-white">{userProfile.name}</h4>
-              <p className="text-xs text-slate-300">{userProfile.organization}</p>
-              <p className="text-[10px] text-blue-300 font-semibold mt-0.5">
+              <h4 className="font-extrabold text-base text-slate-950">{userProfile.name}</h4>
+              <p className="text-xs text-slate-600">{userProfile.organization}</p>
+              <p className="text-[10px] text-blue-700 font-semibold mt-0.5">
                 {userProfile.contributions.conferencesAttended} Conferences Attended • Reviewer Kudos: +
                 {userProfile.contributions.reviewerKudos}
               </p>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+          <div className="pt-2 border-t border-blue-200 flex items-center justify-between text-[10px] text-slate-500">
             <span>Verified by Conference Gate System</span>
-            <span className="text-white font-bold">ID: #CG-{userProfile.id.slice(-8).toUpperCase()}</span>
+            <span className="text-slate-900 font-bold">ID: #CG-{userProfile.id.slice(-8).toUpperCase()}</span>
           </div>
         </div>
 

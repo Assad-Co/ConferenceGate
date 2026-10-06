@@ -56,6 +56,17 @@ function dateText(item: any): string {
   return start || end;
 }
 
+function experienceWithinSevenYears(item: any): boolean {
+  const raw = [
+    text(item?.startDate?.text), text(item?.startDate), text(item?.endDate?.text), text(item?.endDate),
+    text(item?.date), text(item?.duration),
+  ].filter(Boolean).join(' ');
+  if (/present|current|now/i.test(raw)) return true;
+  const years = [...raw.matchAll(/\b(20\d{2})\b/g)].map((match) => Number(match[1]));
+  if (!years.length) return true;
+  return Math.max(...years) >= new Date().getFullYear() - 7;
+}
+
 function educationTitle(item: any): string {
   return text(item?.schoolName) || text(item?.school) || text(item?.institution) || 'Education';
 }
@@ -298,7 +309,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
             <h2 className="text-lg font-extrabold text-slate-900">LinkedIn Professional & Conference Profile</h2>
           </div>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-            Public LinkedIn data only. ConferenceGate treats explicit first-person posts as member claims and keeps reposts as discovery signals—not proof of attendance, authorship, or a role.
+            Public LinkedIn data only. ConferenceGate searches the member's public profile plus up to 400 public posts across the past 7 years for conference attendance/roles, positions and paper evidence. Explicit first-person posts remain member claims until independently verified.
           </p>
         </div>
         <button
@@ -458,9 +469,9 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
 
       {(profile?.experience.length || 0) > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-3"><Briefcase className="w-4 h-4 text-slate-600" /><h3 className="text-sm font-extrabold text-slate-900">Experience</h3></div>
+          <div className="flex items-center gap-2 mb-3"><Briefcase className="w-4 h-4 text-slate-600" /><h3 className="text-sm font-extrabold text-slate-900">Experience — Past 7 Years</h3></div>
           <div className="grid md:grid-cols-2 gap-3">
-            {profile!.experience.slice(0, 12).map((item, index) => (
+            {profile!.experience.filter(experienceWithinSevenYears).slice(0, 20).map((item, index) => (
               <div key={index} className="rounded-xl border border-slate-200 p-3">
                 <div className="text-sm font-semibold text-slate-800">{experienceTitle(item)}</div>
                 <div className="text-xs text-slate-500 mt-0.5">{experienceOrg(item)}</div>
