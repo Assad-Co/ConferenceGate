@@ -1,0 +1,41 @@
+name: Phase 36 Organizer Import Reliability
+
+on:
+  push:
+    branches:
+      - phase-36-organizer-import-reliability
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[phase36-integrated]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Clean install
+        run: npm ci
+      - name: Apply Phase 36 patches
+        run: node scripts/phase36OrganizerImportReliability.mjs
+      - name: Verify importer wiring
+        run: |
+          grep -q "mergeImportCandidates" server/workspaces.ts
+          grep -q "conference_import_prefill" server/workspaces.ts
+          grep -q "onKeyDown" src/components/OrganizerDashboard.tsx
+          grep -q "normalizedSubmitted" server/workspaces.ts
+      - name: TypeScript
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Commit integrated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f scripts/phase36OrganizerImportReliability.mjs .github/workflows/phase36-organizer-import-reliability.yml
+          git add -A
+          git commit -m "Phase 36 — organizer import reliability [phase36-integrated]"
+          git push
