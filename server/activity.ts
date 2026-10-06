@@ -34,6 +34,7 @@ import { searchOpenAlexConferencePapers } from "./openalex";
 import { searchWebForConferenceFacts } from "./braveSearch";
 import { resolvePaidAccountContext, canOperateWorkspace } from "./workspaceAccess";
 import { buildProfessionalTrust } from "./professionalTrust";
+import { buildMeetingMinutesDocxBuffer, meetingMinutesEmailConfigured, meetingMinutesFilename, sendMeetingMinutesEmail } from "./meetingMinutesDocument";
 
 export const activityRouter = Router();
 activityRouter.use(requireAuth);
@@ -1460,6 +1461,168 @@ activityRouter.post("/organizer/meeting-plans", asyncHandler(async (req: AuthedR
       createdAt: row!.created_at,
     },
   });
+}));
+
+function meetingMinutesDTO(row: any) {
+  return {
+    id: row.id,
+    meetingPlanId: row.meeting_plan_id || null,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    title: row.title,
+    date: row.meeting_date,
+    time: row.meeting_time || "",
+    organizerTimezone: row.organizer_timezone || "",
+    chairName: row.chair_name || "",
+    preparedBy: row.prepared_by || "",
+    attendees: JSON.parse(row.attendees || "[]"),
+    objectives: row.objectives || "",
+    agenda: row.agenda || "",
+    discussionSummary: row.discussion_summary || "",
+    keyDecisions: row.key_decisions || "",
+    actionItems: JSON.parse(row.action_items || "[]"),
+    risksIssues: row.risks_issues || "",
+    nextSteps: row.next_steps || "",
+    nextMeetingDate: row.next_meeting_date || "",
+    notes: row.notes || "",
+    distributionGroups: JSON.parse(row.distribution_groups || "[]"),
+    externalEmails: JSON.parse(row.external_emails || "[]"),
+    notifyInApp: Boolean(row.notify_in_app),
+    sendEmail: Boolean(row.send_email),
+    distributedAt: row.distributed_at || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function meetingMinutesDocumentData(row: any) {
+  const dto = meetingMinutesDTO(row);
+  return {
+    title: dto.title, conferenceTitle: dto.conferenceTitle, date: dto.date, time: dto.time,
+    organizerTimezone: dto.organizerTimezone, chairName: dto.chairName, preparedBy: dto.preparedBy,
+    attendees: dto.attendees, objectives: dto.objectives, agenda: dto.agenda,
+    discussionSummary: dto.discussionSummary, keyDecisions: dto.keyDecisions, actionItems: dto.actionItems,
+    risksIssues: dto.risksIssues, nextSteps: dto.nextSteps, nextMeetingDate: dto.nextMeetingDate, notes: dto.notes,
+  };
+}
+
+activityRouter.get("/organizer/meeting-minutes", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const rows = await dbAll<any>(
+    "SELECT * FROM organizer_meeting_minutes WHERE organizer_id = ? ORDER BY meeting_date DESC, created_at DESC",
+    [organizerContext.accountId]
+  );
+  res.json({ minutes: rows.map(meetingMinutesDTO) });
+}));
+
+activityRouter.post("/organizer/meeting-minutes", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const body = req.body || {};
+  const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId.trim() : "";
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const date = typeof body.date === "string" ? body.date.trim() : "";
+  if (!conferenceId || !title || !date) return res.status(400).json({ error: "Conference, meeting title, and date are required." });
+  const owned = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id = ? AND organizer_id = ?", [conferenceId, organizerContext.accountId]);
+  if (!owned) return res.status(404).json({ error: "You can only record minutes for a conference in this Organizer workspace." });
+  const conferenceData = JSON.parse(owned.data || "{}");
+  const attendees = Array.isArray(body.attendees) ? body.attendees.filter((value: unknown) => typeof value === "string").slice(0, 200) : [];
+  const actions = Array.isArray(body.actionItems) ? body.actionItems.filter((item: any) => item && typeof item.action === "string" && item.action.trim()).slice(0, 100).map((item: any) => ({
+    action: String(item.action).trim().slice(0, 1000), owner: String(item.owner || "").trim().slice(0, 200),
+    dueDate: String(item.dueDate || "").trim().slice(0, 30), status: ["Open","In Progress","Done"].includes(item.status) ? item.status : "Open",
+  })) : [];
+  const groups = Array.isArray(body.distributionGroups) ? body.distributionGroups.filter((value: unknown) => ["committee","members","reviewers","speakers"].includes(String(value))) : [];
+  const emails = Array.isArray(body.externalEmails) ? body.externalEmails.filter((value: unknown) => typeof value === "string").map((value: string) => value.trim().toLowerCase()).filter(Boolean).slice(0, 100) : [];
+  const id = `omm_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO organizer_meeting_minutes(
+      id,organizer_id,meeting_plan_id,conference_id,conference_title,title,meeting_date,meeting_time,organizer_timezone,chair_name,prepared_by,attendees,objectives,agenda,discussion_summary,key_decisions,action_items,risks_issues,next_steps,next_meeting_date,notes,distribution_groups,external_emails,notify_in_app,send_email
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id,organizerContext.accountId,typeof body.meetingPlanId === "string" && body.meetingPlanId ? body.meetingPlanId : null,conferenceId,conferenceData.title || body.conferenceTitle || conferenceId,title,date,String(body.time || ""),String(body.organizerTimezone || ""),String(body.chairName || "").trim(),String(body.preparedBy || "").trim(),JSON.stringify(attendees),String(body.objectives || "").trim(),String(body.agenda || "").trim(),String(body.discussionSummary || "").trim(),String(body.keyDecisions || "").trim(),JSON.stringify(actions),String(body.risksIssues || "").trim(),String(body.nextSteps || "").trim(),String(body.nextMeetingDate || "").trim(),String(body.notes || "").trim(),JSON.stringify(groups),JSON.stringify(emails),body.notifyInApp === false ? 0 : 1,body.sendEmail ? 1 : 0]
+  );
+  const row = await dbGet<any>("SELECT * FROM organizer_meeting_minutes WHERE id = ?", [id]);
+  res.status(201).json({ minutes: meetingMinutesDTO(row) });
+}));
+
+activityRouter.get("/organizer/meeting-minutes/:id/document", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const row = await dbGet<any>("SELECT * FROM organizer_meeting_minutes WHERE id = ? AND organizer_id = ?", [req.params.id, organizerContext.accountId]);
+  if (!row) return res.status(404).json({ error: "Meeting minutes not found." });
+  const buffer = await buildMeetingMinutesDocxBuffer(meetingMinutesDocumentData(row));
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  res.setHeader("Content-Disposition", `attachment; filename="${meetingMinutesFilename(row.title, row.meeting_date)}"`);
+  res.send(buffer);
+}));
+
+activityRouter.post("/organizer/meeting-minutes/:id/distribute", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res, true);
+  if (!organizerContext) return;
+  const row = await dbGet<any>("SELECT * FROM organizer_meeting_minutes WHERE id = ? AND organizer_id = ?", [req.params.id, organizerContext.accountId]);
+  if (!row) return res.status(404).json({ error: "Meeting minutes not found." });
+  const body = req.body || {};
+  const stored = meetingMinutesDTO(row);
+  const groups = Array.isArray(body.distributionGroups) ? body.distributionGroups.filter((value: unknown) => ["committee","members","reviewers","speakers"].includes(String(value))) : stored.distributionGroups;
+  const externalEmails = Array.isArray(body.externalEmails) ? body.externalEmails.filter((value: unknown) => typeof value === "string").map((value: string) => value.trim().toLowerCase()).filter(Boolean).slice(0, 100) : stored.externalEmails;
+  const notifyInApp = body.notifyInApp === undefined ? stored.notifyInApp : Boolean(body.notifyInApp);
+  const sendEmail = body.sendEmail === undefined ? stored.sendEmail : Boolean(body.sendEmail);
+  const userIds = new Set<string>();
+  if (groups.includes("committee") || groups.includes("speakers") || groups.includes("members")) {
+    const roleClauses: string[] = [];
+    if (groups.includes("committee")) roleClauses.push("'committee'");
+    if (groups.includes("speakers")) roleClauses.push("'speaker'");
+    if (groups.includes("members")) roleClauses.push("'committee'", "'chair'", "'speaker'");
+    if (roleClauses.length) {
+      const rows = await dbAll<{ professional_id: string }>(
+        `SELECT DISTINCT professional_id FROM professional_invitations WHERE organizer_id=? AND conference_id=? AND status IN ('accepted','completed') AND role_type IN (${[...new Set(roleClauses)].join(',')})`,
+        [organizerContext.accountId, row.conference_id]
+      );
+      rows.forEach((item) => userIds.add(item.professional_id));
+    }
+  }
+  if (groups.includes("members")) {
+    const registrations = await dbAll<{ user_id: string }>("SELECT DISTINCT user_id FROM conference_registrations WHERE conference_id=?", [row.conference_id]);
+    registrations.forEach((item) => userIds.add(item.user_id));
+  }
+  if (groups.includes("reviewers")) {
+    const reviewers = await dbAll<{ reviewer_id: string }>(
+      "SELECT DISTINCT a.reviewer_id FROM submission_reviewer_assignments a JOIN submissions s ON s.id=a.submission_id WHERE s.conference_id=?",
+      [row.conference_id]
+    );
+    reviewers.forEach((item) => userIds.add(item.reviewer_id));
+  }
+  const recipients: Array<{ id?: string; name: string; email: string }> = [];
+  for (const userId of userIds) {
+    const user = await dbGet<{ id: string; name: string; email: string }>("SELECT id,name,email FROM users WHERE id=?", [userId]);
+    if (user) recipients.push({ id: user.id, name: user.name, email: user.email });
+  }
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  externalEmails.filter((email: string) => emailRe.test(email)).forEach((email: string) => { if (!recipients.some((item) => item.email.toLowerCase() === email)) recipients.push({ name: "", email }); });
+  let notifiedCount = 0;
+  if (notifyInApp) {
+    for (const recipient of recipients) {
+      if (!recipient.id) continue;
+      await createNotification(recipient.id, "agenda", `Meeting minutes: ${row.title}`, `${row.conference_title}: meeting minutes are available from the organizer in ConferenceGate.`);
+      notifiedCount += 1;
+    }
+  }
+  const emailConfigured = meetingMinutesEmailConfigured();
+  let emailSentCount = 0;
+  let emailFailedCount = 0;
+  if (sendEmail && emailConfigured && recipients.length) {
+    const documentBuffer = await buildMeetingMinutesDocxBuffer(meetingMinutesDocumentData(row));
+    for (const recipient of recipients) {
+      if (!emailRe.test(recipient.email)) continue;
+      try {
+        await sendMeetingMinutesEmail({ to: recipient.email, recipientName: recipient.name, data: meetingMinutesDocumentData(row), documentBuffer });
+        emailSentCount += 1;
+      } catch { emailFailedCount += 1; }
+    }
+  }
+  await dbRun("UPDATE organizer_meeting_minutes SET distribution_groups=?,external_emails=?,notify_in_app=?,send_email=?,distributed_at=datetime('now'),updated_at=datetime('now') WHERE id=?", [JSON.stringify(groups),JSON.stringify(externalEmails),notifyInApp ? 1 : 0,sendEmail ? 1 : 0,row.id]);
+  const updated = await dbGet<any>("SELECT * FROM organizer_meeting_minutes WHERE id=?", [row.id]);
+  res.json({ notifiedCount,emailSentCount,emailFailedCount,emailConfigured,recipientCount: recipients.length,distributedAt: updated?.distributed_at || null });
 }));
 
 activityRouter.get("/broadcasts/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {

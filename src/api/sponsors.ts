@@ -628,3 +628,25 @@ export async function fetchSponsorPortfolioAnalytics(): Promise<SponsorPortfolio
   const data = await parseResponse(res);
   return data.analytics;
 }
+
+
+export interface SponsorHistoryRecord {
+  id: string; year: number; conferenceTitle: string; organizerName: string; tier: string; location: string; contribution: string; amount: number | null; currency: string; notes: string; evidenceUrl: string; createdAt: string;
+}
+
+export async function fetchMySponsorHistoryRecords(): Promise<SponsorHistoryRecord[]> {
+  const res = await fetch('/api/sponsors/history/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.records;
+}
+
+export async function createSponsorHistoryRecord(payload: Omit<SponsorHistoryRecord, 'id' | 'createdAt'>): Promise<SponsorHistoryRecord> {
+  const res = await fetch('/api/sponsors/history/mine', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+  const data = await parseResponse(res);
+  return data.record;
+}
+
+export async function deleteSponsorHistoryRecord(id: string): Promise<void> {
+  const res = await fetch(`/api/sponsors/history/mine/${id}`, { method: 'DELETE', credentials: 'include' });
+  await parseResponse(res);
+}

@@ -46,6 +46,7 @@ import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
 import { ProfessionalRecruitmentPanel } from './ProfessionalRecruitmentPanel';
+import { MeetingMinutesPanel } from './MeetingMinutesPanel';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -3084,6 +3085,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
               </div>
             )}
           </div>
+          <MeetingMinutesPanel conferences={conferences} meetings={scheduledMeetings} />
         </div>
       )}
 

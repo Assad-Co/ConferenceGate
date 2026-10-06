@@ -479,6 +479,42 @@ export async function createOrganizerMeetingPlan(payload: Omit<OrganizerMeetingP
   return data.meeting;
 }
 
+export interface OrganizerMeetingMinuteActionItem {
+  action: string;
+  owner: string;
+  dueDate: string;
+  status: 'Open' | 'In Progress' | 'Done';
+}
+
+export interface OrganizerMeetingMinutes {
+  id: string; meetingPlanId: string | null; conferenceId: string; conferenceTitle: string; title: string; date: string; time: string; organizerTimezone: string; chairName: string; preparedBy: string; attendees: string[]; objectives: string; agenda: string; discussionSummary: string; keyDecisions: string; actionItems: OrganizerMeetingMinuteActionItem[]; risksIssues: string; nextSteps: string; nextMeetingDate: string; notes: string; distributionGroups: string[]; externalEmails: string[]; notifyInApp: boolean; sendEmail: boolean; distributedAt: string | null; createdAt: string; updatedAt: string;
+}
+
+export type CreateOrganizerMeetingMinutesPayload = Omit<OrganizerMeetingMinutes, 'id' | 'distributedAt' | 'createdAt' | 'updatedAt'>;
+
+export async function fetchOrganizerMeetingMinutes(): Promise<OrganizerMeetingMinutes[]> {
+  const res = await fetch('/api/activity/organizer/meeting-minutes', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return data.minutes;
+}
+
+export async function createOrganizerMeetingMinutes(payload: CreateOrganizerMeetingMinutesPayload): Promise<OrganizerMeetingMinutes> {
+  const res = await fetch('/api/activity/organizer/meeting-minutes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+  const data = await parseResponse(res);
+  return data.minutes;
+}
+
+export async function distributeOrganizerMeetingMinutes(id: string, payload: { distributionGroups: string[]; externalEmails: string[]; notifyInApp: boolean; sendEmail: boolean }): Promise<{ notifiedCount: number; emailSentCount: number; emailFailedCount: number; emailConfigured: boolean; recipientCount: number; distributedAt: string | null }> {
+  const res = await fetch(`/api/activity/organizer/meeting-minutes/${id}/distribute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+  return parseResponse(res);
+}
+
+export async function downloadOrganizerMeetingMinutesDocument(id: string): Promise<Blob> {
+  const res = await fetch(`/api/activity/organizer/meeting-minutes/${id}/document`, { credentials: 'include' });
+  if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || 'Could not generate the Word document.'); }
+  return res.blob();
+}
+
 export interface OrganizerBroadcast {
   id: string;
   recipientGroup: string;

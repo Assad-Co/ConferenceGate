@@ -409,6 +409,59 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_organizer_meeting_plans_owner
       ON organizer_meeting_plans(organizer_id, meeting_date, meeting_time);
 
+    CREATE TABLE IF NOT EXISTS organizer_meeting_minutes (
+      id TEXT PRIMARY KEY,
+      organizer_id TEXT NOT NULL REFERENCES users(id),
+      meeting_plan_id TEXT,
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      title TEXT NOT NULL,
+      meeting_date TEXT NOT NULL,
+      meeting_time TEXT,
+      organizer_timezone TEXT,
+      chair_name TEXT,
+      prepared_by TEXT,
+      attendees TEXT NOT NULL DEFAULT '[]',
+      objectives TEXT,
+      agenda TEXT,
+      discussion_summary TEXT,
+      key_decisions TEXT,
+      action_items TEXT NOT NULL DEFAULT '[]',
+      risks_issues TEXT,
+      next_steps TEXT,
+      next_meeting_date TEXT,
+      notes TEXT,
+      distribution_groups TEXT NOT NULL DEFAULT '[]',
+      external_emails TEXT NOT NULL DEFAULT '[]',
+      notify_in_app INTEGER NOT NULL DEFAULT 1,
+      send_email INTEGER NOT NULL DEFAULT 0,
+      distributed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_organizer_meeting_minutes_owner
+      ON organizer_meeting_minutes(organizer_id, meeting_date, created_at);
+
+    CREATE TABLE IF NOT EXISTS sponsor_history_entries (
+      id TEXT PRIMARY KEY,
+      sponsor_id TEXT NOT NULL REFERENCES users(id),
+      year INTEGER NOT NULL,
+      conference_title TEXT NOT NULL,
+      organizer_name TEXT,
+      tier TEXT,
+      location TEXT,
+      contribution TEXT,
+      amount REAL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      notes TEXT,
+      evidence_url TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sponsor_history_entries_owner
+      ON sponsor_history_entries(sponsor_id, year, created_at);
+
     CREATE TABLE IF NOT EXISTS organizer_coordination_notes (
       id TEXT PRIMARY KEY,
       organizer_id TEXT NOT NULL REFERENCES users(id),
