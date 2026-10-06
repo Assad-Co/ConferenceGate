@@ -564,7 +564,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     const state = detailTabState(tab);
     if (state === 'stated') return 'Available';
     if (state === 'not_announced') return 'Not announced';
-    return 'Not retrieved';
+    return '';
   };
 
   const upcomingEventDate = upcomingImportantDates.find((entry) =>
@@ -754,7 +754,6 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             <div className="flex flex-wrap items-center gap-3 text-[10px] font-semibold">
               <span className="inline-flex items-center gap-1.5 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500" />Available</span>
               <span className="inline-flex items-center gap-1.5 text-amber-700"><span className="w-2 h-2 rounded-full bg-amber-400" />Not announced</span>
-              <span className="inline-flex items-center gap-1.5 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-300" />Not retrieved</span>
             </div>
           </div>
         )}
@@ -765,7 +764,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              title={detailTabStateLabel(tab.id)}
+              title={detailTabStateLabel(tab.id) || undefined}
               className={'py-4 border-b-2 transition-colors cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5 ' + (
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 font-bold'
