@@ -1272,8 +1272,10 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   };
 
   const handleOfficialConferenceImport = async () => {
-    const url = officialImportUrl.trim();
-    if (!url || officialImportLoading) return;
+    const rawUrl = officialImportUrl.trim();
+    if (!rawUrl || officialImportLoading) return;
+    const url = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    setOfficialImportUrl(url);
     setOfficialImportLoading(true);
     setOfficialImportMessage(null);
     try {
@@ -1610,9 +1612,19 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
-                type="url"
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={officialImportUrl}
                 onChange={(e) => setOfficialImportUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleOfficialConferenceImport();
+                  }
+                }}
                 placeholder="https://official-conference-site.org/2027"
                 className="flex-1 p-3 bg-white border border-blue-200 rounded-xl font-medium"
               />

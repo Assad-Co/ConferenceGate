@@ -560,6 +560,48 @@ function importExtractionScore(raw: RawEventExtraction): number {
   ].filter(Boolean).length;
 }
 
+function mergeImportCandidates(
+  candidates: Array<{ route: string; sourceUrl: string; raw: RawEventExtraction }>
+): { route: string; sourceUrl: string; raw: RawEventExtraction } | null {
+  if (!candidates.length) return null;
+  const ranked = candidates
+    .slice()
+    .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw));
+  const merged: any = emptyRawExtraction("derived");
+  const scalarFields = [
+    "title", "startDateText", "endDateText", "datesText", "city", "country", "venue",
+    "locationText", "description", "imageUrl", "formatText", "price", "currency",
+    "organizer", "officialUrl"
+  ];
+
+  const topicSet = new Set<string>();
+  const fieldSet = new Set<string>();
+  let confidence = 0;
+  for (const candidate of ranked) {
+    const raw: any = candidate.raw;
+    for (const field of scalarFields) {
+      if (!merged[field] && raw[field]) merged[field] = raw[field];
+    }
+    for (const topic of Array.isArray(raw.topics) ? raw.topics : []) {
+      const clean = String(topic || '').trim();
+      if (clean) topicSet.add(clean);
+    }
+    for (const field of Array.isArray(raw.filledFields) ? raw.filledFields : []) fieldSet.add(String(field));
+    confidence = Math.max(confidence, Number(raw.confidence || 0));
+  }
+  merged.topics = [...topicSet].slice(0, 20);
+  merged.filledFields = [...fieldSet];
+  merged.confidence = Math.min(0.98, confidence + (ranked.length > 1 ? 0.04 : 0));
+  if (!merged.officialUrl) merged.officialUrl = ranked[0].sourceUrl;
+
+  const routes = [...new Set(ranked.map((candidate) => candidate.route))];
+  return {
+    route: routes.length === 1 ? routes[0] : `combined:${routes.join('+')}`,
+    sourceUrl: ranked[0].sourceUrl,
+    raw: merged as RawEventExtraction,
+  };
+}
+
 function extractImportFromReaderMarkdown(markdown: string, sourceUrl: string): RawEventExtraction {
   const raw = emptyRawExtraction("derived");
   const normalized = markdown.replace(/\r/g, "");
@@ -648,11 +690,12 @@ workspacesRouter.post(
     if (!submitted || submitted.length > 2000) {
       return res.status(400).json({ error: "Provide the official conference URL." });
     }
+    const normalizedSubmitted = /^https?:\/\//i.test(submitted) ? submitted : `https://${submitted}`;
     let url: URL;
     try {
-      url = new URL(submitted);
+      url = new URL(normalizedSubmitted);
     } catch {
-      return res.status(400).json({ error: "Provide a valid http(s) conference URL." });
+      return res.status(400).json({ error: "Provide a valid public conference URL." });
     }
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       return res.status(400).json({ error: "Only http(s) conference URLs are supported." });
@@ -705,7 +748,7 @@ workspacesRouter.post(
     // Hosted readable-page fallback is tried before Chromium for event platforms such as
     // WildApricot. It is faster on Render and works even when the origin blocks Render's IP/TLS.
     const directBest = candidates[0]?.raw;
-    if ((!directBest || importExtractionScore(directBest) < 3) && isJinaConfigured()) {
+    if ((!directBest || importExtractionScore(directBest) < 5) && isJinaConfigured()) {
       const reader = await jinaReadPageDetailed(url.href);
       if (reader.markdown) {
         try {
@@ -737,7 +780,7 @@ workspacesRouter.post(
       .slice()
       .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
     const browserTarget = fetched?.ok ? fetched.finalUrl : url.href;
-    if (!bestBeforeBrowser || importExtractionScore(bestBeforeBrowser.raw) < 3) {
+    if (!bestBeforeBrowser || importExtractionScore(bestBeforeBrowser.raw) < 5) {
       const rendered = await fetchRenderedHtml(browserTarget);
       if (rendered) {
         try {
@@ -764,9 +807,7 @@ workspacesRouter.post(
       }
     }
 
-    const best = candidates
-      .slice()
-      .sort((a, b) => importExtractionScore(b.raw) - importExtractionScore(a.raw))[0];
+    const best = mergeImportCandidates(candidates);
 
     if (!best) {
       return res.status(422).json({
@@ -797,6 +838,13 @@ workspacesRouter.post(
       raw.price && "price",
       raw.organizer && "organizer",
     ].filter(Boolean);
+
+    await audit(context.workspace.id, req.userId!, "conference_import_prefill", null, {
+      sourceUrl,
+      method: best.route,
+      extractedFields: filled,
+      confidence: raw.confidence,
+    });
 
     res.json({
       draft: {
