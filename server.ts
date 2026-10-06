@@ -15,6 +15,7 @@ import {
 } from "./server/braveSearch";
 import { harvestDirectoryConferences } from "./server/directoryHarvest";
 import { activityRouter } from "./server/activity";
+import { meetingMinutesPdfRouter } from "./server/meetingMinutesPdf";
 import { messagesRouter, registerSocket } from "./server/messages";
 import { sponsorsRouter } from "./server/sponsors";
 import { billingRouter } from "./server/billing";
@@ -418,6 +419,9 @@ async function startServer() {
 
   // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations
   app.use("/api/activity", activityRouter);
+
+  // Branded PDF meeting minutes, all-member email delivery, and Gmail handoff.
+  app.use("/api/meeting-minutes", meetingMinutesPdfRouter);
 
   // Persistent, real-time direct messaging
   app.use("/api/messages", messagesRouter);

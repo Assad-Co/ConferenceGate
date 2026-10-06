@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, Mail, Plus, Send, Trash2, Users } from 'lucide-react';
+import { Download, FileDown, FileText, Mail, Plus, Send, Trash2, Users } from 'lucide-react';
 import { Conference } from '../types';
 import {
   OrganizerMeetingPlan,
@@ -7,10 +7,10 @@ import {
   OrganizerMeetingMinutes,
   createOrganizerMeetingMinutes,
   distributeOrganizerMeetingMinutes,
-  downloadOrganizerMeetingMinutesDocument,
   fetchOrganizerMeetingMinutes,
 } from '../api/activity';
 import { useToast } from './Toast';
+import { downloadMeetingMinutesPdf, fetchMeetingMinutesGmailDraft, sendMeetingMinutesPdfToMembers } from '../api/meetingMinutesPdf';
 
 interface MeetingMinutesPanelProps {
   conferences: Conference[];
@@ -39,10 +39,10 @@ const initialDraft = () => ({
   nextSteps: '',
   nextMeetingDate: '',
   notes: '',
-  distributionGroups: ['committee'] as string[],
+  distributionGroups: ['members', 'reviewers'] as string[],
   externalEmails: '',
   notifyInApp: true,
-  sendEmail: false,
+  sendEmail: true,
 });
 
 export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ conferences, meetings }) => {
@@ -50,6 +50,7 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
   const [draft, setDraft] = useState(initialDraft);
   const [saving, setSaving] = useState(false);
   const [distributingId, setDistributingId] = useState<string | null>(null);
+  const [sendingPdfId, setSendingPdfId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
@@ -146,7 +147,7 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
   const saveMinutes = async (distributeAfterSave: boolean) => {
     if (!draft.conferenceId || !draft.title.trim() || !draft.date) {
       showToast({ type: 'info', title: 'Complete meeting details', message: 'Conference, meeting title, and date are required.' });
-      return;
+      return null;
     }
     setSaving(true);
     try {
@@ -171,29 +172,82 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
           message: `${result.notifiedCount} ConferenceGate member notification${result.notifiedCount === 1 ? '' : 's'} sent.${emailText}`,
         });
       } else {
-        showToast({ type: 'success', title: 'Meeting minutes saved', message: 'The minutes are now an organizer workspace record and can be downloaded as Word.' });
+        showToast({ type: 'success', title: 'Meeting minutes saved', message: 'The minutes are now an organizer workspace record and can be downloaded as a branded PDF.' });
       }
       setDraft((prev) => ({ ...initialDraft(), conferenceId: prev.conferenceId, conferenceTitle: prev.conferenceTitle, organizerTimezone: prev.organizerTimezone }));
+      return saved;
     } catch (error) {
       showToast({ type: 'info', title: 'Could not save meeting minutes', message: error instanceof Error ? error.message : 'Please try again.' });
+      return null;
     } finally {
       setSaving(false);
     }
   };
 
-  const downloadMinutes = async (item: OrganizerMeetingMinutes) => {
+  const downloadPdf = async (item: OrganizerMeetingMinutes) => {
     try {
-      const blob = await downloadOrganizerMeetingMinutesDocument(item.id);
+      const blob = await downloadMeetingMinutesPdf(item.id);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${item.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'meeting-minutes'}-${item.date}.docx`;
+      link.download = `${item.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'meeting-minutes'}-${item.date}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     } catch (error) {
-      showToast({ type: 'info', title: 'Could not generate Word document', message: error instanceof Error ? error.message : 'Please try again.' });
+      showToast({ type: 'info', title: 'Could not generate PDF', message: error instanceof Error ? error.message : 'Please try again.' });
+    }
+  };
+
+  const sendPdfToAllMembers = async (item: OrganizerMeetingMinutes, extraEmails: string[] = item.externalEmails) => {
+    setSendingPdfId(item.id);
+    try {
+      const result = await sendMeetingMinutesPdfToMembers(item.id, extraEmails);
+      if (!result.emailConfigured) {
+        showToast({
+          type: 'info',
+          title: 'Email sender needs configuration',
+          message: `${result.recipientCount} member email${result.recipientCount === 1 ? '' : 's'} found. Use Open Gmail now, or configure the ConferenceGate email sender for one-click delivery.`,
+        });
+        return;
+      }
+      setMinutes((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, distributedAt: result.distributedAt || entry.distributedAt, sendEmail: true } : entry));
+      showToast({
+        type: 'success',
+        title: 'PDF meeting minutes sent',
+        message: `${result.emailSentCount} of ${result.recipientCount} member email${result.recipientCount === 1 ? '' : 's'} sent with the branded PDF attached${result.emailFailedCount ? `; ${result.emailFailedCount} failed` : ''}.`,
+      });
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not send PDF', message: error instanceof Error ? error.message : 'Please try again.' });
+    } finally {
+      setSendingPdfId(null);
+    }
+  };
+
+  const openInGmail = async (item: OrganizerMeetingMinutes) => {
+    try {
+      await downloadPdf(item);
+      const draft = await fetchMeetingMinutesGmailDraft(item.id);
+      if (!draft.recipients.length) {
+        showToast({ type: 'info', title: 'No member emails found', message: 'Add conference members or additional recipient emails first.' });
+        return;
+      }
+      const params = new URLSearchParams({
+        view: 'cm',
+        fs: '1',
+        bcc: draft.recipients.join(','),
+        su: draft.subject,
+        body: draft.body,
+      });
+      window.open(`https://mail.google.com/mail/?${params.toString()}`, '_blank', 'noopener,noreferrer');
+      showToast({
+        type: 'success',
+        title: 'Gmail prepared',
+        message: `Gmail opened with ${draft.recipientCount} member email${draft.recipientCount === 1 ? '' : 's'} in BCC and the PDF downloaded. Gmail browser security requires you to attach that downloaded PDF before pressing Send.`,
+      });
+    } catch (error) {
+      showToast({ type: 'info', title: 'Could not prepare Gmail', message: error instanceof Error ? error.message : 'Please try again.' });
     }
   };
 
@@ -231,7 +285,7 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
             <FileText className="w-5 h-5 text-blue-700" /> Meeting Minutes
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-            Record the official summary, decisions and actions after a committee meeting. ConferenceGate generates a branded Word document and can distribute it to conference members by in-app notification and email.
+            Record the official summary, decisions and actions after a committee meeting. ConferenceGate generates a branded PDF and can send it to all conference-member emails or prepare a Gmail message with the recipients already added.
           </p>
         </div>
         <img src="/conference-gate-logo.png" alt="ConferenceGate" className="h-12 w-auto object-contain" />
@@ -278,7 +332,7 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div><h3 className="text-sm font-bold text-slate-900">Action Items</h3><p className="text-[10px] text-slate-500">Each action appears as a structured table in the Word minutes.</p></div>
+          <div><h3 className="text-sm font-bold text-slate-900">Action Items</h3><p className="text-[10px] text-slate-500">Each action appears as a structured section in the branded PDF minutes.</p></div>
           <button type="button" onClick={() => setDraft((prev) => ({ ...prev, actionItems: [...prev.actionItems, blankAction()] }))} className="px-3 py-2 rounded-lg border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Add Action</button>
         </div>
         {draft.actionItems.map((item, index) => (
@@ -315,13 +369,20 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
         <input value={draft.externalEmails} onChange={(e) => setDraft({ ...draft, externalEmails: e.target.value })} placeholder="Additional recipient emails, comma separated" className={inputClass} />
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={draft.notifyInApp} onChange={(e) => setDraft({ ...draft, notifyInApp: e.target.checked })} className="accent-blue-700" /> ConferenceGate notifications</label>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={draft.sendEmail} onChange={(e) => setDraft({ ...draft, sendEmail: e.target.checked })} className="accent-blue-700" /> <Mail className="w-3.5 h-3.5" /> Email branded Word attachment</label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={draft.sendEmail} onChange={(e) => setDraft({ ...draft, sendEmail: e.target.checked })} className="accent-blue-700" /> <Mail className="w-3.5 h-3.5" /> Email branded PDF attachment</label>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button type="button" disabled={saving} onClick={() => saveMinutes(false)} className="px-5 py-3 rounded-xl border border-blue-200 text-blue-800 font-bold text-xs cursor-pointer disabled:opacity-50">{saving ? 'Saving…' : 'Save Minutes'}</button>
-        <button type="button" disabled={saving} onClick={() => saveMinutes(true)} className="px-5 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"><Send className="w-4 h-4" /> Save & Distribute</button>
+      <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 space-y-3">
+        <div>
+          <div className="text-xs font-bold text-slate-900">PDF & member delivery</div>
+          <p className="text-[10px] text-slate-500 mt-1">Save the exact content above as an official ConferenceGate-branded PDF. One-click email delivery automatically resolves all stored conference members, accepted committee/chair/speaker roles, assigned reviewers and abstract submitters, then sends each recipient the PDF privately.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <button type="button" disabled={saving} onClick={() => saveMinutes(false)} className="px-5 py-3 rounded-xl border border-blue-200 text-blue-800 font-bold text-xs cursor-pointer disabled:opacity-50">{saving ? 'Saving…' : 'Save Minutes'}</button>
+          <button type="button" disabled={saving} onClick={async () => { const saved = await saveMinutes(false); if (saved) await downloadPdf(saved); }} className="px-5 py-3 rounded-xl border border-blue-300 bg-white text-blue-800 font-bold text-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"><FileDown className="w-4 h-4" /> Save as PDF</button>
+          <button type="button" disabled={saving} onClick={async () => { const saved = await saveMinutes(false); if (saved) await sendPdfToAllMembers(saved, saved.externalEmails); }} className="px-5 py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"><Send className="w-4 h-4" /> Save & Send PDF to All Members</button>
+        </div>
       </div>
 
       <div className="border-t border-slate-100 pt-5 space-y-3">
@@ -333,9 +394,11 @@ export const MeetingMinutesPanel: React.FC<MeetingMinutesPanelProps> = ({ confer
         ) : minutes.map((item) => (
           <div key={item.id} className="p-4 rounded-2xl border border-slate-200 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="min-w-0"><div className="font-bold text-xs text-slate-900">{item.title}</div><div className="text-[10px] text-slate-500 mt-1">{item.conferenceTitle} · {item.date}{item.distributedAt ? ` · Distributed ${item.distributedAt}` : ' · Not distributed yet'}</div></div>
-            <div className="flex gap-2 shrink-0">
-              <button type="button" onClick={() => downloadMinutes(item)} className="px-3 py-2 rounded-lg border border-slate-200 text-blue-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"><Download className="w-3.5 h-3.5" /> Word</button>
-              <button type="button" disabled={distributingId === item.id} onClick={() => redistribute(item)} className="px-3 py-2 rounded-lg bg-blue-900 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"><Send className="w-3.5 h-3.5" /> {distributingId === item.id ? 'Sending…' : 'Distribute'}</button>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <button type="button" onClick={() => downloadPdf(item)} className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer"><Download className="w-3.5 h-3.5" /> PDF</button>
+              <button type="button" onClick={() => openInGmail(item)} className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"><Mail className="w-3.5 h-3.5" /> Open Gmail</button>
+              <button type="button" disabled={sendingPdfId === item.id} onClick={() => sendPdfToAllMembers(item)} className="px-3 py-2 rounded-lg bg-blue-900 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"><Send className="w-3.5 h-3.5" /> {sendingPdfId === item.id ? 'Sending PDF…' : 'Send PDF to Members'}</button>
+              <button type="button" disabled={distributingId === item.id} onClick={() => redistribute(item)} className="px-3 py-2 rounded-lg border border-slate-200 text-blue-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"><Users className="w-3.5 h-3.5" /> {distributingId === item.id ? 'Notifying…' : 'Notify In-App'}</button>
             </div>
           </div>
         ))}
