@@ -55,6 +55,8 @@ import {
 import { useToast } from './Toast';
 import { WorkspaceTeamPanel } from './WorkspaceTeamPanel';
 import { MarketplaceActionQueue } from './MarketplaceActionQueue';
+import { SponsorWizardPanel } from './SponsorWizardPanel';
+import { SponsorHistoryEditor } from './SponsorHistoryEditor';
 
 interface SponsorPortalProps {
   sponsorshipPackages: SponsorshipPackage[];
@@ -219,8 +221,8 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       setSponsorLaunchpad(await fetchSponsorLaunchpad());
       showToast({
         type: 'success',
-        title: 'Sponsor matching updated',
-        message: 'Your Sponsor Pro preferences are now being used to rank sponsorship opportunities.',
+        title: 'Sponsor wizard saved',
+        message: 'Your Sponsor Wizard profile is now being used to rank sponsorship opportunities and alerts.',
       });
     } catch (error: any) {
       showToast({ type: 'info', title: 'Could not save preferences', message: error?.message || 'Please try again.' });
@@ -715,7 +717,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
-          Matching Preferences
+          Sponsor Wizard
         </button>
         {!ownerPreview && (
           <button
@@ -772,14 +774,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
               <Target className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <h3 className="text-sm font-bold text-slate-800">No internal sponsorship needs yet</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Complete Matching Preferences and ConferenceGate will rank new organizer opportunities here.
+                Complete Sponsor Wizard and ConferenceGate will rank new organizer opportunities here.
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab('preferences')}
                 className="mt-4 px-4 py-2 rounded-full bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition-colors"
               >
-                Set matching preferences
+                Set sponsor wizard profile
               </button>
             </div>
           ) : (
@@ -1071,7 +1073,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 <h2 className="text-xl font-bold text-slate-900 mt-1">Saved Sponsorship Opportunities</h2>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl">
                   Shared across your Sponsor Pro workspace. The bell controls alerts for each item; the delivery
-                  cadence comes from Matching Preferences.
+                  cadence comes from Sponsor Wizard.
                 </p>
               </div>
               <button
@@ -1413,91 +1415,15 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       )}
 
-      {/* Sponsor Pro matching preferences */}
+      {/* Sponsor Wizard */}
       {activeTab === 'preferences' && (
-        <div className="max-w-3xl mx-auto">
-          <form onSubmit={saveSponsorPreferences} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-5">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Sponsor Matching Preferences</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                ConferenceGate uses these saved preferences for in-app matching and alerts. It does not send pre-signup notifications.
-              </p>
-            </div>
-
-            {[
-              ['Sectors / Industries', 'sectors', 'Energy, Oil & Gas, Artificial Intelligence'],
-              ['Conference Categories', 'categories', 'Petroleum & Geoscience, Energy, Engineering'],
-              ['Regions', 'regions', 'Middle East, Europe, North America'],
-              ['Opportunity Types', 'opportunityTypes', 'Exhibition Booth, Gala Dinner, Technical Session'],
-            ].map(([label, key, placeholder]) => (
-              <div key={key}>
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">{label}</label>
-                <input
-                  value={(preferenceDraft as any)[key]}
-                  onChange={(e) => setPreferenceDraft({ ...preferenceDraft, [key]: e.target.value })}
-                  placeholder={placeholder}
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
-                />
-                <p className="text-[9px] text-slate-400 mt-1">Separate values with commas.</p>
-              </div>
-            ))}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Minimum Budget</label>
-                <div className="relative">
-                  <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="number"
-                    min="0"
-                    value={preferenceDraft.budgetMin}
-                    onChange={(e) => setPreferenceDraft({ ...preferenceDraft, budgetMin: e.target.value })}
-                    className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Maximum Budget</label>
-                <div className="relative">
-                  <DollarSign className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="number"
-                    min="0"
-                    value={preferenceDraft.budgetMax}
-                    onChange={(e) => setPreferenceDraft({ ...preferenceDraft, budgetMax: e.target.value })}
-                    className="w-full pl-9 pr-3 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">Alert Frequency</label>
-              <select
-                value={preferenceDraft.alertFrequency}
-                onChange={(e) =>
-                  setPreferenceDraft({
-                    ...preferenceDraft,
-                    alertFrequency: e.target.value as SponsorPreferences['alertFrequency'],
-                  })
-                }
-                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold"
-              >
-                <option value="instant">Instant for strong matches</option>
-                <option value="daily">Daily summary</option>
-                <option value="weekly">Weekly summary</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={savingPreferences}
-              className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
-            >
-              {savingPreferences ? 'Saving…' : 'Save Matching Preferences'}
-            </button>
-          </form>
-        </div>
+        <SponsorWizardPanel
+          preferenceDraft={preferenceDraft}
+          setPreferenceDraft={setPreferenceDraft}
+          saving={savingPreferences}
+          onSubmit={saveSponsorPreferences}
+          onOpenRequests={() => setActiveTab('requests')}
+        />
       )}
 
       {/* Paid Sponsor Pro: Team & Access */}
@@ -1621,12 +1547,14 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
 
           </div>
 
-          {/* Sponsorship History */}
+          <SponsorHistoryEditor />
+
+          {/* ConferenceGate-Verified Sponsorship History */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-blue-600" />
               <h3 className="font-bold text-sm text-slate-900">
-                Sponsorship History
+                ConferenceGate-Verified Sponsorship History
                 {historyYearsSpan > 0 && (
                   <span className="font-normal text-slate-500"> — {sortedHistory.length} sponsorships across the last {historyYearsSpan} years</span>
                 )}
@@ -1647,7 +1575,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 </div>
               ))}
               {sortedHistory.length === 0 && (
-                <p className="text-xs text-slate-400">No prior sponsorships on record yet.</p>
+                <p className="text-xs text-slate-400">No ConferenceGate-verified sponsorships on record yet.</p>
               )}
             </div>
           </div>

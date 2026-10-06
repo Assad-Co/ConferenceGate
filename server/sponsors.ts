@@ -2142,3 +2142,36 @@ sponsorsRouter.get(
     });
   })
 );
+
+
+// Sponsor-entered history is deliberately separate from ConferenceGate-verified sponsorship applications.
+sponsorsRouter.get("/history/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const context = await paidWorkspaceContext(req, res, "sponsor");
+  if (!context) return;
+  const rows = await dbAll<any>("SELECT * FROM sponsor_history_entries WHERE sponsor_id=? ORDER BY year DESC, created_at DESC", [context.accountId]);
+  res.json({ records: rows.map((row) => ({ id: row.id, year: row.year, conferenceTitle: row.conference_title, organizerName: row.organizer_name || "", tier: row.tier || "", location: row.location || "", contribution: row.contribution || "", amount: row.amount === null ? null : Number(row.amount), currency: row.currency || "USD", notes: row.notes || "", evidenceUrl: row.evidence_url || "", createdAt: row.created_at })) });
+}));
+
+sponsorsRouter.post("/history/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const context = await paidWorkspaceContext(req, res, "sponsor", true);
+  if (!context) return;
+  const body = req.body || {};
+  const year = Number(body.year);
+  const conferenceTitle = typeof body.conferenceTitle === "string" ? body.conferenceTitle.trim() : "";
+  if (!Number.isInteger(year) || year < 1950 || year > 2100 || !conferenceTitle) return res.status(400).json({ error: "A valid year and conference/event name are required." });
+  let evidenceUrl = typeof body.evidenceUrl === "string" ? body.evidenceUrl.trim() : "";
+  if (evidenceUrl) { try { const url = new URL(evidenceUrl); if (!['http:','https:'].includes(url.protocol)) evidenceUrl = ""; } catch { return res.status(400).json({ error: "Evidence URL must be a valid http or https URL." }); } }
+  const amount = body.amount === null || body.amount === undefined || body.amount === '' ? null : Number(body.amount);
+  if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return res.status(400).json({ error: "Amount must be a positive number." });
+  const id = `shr_${crypto.randomUUID()}`;
+  await dbRun("INSERT INTO sponsor_history_entries(id,sponsor_id,year,conference_title,organizer_name,tier,location,contribution,amount,currency,notes,evidence_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", [id,context.accountId,year,conferenceTitle,String(body.organizerName || '').trim(),String(body.tier || '').trim(),String(body.location || '').trim(),String(body.contribution || '').trim(),amount,String(body.currency || 'USD').trim().toUpperCase().slice(0,6) || 'USD',String(body.notes || '').trim(),evidenceUrl || null]);
+  const row = await dbGet<any>("SELECT * FROM sponsor_history_entries WHERE id=?", [id]);
+  res.status(201).json({ record: { id: row!.id, year: row!.year, conferenceTitle: row!.conference_title, organizerName: row!.organizer_name || "", tier: row!.tier || "", location: row!.location || "", contribution: row!.contribution || "", amount: row!.amount === null ? null : Number(row!.amount), currency: row!.currency || "USD", notes: row!.notes || "", evidenceUrl: row!.evidence_url || "", createdAt: row!.created_at } });
+}));
+
+sponsorsRouter.delete("/history/mine/:id", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const context = await paidWorkspaceContext(req, res, "sponsor", true);
+  if (!context) return;
+  await dbRun("DELETE FROM sponsor_history_entries WHERE id=? AND sponsor_id=?", [req.params.id, context.accountId]);
+  res.json({ ok: true });
+}));
