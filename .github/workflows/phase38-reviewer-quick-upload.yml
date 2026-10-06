@@ -1,0 +1,86 @@
+name: Phase 38 Reviewer Quick Upload
+
+on:
+  push:
+    branches:
+      - phase-38-reviewer-quick-upload
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[phase38-integrated]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: phase-38-reviewer-quick-upload
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply organizer quick-upload UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/OrganizerDashboard.tsx')
+          text = path.read_text()
+
+          old_import = "import { OrganizerReviewMaterials } from './ReviewerTrustWorkflow';"
+          new_import = old_import + "\nimport { OrganizerReviewerQuickUpload } from './OrganizerReviewerQuickUpload';"
+          if old_import not in text:
+              raise SystemExit('Organizer review materials import not found')
+          text = text.replace(old_import, new_import, 1)
+
+          old_block = '''            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
+              Review documents are attached to each submitted abstract below. Add a PDF, DOC, or DOCX and assigned reviewers will receive secure access in their Reviewer Portal.
+            </div>'''
+          new_block = '''            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[11px] text-blue-900">
+              <div className="font-semibold">
+                Place the review file here so assigned reviewers can open it, work on it, and return their reviewed file securely through the Reviewer Portal.
+              </div>
+              <OrganizerReviewerQuickUpload submissions={myConferenceSubmissions} />
+            </div>'''
+          if old_block not in text:
+              raise SystemExit('Reviewer document callout block not found')
+          text = text.replace(old_block, new_block, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Remove temporary workflow
+        run: rm -f .github/workflows/phase38-reviewer-quick-upload.yml
+
+      - name: Install
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify integration
+        run: |
+          grep -q "OrganizerReviewerQuickUpload" src/components/OrganizerDashboard.tsx
+          grep -q "Add Review File" src/components/OrganizerReviewerQuickUpload.tsx
+          grep -q "uploadSubmissionDocument" src/components/OrganizerReviewerQuickUpload.tsx
+
+      - name: Commit integrated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/OrganizerDashboard.tsx src/components/OrganizerReviewerQuickUpload.tsx .github/workflows/phase38-reviewer-quick-upload.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Phase 38 — reviewer quick-upload button [phase38-integrated]"
+          git push origin HEAD:phase-38-reviewer-quick-upload
