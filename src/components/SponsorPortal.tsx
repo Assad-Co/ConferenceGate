@@ -33,8 +33,6 @@ import {
   fetchMySponsorshipDeals,
   updateSponsorshipDeal,
   addSponsorshipDealUpdate,
-  createSponsorRequest,
-  fetchMySponsorRequests,
   fetchMySponsorRequestResponses,
   decideSponsorRequestResponse,
   fetchSponsorPortfolioAnalytics,
@@ -49,7 +47,6 @@ import {
   type SponsorPreferences,
   type SponsorshipNeed,
   type SponsorshipDeal,
-  type SponsorRequest,
   type SponsorRequestResponse,
 } from '../api/sponsors';
 import { useToast } from './Toast';
@@ -94,7 +91,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   onApplyForSponsorship,
   ownerPreview = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'marketplace' | 'saved' | 'requests' | 'deals' | 'preferences' | 'workspace' | 'roi' | 'profile'>('preferences');
   const alertsPanelRef = useRef<HTMLDivElement>(null);
   const [preferences, setPreferences] = useState<SponsorPreferences>({
     sectors: [],
@@ -125,9 +122,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);
   const [dealNotes, setDealNotes] = useState<Record<string, string>>({});
   const [dealUpdatingId, setDealUpdatingId] = useState<string | null>(null);
-  const [sponsorRequests, setSponsorRequests] = useState<SponsorRequest[]>([]);
   const [sponsorRequestResponses, setSponsorRequestResponses] = useState<SponsorRequestResponse[]>([]);
-  const [requestSaving, setRequestSaving] = useState(false);
   const [sponsorLaunchpad, setSponsorLaunchpad] = useState<SponsorLaunchpad | null>(null);
   const [sponsorAnalytics, setSponsorAnalytics] = useState<SponsorPortfolioAnalytics>({
     meaningfulMatches: 0,
@@ -144,18 +139,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     organizerResponses: 0,
     acceptedRequestResponses: 0,
   });
-  const [requestDraft, setRequestDraft] = useState({
-    title: '',
-    description: '',
-    categories: '',
-    regions: '',
-    opportunityTypes: '',
-    budgetMin: '',
-    budgetMax: '',
-    targetAudience: '',
-    startDate: '',
-    endDate: '',
-  });
   const { showToast } = useToast();
 
   const listFromText = (value: string) =>
@@ -164,11 +147,10 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
   const loadSponsorMatching = async () => {
     setSponsorDataLoading(true);
     try {
-      const [pref, needs, deals, requests, responses, analytics, watchlist, launchpad] = await Promise.all([
+      const [pref, needs, deals, responses, analytics, watchlist, launchpad] = await Promise.all([
         fetchMySponsorPreferences(),
         fetchMatchedSponsorshipNeeds(),
         fetchMySponsorshipDeals('sponsor'),
-        fetchMySponsorRequests(),
         fetchMySponsorRequestResponses(),
         fetchSponsorPortfolioAnalytics(),
         fetchSponsorWatchlist(),
@@ -186,7 +168,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       });
       setMatchedNeeds(needs);
       setSponsorshipDeals(deals);
-      setSponsorRequests(requests);
       setSponsorRequestResponses(responses);
       setSponsorAnalytics(analytics);
       setSavedOpportunities(watchlist);
@@ -282,37 +263,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       showToast({ type: 'info', title: 'Could not post Deal Room update', message: error?.message || 'Please try again.' });
     } finally {
       setDealUpdatingId(null);
-    }
-  };
-
-  const handleCreateSponsorRequest = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!requestDraft.title.trim()) return;
-    setRequestSaving(true);
-    try {
-      const request = await createSponsorRequest({
-        title: requestDraft.title.trim(),
-        description: requestDraft.description.trim() || undefined,
-        categories: listFromText(requestDraft.categories),
-        regions: listFromText(requestDraft.regions),
-        opportunityTypes: listFromText(requestDraft.opportunityTypes),
-        budgetMin: requestDraft.budgetMin ? Number(requestDraft.budgetMin) : null,
-        budgetMax: requestDraft.budgetMax ? Number(requestDraft.budgetMax) : null,
-        targetAudience: requestDraft.targetAudience.trim() || undefined,
-        startDate: requestDraft.startDate || undefined,
-        endDate: requestDraft.endDate || undefined,
-      });
-      setSponsorRequests((prev) => [request, ...prev]);
-      setSponsorLaunchpad(await fetchSponsorLaunchpad());
-      setRequestDraft({
-        title: '', description: '', categories: '', regions: '', opportunityTypes: '',
-        budgetMin: '', budgetMax: '', targetAudience: '', startDate: '', endDate: '',
-      });
-      showToast({ type: 'success', title: 'Sponsor Request published', message: 'Paid organizers can now propose relevant conferences.' });
-    } catch (error: any) {
-      showToast({ type: 'info', title: 'Could not publish Sponsor Request', message: error?.message || 'Please try again.' });
-    } finally {
-      setRequestSaving(false);
     }
   };
 
@@ -646,113 +596,41 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         }}
       />
 
-      {/* Navigation Sub-Tabs */}
+      {/* Navigation Sub-Tabs — one simple sponsor journey */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 flex gap-2 overflow-x-auto text-xs font-semibold text-slate-600">
-        <button
-          onClick={() => setActiveTab('matches')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'matches'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <Target className="w-3.5 h-3.5" />
-          Matched Opportunities ({matchedNeeds.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('marketplace')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'marketplace'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          Sponsorship Marketplace ({sponsorshipPackages.length})
-          {unreadAlertCount > 0 && (
-            <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-              {unreadAlertCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('saved')}
-          className={
-            'px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ' +
-            (activeTab === 'saved'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700')
-          }
-        >
-          <Bookmark className="w-3.5 h-3.5" />
-          Saved ({savedOpportunities.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'requests'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <Target className="w-3.5 h-3.5" />
-          My Sponsor Requests ({sponsorRequests.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('deals')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'deals'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <Briefcase className="w-3.5 h-3.5" />
-          Deal Rooms ({sponsorshipDeals.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('preferences')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'preferences'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Sponsor Wizard
-        </button>
-        {!ownerPreview && (
-          <button
-            onClick={() => setActiveTab('workspace')}
-            className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'workspace'
-                ? 'bg-blue-600 text-white font-bold shadow-xs'
-                : 'hover:bg-slate-100 text-slate-700'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Team & Access
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab('roi')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
-            activeTab === 'roi'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          Sponsor ROI Dashboard & Leads
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'profile'
-              ? 'bg-blue-600 text-white font-bold shadow-xs'
-              : 'hover:bg-slate-100 text-slate-700'
-          }`}
-        >
-          Sponsor Profile & Reputation
-          <StarRating rating={sponsorProfile.rating} size="w-3 h-3" />
-        </button>
+        {[
+          { id: 'preferences', label: 'Sponsor Wizard', icon: SlidersHorizontal, count: null },
+          { id: 'marketplace', label: 'Sponsorship Marketplace', icon: Briefcase, count: sponsorshipPackages.length },
+          { id: 'matches', label: 'Matched Opportunities', icon: Target, count: matchedNeeds.length },
+          { id: 'requests', label: 'Organizer Requests', icon: Send, count: sponsorRequestResponses.length },
+          { id: 'saved', label: 'Saved', icon: Bookmark, count: savedOpportunities.length },
+          { id: 'deals', label: 'Deal Rooms', icon: Briefcase, count: sponsorshipDeals.length },
+          { id: 'roi', label: 'Sponsor ROI', icon: DollarSign, count: null },
+          { id: 'profile', label: 'Sponsor Profile', icon: Star, count: null },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap border ${
+                active
+                  ? 'bg-blue-50 text-blue-800 border-blue-200 font-bold shadow-xs'
+                  : 'bg-white border-transparent hover:bg-blue-50/70 hover:text-blue-800 text-slate-700'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}{tab.count === null ? '' : ` (${tab.count})`}</span>
+              {tab.id === 'marketplace' && unreadAlertCount > 0 && (
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {unreadAlertCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Sponsor Pro: internally matched organizer sponsorship needs */}
@@ -1184,92 +1062,39 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
         </div>
       )}
 
-      {/* Sponsor Pro reverse marketplace */}
+      {/* Organizer-originated sponsor requests / proposals only. Sponsors no longer publish reverse-marketplace requests. */}
       {activeTab === 'requests' && (
         <div className="space-y-6">
-          <form onSubmit={handleCreateSponsorRequest} className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Publish What You Want to Sponsor</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Create a Sponsor Request and let paid organizers respond with relevant conferences. ConferenceGate does not expose your private email.
-              </p>
-            </div>
-            <input
-              required
-              value={requestDraft.title}
-              onChange={(e) => setRequestDraft({ ...requestDraft, title: e.target.value })}
-              placeholder="e.g. Seeking GCC energy conferences for 2027"
-              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
-            />
-            <textarea
-              rows={3}
-              value={requestDraft.description}
-              onChange={(e) => setRequestDraft({ ...requestDraft, description: e.target.value })}
-              placeholder="Describe the audience, strategic objective, or sponsorship type you want."
-              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input value={requestDraft.categories} onChange={(e) => setRequestDraft({ ...requestDraft, categories: e.target.value })} placeholder="Categories, comma separated" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input value={requestDraft.regions} onChange={(e) => setRequestDraft({ ...requestDraft, regions: e.target.value })} placeholder="Regions, comma separated" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input value={requestDraft.opportunityTypes} onChange={(e) => setRequestDraft({ ...requestDraft, opportunityTypes: e.target.value })} placeholder="Booth, dinner, session, title..." className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input value={requestDraft.targetAudience} onChange={(e) => setRequestDraft({ ...requestDraft, targetAudience: e.target.value })} placeholder="Target audience: CIOs, geoscientists..." className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input type="number" min="0" value={requestDraft.budgetMin} onChange={(e) => setRequestDraft({ ...requestDraft, budgetMin: e.target.value })} placeholder="Minimum budget" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input type="number" min="0" value={requestDraft.budgetMax} onChange={(e) => setRequestDraft({ ...requestDraft, budgetMax: e.target.value })} placeholder="Maximum budget" className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input type="date" value={requestDraft.startDate} onChange={(e) => setRequestDraft({ ...requestDraft, startDate: e.target.value })} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-              <input type="date" value={requestDraft.endDate} onChange={(e) => setRequestDraft({ ...requestDraft, endDate: e.target.value })} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs" />
-            </div>
-            <button disabled={requestSaving} className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold cursor-pointer disabled:opacity-60">
-              {requestSaving ? 'Publishing…' : 'Publish Sponsor Request'}
-            </button>
-          </form>
-
-          {sponsorRequests.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {sponsorRequests.map((request) => (
-                <div key={request.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900">{request.title}</h3>
-                      <p className="text-[11px] text-slate-500">{request.responseCount} organizer response{request.responseCount === 1 ? '' : 's'}</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase">{request.status}</span>
-                  </div>
-                  {request.description && <p className="text-xs text-slate-600">{request.description}</p>}
-                  <div className="flex flex-wrap gap-1">
-                    {[...request.categories, ...request.regions, ...request.opportunityTypes].slice(0, 10).map((item) => (
-                      <span key={item} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[9px] font-semibold">{item}</span>
-                    ))}
-                  </div>
-                  {(request.budgetMin !== null || request.budgetMax !== null) && (
-                    <div className="text-xs font-bold text-blue-700">
-                      Budget: {request.budgetMin !== null ? `${request.budgetMin.toLocaleString()}` : 'Any'} – {request.budgetMax !== null ? `${request.budgetMax.toLocaleString()}` : 'Open'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+            <div className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600">Organizer → Sponsor</div>
+            <h2 className="text-xl font-bold text-slate-900 mt-1">Organizer Requests</h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+              Direct conference proposals and sponsorship invitations sent by organizers appear here. Sponsors do not publish requests from this portal.
+            </p>
+          </div>
 
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
-              <h3 className="font-bold text-sm text-slate-900">Organizer Responses</h3>
-              <p className="text-xs text-slate-500 mt-1">Accept a relevant conference proposal or decline it.</p>
-            </div>
             {sponsorRequestResponses.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">No organizer responses yet.</div>
+              <div className="p-10 text-center">
+                <Send className="w-9 h-9 text-slate-300 mx-auto mb-2" />
+                <h3 className="text-sm font-bold text-slate-800">No direct organizer requests yet</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Organizer-published opportunities are still ranked under Matched Opportunities. Direct proposals will appear here when an organizer sends one to your sponsor workspace.
+                </p>
+              </div>
             ) : (
               <div className="divide-y divide-slate-100">
                 {sponsorRequestResponses.map((response) => (
                   <div key={response.id} className="p-5 flex flex-col md:flex-row md:items-center gap-4 justify-between">
                     <div>
-                      <div className="font-bold text-xs text-slate-900">{response.conferenceTitle}</div>
-                      <div className="text-[11px] text-slate-500">{response.organizerName} · Responded to: {response.requestTitle}</div>
+                      <div className="font-bold text-sm text-slate-900">{response.conferenceTitle}</div>
+                      <div className="text-[11px] text-slate-500">Organizer: {response.organizerName}</div>
                       {response.message && <p className="text-[11px] text-slate-600 mt-1">{response.message}</p>}
                     </div>
                     {response.status === 'new' ? (
                       <div className="flex gap-2 shrink-0">
                         <button onClick={() => handleSponsorRequestResponseDecision(response.id, 'declined')} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer">Decline</button>
-                        <button onClick={() => handleSponsorRequestResponseDecision(response.id, 'accepted')} className="px-3 py-2 rounded-lg bg-blue-900 text-white text-xs font-bold cursor-pointer">Accept</button>
+                        <button onClick={() => handleSponsorRequestResponseDecision(response.id, 'accepted')} className="px-3 py-2 rounded-lg bg-blue-700 text-white text-xs font-bold cursor-pointer">Accept</button>
                       </div>
                     ) : (
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
@@ -1422,7 +1247,6 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           setPreferenceDraft={setPreferenceDraft}
           saving={savingPreferences}
           onSubmit={saveSponsorPreferences}
-          onOpenRequests={() => setActiveTab('requests')}
         />
       )}
 
@@ -1437,7 +1261,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900">Sponsor Pro Portfolio Analytics</h2>
             <p className="text-xs text-slate-500 mt-1">
-              These metrics come from your real ConferenceGate matching, inquiries, Deal Rooms, Sponsor Requests, and provider-confirmed payments. No impression or lead numbers are invented.
+              These metrics come from your real ConferenceGate matching, inquiries, Deal Rooms, organizer proposals, and provider-confirmed payments. No impression or lead numbers are invented.
             </p>
           </div>
 
@@ -1481,21 +1305,16 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 bg-white rounded-2xl border border-slate-200">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Sponsor Requests</div>
-              <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.sponsorRequests}</div>
-              <div className="text-[10px] text-slate-500">Requests you published</div>
-            </div>
-            <div className="p-5 bg-white rounded-2xl border border-slate-200">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Organizer Responses</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Organizer Requests</div>
               <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.organizerResponses}</div>
-              <div className="text-[10px] text-slate-500">Conference proposals received</div>
+              <div className="text-[10px] text-slate-500">Direct conference proposals received</div>
             </div>
             <div className="p-5 bg-white rounded-2xl border border-slate-200">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Accepted Proposals</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Accepted Organizer Requests</div>
               <div className="text-xl font-extrabold text-slate-900 mt-1">{sponsorAnalytics.acceptedRequestResponses}</div>
-              <div className="text-[10px] text-slate-500">Reverse-marketplace proposals accepted</div>
+              <div className="text-[10px] text-slate-500">Organizer proposals accepted</div>
             </div>
           </div>
 

@@ -26,6 +26,42 @@ export const ReviewerEligibilityCard: React.FC = () => {
   </div>;
 };
 
+export const OrganizerReviewMaterials: React.FC<{ submission: AbstractSubmission }> = ({ submission }) => {
+  const [documents, setDocuments] = useState<SubmissionDocument[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const refresh = () => fetchSubmissionDocuments(submission.id).then(setDocuments).catch(() => setDocuments([]));
+  useEffect(() => { refresh(); }, [submission.id]);
+  const reviewFiles = documents.filter((doc) => doc.kind === 'author_original');
+  const returnedFiles = documents.filter((doc) => doc.kind === 'reviewer_return');
+  const upload = async (file?: File) => {
+    if (!file || busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await uploadSubmissionDocument(submission.id, 'author_original', file);
+      setMessage('Review material added. Assigned reviewers can download it securely.');
+      await refresh();
+    } catch (e: any) {
+      setMessage(e?.message || 'Could not upload review material.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <div className="min-w-[210px] space-y-2">
+    <div className="flex flex-wrap items-center gap-2">
+      <label className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-[10px] font-bold cursor-pointer ${busy ? 'opacity-60' : ''}`}>
+        <Upload className="w-3.5 h-3.5" />{busy ? 'Uploading…' : 'Add review file'}
+        <input type="file" disabled={busy} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={(e) => { void upload(e.target.files?.[0]); e.currentTarget.value = ''; }} />
+      </label>
+      <span className="text-[9px] text-slate-400">PDF/DOC/DOCX · max 5 MB</span>
+    </div>
+    {reviewFiles.length > 0 && <div className="space-y-1">{reviewFiles.map((doc) => <button key={doc.id} type="button" onClick={() => downloadSubmissionDocument(submission.id, doc.id)} className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-left cursor-pointer"><span className="truncate text-[10px] font-semibold text-slate-700">{doc.fileName}</span><Download className="w-3 h-3 text-blue-600 shrink-0" /></button>)}</div>}
+    {returnedFiles.length > 0 && <div className="text-[9px] font-semibold text-emerald-700">{returnedFiles.length} reviewed file{returnedFiles.length === 1 ? '' : 's'} returned</div>}
+    {message && <div className="text-[9px] font-semibold text-blue-700 max-w-[240px]">{message}</div>}
+  </div>;
+};
+
 export const ReviewerDocumentWorkflow: React.FC<{ submission: AbstractSubmission }> = ({ submission }) => {
   const [documents, setDocuments] = useState<SubmissionDocument[]>([]);
   const [message, setMessage] = useState<string | null>(null);

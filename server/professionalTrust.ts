@@ -449,8 +449,15 @@ professionalTrustRouter.post("/submissions/:id/documents", asyncHandler(async (r
   if (!access.allowed) return res.status(403).json({ error: "You do not have access to this submission." });
   const body = req.body || {};
   const requestedKind = String(body.kind || "");
-  const allowedKind = access.role === "author" ? "author_original" : access.role === "reviewer" ? "reviewer_return" : "organizer_to_author";
-  if (requestedKind && requestedKind !== allowedKind) return res.status(403).json({ error: `Your role can only upload ${allowedKind} documents.` });
+  const allowedKind =
+    access.role === "author"
+      ? "author_original"
+      : access.role === "reviewer"
+        ? "reviewer_return"
+        : requestedKind === "author_original"
+          ? "author_original"
+          : "organizer_to_author";
+  if (requestedKind && requestedKind !== allowedKind) return res.status(403).json({ error: `Your role can only upload ${allowedKind} documents for this action.` });
   const fileName = String(body.fileName || "").trim().slice(0, 240);
   const mimeType = String(body.mimeType || "").trim().toLowerCase();
   const dataBase64 = String(body.dataBase64 || "").replace(/^data:[^;]+;base64,/, "").trim();
@@ -463,6 +470,14 @@ professionalTrustRouter.post("/submissions/:id/documents", asyncHandler(async (r
   if (access.role === "reviewer") {
     const owned = await dbGet<any>("SELECT organizer_id FROM created_conferences WHERE id=?", [access.submission.conference_id]);
     if (owned?.organizer_id) await createNotification(owned.organizer_id, "followup", "Reviewed abstract file returned", `A reviewer returned ${fileName} for “${access.submission.title}”. Open the abstract workflow to review and forward it to the author.`);
+  } else if (access.role === "organizer" && allowedKind === "author_original") {
+    const reviewers = await dbAll<{ reviewer_id: string }>(
+      "SELECT reviewer_id FROM submission_reviewer_assignments WHERE submission_id=?",
+      [req.params.id]
+    );
+    for (const reviewer of reviewers) {
+      await createNotification(reviewer.reviewer_id, "followup", "Review material available", `The organizer added ${fileName} for “${access.submission.title}”. Open your Reviewer Portal to download it.`);
+    }
   } else if (access.role === "organizer") {
     await createNotification(access.submission.submitter_id, "followup", "Reviewed abstract file from organizer", `${access.submission.conference_title} sent ${fileName} for “${access.submission.title}”.`);
   }

@@ -16,7 +16,6 @@ interface SponsorWizardPanelProps {
   setPreferenceDraft: React.Dispatch<React.SetStateAction<SponsorWizardDraft>>;
   saving: boolean;
   onSubmit: (event: React.FormEvent) => void | Promise<void>;
-  onOpenRequests: () => void;
 }
 
 const steps = [
@@ -31,7 +30,6 @@ export const SponsorWizardPanel: React.FC<SponsorWizardPanelProps> = ({
   setPreferenceDraft,
   saving,
   onSubmit,
-  onOpenRequests,
 }) => {
   const [step, setStep] = useState(0);
   const inputClass = 'w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200';
@@ -86,8 +84,7 @@ export const SponsorWizardPanel: React.FC<SponsorWizardPanelProps> = ({
 
         {step === 3 && <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{summary.map(([label, value]) => <div key={label} className="p-4 rounded-xl border border-slate-200 bg-slate-50"><div className="text-[9px] uppercase font-bold text-slate-400">{label}</div><div className="text-xs font-semibold text-slate-800 mt-1 break-words">{value}</div></div>)}</div>
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0" /><span>Saving this wizard activates personalized matching. You can change it any time without affecting existing Deal Rooms or Sponsor Requests.</span></div>
-          <button type="button" onClick={onOpenRequests} className="text-xs font-bold text-blue-700 hover:underline cursor-pointer">Need something specific? Open Sponsor Request →</button>
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0" /><span>Saving this wizard activates personalized matching. You can change it any time without affecting existing Deal Rooms, saved opportunities, or organizer requests.</span></div>
         </div>}
       </div>
 
