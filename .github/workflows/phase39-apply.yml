@@ -1,0 +1,41 @@
+name: Phase 39 Professional Evidence UI
+
+on:
+  push:
+    branches: [phase-39-professional-evidence-ui]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-39-professional-evidence-ui
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply requested fixes
+        run: node scripts/phase39Apply.mjs
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Production build
+        run: npm run build
+      - name: Built server smoke
+        run: node scripts/smokeBuiltServer.mjs
+      - name: Commit validated product changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/phase39Apply.mjs .github/workflows/phase39-apply.yml
+          git add src/components/OrganizerDashboard.tsx src/components/DigitalBadgeModal.tsx src/components/ExternalConferenceDetail.tsx src/components/LinkedInProfilePanel.tsx src/components/LinkedInImportedTabSections.tsx server/linkedinConferenceActivityBootstrap.ts
+          git commit -m "Phase 39 — simplify committee UI and deepen LinkedIn evidence"
+          git push origin HEAD:phase-39-professional-evidence-ui
