@@ -139,12 +139,16 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const [ratings, setRatings] = useState<Ratings>({});
   const [comment, setComment] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [organizerInput, setOrganizerInput] = useState(organizerName);
   const [role, setRole] = useState<ConferenceRole>(defaultRole || 'Attendee');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) setRole(defaultRole || 'Attendee');
-  }, [isOpen, defaultRole]);
+    if (isOpen) {
+      setRole(defaultRole || 'Attendee');
+      setOrganizerInput(organizerName);
+    }
+  }, [isOpen, defaultRole, organizerName]);
 
   const overall = useMemo(() => {
     const values: number[] = Object.values(ratings);
@@ -178,6 +182,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
       await submitConferenceFeedback({
         conferenceId,
         conferenceTitle,
+        organizerName: (organizerName || organizerInput).trim() || undefined,
         role,
         ratings,
         comment: comment.trim() || undefined,
@@ -213,7 +218,23 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <AutoFilledField icon={CalendarDays} label="Conference / Workshop" value={conferenceTitle} />
-            <AutoFilledField icon={Building2} label="Name of Organizer" value={organizerName} />
+            {organizerName ? (
+              <AutoFilledField icon={Building2} label="Name of Organizer" value={organizerName} />
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  Name of Organizer / Society
+                </label>
+                <input
+                  value={organizerInput}
+                  onChange={(event) => setOrganizerInput(event.target.value)}
+                  placeholder="e.g. EAGE, AAPG, SPE, IEEE"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden"
+                />
+                <p className="text-[9px] text-slate-400">Use the organizer's official name so ConferenceGate can route this feedback to a matching Organizer account.</p>
+              </div>
+            )}
             <AutoFilledField icon={CalendarCheck2} label="Date of Event" value={eventDate} />
             <AutoFilledField icon={User} label="Name of Participant" value={participantName} />
           </div>

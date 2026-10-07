@@ -2065,9 +2065,20 @@ sponsorsRouter.post(
     if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
       return res.status(400).json({ error: "conferenceTitle is required" });
     }
-    const rating = Number(body.rating);
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "rating must be an integer from 1 to 5" });
+    const structuredRatings = body.ratings && typeof body.ratings === "object" ? body.ratings : null;
+    const structuredValues = structuredRatings
+      ? Object.values(structuredRatings).map(Number).filter((value) => Number.isFinite(value))
+      : [];
+    let structuredOverall: number | null = null;
+    let rating = Number(body.rating);
+    if (structuredRatings) {
+      if (!structuredValues.length || structuredValues.length !== Object.keys(structuredRatings).length || structuredValues.some((value) => value < 1 || value > 6)) {
+        return res.status(400).json({ error: "Structured sponsor ratings must use the 1 to 6 scale" });
+      }
+      structuredOverall = Number((structuredValues.reduce((sum, value) => sum + value, 0) / structuredValues.length).toFixed(2));
+      rating = Number(((structuredOverall / 6) * 5).toFixed(2));
+    } else if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "rating must be from 1 to 5" });
     }
 
     const eligible = await dbGet<{ id: string }>(
@@ -2086,20 +2097,37 @@ sponsorsRouter.post(
       "SELECT * FROM sponsor_reviews WHERE sponsor_id=? AND organizer_id=? AND conference_title=? ORDER BY created_at DESC LIMIT 1",
       [body.sponsorId, accountId, body.conferenceTitle.trim()]
     );
+    let reviewId: string;
     if (existingReview) {
+      reviewId = existingReview.id;
       await dbRun(
         "UPDATE sponsor_reviews SET rating=?,comment=?,created_at=datetime('now') WHERE id=?",
-        [rating, body.comment || null, existingReview.id]
+        [rating, body.comment || null, reviewId]
       );
     } else {
-      const id = `srev_${crypto.randomUUID()}`;
+      reviewId = `srev_${crypto.randomUUID()}`;
       await dbRun(
         "INSERT INTO sponsor_reviews (id, sponsor_id, organizer_id, conference_title, rating, comment) VALUES (?, ?, ?, ?, ?, ?)",
-        [id, body.sponsorId, accountId, body.conferenceTitle.trim(), rating, body.comment || null]
+        [reviewId, body.sponsorId, accountId, body.conferenceTitle.trim(), rating, body.comment || null]
       );
     }
+    if (structuredRatings && structuredOverall !== null) {
+      await dbRun(
+        `INSERT INTO sponsor_review_details(review_id,ratings,overall_score,updated_at)
+         VALUES(?,?,?,datetime('now'))
+         ON CONFLICT(review_id) DO UPDATE SET ratings=excluded.ratings,overall_score=excluded.overall_score,updated_at=datetime('now')`,
+        [reviewId, JSON.stringify(structuredRatings), structuredOverall]
+      );
+    }
+    await notifyPaidAccount(
+      body.sponsorId,
+      "sponsor",
+      "sponsorship",
+      "New organizer evaluation",
+      `An organizer submitted a sponsor evaluation for ${body.conferenceTitle.trim()}. Open Sponsor Profile & Reputation to review it.`
+    );
     const stats = await sponsorDerivedStats(body.sponsorId);
-    res.status(201).json({ ok: true, ...stats });
+    res.status(201).json({ ok: true, ...stats, structuredOverall });
   })
 );
 
@@ -2113,10 +2141,11 @@ sponsorsRouter.get(
     const accountId = sponsorContext.accountId;
     const stats = await sponsorDerivedStats(accountId);
 
-    const reviewRows = await dbAll<SponsorReviewRow & { organizer_name: string }>(
-      `SELECT sr.*, u.name as organizer_name
+    const reviewRows = await dbAll<SponsorReviewRow & { organizer_name: string; structured_ratings?: string; structured_overall_score?: number | null }>(
+      `SELECT sr.*, u.name as organizer_name, srd.ratings as structured_ratings, srd.overall_score as structured_overall_score
        FROM sponsor_reviews sr
        JOIN users u ON u.id = sr.organizer_id
+       LEFT JOIN sponsor_review_details srd ON srd.review_id = sr.id
        WHERE sr.sponsor_id = ?
        ORDER BY sr.created_at DESC`,
       [accountId]
@@ -2135,7 +2164,9 @@ sponsorsRouter.get(
         reviewerName: r.organizer_name,
         reviewerRole: "Organizer",
         conferenceTitle: r.conference_title,
-        rating: r.rating,
+        rating: Number(r.rating),
+        ratings: safeJson(r.structured_ratings, {}),
+        overallScore: r.structured_overall_score === null || r.structured_overall_score === undefined ? null : Number(r.structured_overall_score),
         comment: r.comment || "",
         date: r.created_at.split(" ")[0],
       })),

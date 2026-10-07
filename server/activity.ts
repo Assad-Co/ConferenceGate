@@ -68,6 +68,17 @@ const RECOMMENDATION_TO_STATUS: Record<string, string> = {
 const TIMELINE_LABELS = ["Submitted", "Initial Screening", "Reviewer Assignment", "Under Review", "Final Decision"];
 const FINAL_STATUSES = ["Accepted", "Accepted for Oral", "Accepted for Poster", "Rejected", "Withdrawn"];
 
+function normalizedOrganizationKey(value: unknown): string {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 // "Reviewer Assignment" only becomes reachable once a real assignment row exists — never assumed
 // just because a submission is sitting unreviewed, since organizers may not have invited anyone yet.
 function deriveVisualTimeline(status: string, hasReviews: boolean, hasAssignment: boolean) {
@@ -1210,17 +1221,81 @@ activityRouter.post("/conference-interactions/toggle", asyncHandler(async (req: 
   res.status(201).json({ active: true });
 }));
 
+async function organizerFeedbackRows(accountId: string, accountOwner: UserRow) {
+  const [feedbackRows, ownedConferences] = await Promise.all([
+    dbAll<any>(
+      `SELECT cf.*, cfr.organizer_name as routed_organizer_name, cfr.organizer_key,
+              u.name as participant_name, u.organization as participant_organization
+         FROM conference_feedback cf
+         LEFT JOIN conference_feedback_routing cfr ON cfr.feedback_id = cf.id
+         LEFT JOIN users u ON u.id = cf.user_id
+        ORDER BY cf.created_at DESC`
+    ),
+    dbAll<CreatedConferenceRow>(
+      "SELECT * FROM created_conferences WHERE organizer_id = ?",
+      [accountId]
+    ),
+  ]);
+
+  const conferenceIds = new Set(ownedConferences.map((row) => row.id));
+  const conferenceTitleKeys = new Set(
+    ownedConferences.map((row) => {
+      try { return normalizedOrganizationKey(JSON.parse(row.data || "{}").title); } catch { return ""; }
+    }).filter(Boolean)
+  );
+  const organizationKeys = new Set(
+    [accountOwner.organization, accountOwner.name].map(normalizedOrganizationKey).filter(Boolean)
+  );
+
+  return feedbackRows.flatMap((row) => {
+    let matchReason: "conference" | "organization" | null = null;
+    if (row.conference_id && conferenceIds.has(row.conference_id)) matchReason = "conference";
+    else if (row.organizer_key && organizationKeys.has(row.organizer_key)) matchReason = "organization";
+    else if (conferenceTitleKeys.has(normalizedOrganizationKey(row.conference_title))) matchReason = "conference";
+    if (!matchReason) return [];
+
+    let ratings: Record<string, number> = {};
+    try { ratings = JSON.parse(row.ratings || "{}"); } catch {}
+    return [{
+      id: row.id,
+      conferenceId: row.conference_id || null,
+      conferenceTitle: row.conference_title,
+      organizerName: row.routed_organizer_name || accountOwner.organization || accountOwner.name || "",
+      participantName: row.participant_name || "ConferenceGate member",
+      participantOrganization: row.participant_organization || "",
+      role: row.role,
+      ratings,
+      overallScore: Number(row.overall_score || 0),
+      comment: row.comment || "",
+      date: row.created_at,
+      matchReason,
+    }];
+  });
+}
+
 activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
   if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
     return res.status(400).json({ error: "conferenceTitle is required" });
   }
   const ratings = body.ratings && typeof body.ratings === "object" ? body.ratings : {};
-  const scoreValues = Object.values(ratings) as number[];
+  const scoreValues = Object.values(ratings).map(Number).filter((value) => Number.isFinite(value) && value >= 1 && value <= 6);
   if (scoreValues.length === 0) {
-    return res.status(400).json({ error: "At least one rating is required" });
+    return res.status(400).json({ error: "At least one valid rating is required" });
   }
-  const overallScore = Number((scoreValues.reduce((a, b) => a + Number(b), 0) / scoreValues.length).toFixed(2));
+  if (scoreValues.length !== Object.keys(ratings).length) {
+    return res.status(400).json({ error: "Feedback ratings must use the 1 to 6 scale" });
+  }
+  const overallScore = Number((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length).toFixed(2));
+
+  let organizerName = typeof body.organizerName === "string" ? body.organizerName.trim() : "";
+  if (!organizerName && typeof body.conferenceId === "string" && body.conferenceId) {
+    const owned = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id = ?", [body.conferenceId]);
+    if (owned) {
+      const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [owned.organizer_id]);
+      organizerName = owner?.organization || owner?.name || "";
+    }
+  }
 
   const id = `fb_${crypto.randomUUID()}`;
   await dbRun(
@@ -1239,23 +1314,31 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
       body.recipientEmail || null,
     ]
   );
+  if (organizerName) {
+    await dbRun(
+      "INSERT INTO conference_feedback_routing(feedback_id, organizer_name, organizer_key) VALUES(?,?,?)",
+      [id, organizerName, normalizedOrganizationKey(organizerName)]
+    );
+  }
 
   res.status(201).json({ ok: true, overallScore });
 }));
 
-// Scoped to feedback left on conferences this organizer created — not a platform-wide average,
-// which would mix in every other organizer's events.
+activityRouter.get("/feedback/organizer", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const organizerContext = await organizerWorkspaceContext(req, res);
+  if (!organizerContext) return;
+  const feedback = await organizerFeedbackRows(organizerContext.accountId, organizerContext.accountOwner);
+  res.json({ feedback });
+}));
+
 activityRouter.get("/feedback/summary", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const organizerContext = await organizerWorkspaceContext(req, res);
   if (!organizerContext) return;
-  const row = (await dbGet<{ avgScore: number | null; count: number }>(
-    `SELECT AVG(cf.overall_score) as avgScore, COUNT(*) as count
-     FROM conference_feedback cf
-     JOIN created_conferences cc ON cc.id = cf.conference_id
-     WHERE cc.organizer_id = ?`,
-    [organizerContext.accountId]
-  ))!;
-  res.json({ averageScore: row.avgScore || 0, responseCount: row.count });
+  const rows = await organizerFeedbackRows(organizerContext.accountId, organizerContext.accountOwner);
+  const averageScore = rows.length
+    ? Number((rows.reduce((sum, row) => sum + row.overallScore, 0) / rows.length).toFixed(2))
+    : 0;
+  res.json({ averageScore, responseCount: rows.length });
 }));
 
 activityRouter.post("/broadcasts", asyncHandler(async (req: AuthedRequest, res: Response) => {

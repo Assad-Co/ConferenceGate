@@ -337,13 +337,15 @@ export function App() {
 
   const handleSubmitSponsorReview = async (
     sponsorId: string,
-    review: { conferenceTitle: string; rating: number; comment: string }
+    review: { conferenceTitle: string; rating: number; comment: string; ratings?: Record<string, number>; overallScore?: number }
   ) => {
     try {
       await submitSponsorReview({
         sponsorId,
         conferenceTitle: review.conferenceTitle,
         rating: review.rating,
+        ratings: review.ratings,
+        overallScore: review.overallScore,
         comment: review.comment,
       });
       refreshOrganizerSponsorData();

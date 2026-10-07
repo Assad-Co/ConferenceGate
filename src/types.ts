@@ -323,6 +323,8 @@ export interface SponsorReview {
   reviewerRole: 'Organizer';
   conferenceTitle: string;
   rating: number;
+  ratings?: Record<string, number>;
+  overallScore?: number | null;
   comment: string;
   date: string;
 }
