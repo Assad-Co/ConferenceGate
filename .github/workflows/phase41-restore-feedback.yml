@@ -1,0 +1,38 @@
+name: Phase 41 Restore Conference Feedback
+
+on:
+  push:
+    branches: [phase-41-restore-conference-feedback]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-41-restore-conference-feedback
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply Phase 41 restoration
+        run: python3 .github/phase41_patch.py
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Production build
+        run: npm run build
+      - name: Commit validated Phase 41
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/phase41_patch.py .github/workflows/phase41-restore-feedback.yml
+          git add src/components/UserProfileView.tsx src/components/LinkedInImportedTabSections.tsx
+          git commit -m "Phase 41 — restore structured conference feedback across history"
+          git push origin HEAD:phase-41-restore-conference-feedback
