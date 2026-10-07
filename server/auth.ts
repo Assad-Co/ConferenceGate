@@ -8,6 +8,7 @@ import { asyncHandler } from "./asyncHandler";
 import { copyLinkedInAvatarToDataUrl } from "./linkedinAvatar";
 import { resolvePaidAccountContext } from "./workspaceAccess";
 import { isOwnerPreviewEmail } from "./ownerPreview";
+import { queueProfessionalEvidenceResearch } from "./professionalEvidenceResearchBootstrap";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
 // the database — otherwise every server restart (a redeploy, a host spinning down an idle
@@ -934,6 +935,8 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
 
       await dbRun("UPDATE users SET linkedin_id = ? WHERE id = ?", [linkedinId, linkingRow.id]);
       await persistAuthenticatedLinkedInPicture(linkingRow.id, picture);
+      void queueProfessionalEvidenceResearch(linkingRow.id, { trigger: "linkedin_oauth" })
+        .catch((err) => console.error("[professional-evidence] LinkedIn link queue failed", err));
 
       const refreshed = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [linkingRow.id]))!;
       const token = signToken(refreshed.id);
@@ -954,6 +957,8 @@ authRouter.get("/linkedin/callback", asyncHandler(async (req, res) => {
 
     if (row) {
       await persistAuthenticatedLinkedInPicture(row.id, picture);
+      void queueProfessionalEvidenceResearch(row.id, { trigger: "linkedin_oauth" })
+        .catch((err) => console.error("[professional-evidence] LinkedIn sign-in queue failed", err));
       row = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [row.id]);
       const token = signToken(row!.id);
       setSessionCookie(res, token);
@@ -1039,6 +1044,9 @@ authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
     await persistAuthenticatedLinkedInPicture(id, pending.avatar);
     row = (await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [id]))!;
   }
+
+  void queueProfessionalEvidenceResearch(row.id, { trigger: "linkedin_oauth" })
+    .catch((err) => console.error("[professional-evidence] LinkedIn signup queue failed", err));
 
   res.clearCookie(LINKEDIN_PENDING_COOKIE, { path: "/" });
   const token = signToken(row.id);

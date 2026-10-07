@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ProfessionalDeepResearchPanel from './ProfessionalDeepResearchPanel';
 import {
   Linkedin,
   RefreshCw,
@@ -383,6 +384,8 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
           <div className="text-2xl font-extrabold text-slate-900 mt-1">{profile?.patents.length || 0}</div>
         </div>
       </div>
+
+      <ProfessionalDeepResearchPanel />
 
       {explicitClaims.length > 0 && (
         <section>
