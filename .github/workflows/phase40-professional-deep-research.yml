@@ -29,7 +29,7 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Built server smoke
-        run: npm run test:built-server
+        run: node scripts/smokeBuiltServer.mjs
       - name: Commit validated Phase 40
         run: |
           git config user.name "github-actions[bot]"
