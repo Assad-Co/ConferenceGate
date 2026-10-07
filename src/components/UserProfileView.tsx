@@ -136,7 +136,7 @@ const isRealExternalPublication = (paper: ExternalPaper): boolean => {
 };
 
 interface AttendedConference {
-  id: string;
+  id?: string;
   title: string;
   location: string;
   roleLabel: string;
@@ -1026,7 +1026,34 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
       {/* Tab Content */}
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
-        <LinkedInImportedTabSections tab={activeTab} onPaperTitlesChange={setLinkedInPaperTitles} />
+        <LinkedInImportedTabSections
+          tab={activeTab}
+          onPaperTitlesChange={setLinkedInPaperTitles}
+          onLeaveFeedback={activeTab === 'conferences' ? (signal) => {
+            const rawRole = signal.role || '';
+            const defaultRole: ConferenceRole = /reviewer/i.test(rawRole)
+              ? 'Reviewer'
+              : /(?:session|track).*chair|^chair$/i.test(rawRole)
+                ? 'Session Chair'
+                : /keynote/i.test(rawRole)
+                  ? 'Keynote'
+                  : /speaker|presenter/i.test(rawRole)
+                    ? 'Speaker'
+                    : /committee/i.test(rawRole)
+                      ? 'Technical Committee'
+                      : /moderator/i.test(rawRole)
+                        ? 'Moderator'
+                        : 'Attendee';
+            setFeedbackConference({
+              title: signal.conferenceName || signal.label,
+              location: '',
+              roleLabel: signal.role || 'Attendee',
+              organizerName: '',
+              eventDate: signal.year ? String(signal.year) : '',
+              defaultRole,
+            });
+          } : undefined}
+        />
         {activeTab === 'notifications' && (
           <ProfileNotifications
             notifications={notifications}
@@ -1105,6 +1132,21 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         )}
 
         {activeTab === 'conferences' && (
+          <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white border border-blue-100 flex items-center justify-center shrink-0">
+              <Gauge className="w-4 h-4 text-blue-700" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900">Conference &amp; Workshop Feedback</h3>
+              <p className="text-[11px] text-slate-600 mt-1">
+                Evaluate conferences you attended using the structured Facilitator / Speaker and Conference / Workshop questionnaire.
+                Use <span className="font-bold text-blue-700">Evaluate Conference</span> beside an eligible history record.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'conferences' && (
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">ConferenceGate Registrations</h3>
@@ -1131,7 +1173,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                         onClick={() => setFeedbackConference(conf)}
                         className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
                       >
-                        Leave Feedback
+                        Evaluate Conference
                       </button>
                       <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
                         Registered
@@ -1192,6 +1234,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setFeedbackConference({
+                          title: entry.conferenceName,
+                          location: entry.location || '',
+                          roleLabel: entry.role || 'Attendee',
+                          organizerName: '',
+                          eventDate: entry.year || '',
+                          defaultRole: 'Attendee',
+                        })}
+                        className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
+                      >
+                        Evaluate Conference
+                      </button>
                       <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full whitespace-nowrap">
                         Self-Reported
                       </span>

@@ -15,6 +15,7 @@ type CrossTab = 'conferences' | 'papers' | 'reviews' | 'committee' | 'badges';
 interface Props {
   tab: string;
   onPaperTitlesChange?: (titles: string[]) => void;
+  onLeaveFeedback?: (signal: LinkedInConferenceSignal) => void;
 }
 
 function textFrom(record: any, keys: string[]): string {
@@ -60,7 +61,21 @@ function EvidenceBadge({ claimed = false, confidence }: { claimed?: boolean; con
   );
 }
 
-function SignalCard({ signal }: { signal: LinkedInConferenceSignal }) {
+function SignalCard({
+  signal,
+  onLeaveFeedback,
+}: {
+  signal: LinkedInConferenceSignal;
+  onLeaveFeedback?: (signal: LinkedInConferenceSignal) => void;
+}) {
+  const feedbackEligible = Boolean(
+    onLeaveFeedback &&
+    signal.memberClaimed &&
+    !signal.repostOrQuote &&
+    signal.confidence >= 80 &&
+    (signal.kind === 'PAST_CONFERENCE' || signal.kind === 'CONFERENCE_ROLE')
+  );
+
   return (
     <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -70,12 +85,23 @@ function SignalCard({ signal }: { signal: LinkedInConferenceSignal }) {
         </p>
         {sourceLink(signal.sourceUrl)}
       </div>
-      <EvidenceBadge claimed={signal.memberClaimed} confidence={signal.confidence} />
+      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
+        {feedbackEligible && (
+          <button
+            type="button"
+            onClick={() => onLeaveFeedback?.(signal)}
+            className="px-2.5 py-1 border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors whitespace-nowrap"
+          >
+            Evaluate Conference
+          </button>
+        )}
+        <EvidenceBadge claimed={signal.memberClaimed} confidence={signal.confidence} />
+      </div>
     </div>
   );
 }
 
-export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitlesChange }) => {
+export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitlesChange, onLeaveFeedback }) => {
   const [profile, setProfile] = useState<LinkedInProfileEnrichment | null>(null);
   const [activity, setActivity] = useState<LinkedInConferenceActivity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,7 +184,7 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Conference Activity</h3>
           <p className="text-[11px] text-slate-500 mt-1">Attendance, participation and conference roles found by the consent-based scan of the member's own public LinkedIn evidence across the past 7 years. These remain evidence-backed member claims until independently verified.</p>
         </div>
-        <div className="space-y-2">{conferenceSignals.map((signal) => <SignalCard key={signal.id} signal={signal} />)}</div>
+        <div className="space-y-2">{conferenceSignals.map((signal) => <SignalCard key={signal.id} signal={signal} onLeaveFeedback={onLeaveFeedback} />)}</div>
       </section>
     );
   }
