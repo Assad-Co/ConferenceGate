@@ -1,0 +1,41 @@
+name: Phase 42 Feedback Routing and Sponsor Evaluations
+
+on:
+  push:
+    branches:
+      - phase-42-organization-feedback-sponsor-evaluations
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply Phase 42
+        run: python .github/phase42_patch.py
+      - name: Install
+        run: npm ci
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
+      - name: Commit validated Phase 42
+        run: |
+          rm -f .github/phase42_patch.py .github/workflows/phase42-apply.yml
+          git config user.name "Assad-Co"
+          git config user.email "72738542+Assad-Co@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No Phase 42 changes to commit"
+          else
+            git commit -m "Phase 42 — route organization feedback and structure sponsor evaluations"
+            git push origin HEAD:phase-42-organization-feedback-sponsor-evaluations
+          fi
