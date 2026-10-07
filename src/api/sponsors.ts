@@ -116,6 +116,8 @@ export async function submitSponsorReview(payload: {
   sponsorId: string;
   conferenceTitle: string;
   rating: number;
+  ratings?: Record<string, number>;
+  overallScore?: number;
   comment?: string;
 }): Promise<void> {
   const res = await fetch('/api/sponsors/reviews', {

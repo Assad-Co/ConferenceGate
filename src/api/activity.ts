@@ -357,6 +357,7 @@ export async function toggleConferenceInteraction(
 export interface SubmitFeedbackPayload {
   conferenceId?: string;
   conferenceTitle: string;
+  organizerName?: string;
   role: string;
   ratings: Record<string, number>;
   comment?: string;
@@ -376,6 +377,27 @@ export async function submitConferenceFeedback(payload: SubmitFeedbackPayload): 
 export async function fetchFeedbackSummary(): Promise<{ averageScore: number; responseCount: number }> {
   const res = await fetch('/api/activity/feedback/summary', { credentials: 'include' });
   return parseResponse(res);
+}
+
+export interface OrganizerFeedbackRecord {
+  id: string;
+  conferenceId: string | null;
+  conferenceTitle: string;
+  organizerName: string;
+  participantName: string;
+  participantOrganization: string;
+  role: string;
+  ratings: Record<string, number>;
+  overallScore: number;
+  comment: string;
+  date: string;
+  matchReason: 'conference' | 'organization';
+}
+
+export async function fetchOrganizerFeedback(): Promise<OrganizerFeedbackRecord[]> {
+  const res = await fetch('/api/activity/feedback/organizer', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return Array.isArray(data.feedback) ? data.feedback : [];
 }
 
 

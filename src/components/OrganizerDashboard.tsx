@@ -49,6 +49,8 @@ import { ProfessionalRecruitmentPanel } from './ProfessionalRecruitmentPanel';
 import { MeetingMinutesPanel } from './MeetingMinutesPanel';
 import { OrganizerReviewMaterials } from './ReviewerTrustWorkflow';
 import { OrganizerReviewerQuickUpload } from './OrganizerReviewerQuickUpload';
+import { OrganizerFeedbackPanel } from './OrganizerFeedbackPanel';
+import { SponsorEvaluationPanel } from './SponsorEvaluationPanel';
 import { importOrganizerConferenceFromOfficialUrl, type OrganizerConferenceImportDraft } from '../api/workspaces';
 import {
   sendBroadcast,
@@ -109,7 +111,7 @@ interface OrganizerDashboardProps {
   sponsorApplicants?: SponsorApplicant[];
   onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
   reviewableSponsors?: ReviewableSponsor[];
-  onReviewSponsor?: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string }) => void;
+  onReviewSponsor?: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string; ratings?: Record<string, number>; overallScore?: number }) => void | Promise<void>;
   reviewOpportunities?: ReviewOpportunity[];
   onPublishReviewOpportunity?: (payload: PublishReviewOpportunityPayload) => void;
   onWithdrawReviewOpportunity?: (id: string) => void;
@@ -257,7 +259,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   sponsorApplicants = [],
   onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
   reviewableSponsors = [],
-  onReviewSponsor = (_sponsorId: string, _review: { conferenceTitle: string; rating: number; comment: string }) => {},
+  onReviewSponsor = (_sponsorId: string, _review: { conferenceTitle: string; rating: number; comment: string; ratings?: Record<string, number>; overallScore?: number }) => {},
   reviewOpportunities = [],
   onPublishReviewOpportunity = (_payload: PublishReviewOpportunityPayload) => {},
   onWithdrawReviewOpportunity = (_id: string) => {},
@@ -266,7 +268,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   onAddNotification = (_notif: { title: string; message: string; type: 'followup'; actionUrl?: string }) => {},
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'communications' | 'workspace' | 'analytics'
+    'overview' | 'wizard' | 'abstracts' | 'professionals' | 'committee' | 'sponsors' | 'feedback' | 'communications' | 'workspace' | 'analytics'
   >('overview');
 
   const [professionalSearch, setProfessionalSearch] = useState({
@@ -1047,49 +1049,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     }
   };
 
-  // Sponsor Feedback / Review State
-  const [sponsorReviewDraft, setSponsorReviewDraft] = useState({
-    sponsorId: reviewableSponsors[0]?.id || '',
-    conferenceTitle: conferences[0]?.title || '',
-    rating: 0,
-    comment: '',
-  });
-
-  // reviewableSponsors/conferences load asynchronously after mount — default the form once they arrive.
-  useEffect(() => {
-    setSponsorReviewDraft((prev) => ({
-      ...prev,
-      sponsorId: prev.sponsorId || reviewableSponsors[0]?.id || '',
-      conferenceTitle: prev.conferenceTitle || conferences[0]?.title || '',
-    }));
-  }, [reviewableSponsors, conferences]);
-  const [sponsorReviewsSent, setSponsorReviewsSent] = useState<
-    Array<{ id: string; sponsorName: string; conferenceTitle: string; rating: number; comment: string; date: string }>
-  >([]);
-
-  const handleSubmitSponsorReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sponsorReviewDraft.sponsorId || !sponsorReviewDraft.rating || !sponsorReviewDraft.comment.trim()) return;
-    const sponsor = reviewableSponsors.find((s) => s.id === sponsorReviewDraft.sponsorId);
-    if (!sponsor) return;
-    onReviewSponsor(sponsorReviewDraft.sponsorId, {
-      conferenceTitle: sponsorReviewDraft.conferenceTitle,
-      rating: sponsorReviewDraft.rating,
-      comment: sponsorReviewDraft.comment,
-    });
-    setSponsorReviewsSent((prev) => [
-      {
-        id: `sr_${Date.now()}`,
-        sponsorName: sponsor.companyName,
-        conferenceTitle: sponsorReviewDraft.conferenceTitle,
-        rating: sponsorReviewDraft.rating,
-        comment: sponsorReviewDraft.comment,
-        date: new Date().toLocaleString(),
-      },
-      ...prev,
-    ]);
-    setSponsorReviewDraft((prev) => ({ ...prev, rating: 0, comment: '' }));
-  };
 
   // Event Analytics Data — derived entirely from real submissions, registrations, and feedback.
   const relevantSubmissions = useMemo(() => {
@@ -1464,6 +1423,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
           { id: 'abstracts', label: `Abstracts & AI Matcher (${myConferenceSubmissions.length})` },
           { id: 'committee', label: 'Technical Committee' },
           { id: 'sponsors', label: `Sponsorship Packages (${sponsorshipPackages.length})` },
+          { id: 'feedback', label: `Feedback (${feedbackSummary.responseCount})` },
           { id: 'communications', label: 'Communications Hub' },
           { id: 'workspace', label: 'Team & Access' },
           { id: 'analytics', label: 'Event Analytics' },
@@ -3659,112 +3619,18 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             </div>
           )}
 
-          {/* Rate & Review Sponsor */}
           {reviewableSponsors.length > 0 && (
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-              <div className="flex items-center gap-2">
-                <MessageSquareQuote className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900">Rate & Review Sponsor</h3>
-              </div>
-              <p className="text-xs text-slate-500 -mt-2">
-                Evaluate the services or package a sponsor delivered. Your review updates their rating and is pushed
-                straight to their Sponsor Marketplace as feedback.
-              </p>
-              <form onSubmit={handleSubmitSponsorReview} className="space-y-3 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <select
-                    value={sponsorReviewDraft.sponsorId}
-                    onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, sponsorId: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                  >
-                    {reviewableSponsors.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.companyName}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={sponsorReviewDraft.conferenceTitle}
-                    onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, conferenceTitle: e.target.value })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                  >
-                    {conferences.map((c) => (
-                      <option key={c.id} value={c.title}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rating</span>
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        type="button"
-                        key={n}
-                        onClick={() => setSponsorReviewDraft({ ...sponsorReviewDraft, rating: n })}
-                        className="cursor-pointer"
-                        title={`${n} star${n === 1 ? '' : 's'}`}
-                      >
-                        <Star
-                          className={`w-5 h-5 ${
-                            n <= sponsorReviewDraft.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  {sponsorReviewDraft.rating > 0 && (
-                    <span className="text-[11px] font-bold text-slate-700">{sponsorReviewDraft.rating}/5</span>
-                  )}
-                </div>
-
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Evaluate the services or package provided, e.g. Delivered branding assets on time and their booth staff were highly engaged with delegates..."
-                  value={sponsorReviewDraft.comment}
-                  onChange={(e) => setSponsorReviewDraft({ ...sponsorReviewDraft, comment: e.target.value })}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                ></textarea>
-
-                <button
-                  type="submit"
-                  disabled={!sponsorReviewDraft.rating || !sponsorReviewDraft.comment.trim()}
-                  className="px-4 py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Push Feedback to Sponsor</span>
-                </button>
-              </form>
-
-              {sponsorReviewsSent.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  {sponsorReviewsSent.map((r) => (
-                    <div key={r.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-slate-900 text-xs">{r.sponsorName}</span>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <Star
-                              key={n}
-                              className={`w-3 h-3 ${n <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {r.conferenceTitle} · <span className="text-emerald-600 font-semibold">Sent to sponsor {r.date}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-1">{r.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SponsorEvaluationPanel
+              sponsors={reviewableSponsors}
+              conferences={conferences}
+              onSubmit={onReviewSponsor}
+            />
           )}
         </div>
+      )}
+
+      {activeTab === 'feedback' && (
+        <OrganizerFeedbackPanel />
       )}
 
       {/* Paid Organizer Pro: Team & Access */}
@@ -3918,7 +3784,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <AnalyticsStatTile
               icon={Smile}
               label="Overall Satisfaction"
-              value={feedbackSummary.responseCount > 0 ? `${feedbackSummary.averageScore.toFixed(1)} / 5` : 'No data yet'}
+              value={feedbackSummary.responseCount > 0 ? `${feedbackSummary.averageScore.toFixed(1)} / 6` : 'No data yet'}
               sub={`${feedbackSummary.responseCount} feedback response${feedbackSummary.responseCount === 1 ? '' : 's'}`}
               tone="good"
               accent={CHART_HEX.rose}
@@ -4061,7 +3927,7 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
                   title="Overall Feedback"
                   subtitle="All roles — attendees, organizers, sponsors"
                   score={feedbackSummary.averageScore}
-                  maxScore={5}
+                  maxScore={6}
                   color={CHART_HEX.blue}
                   responseCount={feedbackSummary.responseCount}
                   breakdown={[]}

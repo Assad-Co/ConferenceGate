@@ -526,6 +526,16 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS conference_feedback_routing (
+      feedback_id TEXT PRIMARY KEY REFERENCES conference_feedback(id),
+      organizer_name TEXT,
+      organizer_key TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_conference_feedback_routing_organizer
+      ON conference_feedback_routing(organizer_key, created_at);
+
     CREATE TABLE IF NOT EXISTS sponsorship_packages (
       id TEXT PRIMARY KEY,
       conference_id TEXT NOT NULL,
@@ -559,6 +569,13 @@ export async function initDb(): Promise<void> {
       rating INTEGER NOT NULL,
       comment TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sponsor_review_details (
+      review_id TEXT PRIMARY KEY REFERENCES sponsor_reviews(id),
+      ratings TEXT NOT NULL DEFAULT '{}',
+      overall_score REAL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS sponsor_preferences (

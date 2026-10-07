@@ -1415,9 +1415,17 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                         {r.reviewerRole}
                       </span>
                     </div>
-                    <StarRating rating={r.rating} />
+                    <div className="flex items-center gap-2">
+                      {typeof r.overallScore === 'number' && (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">{r.overallScore.toFixed(1)} / 6</span>
+                      )}
+                      <StarRating rating={r.rating} />
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-600">{r.comment}</p>
+                  {r.ratings && Object.keys(r.ratings).length > 0 && (
+                    <div className="text-[10px] font-semibold text-blue-700">Structured organizer evaluation · {Object.keys(r.ratings).length} criteria</div>
+                  )}
+                  {r.comment && <p className="text-[11px] text-slate-600">{r.comment}</p>}
                   <div className="text-[10px] text-slate-400">{r.conferenceTitle} · {r.date}</div>
                 </div>
               ))}
