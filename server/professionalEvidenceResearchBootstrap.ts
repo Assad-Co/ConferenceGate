@@ -196,7 +196,7 @@ function draftFingerprint(item: EvidenceDraft) {
 async function readIdentity(userId: string) {
   const { dbGet } = await import("./db");
   const user = await dbGet<any>(
-    `SELECT id,name,email,linkedin_id,linkedin_url FROM users WHERE id = ?`,
+    `SELECT id,name,email,linkedin_id,linkedin_url,organization,title FROM users WHERE id = ?`,
     [userId],
   );
   if (!user) return null;
@@ -220,8 +220,8 @@ async function readIdentity(userId: string) {
     linkedinId: clean(user.linkedin_id) || null,
     linkedinUrl: clean(linkedInProfile?.linkedin_url) || clean(user.linkedin_url) || null,
     headline: clean(linkedInProfile?.headline) || null,
-    title: clean(linkedInProfile?.current_title) || null,
-    organization: clean(linkedInProfile?.current_organization) || null,
+    title: clean(linkedInProfile?.current_title) || clean(user.title) || null,
+    organization: clean(linkedInProfile?.current_organization) || clean(user.organization) || null,
     linkedInVerified: Boolean(linkedInProfile?.verified),
     experience: safeJson(linkedInProfile?.experience, []),
     publications: safeJson(linkedInProfile?.publications, []),
