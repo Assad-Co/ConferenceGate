@@ -20,10 +20,12 @@ import {
   ArrowLeft,
   UserCheck,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { Conference } from '../types';
 import { formatDateRange } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
+import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
 
 interface ConferenceDetailProps {
   conference: Conference;
@@ -38,6 +40,9 @@ interface ConferenceDetailProps {
   isFollowed?: boolean;
   onToggleSave?: () => void;
   onToggleFollow?: () => void;
+  isAttended?: boolean;
+  onMarkAttended?: (localDate: string) => Promise<void>;
+  onRateOrganizer?: () => void;
 }
 
 const EmptyDetailState: React.FC<{ message: string; officialWebsite?: string }> = ({ message, officialWebsite }) => (
@@ -71,12 +76,27 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
   isFollowed = false,
   onToggleSave,
   onToggleFollow,
+  isAttended = false,
+  onMarkAttended,
+  onRateOrganizer,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'overview' | 'cfp' | 'fees' | 'agenda' | 'speakers' | 'committee' | 'sponsors' | 'venue' | 'community'
   >('overview');
   const registeredPackage = registeredPackageId;
   const saved = isSaved;
+  const today = useCurrentLocalDate();
+  const attendanceEligible = conference.dates.start <= today;
+  const [markingAttendance, setMarkingAttendance] = useState(false);
+  const handleMarkAttended = async () => {
+    if (!onMarkAttended || markingAttendance || !attendanceEligible) return;
+    setMarkingAttendance(true);
+    try {
+      await onMarkAttended(today);
+    } finally {
+      setMarkingAttendance(false);
+    }
+  };
   const followed = isFollowed;
   const cfpAcceptingSubmissions = conference.cfpStatus === 'Open' || conference.cfpStatus === 'Extended';
   const publishedPriceRange = conference.priceRange?.trim() || 'See registration packages';
@@ -215,6 +235,38 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <Briefcase className="w-4 h-4" />
               <span>Become Sponsor</span>
             </button>
+            {attendanceEligible && onMarkAttended && (
+              isAttended ? (
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Attended</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleMarkAttended}
+                  disabled={markingAttendance}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  {markingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>{markingAttendance ? 'Saving...' : 'I Attended'}</span>
+                </button>
+              )
+            )}
+            {attendanceEligible && isAttended && onRateOrganizer && (
+              <button
+                type="button"
+                onClick={onRateOrganizer}
+                className="px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Rate Organizer</span>
+              </button>
+            )}
           </div>
 
           <div className="text-right">

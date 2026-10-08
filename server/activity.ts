@@ -1367,7 +1367,10 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
     if (attendance) {
       conferenceTitle = attendance.conference_title;
       organizerName = attendance.organizer_name;
-    } else if (!organizerName) {
+    } else {
+      return res.status(403).json({ error: "Mark this conference Attended before submitting a conference or organizer rating." });
+    }
+    if (!organizerName) {
       const owned = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id = ?", [body.conferenceId]);
       if (owned) {
         const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [owned.organizer_id]);

@@ -19,6 +19,7 @@ import {
   Mail,
   ClipboardList,
   AlertCircle,
+  MessageSquare,
 } from 'lucide-react';
 import {
   LiveSearchResult,
@@ -28,7 +29,8 @@ import {
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 import { downloadAbstractDraftDocx } from '../utils/abstractDraftDocx';
-import { createExternalSubmission } from '../api/activity';
+import { createExternalSubmission, type MarkConferenceAttendancePayload } from '../api/activity';
+import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
 import { AbstractSubmission } from '../types';
 
 // Recognized form-building tools whose CFP link means "fill out a form on their site" rather
@@ -86,6 +88,9 @@ interface ExternalConferenceDetailProps {
    * record — omitted (and that action hidden) when nobody's signed in. */
   author?: { name: string; email: string } | null;
   onExternalSubmissionRecorded?: (submission: AbstractSubmission) => void;
+  isAttended?: boolean;
+  onMarkAttended?: (payload: MarkConferenceAttendancePayload) => Promise<void>;
+  onRateOrganizer?: () => void;
 }
 
 const EmptyExtractState: React.FC<{ message: string; sourceUrl: string }> = ({ message, sourceUrl }) => (
@@ -205,6 +210,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   initialTab,
   author,
   onExternalSubmissionRecorded,
+  isAttended = false,
+  onMarkAttended,
+  onRateOrganizer,
 }) => {
   const [activeTab, setActiveTab] = useState<ExternalDetailTab>(initialTab || 'overview');
   const activeTabRef = useRef<ExternalDetailTab>(initialTab || 'overview');
@@ -233,6 +241,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const [markedSubmitted, setMarkedSubmitted] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
   const [downloadingDraft, setDownloadingDraft] = useState(false);
+  const [markingAttendance, setMarkingAttendance] = useState(false);
+  const today = useCurrentLocalDate();
 
   const handleAICheck = async () => {
     if (!draftAbstractText.trim()) return;
@@ -595,6 +605,37 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     ? `https://www.google.com/maps/search/hotels+near+${encodeURIComponent(venueAnchor)}`
     : null;
 
+  const structuredDateCandidates = [result.startDate, result.endDate, data?.datesText]
+    .filter(Boolean)
+    .flatMap((value) => String(value).match(/\b20\d{2}-\d{2}-\d{2}\b/g) || []);
+  const attendanceStartDate = result.startDate || structuredDateCandidates[0] || null;
+  const attendanceEndDate = result.endDate || structuredDateCandidates[1] || attendanceStartDate;
+  const attendanceOrganizerName = String(data?.overview?.organizer || data?.organizingInstitution || result.organization || result.displayLink || '').trim();
+  const attendanceEligible = Boolean(attendanceStartDate && attendanceEndDate && attendanceOrganizerName && attendanceStartDate <= today);
+  const attendancePayload: MarkConferenceAttendancePayload | null = attendanceEligible && attendanceStartDate && attendanceEndDate
+    ? {
+        conferenceId: `catalog:${result.link}`,
+        conferenceTitle: displayTitle,
+        organizerName: attendanceOrganizerName,
+        startDate: attendanceStartDate,
+        endDate: attendanceEndDate,
+        location: displayLocation || [result.location?.city, result.location?.country].filter(Boolean).join(', '),
+        sourceType: 'catalog',
+        sourceUrl: result.link,
+        localDate: today,
+      }
+    : null;
+
+  const handleMarkAttended = async () => {
+    if (!attendancePayload || !onMarkAttended || markingAttendance) return;
+    setMarkingAttendance(true);
+    try {
+      await onMarkAttended(attendancePayload);
+    } finally {
+      setMarkingAttendance(false);
+    }
+  };
+
   const submissionChannel = detectSubmissionChannel(data?.submissionEmail || null, submissionLink);
   const mailtoLink =
     submissionChannel === 'email' && data?.submissionEmail
@@ -742,6 +783,38 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <FileText className="w-4 h-4" />
               <span>{submissionChannel === 'form' ? 'Open Submission Form' : 'Submit via Official Site'}</span>
             </a>
+          )}
+          {attendanceEligible && onMarkAttended && (
+            isAttended ? (
+              <button
+                type="button"
+                disabled
+                className="px-5 py-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs rounded-xl flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Attended</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleMarkAttended}
+                disabled={markingAttendance}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                {markingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                <span>{markingAttendance ? 'Saving...' : 'I Attended'}</span>
+              </button>
+            )
+          )}
+          {attendanceEligible && isAttended && onRateOrganizer && (
+            <button
+              type="button"
+              onClick={onRateOrganizer}
+              className="px-5 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Rate {attendanceOrganizerName || 'Organizer'}</span>
+            </button>
           )}
         </div>
 

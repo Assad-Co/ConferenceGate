@@ -27,6 +27,7 @@ import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
 import { ConferenceDetail } from './components/ConferenceDetail';
+import { ConferenceFeedbackModal } from './components/ConferenceFeedbackModal';
 import { ExternalConferenceDetail, ExternalDetailTab } from './components/ExternalConferenceDetail';
 import { AbstractSubmissionModal } from './components/AbstractSubmissionModal';
 import { AbstractTrackerView } from './components/AbstractTrackerView';
@@ -60,6 +61,10 @@ import {
   registerForConference,
   fetchMyRegistrations,
   ConferenceRegistration,
+  ConferenceAttendance,
+  MarkConferenceAttendancePayload,
+  fetchMyConferenceAttendance,
+  markConferenceAttended,
   fetchMyConferenceInteractions,
   toggleConferenceInteraction,
   recordConferenceAction,
@@ -419,6 +424,8 @@ export function App() {
 
   // Real tracked activity — persisted server-side, loaded once authenticated.
   const [registrations, setRegistrations] = useState<ConferenceRegistration[]>([]);
+  const [conferenceAttendance, setConferenceAttendance] = useState<ConferenceAttendance[]>([]);
+  const [attendanceFeedbackTarget, setAttendanceFeedbackTarget] = useState<ConferenceAttendance | null>(null);
   const [volunteeredOpportunityIds, setVolunteeredOpportunityIds] = useState<string[]>([]);
   const [reviewOpportunities, setReviewOpportunities] = useState<ReviewOpportunity[]>([]);
   const [professionalOpportunities, setProfessionalOpportunities] = useState<ProfessionalOpportunity[]>([]);
@@ -451,6 +458,7 @@ export function App() {
     fetchSubmissions().then(setSubmissions).catch(() => {});
     fetchFeed().then(setPosts).catch(() => {});
     fetchMyRegistrations().then(setRegistrations).catch(() => {});
+    fetchMyConferenceAttendance().then(setConferenceAttendance).catch(() => {});
     fetchMyVolunteeredOpportunityIds().then(setVolunteeredOpportunityIds).catch(() => {});
     fetchReviewOpportunities().then(setReviewOpportunities).catch(() => {});
     if (authUser.role === 'professional') {
@@ -487,6 +495,21 @@ export function App() {
       fetchSponsorshipPackages().then(setSponsorshipPackagesReal).catch(() => {});
     }
   }, [authUser?.id, authUser?.role, authUser?.ownerPreview]);
+
+  const handleMarkConferenceAttendance = async (payload: MarkConferenceAttendancePayload) => {
+    try {
+      const attendance = await markConferenceAttended(payload);
+      setConferenceAttendance((prev) => [attendance, ...prev.filter((item) => item.conferenceId !== attendance.conferenceId)]);
+      showToast({
+        type: 'success',
+        title: 'Attendance saved',
+        message: `${attendance.conferenceTitle} is now in your attended-conference history. You can rate ${attendance.organizerName} from this record.`,
+      });
+    } catch (err: any) {
+      showToast({ type: 'info', title: 'Attendance not saved', message: err.message || 'Please try again.' });
+      throw err;
+    }
+  };
 
   const handleToggleSaveConference = async (conferenceId: string) => {
     try {
@@ -576,7 +599,7 @@ export function App() {
       authUser?.keynoteSpeakerMatches?.filter((match) => match.verified).length || 0;
 
     return {
-      conferencesAttended: registrations.length,
+      conferencesAttended: conferenceAttendance.length,
       abstractsSubmitted: mySubmissions.length,
       abstractsAccepted,
       oralPresentations,
@@ -594,7 +617,7 @@ export function App() {
       awards: 0,
       certificatesCount,
     };
-  }, [submissions, registrations, authUser?.id, authUser?.email, authUser?.keynoteSpeakerMatches]);
+  }, [submissions, registrations, conferenceAttendance, authUser?.id, authUser?.email, authUser?.keynoteSpeakerMatches]);
 
   // Discover shows only real, organizer-created conferences (submitted through the app) plus
   // live web results — never the static seed catalog, which was only ever meant as starter
@@ -1663,6 +1686,12 @@ export function App() {
             initialTab={selectedExternalTab}
             author={authUser ? { name: userProfile.name, email: authUser.email } : null}
             onExternalSubmissionRecorded={(submission) => setSubmissions((prev) => [submission, ...prev])}
+            isAttended={conferenceAttendance.some((item) => item.conferenceId === `catalog:${selectedExternalResult.link}`)}
+            onMarkAttended={handleMarkConferenceAttendance}
+            onRateOrganizer={() => {
+              const attendance = conferenceAttendance.find((item) => item.conferenceId === `catalog:${selectedExternalResult.link}`);
+              if (attendance) setAttendanceFeedbackTarget(attendance);
+            }}
           />
         )}
 
@@ -1678,6 +1707,22 @@ export function App() {
             isFollowed={followedConferenceIds.includes(selectedConference.id)}
             onToggleSave={() => handleToggleSaveConference(selectedConference.id)}
             onToggleFollow={() => handleToggleFollowConference(selectedConference.id)}
+            isAttended={conferenceAttendance.some((item) => item.conferenceId === selectedConference.id)}
+            onMarkAttended={(localDate) => handleMarkConferenceAttendance({
+              conferenceId: selectedConference.id,
+              conferenceTitle: selectedConference.title,
+              organizerName: selectedConference.organizerName,
+              startDate: selectedConference.dates.start,
+              endDate: selectedConference.dates.end,
+              location: [selectedConference.location.venue, selectedConference.location.city, selectedConference.location.country].filter(Boolean).join(', '),
+              sourceType: 'conferencegate',
+              sourceUrl: selectedConference.officialWebsite || null,
+              localDate,
+            })}
+            onRateOrganizer={() => {
+              const attendance = conferenceAttendance.find((item) => item.conferenceId === selectedConference.id);
+              if (attendance) setAttendanceFeedbackTarget(attendance);
+            }}
             onExpressCommitteeInterest={async (confId) => {
               const conf = conferences.find((c) => c.id === confId);
               await recordConferenceAction(confId, conf?.title || 'this conference', 'committee_interest').catch(() => {});
@@ -1832,6 +1877,7 @@ export function App() {
             submissions={submissions}
             posts={posts}
             registrations={registrations}
+            attendanceRecords={conferenceAttendance}
             conferences={discoverConferences}
             onSelectConference={handleSelectConference}
             onOpenBadgeModal={() => setIsBadgeOpen(true)}
@@ -1894,6 +1940,18 @@ export function App() {
           setIsSubmitAbstractOpen(false);
           setActiveTab('discover');
         }}
+      />
+
+      <ConferenceFeedbackModal
+        isOpen={attendanceFeedbackTarget !== null}
+        onClose={() => setAttendanceFeedbackTarget(null)}
+        conferenceId={attendanceFeedbackTarget?.conferenceId}
+        conferenceTitle={attendanceFeedbackTarget?.conferenceTitle || ''}
+        organizerName={attendanceFeedbackTarget?.organizerName || ''}
+        eventDate={attendanceFeedbackTarget ? `${attendanceFeedbackTarget.startDate} – ${attendanceFeedbackTarget.endDate}` : ''}
+        participantName={userProfile.name}
+        participantCompany={userProfile.organization}
+        defaultRole="Attendee"
       />
 
       <DigitalBadgeModal
