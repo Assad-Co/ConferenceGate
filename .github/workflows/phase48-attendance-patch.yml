@@ -1,0 +1,34 @@
+name: Phase 48 Attendance Backend Patch
+
+on:
+  push:
+    branches:
+      - phase-48-attendance-and-organizer-rating
+
+permissions:
+  contents: write
+
+jobs:
+  patch-attendance:
+    if: ${{ !contains(github.event.head_commit.message, '[phase48-backend]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-48-attendance-and-organizer-rating
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply guarded attendance backend/API patch
+        run: python scripts/phase48_attendance_patch.py
+      - name: Commit transformed sources
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add server/db.ts server/activity.ts src/api/activity.ts
+          if git diff --cached --quiet; then
+            echo "No source changes to commit"
+            exit 0
+          fi
+          git commit -m "Phase 48: add attendance persistence and locked organizer ratings [phase48-backend]"
+          git push origin HEAD:phase-48-attendance-and-organizer-rating
