@@ -1,0 +1,34 @@
+name: Phase 47 Refine Role Verification
+
+on:
+  push:
+    branches:
+      - phase-47-deep-professional-role-research
+
+permissions:
+  contents: write
+
+jobs:
+  refine-role-verification:
+    if: ${{ !contains(github.event.head_commit.message, '[phase47-refine]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-47-deep-professional-role-research
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply role verification refinements
+        run: python scripts/phase47_refine_role_verification.py
+      - name: Commit refined role research
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add server/professionalRoleEvidence.ts
+          if git diff --cached --quiet; then
+            echo "No source changes to commit"
+            exit 0
+          fi
+          git commit -m "Phase 47: refine professional role verification [phase47-refine]"
+          git push origin HEAD:phase-47-deep-professional-role-research
