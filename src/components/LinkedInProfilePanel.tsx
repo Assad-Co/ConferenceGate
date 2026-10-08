@@ -299,6 +299,10 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
 
   const explicitClaims = (activity?.conferenceActivity || []).filter((item) => item.memberClaimed && !item.repostOrQuote);
   const otherConferenceSignals = (activity?.conferenceActivity || []).filter((item) => !item.memberClaimed || item.repostOrQuote);
+  const importedRoleClaims = explicitClaims.filter((item) => item.kind === 'CONFERENCE_ROLE' && Boolean(item.role));
+  const importedCommitteeLeadershipCount = importedRoleClaims.filter((item) =>
+    /committee|chair|moderator|panel|reviewer|workshop|instructor/i.test(item.role || '')
+  ).length;
 
   return (
     <div className="space-y-7">
@@ -310,7 +314,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
             <h2 className="text-lg font-extrabold text-slate-900">LinkedIn Professional & Conference Profile</h2>
           </div>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-            Public LinkedIn data only. ConferenceGate searches the member's public profile plus up to 400 public posts across the past 7 years for conference attendance/roles, positions and paper evidence. Explicit first-person posts remain member claims until independently verified.
+            Public LinkedIn data only. ConferenceGate imports the signed-in member's own public profile plus up to 1,000 currently available public posts, with no seven-year cutoff, to recover conference attendance, committee/chair/reviewer roles, speaking activity and paper evidence. Imported first-person evidence stays source-labelled until independently verified.
           </p>
         </div>
         <button
@@ -319,7 +323,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
           className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh LinkedIn
+          Import / Refresh LinkedIn Activity
         </button>
       </div>
 
@@ -368,12 +372,14 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
-          <div className="text-[10px] uppercase font-bold text-slate-400">Conference claims</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400">Conference Activity</div>
           <div className="text-2xl font-extrabold text-slate-900 mt-1">{explicitClaims.length}</div>
+          <div className="text-[9px] text-slate-400 mt-1">Member-linked LinkedIn evidence</div>
         </div>
         <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
-          <div className="text-[10px] uppercase font-bold text-slate-400">Calls & opportunities</div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{activity?.callsForPapers.length || 0}</div>
+          <div className="text-[10px] uppercase font-bold text-slate-400">Committee & Leadership</div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">{importedCommitteeLeadershipCount}</div>
+          <div className="text-[9px] text-slate-400 mt-1">Committee, chair, moderator, reviewer & related roles</div>
         </div>
         <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
           <div className="text-[10px] uppercase font-bold text-slate-400">Publications</div>

@@ -42,6 +42,9 @@ export interface LinkedInConferenceImportResult {
     conferenceActivity: number;
     callsForPapers: number;
     explicitMemberClaims: number;
+    conferenceRoles: number;
+    committeeLeadershipRoles: number;
+    pastConferenceClaims: number;
   };
 }
 

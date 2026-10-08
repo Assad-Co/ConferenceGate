@@ -10,8 +10,7 @@ import express, { Router, type NextFunction, type Request, type Response } from 
 
 const POSTS_ACTOR_ID = "harvestapi~linkedin-profile-posts";
 const SOURCE_ACTOR = "harvestapi/linkedin-profile-posts";
-const MAX_POSTS = 400;
-const LOOKBACK_YEARS = 7;
+const MAX_POSTS = 1000;
 
 type AuthedRequest = Request & { linkedinConferenceUserId?: string };
 
@@ -214,17 +213,9 @@ function yearFromPostDateValue(value: unknown, depth = 0): number | null {
   return null;
 }
 
-function postWithinSevenYears(post: Record<string, any>): boolean {
-  const candidates = [
-    post.postedAt, post.postedDate, post.publishedAt, post.createdAt, post.date,
-    post.timestamp, post.postedAtTimestamp, post.createdAtTimestamp, post.time,
-  ];
-  for (const candidate of candidates) {
-    const year = yearFromPostDateValue(candidate);
-    if (year) return year >= new Date().getUTCFullYear() - LOOKBACK_YEARS;
-  }
-  // Some LinkedIn exports omit timestamps. Keep those posts and rely on the event/publication year
-  // when one is present rather than discarding potentially useful member evidence.
+function postWithinAvailableHistory(_post: Record<string, any>): boolean {
+  // The provider is already asked for the member's available public post history.
+  // Do not discard older professional conference evidence with an arbitrary year cutoff.
   return true;
 }
 
@@ -281,25 +272,52 @@ function sentenceWithEvent(value: string): string {
   return chosen.length > 220 ? `${chosen.slice(0, 217)}…` : chosen;
 }
 
-function detectRole(value: string): string | null {
-  const roles: Array<[RegExp, string]> = [
+function detectRoles(value: string): string[] {
+  const patterns: Array<[RegExp, string]> = [
+    [/\btechnical program(?:me)? committee co[- ]?chair\b/i, "Technical Program Committee Co-Chair"],
+    [/\btechnical program(?:me)? committee chair\b/i, "Technical Program Committee Chair"],
+    [/\b(?:program|programme) committee co[- ]?chair\b/i, "Program Committee Co-Chair"],
+    [/\b(?:program|programme) committee chair\b/i, "Program Committee Chair"],
+    [/\bscientific committee co[- ]?chair\b/i, "Scientific Committee Co-Chair"],
+    [/\bscientific committee chair\b/i, "Scientific Committee Chair"],
+    [/\borganizing committee co[- ]?chair\b|\borganising committee co[- ]?chair\b/i, "Organizing Committee Co-Chair"],
+    [/\borganizing committee chair\b|\borganising committee chair\b/i, "Organizing Committee Chair"],
+    [/\bsession co[- ]?chair\b/i, "Session Co-Chair"],
+    [/\bsession chair\b/i, "Session Chair"],
+    [/\btrack co[- ]?chair\b/i, "Track Co-Chair"],
+    [/\btrack chair\b/i, "Track Chair"],
+    [/\bconference co[- ]?chair\b/i, "Conference Co-Chair"],
     [/\bkeynote(?: speaker)?\b/i, "Keynote Speaker"],
     [/\bplenary(?: speaker)?\b/i, "Plenary Speaker"],
     [/\binvited speaker\b/i, "Invited Speaker"],
-    [/\b(?:session|track|program|programme|scientific) chair\b/i, "Chair"],
+    [/\bcore presenter\b/i, "Core Presenter"],
+    [/\boral presenter\b|\boral presentation\b/i, "Oral Presenter"],
+    [/\bposter presenter\b|\bposter presentation\b/i, "Poster Presenter"],
+    [/\bworkshop (?:instructor|facilitator|leader|chair)\b/i, "Workshop Instructor"],
+    [/\b(?:course|short course) instructor\b/i, "Course Instructor"],
     [/\bmoderator\b/i, "Moderator"],
-    [/\bpanelist\b|\bpanellist\b/i, "Panelist"],
-    [/\bcommittee member\b|\btechnical committee\b|\bscientific committee\b|\bprogram committee\b/i, "Committee Member"],
-    [/\b(?:oral )?presenter\b|\bpresenting\b|\bpresentation\b/i, "Presenter"],
+    [/\bpanel chair\b/i, "Panel Chair"],
+    [/\bpanelist\b|\bpanellist\b|\bpanel participant\b/i, "Panelist"],
+    [/\b(?:abstract|paper|technical)?\s*reviewer\b/i, "Reviewer"],
+    [/\badvisory board(?: member)?\b|\badvisory committee(?: member)?\b/i, "Advisory Committee Member"],
+    [/\bsteering committee(?: member)?\b/i, "Steering Committee Member"],
+    [/\borganizing committee(?: member)?\b|\borganising committee(?: member)?\b/i, "Organizing Committee Member"],
+    [/\bscientific committee(?: member)?\b/i, "Scientific Committee Member"],
+    [/\btechnical program(?:me)? committee(?: member)?\b/i, "Technical Program Committee Member"],
+    [/\bprogram(?:me)? committee(?: member)?\b/i, "Program Committee Member"],
+    [/\btechnical committee(?: member)?\b|\bcommittee member\b/i, "Committee Member"],
+    [/\b(?:oral )?presenter\b|\bpresenting\b/i, "Presenter"],
     [/\bspeaker\b|\bspeaking\b/i, "Speaker"],
-    [/\bposter\b/i, "Poster Presenter"],
   ];
-  for (const [re, label] of roles) if (re.test(value)) return label;
-  return null;
+  const matches: string[] = [];
+  for (const [pattern, label] of patterns) {
+    if (pattern.test(value) && !matches.includes(label)) matches.push(label);
+  }
+  return matches;
 }
 
 function explicitSelfClaim(value: string): boolean {
-  return /\b(i\s+(?:am|was|will|shall|have|had|presented|spoke|attended|participated|chaired|moderated|served|joined)|i['’]m|i['’]ll|my\s+(?:talk|presentation|poster|paper|abstract|session)|honou?red to|pleased to|delighted to|excited to)\b/i.test(
+  return /\b(i\s+(?:am|was|will|shall|have|had|presented|spoke|attended|participated|chaired|co[- ]?chaired|moderated|served|serve|joined|reviewed|facilitated|led|instructed)|i['’]m|i['’]ll|my\s+(?:talk|presentation|poster|paper|abstract|session|role)|honou?red to|pleased to|delighted to|excited to|proud to|appointed as|selected as|invited as|serving as|serve as|member of)\b/i.test(
     value,
   );
 }
@@ -311,7 +329,7 @@ function classifyPosts(posts: any[], requestedUrl: string) {
 
   posts.forEach((raw, index) => {
     const post = raw && typeof raw === "object" ? raw as Record<string, any> : {};
-    if (!postWithinSevenYears(post)) return;
+    if (!postWithinAvailableHistory(post)) return;
     const content = postText(post);
     if (!content) return;
 
@@ -320,11 +338,11 @@ function classifyPosts(posts: any[], requestedUrl: string) {
     const callForPapers = /\b(call for papers?|cfp|paper submissions?|submit (?:your )?paper)\b/i.test(content);
     const callForAbstracts = /\b(call for abstracts?|abstract submissions?|submit (?:your )?abstract)\b/i.test(content);
     const registration = /\b(registration (?:is )?open|register now|early[- ]bird registration|conference registration)\b/i.test(content);
-    const role = detectRole(content);
+    const roles = detectRoles(content);
+    const role = roles[0] || null;
     const selfClaim = explicitSelfClaim(content);
     const repostOrQuote = isRepostOrQuote(post, requestedUrl);
     const year = extractYear(content);
-    if (year && year < nowYear - LOOKBACK_YEARS) return;
     const sourceUrl = postUrl(post);
     const label = sentenceWithEvent(content);
     const id = postId(post, index);
@@ -372,19 +390,34 @@ function classifyPosts(posts: any[], requestedUrl: string) {
       confidence = repostOrQuote ? 55 : 70;
     }
 
-    conferenceActivity.push({
-      id,
+    const baseSignal = {
       kind,
       label,
-      role: memberClaimed ? role : null,
+      conferenceName: hasEvent ? label : null,
       year,
       sourceUrl,
       evidenceText: label,
       confidence,
       memberClaimed,
       repostOrQuote,
-      verified: false,
-    });
+      verified: false as const,
+    };
+
+    if (kind === "CONFERENCE_ROLE" && memberClaimed && roles.length > 0) {
+      roles.forEach((detectedRole, roleIndex) => {
+        conferenceActivity.push({
+          id: `${id}:role:${roleIndex}`,
+          ...baseSignal,
+          role: detectedRole,
+        });
+      });
+    } else {
+      conferenceActivity.push({
+        id,
+        ...baseSignal,
+        role: memberClaimed ? role : null,
+      });
+    }
   });
 
   const dedupe = <T extends { id: string }>(items: T[]) => {
@@ -397,75 +430,9 @@ function classifyPosts(posts: any[], requestedUrl: string) {
   };
 
   return {
-    conferenceActivity: dedupe(conferenceActivity).slice(0, 400),
-    callsForPapers: dedupe(callsForPapers).slice(0, 250),
+    conferenceActivity: dedupe(conferenceActivity).slice(0, 1000),
+    callsForPapers: dedupe(callsForPapers).slice(0, 500),
   };
-}
-
-const REGISTERED_LINKEDIN_ROLE_EVIDENCE = [
-  {
-    linkedinUrl: "https://www.linkedin.com/in/assad-ghazwani-52978253",
-    conferenceName: "EAGE/AAPG Petroleum Systems of the Middle East GTW",
-    year: 2025,
-    evidenceText: "Honored to take part in the EAGE/AAPG Petroleum Systems of the Middle East GTW in Kuwait. Proud to contribute as a Core Presenter, Oral Presenter, Session Chair, and Technical Program Committee Co-Chair.",
-    roles: [
-      "Core Presenter",
-      "Oral Presenter",
-      "Session Chair",
-      "Technical Program Committee Co-Chair",
-    ],
-  },
-] as const;
-
-function normalizeEvidenceLinkedInUrl(value: unknown): string {
-  return clean(value).toLowerCase().replace(/\/+$/, "");
-}
-
-function mergeRegisteredLinkedInRoleEvidence(activity: any, linkedinUrl: unknown) {
-  const normalized = normalizeEvidenceLinkedInUrl(linkedinUrl);
-  const registered = REGISTERED_LINKEDIN_ROLE_EVIDENCE.find(
-    (item) => normalizeEvidenceLinkedInUrl(item.linkedinUrl) === normalized,
-  );
-  if (!registered) return activity;
-
-  const base = activity || {
-    linkedinUrl: registered.linkedinUrl,
-    conferenceActivity: [],
-    callsForPapers: [],
-    sourceActor: "member-evidence-recovery",
-    consentedAt: new Date().toISOString(),
-    fetchedAt: new Date().toISOString(),
-  };
-  const signals = Array.isArray(base.conferenceActivity) ? [...base.conferenceActivity] : [];
-  const seen = new Set(
-    signals.map((item: any) => [
-      String(item?.conferenceName || item?.label || "").toLowerCase(),
-      String(item?.year || ""),
-      String(item?.role || "").toLowerCase(),
-    ].join("|")),
-  );
-
-  registered.roles.forEach((role, index) => {
-    const key = [registered.conferenceName.toLowerCase(), String(registered.year), role.toLowerCase()].join("|");
-    if (seen.has(key)) return;
-    seen.add(key);
-    signals.push({
-      id: "registered-linkedin-role:" + index,
-      kind: "CONFERENCE_ROLE",
-      label: registered.conferenceName,
-      conferenceName: registered.conferenceName,
-      role,
-      year: registered.year,
-      sourceUrl: registered.linkedinUrl,
-      evidenceText: registered.evidenceText,
-      confidence: 95,
-      memberClaimed: true,
-      repostOrQuote: false,
-      verified: false,
-    });
-  });
-
-  return { ...base, linkedinUrl: registered.linkedinUrl, conferenceActivity: signals };
 }
 
 async function readStored(userId: string) {
@@ -488,16 +455,7 @@ async function readStored(userId: string) {
 
 router.get("/me", requireMember, safe(async (req, res) => {
   const userId = req.linkedinConferenceUserId!;
-  const { dbGet } = await import("./db");
-  const user = await dbGet<{ linkedin_url: string | null }>(
-    "SELECT linkedin_url FROM users WHERE id = ?",
-    [userId],
-  );
-  const stored = await readStored(userId);
-  const activity = mergeRegisteredLinkedInRoleEvidence(
-    stored,
-    stored?.linkedinUrl || user?.linkedin_url || null,
-  );
+  const activity = await readStored(userId);
   res.json({
     activity,
     apifyConfigured: Boolean(process.env.APIFY_TOKEN?.trim()),
@@ -536,7 +494,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     endpoint.searchParams.set("format", "json");
     endpoint.searchParams.set("clean", "true");
     endpoint.searchParams.set("maxItems", String(MAX_POSTS));
-    endpoint.searchParams.set("maxTotalChargeUsd", "1.20");
+    endpoint.searchParams.set("maxTotalChargeUsd", "3.00");
 
     response = await fetch(endpoint, {
       method: "POST",
@@ -609,6 +567,13 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
       conferenceActivity: conferenceActivity.length,
       callsForPapers: callsForPapers.length,
       explicitMemberClaims: conferenceActivity.filter((item) => item.memberClaimed).length,
+      conferenceRoles: conferenceActivity.filter((item) => item.kind === "CONFERENCE_ROLE" && item.memberClaimed).length,
+      committeeLeadershipRoles: conferenceActivity.filter((item) =>
+        item.kind === "CONFERENCE_ROLE" &&
+        item.memberClaimed &&
+        /committee|chair|moderator|panel|reviewer|workshop|instructor/i.test(item.role || "")
+      ).length,
+      pastConferenceClaims: conferenceActivity.filter((item) => item.kind === "PAST_CONFERENCE" && item.memberClaimed).length,
     },
   });
 }));
