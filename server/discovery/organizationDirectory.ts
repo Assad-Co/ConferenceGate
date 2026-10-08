@@ -5,6 +5,17 @@ import type { AuthedRequest } from "../auth";
 
 export const organizationDirectoryRouter = Router();
 
+const RANKING_PRIOR_SCORE = 4;
+const RANKING_PRIOR_WEIGHT = 5;
+const SUCCESSFUL_DEAL_STATUSES = new Set([
+  "agreement_reached",
+  "contract_pending",
+  "payment_pending",
+  "paid",
+  "delivering",
+  "completed",
+]);
+
 function normalizeOrganizationKey(value: unknown): string {
   return String(value || "")
     .normalize("NFKD")
@@ -27,6 +38,14 @@ function average(values: number[]): number {
     : 0;
 }
 
+function clamp(value: number, min = 0, max = 100): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number): number {
+  return Number(value.toFixed(1));
+}
+
 function parseConferenceTitle(data: unknown): string {
   try {
     const parsed = JSON.parse(String(data || "{}"));
@@ -36,6 +55,105 @@ function parseConferenceTitle(data: unknown): string {
   }
 }
 
+function latestDate(values: string[]): string | null {
+  let latest: { value: string; time: number } | null = null;
+  for (const value of values) {
+    const time = Date.parse(value);
+    if (!Number.isFinite(time)) continue;
+    if (!latest || time > latest.time) latest = { value, time };
+  }
+  return latest?.value || null;
+}
+
+function recencyScore(lastVerifiedActivity: string | null): number {
+  if (!lastVerifiedActivity) return 0;
+  const time = Date.parse(lastVerifiedActivity);
+  if (!Number.isFinite(time)) return 0;
+  const ageDays = Math.max(0, (Date.now() - time) / 86_400_000);
+  if (ageDays <= 90) return 100;
+  if (ageDays <= 365) return round1(100 - ((ageDays - 90) / 275) * 30);
+  if (ageDays <= 730) return round1(70 - ((ageDays - 365) / 365) * 30);
+  return 20;
+}
+
+function logarithmicScore(count: number, fullScoreAt: number): number {
+  if (count <= 0) return 0;
+  return round1(clamp((Math.log1p(count) / Math.log1p(fullScoreAt)) * 100));
+}
+
+function reputationIntelligence(
+  verifiedScores: number[],
+  eventHistoryCount: number,
+  sponsorshipHistoryCount: number,
+  verifiedActivityDates: string[]
+) {
+  const verifiedCount = verifiedScores.length;
+  const rawAverage = average(verifiedScores);
+  const lastVerifiedActivity = latestDate(verifiedActivityDates);
+  const eventHistoryScore = logarithmicScore(eventHistoryCount, 10);
+  const sponsorshipHistoryScore = logarithmicScore(sponsorshipHistoryCount, 10);
+  const historyInputs = [
+    eventHistoryCount > 0 ? eventHistoryScore : null,
+    sponsorshipHistoryCount > 0 ? sponsorshipHistoryScore : null,
+  ].filter((value): value is number => value !== null);
+  const historyScore = historyInputs.length ? average(historyInputs) : 0;
+  const recentActivityScore = recencyScore(lastVerifiedActivity);
+
+  if (verifiedCount === 0) {
+    return {
+      rank: null as number | null,
+      score: 0,
+      status: "unranked" as const,
+      confidenceLabel: "Not ranked" as const,
+      bayesianReputation: 0,
+      rawReputation: rawAverage,
+      qualityScore: 0,
+      confidenceScore: 0,
+      recencyScore: recentActivityScore,
+      historyScore,
+      eventHistoryScore,
+      sponsorshipHistoryScore,
+      eventHistoryCount,
+      sponsorshipHistoryCount,
+      verifiedCount,
+      lastVerifiedActivity,
+    };
+  }
+
+  const scoreSum = verifiedScores.reduce((sum, value) => sum + value, 0);
+  const bayesianReputation = (scoreSum + RANKING_PRIOR_SCORE * RANKING_PRIOR_WEIGHT) /
+    (verifiedCount + RANKING_PRIOR_WEIGHT);
+  const qualityScore = round1(clamp(((bayesianReputation - 1) / 5) * 100));
+  const confidenceScore = logarithmicScore(verifiedCount, 20);
+  const score = round1(
+    qualityScore * 0.55 +
+    confidenceScore * 0.20 +
+    recentActivityScore * 0.10 +
+    historyScore * 0.15
+  );
+  const status = verifiedCount >= 8 ? "established" : verifiedCount >= 3 ? "ranked" : "provisional";
+  const confidenceLabel = verifiedCount >= 8 ? "High" : verifiedCount >= 3 ? "Moderate" : "Emerging";
+
+  return {
+    rank: null as number | null,
+    score,
+    status,
+    confidenceLabel,
+    bayesianReputation: Number(bayesianReputation.toFixed(2)),
+    rawReputation: rawAverage,
+    qualityScore,
+    confidenceScore,
+    recencyScore: recentActivityScore,
+    historyScore,
+    eventHistoryScore,
+    sponsorshipHistoryScore,
+    eventHistoryCount,
+    sponsorshipHistoryCount,
+    verifiedCount,
+    lastVerifiedActivity,
+  };
+}
+
 organizationDirectoryRouter.get(
   "/",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
@@ -43,9 +161,20 @@ organizationDirectoryRouter.get(
     const roleFilter = req.query.role === "organizer" || req.query.role === "sponsor"
       ? String(req.query.role)
       : "";
+    const requestedSort = typeof req.query.sort === "string" ? req.query.sort : "rank";
+    const sort = ["rank", "reputation", "reviews", "name"].includes(requestedSort)
+      ? requestedSort
+      : "rank";
     const limit = Math.max(1, Math.min(Number(req.query.limit) || 100, 200));
 
-    const [users, createdConferences, eventFeedback, sponsorReviews] = await Promise.all([
+    const [
+      users,
+      createdConferences,
+      eventFeedback,
+      sponsorReviews,
+      approvedApplications,
+      sponsorshipDeals,
+    ] = await Promise.all([
       dbAll<any>(
         `SELECT id,email,role,name,organization,title,avatar,bio,city,country
            FROM users
@@ -67,6 +196,16 @@ organizationDirectoryRouter.get(
            JOIN users ou ON ou.id=sr.organizer_id
            LEFT JOIN sponsor_review_details srd ON srd.review_id=sr.id
           ORDER BY sr.created_at DESC`
+      ),
+      dbAll<any>(
+        `SELECT sponsor_id,package_id,created_at,decided_at
+           FROM sponsorship_applications
+          WHERE status='Approved'`
+      ),
+      dbAll<any>(
+        `SELECT sponsor_id,status,updated_at
+           FROM sponsorship_deals
+          WHERE status <> 'canceled'`
       ),
     ]);
 
@@ -92,6 +231,9 @@ organizationDirectoryRouter.get(
         country: "",
         eventScores: [] as number[],
         sponsorScores: [] as number[],
+        eventHistoryCount: 0,
+        sponsorshipHistoryCount: 0,
+        verifiedActivityDates: [] as string[],
         verifiedEventFeedback: [] as any[],
         nameMatchedEventFeedback: [] as any[],
         sponsorFeedback: [] as any[],
@@ -111,7 +253,8 @@ organizationDirectoryRouter.get(
     const titleToKeys = new Map<string, Set<string>>();
     for (const conference of createdConferences) {
       const key = accountToKey.get(String(conference.organizer_id));
-      if (!key) continue;
+      if (!key || !groups.has(key)) continue;
+      groups.get(key).eventHistoryCount += 1;
       conferenceToKey.set(String(conference.id), key);
       const titleKey = normalizeOrganizationKey(parseConferenceTitle(conference.data));
       if (!titleKey) continue;
@@ -129,6 +272,7 @@ organizationDirectoryRouter.get(
       if (verifiedKey && groups.has(verifiedKey)) {
         const group = groups.get(verifiedKey);
         if (score !== null) group.eventScores.push(score);
+        if (row.created_at) group.verifiedActivityDates.push(String(row.created_at));
         group.verifiedEventFeedback.push({
           id: String(row.id),
           conferenceTitle: String(row.conference_title || "Conference / Workshop"),
@@ -164,6 +308,7 @@ organizationDirectoryRouter.get(
       const score6 = structured ?? (legacy === null ? null : Number(((legacy / 5) * 6).toFixed(2)));
       const group = groups.get(key);
       if (score6 !== null) group.sponsorScores.push(score6);
+      if (row.created_at) group.verifiedActivityDates.push(String(row.created_at));
       let ratings: Record<string, number> = {};
       try { ratings = row.structured_ratings ? JSON.parse(String(row.structured_ratings)) : {}; } catch {}
       group.sponsorFeedback.push({
@@ -179,7 +324,22 @@ organizationDirectoryRouter.get(
       });
     }
 
-    const profiles = [...groups.values()].map((group) => {
+    for (const row of approvedApplications) {
+      const key = accountToKey.get(String(row.sponsor_id));
+      if (!key || !groups.has(key)) continue;
+      groups.get(key).sponsorshipHistoryCount += 1;
+    }
+
+    for (const row of sponsorshipDeals) {
+      if (!SUCCESSFUL_DEAL_STATUSES.has(String(row.status))) continue;
+      const key = accountToKey.get(String(row.sponsor_id));
+      if (!key || !groups.has(key)) continue;
+      const group = groups.get(key);
+      group.sponsorshipHistoryCount += 1;
+      if (row.updated_at) group.verifiedActivityDates.push(String(row.updated_at));
+    }
+
+    const scopedProfiles = [...groups.values()].map((group) => {
       const roles = [...group.roles].sort();
       const eventScore = average(group.eventScores);
       const sponsorScore = average(group.sponsorScores);
@@ -206,26 +366,71 @@ organizationDirectoryRouter.get(
           score: average(combinedScores),
           verifiedCount: combinedScores.length,
         },
+        ranking: reputationIntelligence(
+          combinedScores,
+          group.eventHistoryCount,
+          group.sponsorshipHistoryCount,
+          group.verifiedActivityDates
+        ),
         verifiedEventFeedback: group.verifiedEventFeedback.slice(0, 50),
         nameMatchedEventFeedback: group.nameMatchedEventFeedback.slice(0, 50),
         sponsorFeedback: group.sponsorFeedback.slice(0, 50),
       };
     })
-      .filter((profile) => !roleFilter || profile.roles.includes(roleFilter))
-      .filter((profile) => {
-        if (!q) return true;
-        const haystack = [profile.name, profile.industry, profile.city, profile.country, ...profile.roles]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-      .sort((a, b) =>
-        b.combinedReputation.verifiedCount - a.combinedReputation.verifiedCount ||
-        b.combinedReputation.score - a.combinedReputation.score ||
-        a.name.localeCompare(b.name)
-      )
-      .slice(0, limit);
+      .filter((profile) => !roleFilter || profile.roles.includes(roleFilter));
 
-    res.json({ profiles, total: profiles.length });
+    const rankOrdered = [...scopedProfiles].sort((a, b) =>
+      b.ranking.score - a.ranking.score ||
+      b.ranking.verifiedCount - a.ranking.verifiedCount ||
+      b.combinedReputation.score - a.combinedReputation.score ||
+      a.name.localeCompare(b.name)
+    );
+    let nextRank = 1;
+    for (const profile of rankOrdered) {
+      if (profile.ranking.status === "unranked") continue;
+      profile.ranking.rank = nextRank;
+      nextRank += 1;
+    }
+
+    const searchedProfiles = scopedProfiles.filter((profile) => {
+      if (!q) return true;
+      const haystack = [profile.name, profile.industry, profile.city, profile.country, ...profile.roles]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+
+    searchedProfiles.sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "reviews") {
+        return b.combinedReputation.verifiedCount - a.combinedReputation.verifiedCount ||
+          b.ranking.score - a.ranking.score ||
+          a.name.localeCompare(b.name);
+      }
+      if (sort === "reputation") {
+        return b.combinedReputation.score - a.combinedReputation.score ||
+          b.combinedReputation.verifiedCount - a.combinedReputation.verifiedCount ||
+          a.name.localeCompare(b.name);
+      }
+      const aRank = a.ranking.rank ?? Number.MAX_SAFE_INTEGER;
+      const bRank = b.ranking.rank ?? Number.MAX_SAFE_INTEGER;
+      return aRank - bRank || a.name.localeCompare(b.name);
+    });
+
+    const profiles = searchedProfiles.slice(0, limit);
+    res.json({
+      profiles,
+      total: searchedProfiles.length,
+      rankingScope: roleFilter || "all",
+      rankingMethod: {
+        qualityWeight: 55,
+        confidenceWeight: 20,
+        recencyWeight: 10,
+        historyWeight: 15,
+        priorScore: RANKING_PRIOR_SCORE,
+        priorWeight: RANKING_PRIOR_WEIGHT,
+        note: "Only verified reviews influence ranking. Name-only matches are excluded.",
+      },
+    });
   })
 );
