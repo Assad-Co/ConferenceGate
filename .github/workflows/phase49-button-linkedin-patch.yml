@@ -1,0 +1,46 @@
+name: Phase 49 Button and LinkedIn Patch
+
+on:
+  push:
+    branches:
+      - phase-49-button-workflows-linkedin-activity
+
+permissions:
+  contents: write
+
+jobs:
+  patch-phase49:
+    if: ${{ !contains(github.event.head_commit.message, '[phase49-source]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-49-button-workflows-linkedin-activity
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Narrow reviewer opportunity filter transformation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/phase49_button_linkedin_patch.py')
+          text = p.read_text()
+          old = '''replace_once(\n    "src/components/ReviewerPortal.tsx",\n    ''' + "'''" + '''      .filter(({ opportunity }) => {\\n        if (!query) return true;\\n''' + "'''" + ''',\n    ''' + "'''" + '''      .filter(({ opportunity }) => {\\n        if (focusConferenceId && opportunity.conferenceId !== focusConferenceId) return false;\\n        if (!query) return true;\\n''' + "'''" + ''',\n)'''
+          new = '''replace_once(\n    "src/components/ReviewerPortal.tsx",\n    ''' + "'''" + '''      .filter(({ opportunity }) => {\\n        if (!query) return true;\\n        return [\\n          opportunity.conferenceTitle,\\n          opportunity.topic,\\n''' + "'''" + ''',\n    ''' + "'''" + '''      .filter(({ opportunity }) => {\\n        if (focusConferenceId && opportunity.conferenceId !== focusConferenceId) return false;\\n        if (!query) return true;\\n        return [\\n          opportunity.conferenceTitle,\\n          opportunity.topic,\\n''' + "'''" + ''',\n)'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one reviewer-filter patch block, found {text.count(old)}')
+          p.write_text(text.replace(old, new, 1))
+          PY
+      - name: Apply guarded Phase 49 source transformation
+        run: python scripts/phase49_button_linkedin_patch.py
+      - name: Commit shipping sources
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add server/linkedinConferenceActivityBootstrap.ts src/api/linkedinConferenceActivity.ts src/components/LinkedInProfilePanel.tsx src/components/LinkedInImportedTabSections.tsx src/components/Footer.tsx src/components/ConferenceDetail.tsx src/components/ReviewerPortal.tsx src/App.tsx
+          if git diff --cached --quiet; then
+            echo "No source changes to commit"
+            exit 0
+          fi
+          git commit -m "Phase 49: connect real opportunity actions and generalize LinkedIn activity import [phase49-source]"
+          git push origin HEAD:phase-49-button-workflows-linkedin-activity
