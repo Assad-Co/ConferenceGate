@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Award,
   CheckCircle2,
@@ -34,6 +34,9 @@ interface ReviewerPortalProps {
   volunteeredOpportunityIds?: string[];
   onVolunteer?: (opportunityId: string, conferenceTitle: string, topic: string) => void;
   onToggleAvailability?: () => void;
+  initialRoleFilter?: OpportunityRoleFilter;
+  focusConferenceId?: string | null;
+  onClearOpportunityFocus?: () => void;
 }
 
 type OpportunityRoleFilter = 'recommended' | 'reviewer' | 'committee' | 'chair' | 'speaker';
@@ -135,10 +138,23 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
   volunteeredOpportunityIds = [],
   onVolunteer,
   onToggleAvailability,
+  initialRoleFilter = 'recommended',
+  focusConferenceId = null,
+  onClearOpportunityFocus,
 }) => {
   const [activeTab, setActiveTab] = useState<'opportunities' | 'my-reviews' | 'evaluate' | 'history'>('opportunities');
-  const [roleFilter, setRoleFilter] = useState<OpportunityRoleFilter>('recommended');
+  const [roleFilter, setRoleFilter] = useState<OpportunityRoleFilter>(initialRoleFilter);
   const [opportunitySearch, setOpportunitySearch] = useState('');
+  useEffect(() => {
+    setRoleFilter(initialRoleFilter);
+    if (focusConferenceId) {
+      setActiveTab('opportunities');
+      setOpportunitySearch('');
+    }
+  }, [initialRoleFilter, focusConferenceId]);
+  const focusedConferenceTitle = focusConferenceId
+    ? conferences.find((conference) => conference.id === focusConferenceId)?.title || 'Selected conference'
+    : null;
   const availableToReview = userProfile.reviewerInfo.available;
   const atReviewCapacity =
     (userProfile.reviewerInfo.currentLoad || 0) >= Math.max(1, userProfile.reviewerInfo.maxLoad || 5);
@@ -151,6 +167,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         matchScore: opportunityMatchScore(userProfile, opportunity),
       }))
       .filter(({ opportunity }) => {
+        if (focusConferenceId && opportunity.conferenceId !== focusConferenceId) return false;
         if (!query) return true;
         return [
           opportunity.conferenceTitle,
@@ -170,7 +187,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         if (b.matchScore === null) return -1;
         return b.matchScore - a.matchScore;
       });
-  }, [opportunities, opportunitySearch, userProfile]);
+  }, [opportunities, opportunitySearch, userProfile, focusConferenceId]);
 
   const visibleReviewerOpportunities =
     roleFilter === 'recommended'
@@ -187,6 +204,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         matchScore: professionalOpportunityMatchScore(userProfile, opportunity),
       }))
       .filter(({ opportunity }) => {
+        if (focusConferenceId && opportunity.conferenceId !== focusConferenceId) return false;
         if (!query) return true;
         return [
           opportunity.conferenceTitle,
@@ -207,7 +225,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
         if (b.matchScore === null) return -1;
         return b.matchScore - a.matchScore;
       });
-  }, [professionalOpportunities, opportunitySearch, userProfile]);
+  }, [professionalOpportunities, opportunitySearch, userProfile, focusConferenceId]);
 
   const pendingProfessionalInvitations = professionalInvitations.filter((item) => item.status === 'pending');
   const activeProfessionalInvitations = professionalInvitations.filter(
@@ -432,6 +450,24 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
       {/* Tab 1: Unified Professional Opportunity Center */}
       {activeTab === 'opportunities' && (
         <div className="space-y-6">
+          {focusConferenceId && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase font-extrabold tracking-wide text-blue-700">Conference-specific openings</div>
+                <div className="text-sm font-bold text-slate-900 mt-0.5">{focusedConferenceTitle}</div>
+                <div className="text-[11px] text-slate-600 mt-0.5">Only real organizer-published openings for this conference are shown.</div>
+              </div>
+              {onClearOpportunityFocus && (
+                <button
+                  type="button"
+                  onClick={onClearOpportunityFocus}
+                  className="shrink-0 px-3 py-2 rounded-xl border border-blue-200 bg-white hover:bg-blue-100 text-blue-800 text-xs font-bold cursor-pointer"
+                >
+                  Show all opportunities
+                </button>
+              )}
+            </div>
+          )}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>

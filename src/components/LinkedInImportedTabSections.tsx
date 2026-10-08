@@ -182,7 +182,7 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
       <section className="mb-6 pb-6 border-b border-slate-100 space-y-3">
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> LinkedIn Conference Activity</h3>
-          <p className="text-[11px] text-slate-500 mt-1">Attendance, participation and conference roles found by the consent-based scan of the member's own public LinkedIn evidence across the past 7 years. These remain evidence-backed member claims until independently verified.</p>
+          <p className="text-[11px] text-slate-500 mt-1">Attendance, participation and conference roles found by the consent-based scan of the signed-in member's available public LinkedIn evidence. ConferenceGate imports these per account and keeps them source-labelled until independently verified.</p>
         </div>
         <div className="space-y-2">{conferenceSignals.map((signal) => <SignalCard key={signal.id} signal={signal} onLeaveFeedback={onLeaveFeedback} />)}</div>
       </section>
@@ -197,7 +197,7 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
       <section className="mb-6 pb-6 border-b border-slate-100 space-y-5">
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2"><Linkedin className="w-4 h-4 text-[#0A66C2]" /> Imported LinkedIn Papers & Abstracts</h3>
-          <p className="text-[11px] text-slate-500 mt-1">Publications from the public LinkedIn profile plus paper/abstract evidence found in the member's public posts across the past 7 years.</p>
+          <p className="text-[11px] text-slate-500 mt-1">Publications from the public LinkedIn profile plus paper/abstract evidence found across the member's currently available public LinkedIn history.</p>
         </div>
         {publications.length > 0 && (
           <div className="space-y-2">

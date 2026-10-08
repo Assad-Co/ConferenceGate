@@ -67,7 +67,6 @@ import {
   markConferenceAttended,
   fetchMyConferenceInteractions,
   toggleConferenceInteraction,
-  recordConferenceAction,
   fetchRegistrationCountsByConference,
   fetchFeedbackSummary,
   createConferenceRemote,
@@ -430,6 +429,8 @@ export function App() {
   const [reviewOpportunities, setReviewOpportunities] = useState<ReviewOpportunity[]>([]);
   const [professionalOpportunities, setProfessionalOpportunities] = useState<ProfessionalOpportunity[]>([]);
   const [professionalOpportunityInterestIds, setProfessionalOpportunityInterestIds] = useState<string[]>([]);
+  const [opportunityRoleFilter, setOpportunityRoleFilter] = useState<'recommended' | 'reviewer' | 'committee' | 'chair' | 'speaker'>('recommended');
+  const [opportunityConferenceId, setOpportunityConferenceId] = useState<string | null>(null);
   const [professionalInvitations, setProfessionalInvitations] = useState<ProfessionalInvitation[]>([]);
   const [savedConferenceIds, setSavedConferenceIds] = useState<string[]>([]);
   const [followedConferenceIds, setFollowedConferenceIds] = useState<string[]>([]);
@@ -1700,7 +1701,14 @@ export function App() {
             conference={selectedConference}
             onBack={() => setActiveTab('discover')}
             onOpenSubmitAbstract={handleOpenSubmitAbstract}
-            onVolunteerReviewer={() => setActiveTab('reviewer')}
+            reviewerOpeningCount={reviewOpportunities.filter((item) => item.conferenceId === selectedConference.id).length}
+            committeeOpeningCount={professionalOpportunities.filter((item) => item.conferenceId === selectedConference.id && item.status === 'active' && item.roleType === 'committee').length}
+            sponsorshipPackageCount={activeRole === 'Sponsor' ? sponsorshipPackagesReal.filter((item) => item.conferenceId === selectedConference.id && item.availableSlots > 0).length : 0}
+            onVolunteerReviewer={() => {
+              setOpportunityRoleFilter('reviewer');
+              setOpportunityConferenceId(selectedConference.id);
+              setActiveTab('reviewer');
+            }}
             registeredPackageId={registrations.find((r) => r.conferenceId === selectedConference.id)?.packageId || null}
             onRegister={handleRegisterForConference}
             isSaved={savedConferenceIds.includes(selectedConference.id)}
@@ -1723,24 +1731,12 @@ export function App() {
               const attendance = conferenceAttendance.find((item) => item.conferenceId === selectedConference.id);
               if (attendance) setAttendanceFeedbackTarget(attendance);
             }}
-            onExpressCommitteeInterest={async (confId) => {
-              const conf = conferences.find((c) => c.id === confId);
-              await recordConferenceAction(confId, conf?.title || 'this conference', 'committee_interest').catch(() => {});
-              showToast({
-                type: 'success',
-                title: 'Interest recorded',
-                message: `Saved to your activity. Explore open Technical Committee roles from the Committee tab.`,
-              });
+            onExpressCommitteeInterest={() => {
+              setOpportunityRoleFilter('committee');
+              setOpportunityConferenceId(selectedConference.id);
+              setActiveTab('reviewer');
             }}
-            onApplySponsorship={async (confId) => {
-              const conf = conferences.find((c) => c.id === confId);
-              await recordConferenceAction(confId, conf?.title || 'this conference', 'sponsorship_inquiry').catch(() => {});
-              showToast({
-                type: 'success',
-                title: 'Sponsorship inquiry recorded',
-                message: `Saved to your activity — explore live packages in the Sponsor Marketplace.`,
-              });
-            }}
+            onApplySponsorship={() => setActiveTab('sponsor')}
           />
         )}
 
@@ -1762,6 +1758,12 @@ export function App() {
             opportunities={reviewOpportunities}
             professionalOpportunities={professionalOpportunities}
             professionalOpportunityInterestIds={professionalOpportunityInterestIds}
+            initialRoleFilter={opportunityRoleFilter}
+            focusConferenceId={opportunityConferenceId}
+            onClearOpportunityFocus={() => {
+              setOpportunityConferenceId(null);
+              setOpportunityRoleFilter('recommended');
+            }}
             onProfessionalOpportunityInterest={handleProfessionalOpportunityInterest}
             professionalInvitations={professionalInvitations}
             onProfessionalInvitationDecision={handleProfessionalInvitationDecision}

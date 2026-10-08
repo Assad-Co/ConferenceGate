@@ -90,7 +90,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role
         </div>
 
         <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4">
-          <p>© {new Date().getFullYear()} Conference Gate. The Global Gateway to Conferences. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Conference Gate — Your Gateway to Conferences, Connections & Opportunity. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <span>Discover. Connect. Submit. Review. Organize. Sponsor.</span>
             {release && (

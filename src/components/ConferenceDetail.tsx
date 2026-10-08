@@ -40,6 +40,9 @@ interface ConferenceDetailProps {
   isFollowed?: boolean;
   onToggleSave?: () => void;
   onToggleFollow?: () => void;
+  reviewerOpeningCount?: number;
+  committeeOpeningCount?: number;
+  sponsorshipPackageCount?: number;
   isAttended?: boolean;
   onMarkAttended?: (localDate: string) => Promise<void>;
   onRateOrganizer?: () => void;
@@ -76,6 +79,9 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
   isFollowed = false,
   onToggleSave,
   onToggleFollow,
+  reviewerOpeningCount = 0,
+  committeeOpeningCount = 0,
+  sponsorshipPackageCount = 0,
   isAttended = false,
   onMarkAttended,
   onRateOrganizer,
@@ -214,27 +220,33 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
               <FileText className="w-4 h-4" />
               <span>{cfpAcceptingSubmissions ? 'Submit Abstract' : 'CFP Closed'}</span>
             </button>
-            <button
-              onClick={() => onVolunteerReviewer(conference.id)}
-              className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Award className="w-4 h-4" />
-              <span>Volunteer as Reviewer</span>
-            </button>
-            <button
-              onClick={() => onExpressCommitteeInterest(conference.id)}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Join Technical Committee</span>
-            </button>
-            <button
-              onClick={() => onApplySponsorship(conference.id)}
-              className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <Briefcase className="w-4 h-4" />
-              <span>Become Sponsor</span>
-            </button>
+            {reviewerOpeningCount > 0 && (
+              <button
+                onClick={() => onVolunteerReviewer(conference.id)}
+                className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Award className="w-4 h-4" />
+                <span>Reviewer Openings ({reviewerOpeningCount})</span>
+              </button>
+            )}
+            {committeeOpeningCount > 0 && (
+              <button
+                onClick={() => onExpressCommitteeInterest(conference.id)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Committee Openings ({committeeOpeningCount})</span>
+              </button>
+            )}
+            {sponsorshipPackageCount > 0 && (
+              <button
+                onClick={() => onApplySponsorship(conference.id)}
+                className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>Sponsorship Packages ({sponsorshipPackageCount})</span>
+              </button>
+            )}
             {attendanceEligible && onMarkAttended && (
               isAttended ? (
                 <button
