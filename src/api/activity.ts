@@ -324,6 +324,50 @@ export async function fetchMyRegistrations(): Promise<ConferenceRegistration[]> 
   return data.registrations;
 }
 
+export interface ConferenceAttendance {
+  id: string;
+  conferenceId: string;
+  conferenceTitle: string;
+  organizerName: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  sourceType: 'conferencegate' | 'catalog';
+  sourceUrl: string | null;
+  attendedAt: string;
+}
+
+export interface MarkConferenceAttendancePayload {
+  conferenceId: string;
+  conferenceTitle: string;
+  organizerName: string;
+  startDate: string;
+  endDate: string;
+  location?: string;
+  sourceType: 'conferencegate' | 'catalog';
+  sourceUrl?: string | null;
+  localDate: string;
+}
+
+export async function fetchMyConferenceAttendance(): Promise<ConferenceAttendance[]> {
+  const res = await fetch('/api/activity/attendance/mine', { credentials: 'include' });
+  const data = await parseResponse(res);
+  return Array.isArray(data.attendance) ? data.attendance : [];
+}
+
+export async function markConferenceAttended(
+  payload: MarkConferenceAttendancePayload
+): Promise<ConferenceAttendance> {
+  const res = await fetch('/api/activity/attendance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseResponse(res);
+  return data.attendance;
+}
+
 export async function fetchRegistrationCountsByConference(): Promise<Record<string, number>> {
   const res = await fetch('/api/activity/registrations/counts-by-conference', { credentials: 'include' });
   const data = await parseResponse(res);

@@ -1172,6 +1172,75 @@ activityRouter.get("/registrations/mine", asyncHandler(async (req: AuthedRequest
   });
 }));
 
+function toConferenceAttendanceDTO(row: any) {
+  return {
+    id: row.id,
+    conferenceId: row.conference_id,
+    conferenceTitle: row.conference_title,
+    organizerName: row.organizer_name,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    location: row.location || "",
+    sourceType: row.source_type === "conferencegate" ? "conferencegate" : "catalog",
+    sourceUrl: row.source_url || null,
+    attendedAt: row.attended_at,
+  };
+}
+
+activityRouter.get("/attendance/mine", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const rows = await dbAll<any>(
+    "SELECT * FROM conference_attendance WHERE user_id = ? ORDER BY start_date DESC, attended_at DESC",
+    [req.userId!]
+  );
+  res.json({ attendance: rows.map(toConferenceAttendanceDTO) });
+}));
+
+activityRouter.post("/attendance", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const body = req.body || {};
+  const conferenceId = typeof body.conferenceId === "string" ? body.conferenceId.trim() : "";
+  const conferenceTitle = typeof body.conferenceTitle === "string" ? body.conferenceTitle.trim() : "";
+  const organizerName = typeof body.organizerName === "string" ? body.organizerName.trim() : "";
+  const startDate = typeof body.startDate === "string" ? body.startDate.trim() : "";
+  const endDate = typeof body.endDate === "string" ? body.endDate.trim() : "";
+  const location = typeof body.location === "string" ? body.location.trim() : "";
+  const sourceType = body.sourceType === "conferencegate" ? "conferencegate" : "catalog";
+  const sourceUrl = typeof body.sourceUrl === "string" ? body.sourceUrl.trim() || null : null;
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  if (!conferenceId || !conferenceTitle || !organizerName) {
+    return res.status(400).json({ error: "Conference and organizer details are required." });
+  }
+  if (!isoDate.test(startDate) || !isoDate.test(endDate) || endDate < startDate) {
+    return res.status(400).json({ error: "Valid conference start and end dates are required." });
+  }
+
+  const serverToday = new Date().toISOString().slice(0, 10);
+  const localDate = typeof body.localDate === "string" && isoDate.test(body.localDate) ? body.localDate : serverToday;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const skew = Math.abs(Date.parse(`${localDate}T00:00:00Z`) - Date.parse(`${serverToday}T00:00:00Z`));
+  const effectiveToday = skew <= dayMs ? localDate : serverToday;
+  if (startDate > effectiveToday) {
+    return res.status(409).json({ error: "Attendance can be recorded when the conference starts, not before." });
+  }
+
+  const existing = await dbGet<any>(
+    "SELECT * FROM conference_attendance WHERE user_id = ? AND conference_id = ?",
+    [req.userId!, conferenceId]
+  );
+  if (existing) {
+    return res.json({ attendance: toConferenceAttendanceDTO(existing), alreadyRecorded: true });
+  }
+
+  const id = `att_${crypto.randomUUID()}`;
+  await dbRun(
+    `INSERT INTO conference_attendance(
+      id,user_id,conference_id,conference_title,organizer_name,start_date,end_date,location,source_type,source_url
+    ) VALUES(?,?,?,?,?,?,?,?,?,?)`,
+    [id, req.userId!, conferenceId, conferenceTitle, organizerName, startDate, endDate, location || null, sourceType, sourceUrl]
+  );
+  const row = await dbGet<any>("SELECT * FROM conference_attendance WHERE id = ?", [id]);
+  res.status(201).json({ attendance: toConferenceAttendanceDTO(row), alreadyRecorded: false });
+}));
+
 // Organizer-facing aggregate counts — every registered account is visible to organizers so they
 // can see real registration totals per conference, mirroring the platform-wide submissions view.
 activityRouter.get("/registrations/counts-by-conference", asyncHandler(async (_req: AuthedRequest, res: Response) => {
@@ -1288,32 +1357,51 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
   }
   const overallScore = Number((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length).toFixed(2));
 
+  let conferenceTitle = body.conferenceTitle.trim();
   let organizerName = typeof body.organizerName === "string" ? body.organizerName.trim() : "";
-  if (!organizerName && typeof body.conferenceId === "string" && body.conferenceId) {
-    const owned = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id = ?", [body.conferenceId]);
-    if (owned) {
-      const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [owned.organizer_id]);
-      organizerName = owner?.organization || owner?.name || "";
+  if (typeof body.conferenceId === "string" && body.conferenceId) {
+    const attendance = await dbGet<any>(
+      "SELECT * FROM conference_attendance WHERE user_id = ? AND conference_id = ?",
+      [req.userId!, body.conferenceId]
+    );
+    if (attendance) {
+      conferenceTitle = attendance.conference_title;
+      organizerName = attendance.organizer_name;
+    } else if (!organizerName) {
+      const owned = await dbGet<CreatedConferenceRow>("SELECT * FROM created_conferences WHERE id = ?", [body.conferenceId]);
+      if (owned) {
+        const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [owned.organizer_id]);
+        organizerName = owner?.organization || owner?.name || "";
+      }
     }
   }
 
-  const id = `fb_${crypto.randomUUID()}`;
-  await dbRun(
-    `INSERT INTO conference_feedback (
-      id, user_id, conference_id, conference_title, role, ratings, overall_score, comment, recipient_email
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      req.userId!,
-      body.conferenceId || null,
-      body.conferenceTitle.trim(),
-      body.role || "Attendee",
-      JSON.stringify(ratings),
-      overallScore,
-      body.comment || null,
-      body.recipientEmail || null,
-    ]
-  );
+  const existingFeedback = typeof body.conferenceId === "string" && body.conferenceId
+    ? await dbGet<ConferenceFeedbackRow>(
+        "SELECT * FROM conference_feedback WHERE user_id = ? AND conference_id = ? ORDER BY created_at DESC LIMIT 1",
+        [req.userId!, body.conferenceId]
+      )
+    : undefined;
+  const id = existingFeedback?.id || `fb_${crypto.randomUUID()}`;
+  if (existingFeedback) {
+    await dbRun(
+      `UPDATE conference_feedback
+          SET conference_title=?, role=?, ratings=?, overall_score=?, comment=?, recipient_email=?, created_at=datetime('now')
+        WHERE id=?`,
+      [conferenceTitle, body.role || "Attendee", JSON.stringify(ratings), overallScore, body.comment || null, body.recipientEmail || null, id]
+    );
+    await dbRun("DELETE FROM conference_feedback_routing WHERE feedback_id = ?", [id]);
+  } else {
+    await dbRun(
+      `INSERT INTO conference_feedback (
+        id, user_id, conference_id, conference_title, role, ratings, overall_score, comment, recipient_email
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, req.userId!, body.conferenceId || null, conferenceTitle, body.role || "Attendee",
+        JSON.stringify(ratings), overallScore, body.comment || null, body.recipientEmail || null,
+      ]
+    );
+  }
   if (organizerName) {
     await dbRun(
       "INSERT INTO conference_feedback_routing(feedback_id, organizer_name, organizer_key) VALUES(?,?,?)",
@@ -1321,7 +1409,7 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
     );
   }
 
-  res.status(201).json({ ok: true, overallScore });
+  res.status(existingFeedback ? 200 : 201).json({ ok: true, overallScore, updated: Boolean(existingFeedback) });
 }));
 
 activityRouter.get("/feedback/organizer", asyncHandler(async (req: AuthedRequest, res: Response) => {
