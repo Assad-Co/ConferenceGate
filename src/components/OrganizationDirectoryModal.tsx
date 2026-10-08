@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   Briefcase,
   Building2,
   CalendarDays,
+  History,
   Loader2,
   MapPin,
   MessageSquareQuote,
   Search,
   ShieldCheck,
+  TrendingUp,
+  Trophy,
   X,
 } from 'lucide-react';
 import {
@@ -36,6 +40,9 @@ const initials = (name: string) =>
 
 const displayDate = (value: string) => String(value || '').replace('T', ' ').slice(0, 10);
 
+const rankScopeLabel = (role: 'all' | 'organizer' | 'sponsor') =>
+  role === 'organizer' ? 'Organizer' : role === 'sponsor' ? 'Sponsor' : 'Organization';
+
 const ReputationTile: React.FC<{
   label: string;
   score: number;
@@ -49,6 +56,19 @@ const ReputationTile: React.FC<{
       {count > 0 && <span className="pb-1 text-[10px] font-bold text-emerald-700">{scoreLabel(score)}</span>}
     </div>
     <div className="mt-1 text-[10px] text-slate-500">{count} verified review{count === 1 ? '' : 's'} · {note}</div>
+  </div>
+);
+
+const FactorBar: React.FC<{ label: string; value: number; note: string }> = ({ label, value, note }) => (
+  <div>
+    <div className="mb-1 flex items-center justify-between gap-3 text-[10px]">
+      <span className="font-bold text-slate-700">{label}</span>
+      <span className="font-extrabold text-slate-900">{Math.round(value)} / 100</span>
+    </div>
+    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+      <div className="h-full rounded-full bg-blue-700" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+    </div>
+    <div className="mt-1 text-[9px] text-slate-400">{note}</div>
   </div>
 );
 
@@ -99,6 +119,7 @@ const SponsorFeedbackCard: React.FC<{ item: OrganizationSponsorFeedback }> = ({ 
 export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<'all' | 'organizer' | 'sponsor'>('all');
+  const [sort, setSort] = useState<'rank' | 'reputation' | 'reviews' | 'name'>('rank');
   const [profiles, setProfiles] = useState<OrganizationProfile[]>([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -112,6 +133,7 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
       fetchOrganizationDirectory({
         q: query.trim() || undefined,
         role: role === 'all' ? undefined : role,
+        sort,
         limit: 150,
       })
         .then((items) => setProfiles(items))
@@ -122,7 +144,7 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
         .finally(() => setLoading(false));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [query, role]);
+  }, [query, role, sort]);
 
   useEffect(() => {
     if (!profiles.length) {
@@ -140,6 +162,8 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
     [profiles, selectedKey]
   );
 
+  const scopeLabel = rankScopeLabel(role);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-3 sm:p-5" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl">
@@ -149,7 +173,7 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
               <Building2 className="h-5 w-5 text-blue-700" />
               <h2 className="text-lg font-extrabold text-slate-900">Organization Directory & Reputation</h2>
             </div>
-            <p className="mt-1 max-w-3xl text-xs text-slate-500">Organizer and Sponsor accounts are grouped by normalized organization identity. Only verified conference and sponsorship relationships contribute to the primary reputation scores.</p>
+            <p className="mt-1 max-w-3xl text-xs text-slate-500">Verified reputation is ranked with confidence, recency, and real ConferenceGate history. Name-only matches remain visible but never influence ranking.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 cursor-pointer" aria-label="Close organization directory">
             <X className="h-5 w-5" />
@@ -180,6 +204,19 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                   </button>
                 ))}
               </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-600" />
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as typeof sort)}
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-700 outline-none focus:border-blue-400"
+                >
+                  <option value="rank">Reputation ranking</option>
+                  <option value="reputation">Raw reputation</option>
+                  <option value="reviews">Verified review volume</option>
+                  <option value="name">Organization name</option>
+                </select>
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -207,7 +244,14 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-extrabold text-slate-600">{initials(profile.name)}</div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-xs font-bold text-slate-900">{profile.name}</div>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="truncate text-xs font-bold text-slate-900">{profile.name}</div>
+                              {profile.ranking.rank ? (
+                                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800">#{profile.ranking.rank}</span>
+                              ) : (
+                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500">Unranked</span>
+                              )}
+                            </div>
                             <div className="mt-1 flex flex-wrap gap-1">
                               {profile.roles.map((profileRole) => (
                                 <span key={profileRole} className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold capitalize text-slate-600">{profileRole}</span>
@@ -216,6 +260,9 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                             <div className="mt-1.5 text-[10px] font-semibold text-emerald-700">
                               {profile.combinedReputation.verifiedCount ? `${profile.combinedReputation.score.toFixed(1)} / 6 · ${profile.combinedReputation.verifiedCount} verified` : 'New · no verified reviews yet'}
                             </div>
+                            {profile.ranking.rank && (
+                              <div className="mt-0.5 text-[9px] font-semibold text-blue-700">Rank score {profile.ranking.score.toFixed(1)} / 100 · {profile.ranking.confidenceLabel} confidence</div>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -244,6 +291,9 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                         {selected.combinedReputation.verifiedCount > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800"><ShieldCheck className="h-3 w-3" />Verified reputation</span>
                         )}
+                        {selected.ranking.rank && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-extrabold text-amber-800"><Trophy className="h-3 w-3" />#{selected.ranking.rank} {scopeLabel} rank</span>
+                        )}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {selected.roles.map((profileRole) => (
@@ -267,6 +317,35 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                   <ReputationTile label="Sponsor Reputation" score={selected.sponsorReputation.score} count={selected.sponsorReputation.verifiedCount} note="organizer evaluations" />
                 </section>
 
+                <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-xs sm:p-6">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-xl">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-blue-700" />
+                        <h4 className="text-sm font-extrabold text-slate-900">Reputation Intelligence</h4>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">Ranking uses verified quality (55%), review confidence (20%), recent verified activity (10%), and event/sponsorship history (15%). A Bayesian adjustment toward 4.0 / 6 with a five-review prior prevents one perfect review from dominating established organizations.</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${selected.ranking.status === 'established' ? 'bg-emerald-100 text-emerald-800' : selected.ranking.status === 'ranked' ? 'bg-blue-100 text-blue-800' : selected.ranking.status === 'provisional' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>{selected.ranking.status === 'unranked' ? 'Not yet ranked' : `${selected.ranking.status.charAt(0).toUpperCase()}${selected.ranking.status.slice(1)} ranking`}</span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">{selected.ranking.confidenceLabel} confidence</span>
+                        {selected.ranking.lastVerifiedActivity && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">Last verified activity {displayDate(selected.ranking.lastVerifiedActivity)}</span>}
+                      </div>
+                    </div>
+                    <div className="min-w-[180px] rounded-2xl bg-blue-950 p-5 text-white">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-200">Ranking Score</div>
+                      <div className="mt-1 text-4xl font-extrabold">{selected.ranking.rank ? selected.ranking.score.toFixed(1) : '—'}</div>
+                      <div className="mt-1 text-[10px] text-blue-200">{selected.ranking.rank ? `#${selected.ranking.rank} in current ${scopeLabel.toLowerCase()} scope` : 'Requires verified feedback'}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <FactorBar label="Verified quality · 55%" value={selected.ranking.qualityScore} note={selected.ranking.verifiedCount ? `Bayesian reputation ${selected.ranking.bayesianReputation.toFixed(2)} / 6 from ${selected.ranking.verifiedCount} verified reviews` : 'No verified reviews yet'} />
+                    <FactorBar label="Review confidence · 20%" value={selected.ranking.confidenceScore} note={`${selected.ranking.verifiedCount} verified review${selected.ranking.verifiedCount === 1 ? '' : 's'}; confidence grows gradually with volume`} />
+                    <FactorBar label="Recent verified activity · 10%" value={selected.ranking.recencyScore} note={selected.ranking.lastVerifiedActivity ? `Most recent verified signal: ${displayDate(selected.ranking.lastVerifiedActivity)}` : 'No verified activity date yet'} />
+                    <FactorBar label="Verified history · 15%" value={selected.ranking.historyScore} note={`${selected.ranking.eventHistoryCount} ConferenceGate event${selected.ranking.eventHistoryCount === 1 ? '' : 's'} · ${selected.ranking.sponsorshipHistoryCount} verified sponsorship milestone${selected.ranking.sponsorshipHistoryCount === 1 ? '' : 's'}`} />
+                  </div>
+                </section>
+
                 <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
                   {([
                     ['overview', 'Overview'],
@@ -281,7 +360,7 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <section className="rounded-3xl border border-slate-200 bg-white p-5">
                       <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-blue-600" /><h4 className="text-sm font-bold text-slate-900">Event Reputation</h4></div>
-                      <p className="mt-2 text-xs text-slate-500">Verified conference-linked evaluations contribute to this score. Normalized organization-name matches stay visible for transparency but do not affect the verified score.</p>
+                      <p className="mt-2 text-xs text-slate-500">Verified conference-linked evaluations contribute to this score. Normalized organization-name matches stay visible for transparency but do not affect the verified score or ranking.</p>
                       <div className="mt-4 text-3xl font-extrabold text-slate-900">{selected.eventReputation.verifiedCount ? selected.eventReputation.score.toFixed(1) : '—'}<span className="text-sm font-bold text-slate-400"> / 6</span></div>
                       <div className="mt-1 text-[10px] text-slate-500">{selected.eventReputation.verifiedCount} verified event reviews · {selected.eventReputation.nameMatchCount} name-only matches</div>
                     </section>
@@ -290,6 +369,13 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                       <p className="mt-2 text-xs text-slate-500">Organizer evaluations shown here are tied to approved ConferenceGate sponsorship relationships and their specific conferences.</p>
                       <div className="mt-4 text-3xl font-extrabold text-slate-900">{selected.sponsorReputation.verifiedCount ? selected.sponsorReputation.score.toFixed(1) : '—'}<span className="text-sm font-bold text-slate-400"> / 6</span></div>
                       <div className="mt-1 text-[10px] text-slate-500">{selected.sponsorReputation.verifiedCount} verified sponsor reviews</div>
+                    </section>
+                    <section className="rounded-3xl border border-slate-200 bg-white p-5 lg:col-span-2">
+                      <div className="flex items-center gap-2"><History className="h-4 w-4 text-blue-600" /><h4 className="text-sm font-bold text-slate-900">Verified Platform History</h4></div>
+                      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"><CalendarDays className="h-3.5 w-3.5" />Event history</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{selected.ranking.eventHistoryCount}</div><div className="text-[10px] text-slate-500">ConferenceGate-created conferences</div></div>
+                        <div className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"><Activity className="h-3.5 w-3.5" />Sponsorship history</div><div className="mt-1 text-2xl font-extrabold text-slate-900">{selected.ranking.sponsorshipHistoryCount}</div><div className="text-[10px] text-slate-500">Approved applications and qualified deal milestones</div></div>
+                      </div>
                     </section>
                   </div>
                 )}
@@ -304,7 +390,7 @@ export const OrganizationDirectoryModal: React.FC<{ onClose: () => void }> = ({ 
                       <section className="space-y-3">
                         <div>
                           <h4 className="text-sm font-bold text-violet-900">Organization Name Matches</h4>
-                          <p className="mt-1 text-[11px] text-violet-700">Visible for transparency. These records are not included in the verified reputation score until a ConferenceGate event relationship is confirmed.</p>
+                          <p className="mt-1 text-[11px] text-violet-700">Visible for transparency. These records are not included in the verified reputation score or ranking until a ConferenceGate event relationship is confirmed.</p>
                         </div>
                         {selected.nameMatchedEventFeedback.map((item) => <EventFeedbackCard key={item.id} item={item} verified={false} />)}
                       </section>
