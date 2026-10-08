@@ -1,0 +1,219 @@
+name: Phase 46 Profile Cleanup
+
+on:
+  push:
+    branches:
+      - phase-46-professional-record-ux-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  patch-profile:
+    if: ${{ !contains(github.event.head_commit.message, '[phase46-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-46-professional-record-ux-cleanup
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply evidence-first professional profile changes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one exact match, found {count}')
+              p.write_text(text.replace(old, new, 1))
+
+          def regex_once(path, pattern, replacement):
+              p = Path(path)
+              text = p.read_text()
+              next_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one regex match, found {count}')
+              p.write_text(next_text)
+
+          # Remove the visible AI assistant/chat entry point from the navigation.
+          replace_once(
+              'src/components/LegacyNavbar.tsx',
+              '  Sparkles,\n',
+              ''
+          )
+          replace_once(
+              'src/components/LegacyNavbar.tsx',
+              '  onOpenAIAssistant,\n  onOpenAIModal,\n',
+              ''
+          )
+          replace_once(
+              'src/components/LegacyNavbar.tsx',
+              '  const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});\n',
+              ''
+          )
+          regex_once(
+              'src/components/LegacyNavbar.tsx',
+              r'''\n\s*\{\/\* AI Assistant Button \*\/\}\n\s*<button\n\s*onClick=\{handleOpenAI\}[\s\S]*?<\/button>\n''',
+              '\n'
+          )
+
+          # Remove the modal wiring entirely from App so AI chat is not merely hidden.
+          replace_once(
+              'src/App.tsx',
+              "import { AIAssistantModal, type AssistantConferenceTab } from './components/AIAssistantModal';\n",
+              ''
+          )
+          replace_once(
+              'src/App.tsx',
+              '  const [isAIModalOpen, setIsAIModalOpen] = useState(false);\n',
+              ''
+          )
+          replace_once(
+              'src/App.tsx',
+              '        onOpenAIModal={() => setIsAIModalOpen(true)}\n',
+              ''
+          )
+          replace_once(
+              'src/App.tsx',
+              '        onOpenAIAssistant={() => setIsAIModalOpen(true)}\n',
+              ''
+          )
+          regex_once(
+              'src/App.tsx',
+              r'''\n\s*<AIAssistantModal\n[\s\S]*?\n\s*\/>
+\n\s*<AbstractSubmissionModal''',
+              '\n\n      <AbstractSubmissionModal'
+          )
+
+          # Make the footer describe evidence/provenance instead of an unexplained index.
+          replace_once(
+              'src/components/Footer.tsx',
+              "export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant, onOpenBadge, role }) => {",
+              "export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role }) => {"
+          )
+          replace_once(
+              'src/components/Footer.tsx',
+              '              LinkedIn builds your general professional identity. Conference Gate records your conference activity, roles, reviews, and organizer-confirmed professional achievements.\n',
+              '              ConferenceGate builds a conference-specific professional record from presentations, peer reviews, completed roles, certificates, and organizer-confirmed activity. Imported and self-reported evidence stays clearly labeled.\n'
+          )
+          replace_once(
+              'src/components/Footer.tsx',
+              '              <span>ConferenceGate Index · Verified Professional Records</span>\n',
+              '              <span>Verified Conference Record · Source-labeled evidence</span>\n'
+          )
+          replace_once(
+              'src/components/Footer.tsx',
+              '                <li><button onClick={() => onNavigateTab(\'certificates\')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">ConferenceGate Index & Digital Credentials</button></li>\n',
+              '                <li><button onClick={() => onNavigateTab(\'certificates\')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Verified Record & Digital Credentials</button></li>\n'
+          )
+          replace_once(
+              'src/components/Footer.tsx',
+              '                <li><button onClick={() => onNavigateTab(\'organizer\')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">AI Reviewer & Committee Matcher</button></li>\n',
+              '                <li><button onClick={() => onNavigateTab(\'organizer\')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Reviewer & Committee Matching</button></li>\n'
+          )
+          replace_once(
+              'src/components/Footer.tsx',
+              '                <li><button onClick={onOpenAIAssistant} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Gate AI Assistant</button></li>\n',
+              ''
+          )
+
+          # Replace the visible ConferenceGate score with direct, attributable evidence.
+          replace_once(
+              'src/components/ConferenceGateIndexCard.tsx',
+              "import { Award, ShieldCheck } from 'lucide-react';",
+              "import { ShieldCheck } from 'lucide-react';"
+          )
+          regex_once(
+              'src/components/ConferenceGateIndexCard.tsx',
+              r'''  return \(\n    <div className="p-5 rounded-2xl border border-blue-200 bg-white space-y-3">[\s\S]*?\n    <\/div>\n  \);''',
+              '''  const verifiedEvidenceCount =\n    trust.evidence.organizerEvaluations + trust.evidence.verifiedReviews + trust.evidence.completedRoles;\n  return (\n    <div className="p-5 rounded-2xl border border-blue-200 bg-white space-y-4">\n      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">\n        <div>\n          <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-emerald-700" /><h4 className="text-sm font-bold text-slate-900">Verified Conference Record</h4></div>\n          <p className="text-[11px] text-slate-500 mt-1 max-w-2xl">Evidence-backed ConferenceGate activity is shown directly instead of being compressed into an arbitrary reputation score. Imported credentials remain source-labeled and are not silently upgraded to verified activity.</p>\n        </div>\n        <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-2 text-right">\n          <div className="text-2xl font-extrabold text-emerald-800">{verifiedEvidenceCount}</div>\n          <div className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">verified records</div>\n        </div>\n      </div>\n      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">\n        <div className="p-3 rounded-lg border border-slate-200 bg-slate-50"><b className="text-base text-slate-900">{trust.evidence.organizerEvaluations}</b><br/>Organizer evaluations</div>\n        <div className="p-3 rounded-lg border border-slate-200 bg-slate-50"><b className="text-base text-slate-900">{trust.evidence.verifiedReviews}</b><br/>Verified peer reviews</div>\n        <div className="p-3 rounded-lg border border-slate-200 bg-slate-50"><b className="text-base text-slate-900">{trust.evidence.completedRoles}</b><br/>Organizer-confirmed roles</div>\n        <div className="p-3 rounded-lg border border-slate-200 bg-slate-50"><b className="text-base text-slate-900">{trust.evidence.certificationCount}</b><br/>Imported credentials</div>\n      </div>\n      <div className={`text-xs font-bold flex items-center gap-2 ${trust.reviewerEligible ? 'text-emerald-700' : 'text-amber-700'}`}><ShieldCheck className="w-4 h-4" />{trust.eligibilityReason}</div>\n    </div>\n  );'''
+          )
+
+          # Align Deep Research language with provenance: supported != verified.
+          replace_once(
+              'src/components/ProfessionalDeepResearchPanel.tsx',
+              '            LinkedIn anchors your identity; ConferenceGate then cross-checks public scholarly indexes, official conference/society pages and public professional sources. Private LinkedIn data is never accessed, and uncertain same-name matches stay separate from verified reputation.\n',
+              '            LinkedIn anchors identity. ConferenceGate cross-checks Crossref, OpenAlex, Semantic Scholar, DBLP, official conference/society pages and other public professional sources. Independent-source agreement strengthens a record; same-name matches remain candidates until the evidence is strong enough.\n'
+          )
+          replace_once(
+              'src/components/ProfessionalDeepResearchPanel.tsx',
+              '            <span>•</span><span>Possible matches do not affect your ConferenceGate Index</span>\n',
+              '            <span>•</span><span>Possible matches never become verified records without stronger evidence</span>\n'
+          )
+
+          # Replace the 0/1000 vanity score and kudos headline with direct verified activity.
+          regex_once(
+              'src/components/UserProfileView.tsx',
+              r'''  const conferenceGateIndex = Math\.min\(\n    1000,\n    userProfile\.contributions\.reviewerKudos \+\n      userProfile\.contributions\.abstractsAccepted \* 15 \+\n      userProfile\.contributions\.technicalCommittees \* 25 \+\n      userProfile\.contributions\.sessionsChaired \* 20 \+\n      userProfile\.contributions\.speakerRoles \* 20\n  \);''',
+              '''  const verifiedSpeakerCount = keynoteSpeakerMatches.filter((match) => match.verified).length;\n  const verifiedProfessionalRoleCount = verifiedRoleCount + verifiedSpeakerCount;\n  const verifiedConferenceActivityCount =\n    userProfile.contributions.abstractsAccepted + verifiedReviewCount + verifiedProfessionalRoleCount;\n\n  const opportunityAvailabilityEnabled = Boolean(\n    userProfile.reviewerInfo.available ||\n    userProfile.committeeAvailable ||\n    userProfile.sessionChairAvailable ||\n    userProfile.speakerAvailable\n  );\n  const opportunityReadinessChecks = [\n    (userProfile.expertise || []).length >= 3,\n    (userProfile.technicalSpecialization || []).length > 0,\n    (userProfile.researchInterests || []).length > 0,\n    (userProfile.preferredRegions || []).length > 0,\n    opportunityAvailabilityEnabled,\n  ];\n  const opportunityReadiness = Math.round(\n    (opportunityReadinessChecks.filter(Boolean).length / opportunityReadinessChecks.length) * 100\n  );\n  const opportunityProfileGaps = [\n    (userProfile.expertise || []).length >= 3 ? null : 'Add 3+ expertise terms',\n    (userProfile.technicalSpecialization || []).length > 0 ? null : 'Add specialization',\n    (userProfile.researchInterests || []).length > 0 ? null : 'Add research interests',\n    (userProfile.preferredRegions || []).length > 0 ? null : 'Choose preferred regions',\n    opportunityAvailabilityEnabled ? null : 'Enable at least one role',\n  ].filter((item): item is string => Boolean(item));'''
+          )
+
+          regex_once(
+              'src/components/UserProfileView.tsx',
+              r'''        \{\/\* Verified Conference Reputation Stats Grid — professional\/reviewer achievements only \*\/\}\n        \{variant === 'professional' && \(\n        <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">[\s\S]*?\n        <\/div>\n        \)\}\n''',
+              '''        {/* Evidence-first professional record — direct counts, no arbitrary headline score. */}\n        {variant === 'professional' && (\n        <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200">\n          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">\n            <div>\n              <div className="text-xs font-extrabold text-slate-900">Verified Conference Record</div>\n              <div className="text-[10px] text-slate-500">ConferenceGate-confirmed activity is counted separately from imported and self-reported evidence.</div>\n            </div>\n            <div className="text-[10px] font-semibold text-emerald-700">Evidence first · source labeled</div>\n          </div>\n          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">\n            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">\n              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Conference Activity</div>\n              <div className="text-xl font-extrabold text-blue-700">{verifiedConferenceActivityCount}</div>\n              <div className="mt-1 text-[9px] text-slate-400">accepted abstracts · reviews · completed roles</div>\n            </div>\n\n            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">\n              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Peer Reviews</div>\n              <div className="text-xl font-extrabold text-blue-600">{verifiedReviewCount}</div>\n              <div className="mt-1 text-[9px] text-slate-400">completed inside ConferenceGate</div>\n            </div>\n\n            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">\n              <div className="text-[10px] font-bold text-slate-400 uppercase">Research Outputs</div>\n              <div className="text-xl font-extrabold text-slate-900">\n                {paperPublicationCount} {paperPublicationCount === 1 ? 'Work' : 'Works'}\n              </div>\n              <div className="mt-1 text-[9px] text-slate-400">profile-linked and confirmed sources</div>\n            </div>\n\n            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">\n              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Professional Roles</div>\n              <div className="text-xl font-extrabold text-indigo-700">{verifiedProfessionalRoleCount}</div>\n              <div className="mt-1 text-[9px] text-slate-400">organizer-confirmed or verified speaker evidence</div>\n            </div>\n          </div>\n        </div>\n        )}\n'''
+          )
+
+          # Turn generic profile completeness into actionable opportunity matching readiness.
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              '<h3 className="text-sm font-extrabold text-slate-900">Professional Opportunity Profile</h3>',
+              '<h3 className="text-sm font-extrabold text-slate-900">Opportunity Matching Profile</h3>'
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              '                  Your expertise and availability for reviewer, committee, chair, and speaker matching.\n',
+              '                  Controls how organizers can find you for reviewer, committee, chair, and speaker opportunities.\n'
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              '                    <span>Profile completeness</span>\n                    <span>{profileCompleteness}%</span>\n',
+              '                    <span>Matching readiness</span>\n                    <span>{opportunityReadiness}%</span>\n'
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              '                    <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${profileCompleteness}%` }} />\n',
+              '                    <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${opportunityReadiness}%` }} />\n'
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              "                  Reviewer {userProfile.reviewerInfo.available ? 'Available' : 'Off'}\n",
+              "                  Reviewer: {userProfile.reviewerInfo.available ? 'Open' : 'Not available'}\n"
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              "                  Committee {userProfile.committeeAvailable ? 'Available' : 'Off'}\n",
+              "                  Committee: {userProfile.committeeAvailable ? 'Open' : 'Not available'}\n"
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              "                  Session Chair {userProfile.sessionChairAvailable ? 'Available' : 'Off'}\n",
+              "                  Session Chair: {userProfile.sessionChairAvailable ? 'Open' : 'Not available'}\n"
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              "                  Speaker {userProfile.speakerAvailable ? 'Available' : 'Off'}\n",
+              "                  Speaker: {userProfile.speakerAvailable ? 'Open' : 'Not available'}\n"
+          )
+          replace_once(
+              'src/components/UserProfileView.tsx',
+              '''              </div>\n            </div>\n            {(userProfile.expertise.length > 0 || userProfile.technicalSpecialization.length > 0 || (userProfile.preferredRegions?.length || 0) > 0) && (\n''',
+              '''              </div>\n            </div>\n            {opportunityProfileGaps.length > 0 && (\n              <div className="mt-3 flex flex-wrap items-center gap-1.5">\n                <span className="text-[10px] font-bold text-slate-500 mr-1">Improve matching:</span>\n                {opportunityProfileGaps.slice(0, 5).map((gap) => (\n                  <button\n                    key={gap}\n                    type="button"\n                    onClick={() => setIsProfessionalPreferencesOpen(true)}\n                    className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer"\n                  >\n                    {gap}\n                  </button>\n                ))}\n              </div>\n            )}\n            {(userProfile.expertise.length > 0 || userProfile.technicalSpecialization.length > 0 || (userProfile.preferredRegions?.length || 0) > 0) && (\n'''
+          )
+          PY
+      - name: Commit Phase 46 patch
+        shell: bash
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/App.tsx src/components/LegacyNavbar.tsx src/components/Footer.tsx src/components/ConferenceGateIndexCard.tsx src/components/ProfessionalDeepResearchPanel.tsx src/components/UserProfileView.tsx
+          git diff --cached --check
+          git commit -m "Phase 46: evidence-first professional profile [phase46-patch]"
+          git push origin HEAD:phase-46-professional-record-ux-cleanup
