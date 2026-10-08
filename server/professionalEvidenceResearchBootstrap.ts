@@ -5,6 +5,7 @@ import { searchSemanticScholarConferencePapers } from "./semanticscholar";
 import { searchDblpConferencePapers } from "./dblp";
 import { braveSearch, isBraveConfigured, type LiveSearchResult } from "./braveSearch";
 import { isSerperConfigured, serperSearch } from "./serperSearch";
+import { deepProfessionalRoleEvidence } from "./professionalRoleEvidence";
 
 /**
  * Phase 40 — Professional Deep Research & Evidence Graph.
@@ -50,6 +51,7 @@ type EvidenceDraft = {
 
 const router = Router();
 const RESEARCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RESEARCH_VERSION = 47;
 const runningUsers = new Set<string>();
 let schemaReady: Promise<void> | null = null;
 
@@ -423,11 +425,17 @@ async function linkedInClaimEvidence(identity: any): Promise<EvidenceDraft[]> {
 function promoteCorroborated(items: EvidenceDraft[]) {
   const groups = new Map<string, EvidenceDraft[]>();
   for (const item of items) {
-    const key = [item.kind, canonicalTitle(item.title), item.year || ""].join("|");
+    const key = item.kind === "conference_role"
+      ? [item.kind, canonicalTitle(item.conferenceTitle || item.title), normalize(item.role || ""), item.year || ""].join("|")
+      : [item.kind, canonicalTitle(item.title), item.year || ""].join("|");
     groups.set(key, [...(groups.get(key) || []), item]);
   }
   for (const group of groups.values()) {
-    const independent = new Set(group.map((item) => item.sourceType).filter((type) => type !== "linkedin_public"));
+    const independent = new Set(
+      group
+        .map((item) => clean(item.payload?.host) || item.sourceType)
+        .filter((origin) => origin !== "linkedin_public"),
+    );
     const hasMemberClaim = group.some((item) => item.confidence === "member_claimed");
     if (independent.size >= 2 || (hasMemberClaim && independent.size >= 1)) {
       for (const item of group) {
@@ -493,18 +501,20 @@ async function executeResearch(userId: string, trigger: ResearchTrigger) {
   try {
     const identity = await readIdentity(userId);
     if (!identity?.fullName) throw new Error("Professional identity has no usable name yet.");
-    const [scholarly, web, linkedIn] = await Promise.all([
+    const [scholarly, web, deepRoles, linkedIn] = await Promise.all([
       scholarlyEvidence(identity),
       webEvidence(identity),
+      deepProfessionalRoleEvidence(identity),
       linkedInClaimEvidence(identity),
     ]);
-    const evidence = promoteCorroborated([...scholarly, ...web, ...linkedIn]);
+    const evidence = promoteCorroborated([...scholarly, ...web, ...deepRoles, ...linkedIn]);
     await storeEvidence(userId, evidence);
     const counts = evidence.reduce((acc: Record<string, number>, item) => {
       acc[item.confidence] = (acc[item.confidence] || 0) + 1;
       acc[item.kind] = (acc[item.kind] || 0) + 1;
       return acc;
     }, {});
+    counts.researchVersion = RESEARCH_VERSION;
     await dbRun(
       `UPDATE professional_evidence_research_runs
           SET status=?,finished_at=?,counts_json=? WHERE id=?`,
@@ -626,7 +636,13 @@ async function snapshot(userId: string) {
 }
 
 router.get("/me", requireMember, safe(async (req, res) => {
-  res.json(await snapshot(req.professionalEvidenceUserId!));
+  const userId = req.professionalEvidenceUserId!;
+  let current = await snapshot(userId);
+  if (current.status !== "running" && current.lastRun?.counts?.researchVersion !== RESEARCH_VERSION) {
+    await queueProfessionalEvidenceResearch(userId, { trigger: "manual_refresh", force: true });
+    current = { ...current, status: "queued" };
+  }
+  res.json(current);
 }));
 
 router.post("/refresh", requireMember, safe(async (req, res) => {

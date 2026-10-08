@@ -43,6 +43,7 @@ import {
   type LinkedInConferenceSignal,
 } from '../api/linkedinConferenceActivity';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
+import { fetchProfessionalEvidence, type ProfessionalEvidenceSnapshot } from '../api/professionalEvidence';
 import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
 import { resizeImageFile } from '../utils/image';
@@ -175,6 +176,33 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
+  const [professionalEvidenceSnapshot, setProfessionalEvidenceSnapshot] = useState<ProfessionalEvidenceSnapshot | null>(null);
+
+  useEffect(() => {
+    if (variant !== 'professional') {
+      setProfessionalEvidenceSnapshot(null);
+      return;
+    }
+    let cancelled = false;
+    let timer: number | null = null;
+    const load = async () => {
+      try {
+        const next = await fetchProfessionalEvidence();
+        if (cancelled) return;
+        setProfessionalEvidenceSnapshot(next);
+        if (['queued', 'running'].includes(next.status)) {
+          timer = window.setTimeout(() => { void load(); }, 5000);
+        }
+      } catch {
+        if (!cancelled) setProfessionalEvidenceSnapshot(null);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [currentUserId, variant]);
 
   // A ConferenceGate registration proves enrollment, not actual attendance. Keep registrations
   // separate from the self-reported attendance section so the profile never upgrades one fact
@@ -670,8 +698,25 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   );
   const verifiedRoleCount = completedProfessionalRoles.length;
 
-  const verifiedSpeakerCount = keynoteSpeakerMatches.filter((match) => match.verified).length;
-  const verifiedProfessionalRoleCount = verifiedRoleCount + verifiedSpeakerCount;
+  const canonicalProfessionalRole = (conference: string, role: string) =>
+    `${paperIdentityKey(conference || 'conference')}|${paperIdentityKey(role || 'role')}`;
+  const verifiedProfessionalRoleKeys = new Set<string>();
+  completedProfessionalRoles.forEach((item) => {
+    verifiedProfessionalRoleKeys.add(canonicalProfessionalRole(item.conferenceTitle, item.roleType));
+  });
+  keynoteSpeakerMatches
+    .filter((match) => match.verified)
+    .forEach((match) => {
+      verifiedProfessionalRoleKeys.add(canonicalProfessionalRole(match.conferenceTitle, match.role || 'speaker'));
+    });
+  (professionalEvidenceSnapshot?.items || [])
+    .filter((item) => item.kind === 'conference_role' && item.confidence === 'verified')
+    .forEach((item) => {
+      verifiedProfessionalRoleKeys.add(
+        canonicalProfessionalRole(item.conferenceTitle || item.title, item.role || item.title)
+      );
+    });
+  const verifiedProfessionalRoleCount = verifiedProfessionalRoleKeys.size;
   const verifiedConferenceActivityCount =
     userProfile.contributions.abstractsAccepted + verifiedReviewCount + verifiedProfessionalRoleCount;
 
@@ -960,7 +1005,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
               <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Professional Roles</div>
               <div className="text-xl font-extrabold text-indigo-700">{verifiedProfessionalRoleCount}</div>
-              <div className="mt-1 text-[9px] text-slate-400">organizer-confirmed or verified speaker evidence</div>
+              <div className="mt-1 text-[9px] text-slate-400">organizer-confirmed or independently verified public evidence</div>
             </div>
           </div>
         </div>
