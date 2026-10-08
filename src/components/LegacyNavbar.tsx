@@ -8,7 +8,6 @@ import {
   Users,
   Bell,
   MessageSquare,
-  Sparkles,
   ChevronDown,
   UserCheck,
   Briefcase,
@@ -63,8 +62,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSponsorLogoChange,
   notifications = [],
   unreadMessageCount = 0,
-  onOpenAIAssistant,
-  onOpenAIModal,
   onOpenMessages = () => {},
   onOpenDigitalBadge = () => {},
   onSearch = (_query: string) => {},
@@ -122,7 +119,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleOpenNotifications = onOpenNotifications || (() => handleTabChange('profile'));
   const isSponsorRole = role === 'sponsor';
   const handleOpenSponsorAlerts = onOpenSponsorAlerts || (() => handleTabChange('sponsor'));
-  const handleOpenAI = onOpenAIAssistant || onOpenAIModal || (() => {});
   const isOrganizerRole = role === 'organizer';
   const identity = isOrganizerRole && organizerIdentity
     ? { name: organizerIdentity.name, avatar: organizerIdentity.logo }
@@ -232,15 +228,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Action Icons & Role Switcher */}
           <div className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 shrink-0">
-            {/* AI Assistant Button */}
-            <button
-              onClick={handleOpenAI}
-              className="flex items-center gap-1 px-1.5 sm:px-2 md:px-2.5 xl:px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-semibold shadow-xs hover:shadow-md transition-all hover:opacity-95 cursor-pointer"
-              title="Conference Gate AI Assistant"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
-              <span className="hidden 2xl:inline">AI Assistant</span>
-            </button>
 
             {/* Role Switcher Pill */}
             <div className="relative">

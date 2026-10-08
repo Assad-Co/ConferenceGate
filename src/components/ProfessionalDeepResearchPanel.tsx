@@ -102,11 +102,11 @@ export const ProfessionalDeepResearchPanel: React.FC = () => {
             <h3 className="text-base font-extrabold text-slate-900">Professional Deep Research & Evidence Graph</h3>
           </div>
           <p className="mt-1 text-xs text-slate-600 max-w-3xl leading-relaxed">
-            LinkedIn anchors your identity; ConferenceGate then cross-checks public scholarly indexes, official conference/society pages and public professional sources. Private LinkedIn data is never accessed, and uncertain same-name matches stay separate from verified reputation.
+            LinkedIn anchors identity. ConferenceGate cross-checks Crossref, OpenAlex, Semantic Scholar, DBLP, official conference/society pages and other public professional sources. Independent-source agreement strengthens a record; same-name matches remain candidates until the evidence is strong enough.
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
             <span className="inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Public sources only</span>
-            <span>•</span><span>Possible matches do not affect your ConferenceGate Index</span>
+            <span>•</span><span>Possible matches never become verified records without stronger evidence</span>
             <span>•</span><span>OAuth access tokens are not stored</span>
           </div>
         </div>

@@ -11,7 +11,7 @@ interface FooterProps {
   role: 'professional' | 'organizer' | 'sponsor';
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant, onOpenBadge, role }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role }) => {
   const [release, setRelease] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,11 +35,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
           <div className="space-y-4">
             <Logo className="h-10 w-auto" />
             <p className="text-xs text-slate-500 leading-relaxed">
-              LinkedIn builds your general professional identity. Conference Gate records your conference activity, roles, reviews, and organizer-confirmed professional achievements.
+              ConferenceGate builds a conference-specific professional record from presentations, peer reviews, completed roles, certificates, and organizer-confirmed activity. Imported and self-reported evidence stays clearly labeled.
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
-              <span>ConferenceGate Index · Verified Professional Records</span>
+              <span>Verified Conference Record · Source-labeled evidence</span>
             </div>
           </div>
 
@@ -54,7 +54,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
                 <li><button onClick={() => onNavigateTab('abstracts')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Submit Abstracts & Track Status</button></li>
                 <li><button onClick={() => onNavigateTab('reviewer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Reviewer Opportunity Marketplace</button></li>
                 <li><button onClick={() => onNavigateTab('profile')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Professional History & Badges</button></li>
-                <li><button onClick={() => onNavigateTab('certificates')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">ConferenceGate Index & Digital Credentials</button></li>
+                <li><button onClick={() => onNavigateTab('certificates')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Verified Record & Digital Credentials</button></li>
               </ul>
             </div>
           )}
@@ -68,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
               <ul className="space-y-2 text-xs">
                 <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Lifecycle Management</button></li>
                 <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Create Conference Wizard</button></li>
-                <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">AI Reviewer & Committee Matcher</button></li>
+                <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Reviewer & Committee Matching</button></li>
                 <li><button onClick={() => onNavigateTab('organizer')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Drag-and-Drop Agenda Scheduler</button></li>
                 <li><button onClick={onOpenBadge} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Digital Badges & QR Check-In</button></li>
               </ul>
@@ -84,7 +84,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenAIAssistant
               <ul className="space-y-2 text-xs">
                 <li><button onClick={() => onNavigateTab('sponsor')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Sponsorship Marketplace</button></li>
                 <li><button onClick={() => onNavigateTab('sponsor')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Sponsor Marketing ROI Analytics</button></li>
-                <li><button onClick={onOpenAIAssistant} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Conference Gate AI Assistant</button></li>
               </ul>
             </div>
           )}

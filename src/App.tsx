@@ -36,7 +36,6 @@ import { SponsorPortal } from './components/SponsorPortal';
 import { UserProfileView } from './components/UserProfileView';
 import { CommunityFeed } from './components/CommunityFeed';
 import { ReactionType } from './components/reactionMeta';
-import { AIAssistantModal, type AssistantConferenceTab } from './components/AIAssistantModal';
 import { DigitalBadgeModal } from './components/DigitalBadgeModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { CertificatesView } from './components/CertificatesView';
@@ -1224,7 +1223,6 @@ export function App() {
   };
 
   // Modals State
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isSubmitAbstractOpen, setIsSubmitAbstractOpen] = useState(false);
   const [submitAbstractConfId, setSubmitAbstractConfId] = useState<string | undefined>();
   const [isBadgeOpen, setIsBadgeOpen] = useState(false);
@@ -1574,7 +1572,6 @@ export function App() {
         }}
         activeRole={activeRole}
         onRoleChange={handleRoleChange}
-        onOpenAIModal={() => setIsAIModalOpen(true)}
         userProfile={userProfile}
         organizerIdentity={
           conferences[0]
@@ -1875,26 +1872,11 @@ export function App() {
           if (tab === 'profile') setProfileInitialTab('conferences');
           setActiveTab(tab);
         }}
-        onOpenAIAssistant={() => setIsAIModalOpen(true)}
         onOpenBadge={() => setIsBadgeOpen(true)}
         role={authUser.role}
       />
 
       {/* Modals */}
-      <AIAssistantModal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-        userRole={activeRole}
-        onOpenConference={(result, tab: AssistantConferenceTab) => {
-          setIsAIModalOpen(false);
-          handleOpenExternalResult(result, tab);
-        }}
-        onNavigate={(destination) => {
-          setIsAIModalOpen(false);
-          if (destination === 'profile') setProfileInitialTab('conferences');
-          setActiveTab(destination);
-        }}
-      />
 
       <AbstractSubmissionModal
         isOpen={isSubmitAbstractOpen}
