@@ -102,7 +102,7 @@ export const ProfessionalDeepResearchPanel: React.FC = () => {
             <h3 className="text-base font-extrabold text-slate-900">Professional Deep Research & Evidence Graph</h3>
           </div>
           <p className="mt-1 text-xs text-slate-600 max-w-3xl leading-relaxed">
-            LinkedIn anchors identity. ConferenceGate cross-checks Crossref, OpenAlex, Semantic Scholar, DBLP, official conference/society pages and other public professional sources. Independent-source agreement strengthens a record; same-name matches remain candidates until the evidence is strong enough.
+            LinkedIn anchors identity. ConferenceGate cross-checks Crossref, OpenAlex, Semantic Scholar, DBLP, official conference and society sites, speaker pages, technical/program/scientific committee rosters, session schedules, workshop agendas, and conference-program PDFs. Independent-source agreement strengthens a record; same-name matches remain candidates until the evidence is strong enough.
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
             <span className="inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Public sources only</span>
@@ -122,6 +122,13 @@ export const ProfessionalDeepResearchPanel: React.FC = () => {
       </div>
 
       {error && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{error}</div>}
+
+      {summary && (
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-white px-4 py-3 text-xs text-slate-600">
+          <span className="font-extrabold text-indigo-800">Professional role evidence: {summary.conferenceRoles}</span>
+          <span className="ml-2">speaker, chair, committee, moderator, panel and workshop roles found across public sources.</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
         <div className="rounded-xl bg-white border border-emerald-100 p-3"><div className="text-[10px] uppercase font-bold text-slate-400">Verified</div><div className="text-xl font-extrabold text-emerald-700">{summary?.verified || 0}</div></div>
