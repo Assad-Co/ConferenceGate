@@ -670,14 +670,34 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   );
   const verifiedRoleCount = completedProfessionalRoles.length;
 
-  const conferenceGateIndex = Math.min(
-    1000,
-    userProfile.contributions.reviewerKudos +
-      userProfile.contributions.abstractsAccepted * 15 +
-      userProfile.contributions.technicalCommittees * 25 +
-      userProfile.contributions.sessionsChaired * 20 +
-      userProfile.contributions.speakerRoles * 20
+  const verifiedSpeakerCount = keynoteSpeakerMatches.filter((match) => match.verified).length;
+  const verifiedProfessionalRoleCount = verifiedRoleCount + verifiedSpeakerCount;
+  const verifiedConferenceActivityCount =
+    userProfile.contributions.abstractsAccepted + verifiedReviewCount + verifiedProfessionalRoleCount;
+
+  const opportunityAvailabilityEnabled = Boolean(
+    userProfile.reviewerInfo.available ||
+    userProfile.committeeAvailable ||
+    userProfile.sessionChairAvailable ||
+    userProfile.speakerAvailable
   );
+  const opportunityReadinessChecks = [
+    (userProfile.expertise || []).length >= 3,
+    (userProfile.technicalSpecialization || []).length > 0,
+    (userProfile.researchInterests || []).length > 0,
+    (userProfile.preferredRegions || []).length > 0,
+    opportunityAvailabilityEnabled,
+  ];
+  const opportunityReadiness = Math.round(
+    (opportunityReadinessChecks.filter(Boolean).length / opportunityReadinessChecks.length) * 100
+  );
+  const opportunityProfileGaps = [
+    (userProfile.expertise || []).length >= 3 ? null : 'Add 3+ expertise terms',
+    (userProfile.technicalSpecialization || []).length > 0 ? null : 'Add specialization',
+    (userProfile.researchInterests || []).length > 0 ? null : 'Add research interests',
+    (userProfile.preferredRegions || []).length > 0 ? null : 'Choose preferred regions',
+    opportunityAvailabilityEnabled ? null : 'Enable at least one role',
+  ].filter((item): item is string => Boolean(item));
 
   if (professionalRecoveryRequired) {
     return (
@@ -906,32 +926,42 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         </div>
 
-        {/* Verified Conference Reputation Stats Grid — professional/reviewer achievements only */}
+        {/* Evidence-first professional record — direct counts, no arbitrary headline score. */}
         {variant === 'professional' && (
-        <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Conference Gate Index</div>
-            <div className="text-xl font-extrabold text-blue-700">{conferenceGateIndex} / 1000</div>
-          </div>
-
-          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Reviewer Kudos</div>
-            <div className="text-xl font-extrabold text-blue-600 flex items-center justify-center gap-1">
-              <Zap className="w-4 h-4 fill-blue-500" />
-              <span>+{userProfile.contributions.reviewerKudos}</span>
+        <div className="px-6 sm:px-8 py-6 bg-slate-50 border-t border-slate-200">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-xs font-extrabold text-slate-900">Verified Conference Record</div>
+              <div className="text-[10px] text-slate-500">ConferenceGate-confirmed activity is counted separately from imported and self-reported evidence.</div>
             </div>
+            <div className="text-[10px] font-semibold text-emerald-700">Evidence first · source labeled</div>
           </div>
-
-          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Papers & Publications</div>
-            <div className="text-xl font-extrabold text-slate-900">
-              {paperPublicationCount} {paperPublicationCount === 1 ? 'Paper' : 'Papers'}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Conference Activity</div>
+              <div className="text-xl font-extrabold text-blue-700">{verifiedConferenceActivityCount}</div>
+              <div className="mt-1 text-[9px] text-slate-400">accepted abstracts · reviews · completed roles</div>
             </div>
-          </div>
 
-          <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">Committee Roles</div>
-            <div className="text-xl font-extrabold text-indigo-700">{committeePositionCount} Positions</div>
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Peer Reviews</div>
+              <div className="text-xl font-extrabold text-blue-600">{verifiedReviewCount}</div>
+              <div className="mt-1 text-[9px] text-slate-400">completed inside ConferenceGate</div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] font-bold text-slate-400 uppercase">Research Outputs</div>
+              <div className="text-xl font-extrabold text-slate-900">
+                {paperPublicationCount} {paperPublicationCount === 1 ? 'Work' : 'Works'}
+              </div>
+              <div className="mt-1 text-[9px] text-slate-400">profile-linked and confirmed sources</div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <div className="text-[10px] font-bold text-slate-400 uppercase">Verified Professional Roles</div>
+              <div className="text-xl font-extrabold text-indigo-700">{verifiedProfessionalRoleCount}</div>
+              <div className="mt-1 text-[9px] text-slate-400">organizer-confirmed or verified speaker evidence</div>
+            </div>
           </div>
         </div>
         )}
@@ -940,35 +970,50 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Professional Opportunity Profile</h3>
+                <h3 className="text-sm font-extrabold text-slate-900">Opportunity Matching Profile</h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Your expertise and availability for reviewer, committee, chair, and speaker matching.
+                  Controls how organizers can find you for reviewer, committee, chair, and speaker opportunities.
                 </p>
                 <div className="mt-3 max-w-sm">
                   <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
-                    <span>Profile completeness</span>
-                    <span>{profileCompleteness}%</span>
+                    <span>Matching readiness</span>
+                    <span>{opportunityReadiness}%</span>
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${profileCompleteness}%` }} />
+                    <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${opportunityReadiness}%` }} />
                   </div>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 text-[10px] font-bold">
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.reviewerInfo.available ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  Reviewer {userProfile.reviewerInfo.available ? 'Available' : 'Off'}
+                  Reviewer: {userProfile.reviewerInfo.available ? 'Open' : 'Not available'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.committeeAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  Committee {userProfile.committeeAvailable ? 'Available' : 'Off'}
+                  Committee: {userProfile.committeeAvailable ? 'Open' : 'Not available'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.sessionChairAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  Session Chair {userProfile.sessionChairAvailable ? 'Available' : 'Off'}
+                  Session Chair: {userProfile.sessionChairAvailable ? 'Open' : 'Not available'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.speakerAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  Speaker {userProfile.speakerAvailable ? 'Available' : 'Off'}
+                  Speaker: {userProfile.speakerAvailable ? 'Open' : 'Not available'}
                 </span>
               </div>
             </div>
+            {opportunityProfileGaps.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 mr-1">Improve matching:</span>
+                {opportunityProfileGaps.slice(0, 5).map((gap) => (
+                  <button
+                    key={gap}
+                    type="button"
+                    onClick={() => setIsProfessionalPreferencesOpen(true)}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer"
+                  >
+                    {gap}
+                  </button>
+                ))}
+              </div>
+            )}
             {(userProfile.expertise.length > 0 || userProfile.technicalSpecialization.length > 0 || (userProfile.preferredRegions?.length || 0) > 0) && (
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {[...userProfile.expertise, ...userProfile.technicalSpecialization, ...(userProfile.preferredRegions || [])]
