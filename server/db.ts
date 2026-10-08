@@ -343,6 +343,24 @@ export async function initDb(): Promise<void> {
       UNIQUE(user_id, conference_id)
     );
 
+    CREATE TABLE IF NOT EXISTS conference_attendance (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      conference_id TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      organizer_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      location TEXT,
+      source_type TEXT NOT NULL DEFAULT 'catalog' CHECK(source_type IN ('conferencegate','catalog')),
+      source_url TEXT,
+      attended_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, conference_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_conference_attendance_user_date
+      ON conference_attendance(user_id, start_date, attended_at);
+
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
       user_a TEXT NOT NULL REFERENCES users(id),

@@ -48,6 +48,7 @@ import { AddAttendanceModal } from './AddAttendanceModal';
 import { AddCommitteePositionModal } from './AddCommitteePositionModal';
 import { resizeImageFile } from '../utils/image';
 import { generateInitialsAvatar } from '../utils/avatar';
+import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
 import type { KeynoteSpeakerMatch } from '../api/auth';
 import {
   fetchLinkedInProfileEnrichment,
@@ -57,6 +58,7 @@ import {
 } from '../api/linkedinProfile';
 import {
   ConferenceRegistration,
+  ConferenceAttendance,
   fetchMyExternalPapers,
   decideExternalPaper,
   ExternalPaper,
@@ -80,6 +82,7 @@ interface UserProfileViewProps {
   submissions?: AbstractSubmission[];
   posts?: Post[];
   registrations?: ConferenceRegistration[];
+  attendanceRecords?: ConferenceAttendance[];
   conferences?: Conference[];
   onSelectConference?: (conf: Conference) => void;
   onOpenBadgeModal: () => void;
@@ -152,6 +155,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   submissions = [],
   posts = [],
   registrations = [],
+  attendanceRecords = [],
   conferences = [],
   onSelectConference = () => {},
   onOpenBadgeModal,
@@ -177,6 +181,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
   const [feedbackConference, setFeedbackConference] = useState<AttendedConference | null>(null);
   const [professionalEvidenceSnapshot, setProfessionalEvidenceSnapshot] = useState<ProfessionalEvidenceSnapshot | null>(null);
+  const today = useCurrentLocalDate();
+  const attendanceByConferenceId = useMemo(
+    () => new Map(attendanceRecords.map((item) => [item.conferenceId, item] as const)),
+    [attendanceRecords]
+  );
 
   useEffect(() => {
     if (variant !== 'professional') {
@@ -1237,7 +1246,56 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         )}
 
         {activeTab === 'conferences' && (
-          <div className="space-y-4">
+          <div className="space-y-4 mb-6">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Attended Conferences</h3>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Conferences you explicitly marked Attended after the event start date. These are account-linked attendance confirmations; organizer ratings are routed only to the company stored with that exact conference.
+              </p>
+            </div>
+            {attendanceRecords.length > 0 ? (
+              <div className="space-y-3">
+                {attendanceRecords.map((attendance) => (
+                  <div key={attendance.id} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs text-slate-900">{attendance.conferenceTitle}</h4>
+                      <p className="text-[11px] text-slate-500">
+                        {[attendance.startDate === attendance.endDate ? attendance.startDate : `${attendance.startDate} – ${attendance.endDate}`, attendance.location, attendance.organizerName].filter(Boolean).join(' • ')}
+                      </p>
+                      {attendance.sourceUrl && (
+                        <a href={attendance.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-blue-700 hover:underline">
+                          <ExternalLink className="w-3 h-3" /> Official source
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setFeedbackConference({
+                          id: attendance.conferenceId,
+                          title: attendance.conferenceTitle,
+                          location: attendance.location,
+                          roleLabel: 'Attendee',
+                          organizerName: attendance.organizerName,
+                          eventDate: attendance.startDate === attendance.endDate ? attendance.startDate : `${attendance.startDate} – ${attendance.endDate}`,
+                          defaultRole: 'Attendee',
+                        })}
+                        className="px-2.5 py-1 border border-violet-200 text-violet-700 hover:bg-violet-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
+                      >
+                        Rate Organizer
+                      </button>
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">Attended</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">No attended conferences recorded yet. Open a conference that is happening now or has already started and choose I Attended.</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'conferences' && (
+          <div className="space-y-4 pt-4 border-t border-slate-100">
             <div>
               <h3 className="text-base font-bold text-slate-900">ConferenceGate Registrations</h3>
               <p className="text-[11px] text-slate-500 mt-1">
@@ -1259,15 +1317,19 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                       <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => setFeedbackConference(conf)}
-                        className="px-2.5 py-1 border border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-[10px] rounded-full cursor-pointer transition-colors"
-                      >
-                        Evaluate Conference
-                      </button>
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
-                        Registered
-                      </span>
+                      {conf.id && attendanceByConferenceId.has(conf.id) ? (
+                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                          Attended
+                        </span>
+                      ) : conferences.find((item) => item.id === conf.id)?.dates.start && conferences.find((item) => item.id === conf.id)!.dates.start > today ? (
+                        <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-full whitespace-nowrap">
+                          Upcoming · Registered
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 font-bold text-[10px] rounded-full whitespace-nowrap">
+                          Registered · attendance not confirmed
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
