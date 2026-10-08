@@ -39,6 +39,7 @@ const ROLE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /\binvited\s+(?:speaker|lecture|presentation|talk)\b/i, label: "Invited Speaker" },
   { pattern: /\bguest\s+speaker\b/i, label: "Guest Speaker" },
   { pattern: /\b(?:session|technical session)\s+co[- ]?chair\b/i, label: "Session Co-Chair" },
+  { pattern: /\bco[- ]?chair\b/i, label: "Co-Chair" },
   { pattern: /\bsession\s+chair(?:person)?\b/i, label: "Session Chair" },
   { pattern: /\btrack\s+chair\b/i, label: "Track Chair" },
   { pattern: /\bprogram(?:me)?\s+chair\b/i, label: "Program Chair" },
@@ -192,7 +193,7 @@ function roleQueries(identity: ProfessionalRoleIdentity): string[] {
   return [
     `${exact}${org} "technical committee" OR "program committee" OR "scientific committee"`,
     `${exact}${org} "organizing committee" OR "steering committee" OR "advisory board"`,
-    `${exact}${org} "session chair" OR "track chair" OR "program chair" OR moderator OR panelist`,
+    `${exact}${org} "session chair" OR "co-chair" OR "track chair" OR "program chair" OR moderator OR panelist`,
     `${exact}${org} "keynote speaker" OR "plenary speaker" OR "invited speaker" OR presenter`,
     `${exact}${org} "workshop instructor" OR "course instructor" OR facilitator OR trainer`,
     `${exact}${org} conference program agenda schedule filetype:pdf`,
@@ -202,6 +203,8 @@ function roleQueries(identity: ProfessionalRoleIdentity): string[] {
     `${exact} site:eage.org speaker committee chair program`,
     `${exact} site:spe.org speaker committee chair program`,
     `${exact} site:seg.org speaker committee chair program`,
+    `${exact} site:agu.org speaker committee chair program`,
+    `${exact} site:onepetro.org speaker committee chair program`,
   ];
 }
 
@@ -253,8 +256,10 @@ function evidenceFromText(
   for (const context of contexts) {
     const role = roleFromText(context);
     if (!role) continue;
-    const organizationMatched = organizationMatches(identity.organization, context)
-      || organizationMatches(identity.organization, pageText.slice(0, MAX_PAGE_TEXT));
+    const contextOrganizationMatched = organizationMatches(identity.organization, context);
+    const pageOrganizationMatched = organizationMatches(identity.organization, pageText.slice(0, MAX_PAGE_TEXT));
+    const organizationMatched = contextOrganizationMatched || pageOrganizationMatched;
+    const emailMatched = Boolean(identity.email && normalize(pageText).includes(normalize(identity.email)));
     const year = yearNumber(context) || yearNumber(`${result.title} ${result.snippet}`);
     const sourceType = sourceTypeFor(result, sourceUrl, role, authoritative);
     const key = `${canonical(conferenceTitle)}|${normalize(role)}|${year || ""}|${sourceHost}`;
@@ -265,12 +270,20 @@ function evidenceFromText(
     let confidenceScore = 68;
     let evidenceReason = "Exact-name role context found on a public page; retained as possible until stronger identity evidence is available.";
 
-    if (organizationMatched && (authoritative || rolePage)) {
+    if (emailMatched && (authoritative || rolePage)) {
+      confidence = "verified";
+      confidenceScore = 98;
+      evidenceReason = "Official conference evidence places the member's name beside this role and also matches the stored professional email.";
+    } else if (contextOrganizationMatched && (authoritative || rolePage)) {
       confidence = "verified";
       confidenceScore = authoritative ? 96 : 93;
       evidenceReason = authoritative
-        ? "Official/authoritative conference evidence places the member's exact name beside this role and matches the stored organization."
-        : "A role-specific conference page places the member's exact name beside this role and matches the stored organization.";
+        ? "Official/authoritative conference evidence places the member's exact name beside this role and the stored organization appears in the same local context."
+        : "A role-specific conference page places the member's exact name beside this role and the stored organization appears in the same local context.";
+    } else if (authoritative && pageOrganizationMatched) {
+      confidence = "verified";
+      confidenceScore = 94;
+      evidenceReason = "An authoritative conference source places the member's exact name beside this role and independently matches the stored organization on the same source page.";
     } else if (authoritative || rolePage) {
       confidence = "strong";
       confidenceScore = authoritative ? 89 : 86;
@@ -301,6 +314,9 @@ function evidenceFromText(
         snippet: clean(result.snippet),
         evidenceContext: context.slice(0, 900),
         organizationMatched,
+        contextOrganizationMatched,
+        pageOrganizationMatched,
+        emailMatched,
         authoritative,
         roleSpecificPage: rolePage,
         deepRoleResearch: true,
