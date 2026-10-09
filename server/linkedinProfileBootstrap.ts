@@ -1141,7 +1141,6 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     return res.status(404).json({ error: "No usable public LinkedIn profile data was returned for this URL. Existing ConferenceGate profile data was not changed." });
   }
 
-  const requestedSlug = profileSlug(requestedUrl);
   const returnedUrl = normalizeLinkedInProfileUrl(profile.linkedinUrl) || requestedUrl;
   const returnedSlug = profileSlug(returnedUrl);
   if (requestedSlug && returnedSlug && requestedSlug !== returnedSlug) {
