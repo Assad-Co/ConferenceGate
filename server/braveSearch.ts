@@ -33,6 +33,10 @@ export interface LiveSearchResult {
   /** CFP is currently open/extended, or has a future stated submission deadline. */
   cfpOpen?: boolean;
   format?: "in-person" | "hybrid" | "online" | null;
+  /** Rich stored identity fields reused by Profile → Conference History. */
+  venue?: string | null;
+  organization?: string | null;
+  topics?: string[];
   /** What the conference is, where the record holds a description of its own. */
   description?: string | null;
   /** Which tabs actually have something behind them, so a card offers only those. */
@@ -616,6 +620,11 @@ async function searchPreparedConferences(query: string): Promise<LiveSearchResul
         // beside it carried all four.
         endDate: text(overview.end_date),
         location: city || nation ? { city, country: nation } : null,
+        venue: text(overview.venue) ?? text(overview.venue_name),
+        organization: text(overview.organizer) ?? text(overview.organizing_institution) ?? text(overview.society),
+        topics: Array.isArray(overview.topics)
+          ? overview.topics.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
+          : [],
         category: text(overview.category) ?? text((overview.categories ?? [])[0]),
         categories: Array.isArray(overview.categories)
           ? overview.categories.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
@@ -1055,6 +1064,115 @@ braveSearchRouter.get(
       console.error("Directory harvest failed:", error);
       res.json({ results: [] });
     }
+  })
+);
+
+
+// Profile history enrichment is deliberately stored-only. Matching a conference identity can add
+// authoritative event metadata, but it must never upgrade a person's attendance or role evidence.
+// `searchConferences` has been database/static-catalogue only since Phase 1.5, so this route cannot
+// spend provider quota or turn a profile view into a web crawl.
+braveSearchRouter.post(
+  "/conferences/history-match",
+  asyncHandler(async (req, res) => {
+    const records = Array.isArray(req.body?.records) ? req.body.records.slice(0, 50) : [];
+    const results = [] as any[];
+
+    const yearOf = (result: LiveSearchResult): number | null => {
+      const fromStart = String(result.startDate || "").match(/\b(20\d{2})\b/)?.[1];
+      const fromTitle = result.title.match(/\b(20\d{2})\b/)?.[1];
+      const year = Number(fromStart || fromTitle || 0);
+      return year >= 2000 && year <= 2100 ? year : null;
+    };
+
+    for (const record of records) {
+      const key = typeof record?.key === "string" ? record.key : "";
+      const title = typeof record?.title === "string" ? record.title.trim() : "";
+      const requestedYear = Number(record?.year || 0) || null;
+      if (!key || title.length < 3) {
+        results.push({ key, matched: false });
+        continue;
+      }
+
+      const requestedIdentity = conferenceIdentity(title);
+      if (!requestedIdentity) {
+        results.push({ key, matched: false });
+        continue;
+      }
+
+      const candidates = await searchConferences(title, "low", false);
+      const acronymAliases = (value: string): Set<string> => {
+        const aliases = new Set<string>();
+        const clean = value.replace(/\b20\d{2}\b/g, " ");
+        for (const token of clean.match(/\b[A-Z][A-Z0-9]{1,9}\b/g) || []) {
+          aliases.add(token.toLowerCase());
+        }
+        const words = clean
+          .replace(/[^A-Za-z0-9 ]+/g, " ")
+          .split(/\s+/)
+          .filter(Boolean)
+          .filter((word) => !/^(?:the|and|of|for|in|on|at|to|a|an)$/i.test(word));
+        if (words.length >= 2) {
+          const initials = words.map((word) => word[0]).join("").toLowerCase();
+          if (initials.length >= 3 && initials.length <= 10) aliases.add(initials);
+        }
+        return aliases;
+      };
+      const requestedAliases = acronymAliases(title);
+      const requestedCompact = requestedIdentity.replace(/\s+/g, "");
+      const exactTitleCandidates = candidates.filter((candidate) => {
+        const candidateIdentity = conferenceIdentity(candidate.title);
+        if (candidateIdentity === requestedIdentity) return true;
+        const candidateCompact = candidateIdentity.replace(/\s+/g, "");
+        const candidateAliases = acronymAliases(candidate.title);
+        return (requestedCompact.length >= 3 && candidateAliases.has(requestedCompact)) ||
+          (candidateCompact.length >= 3 && requestedAliases.has(candidateCompact));
+      });
+      const sameYear = requestedYear
+        ? exactTitleCandidates.find((candidate) => {
+            const candidateYear = yearOf(candidate);
+            return candidateYear === null || candidateYear === requestedYear;
+          })
+        : null;
+      // If the history entry names a year, never attach a stored edition that explicitly states
+      // another year. An undated candidate may still match because it does not contradict the
+      // profile; a dated 2027 record must not enrich a 2024 history entry.
+      const match = requestedYear ? (sameYear || null) : (exactTitleCandidates[0] || null);
+
+      if (!match) {
+        results.push({ key, matched: false });
+        continue;
+      }
+
+      const candidateYear = yearOf(match);
+      const confidence = requestedYear && candidateYear === requestedYear
+        ? "exact-title-year"
+        : "exact-title";
+      results.push({
+        key,
+        matched: true,
+        confidence,
+        title: match.title,
+        officialUrl: match.link,
+        description: match.description || match.snippet || null,
+        startDate: match.startDate || null,
+        endDate: match.endDate || null,
+        city: match.location?.city || null,
+        country: match.location?.country || null,
+        venue: match.venue || null,
+        organizer: match.organization || null,
+        format: match.format || null,
+        category: match.category || null,
+        categories: match.categories || [],
+        topics: match.topics || [],
+        sections: match.sections || [],
+        cfpStatus: match.cfpStatus || null,
+        cfpOpen: Boolean(match.cfpOpen),
+        prepared: Boolean(match.prepared),
+      });
+    }
+
+    res.json({ results });
   })
 );
 
