@@ -1,37 +1,42 @@
-const endpoint = 'https://conferencegate.onrender.com/api/search/conferences?q=WPC';
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const base = 'https://conferencegate.onrender.com/api/search/conferences';
 
-for (let attempt = 1; attempt <= 18; attempt += 1) {
-  try {
-    const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
-    const text = await response.text();
-    if (!response.ok) {
-      console.log(`attempt=${attempt} http=${response.status} body=${text.slice(0, 300)}`);
-    } else {
-      const data = JSON.parse(text);
-      const rows = Array.isArray(data?.results) ? data.results : [];
-      const match = rows.find((row) => {
-        const title = String(row?.title || '').toLowerCase();
-        return title.includes('wpc') || title.includes('world petroleum');
-      });
-      if (match) {
-        console.log('LIVE_WPC_MATCH=' + JSON.stringify({
-          title: match.title,
-          startDate: match.startDate,
-          endDate: match.endDate,
-          location: match.location,
-          organization: match.organization,
-          prepared: match.prepared,
-          sections: match.sections,
-        }));
-        process.exit(0);
-      }
-      console.log(`attempt=${attempt} results=${rows.length} no-wpc-match`);
-    }
-  } catch (error) {
-    console.log(`attempt=${attempt} error=${error?.message || error}`);
+async function get(url) {
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  const text = await response.text();
+  console.log(`GET ${url} -> ${response.status}`);
+  if (!response.ok) {
+    console.log(text.slice(0, 1000));
+    return [];
   }
-  await sleep(10000);
+  const data = JSON.parse(text);
+  return Array.isArray(data?.results) ? data.results : [];
 }
 
-throw new Error('WPC not found in live ConferenceGate stored search after retries');
+function wpc(rows) {
+  return rows.filter((row) => {
+    const title = String(row?.title || '').toLowerCase();
+    const organization = String(row?.organization || '').toLowerCase();
+    return title.includes('wpc') || title.includes('world petroleum') || organization.includes('wpc energy');
+  });
+}
+
+const browse = await get(`${base}?browse=true&limit=10000`);
+console.log('BROWSE_COUNT=' + browse.length);
+console.log('BROWSE_WPC=' + JSON.stringify(wpc(browse).slice(0, 5)));
+
+for (const q of ['WPC', 'World Petroleum', 'Riyadh', 'ADIPEC']) {
+  const rows = await get(`${base}?q=${encodeURIComponent(q)}`);
+  console.log(`SEARCH_${q.replace(/\s+/g, '_').toUpperCase()}_COUNT=${rows.length}`);
+  console.log(`SEARCH_${q.replace(/\s+/g, '_').toUpperCase()}_WPC=` + JSON.stringify(wpc(rows).slice(0, 5)));
+  if (q === 'ADIPEC') {
+    console.log('SEARCH_ADIPEC_SAMPLE=' + JSON.stringify(rows.slice(0, 3).map((r) => ({ title: r.title, startDate: r.startDate, prepared: r.prepared }))));
+  }
+}
+
+if (wpc(browse).length === 0) {
+  throw new Error('WPC is absent from the live customer-visible stored browse catalogue');
+}
+if (wpc(await get(`${base}?q=WPC`)).length === 0) {
+  throw new Error('WPC is present in browse but missing from typed search');
+}
+console.log('LIVE_WPC_VERIFIED=true');
