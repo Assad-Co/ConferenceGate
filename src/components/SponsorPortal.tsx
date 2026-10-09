@@ -20,6 +20,7 @@ import {
   BookmarkCheck,
   BellOff,
   Trash2,
+  Search,
   ChevronRight,
 } from 'lucide-react';
 import { SponsorshipPackage, SponsorshipOpportunity, SponsorProfile, NotificationItem } from '../types';
@@ -112,6 +113,11 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     alertFrequency: 'instant' as SponsorPreferences['alertFrequency'],
   });
   const [matchedNeeds, setMatchedNeeds] = useState<SponsorshipNeed[]>([]);
+  const [marketplaceQuery, setMarketplaceQuery] = useState('');
+  const [marketplaceSource, setMarketplaceSource] = useState<'all' | 'needs' | 'packages'>('all');
+  const [marketplaceRegion, setMarketplaceRegion] = useState('all');
+  const [marketplaceCategory, setMarketplaceCategory] = useState('all');
+  const [marketplaceBudget, setMarketplaceBudget] = useState<'all' | '5000' | '10000' | '25000' | '50000' | 'request'>('all');
   const [sponsorDataLoading, setSponsorDataLoading] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [inquiredNeedIds, setInquiredNeedIds] = useState<Record<string, boolean>>({});
@@ -435,6 +441,70 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       .sort((a, b) => b.matchScore - a.matchScore);
   }, [sponsorshipPackages, opportunityById, sponsorProfile]);
 
+  const marketplaceRegionOptions = useMemo(
+    () => Array.from(new Set(matchedNeeds.flatMap((need) => need.regions || []).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [matchedNeeds]
+  );
+  const marketplaceCategoryOptions = useMemo(
+    () => Array.from(new Set(matchedNeeds.flatMap((need) => [...(need.categories || []), ...(need.targetSectors || [])]).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [matchedNeeds]
+  );
+  const normalizedMarketplaceQuery = marketplaceQuery.trim().toLowerCase();
+  const marketplaceBudgetPass = (price: number | null, priceOnRequest = false) => {
+    if (marketplaceBudget === 'all') return true;
+    if (marketplaceBudget === 'request') return priceOnRequest;
+    if (priceOnRequest || price === null || !Number.isFinite(Number(price))) return false;
+    return Number(price) <= Number(marketplaceBudget);
+  };
+  const marketplaceTextPass = (values: Array<string | number | null | undefined>) => {
+    if (!normalizedMarketplaceQuery) return true;
+    const haystack = values.filter((value) => value !== null && value !== undefined).join(' ').toLowerCase();
+    return normalizedMarketplaceQuery.split(/\s+/).filter(Boolean).every((token) => haystack.includes(token));
+  };
+  const filteredMarketplaceNeeds = useMemo(() => matchedNeeds.filter((need) => {
+    if (marketplaceSource === 'packages') return false;
+    if (marketplaceRegion !== 'all' && !(need.regions || []).some((region) => region.toLowerCase() === marketplaceRegion.toLowerCase())) return false;
+    if (marketplaceCategory !== 'all') {
+      const values = [...(need.categories || []), ...(need.targetSectors || [])];
+      if (!values.some((value) => value.toLowerCase() === marketplaceCategory.toLowerCase())) return false;
+    }
+    if (!marketplaceBudgetPass(need.priceAmount, need.priceOnRequest)) return false;
+    return marketplaceTextPass([
+      need.title, need.conferenceTitle, need.organizerName, need.description, need.deadline,
+      ...(need.categories || []), ...(need.targetSectors || []), ...(need.regions || []),
+      ...(need.opportunityTypes || []), ...(need.benefits || []),
+    ]);
+  }), [matchedNeeds, marketplaceSource, marketplaceRegion, marketplaceCategory, marketplaceBudget, normalizedMarketplaceQuery]);
+  const filteredStandardPackages = useMemo(() => standardPackages.filter((pkg) => {
+    if (marketplaceSource === 'needs') return false;
+    if (marketplaceRegion !== 'all' || marketplaceCategory !== 'all') return false;
+    if (pkg.availableSlots <= 0 || !marketplaceBudgetPass(pkg.price, false)) return false;
+    return marketplaceTextPass([pkg.tier, pkg.conferenceTitle, pkg.boothSpace, pkg.speakingOps, ...(pkg.benefits || [])]);
+  }), [standardPackages, marketplaceSource, marketplaceRegion, marketplaceCategory, marketplaceBudget, normalizedMarketplaceQuery]);
+  const filteredSuggestedPackages = useMemo(() => suggestedPackages.filter(({ pkg, opportunityName, opportunityDescription }) => {
+    if (marketplaceSource === 'needs') return false;
+    if (marketplaceRegion !== 'all') return false;
+    const opportunityId = pkg.sourceOpportunityId?.split('__')[0] || '';
+    const opportunity = opportunityById.get(opportunityId);
+    if (marketplaceCategory !== 'all') {
+      const values = [opportunity?.category || '', ...(opportunity?.idealSectors || [])];
+      if (!values.some((value) => value.toLowerCase() === marketplaceCategory.toLowerCase())) return false;
+    }
+    if (pkg.availableSlots <= 0 || !marketplaceBudgetPass(pkg.price, false)) return false;
+    return marketplaceTextPass([
+      pkg.tier, pkg.conferenceTitle, opportunityName, opportunityDescription, opportunity?.category,
+      ...(opportunity?.idealSectors || []), ...(pkg.benefits || []),
+    ]);
+  }), [suggestedPackages, opportunityById, marketplaceSource, marketplaceRegion, marketplaceCategory, marketplaceBudget, normalizedMarketplaceQuery]);
+  const marketplaceResultCount = filteredMarketplaceNeeds.length + filteredStandardPackages.length + filteredSuggestedPackages.length;
+  const clearMarketplaceFilters = () => {
+    setMarketplaceQuery('');
+    setMarketplaceSource('all');
+    setMarketplaceRegion('all');
+    setMarketplaceCategory('all');
+    setMarketplaceBudget('all');
+  };
+
   const sortedHistory = [...(sponsorProfile.sponsorshipHistory || [])].sort((a, b) => b.year - a.year);
   const historyYearsSpan = sortedHistory.length > 0 ? sortedHistory[0].year - sortedHistory[sortedHistory.length - 1].year + 1 : 0;
 
@@ -756,6 +826,50 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
       {/* Tab 1: Marketplace */}
       {activeTab === 'marketplace' && (
         <div className="space-y-8">
+          <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider font-extrabold text-blue-600">Sponsor Marketplace Search</div>
+              <h2 className="text-lg font-extrabold text-slate-900 mt-1">Find organizers actively seeking sponsors</h2>
+              <p className="text-xs text-slate-500 mt-1">Search real organizer-published sponsorship needs and available sponsorship packages. Personalized ranking remains under Matched Opportunities.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+              <div className="relative md:col-span-2 xl:col-span-2">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={marketplaceQuery}
+                  onChange={(event) => setMarketplaceQuery(event.target.value)}
+                  placeholder="Conference, organizer need, sector, benefit…"
+                  className="w-full pl-9 pr-3 py-3 rounded-xl border border-slate-200 bg-white text-xs focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+              <select value={marketplaceSource} onChange={(event) => setMarketplaceSource(event.target.value as typeof marketplaceSource)} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+                <option value="all">All opportunities</option>
+                <option value="needs">Organizer needs</option>
+                <option value="packages">Published packages</option>
+              </select>
+              <select value={marketplaceRegion} onChange={(event) => setMarketplaceRegion(event.target.value)} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+                <option value="all">Any region</option>
+                {marketplaceRegionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
+              </select>
+              <select value={marketplaceCategory} onChange={(event) => setMarketplaceCategory(event.target.value)} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+                <option value="all">Any sector/category</option>
+                {marketplaceCategoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+              <select value={marketplaceBudget} onChange={(event) => setMarketplaceBudget(event.target.value as typeof marketplaceBudget)} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+                <option value="all">Any budget</option>
+                <option value="5000">Up to $5,000</option>
+                <option value="10000">Up to $10,000</option>
+                <option value="25000">Up to $25,000</option>
+                <option value="50000">Up to $50,000</option>
+                <option value="request">Price on request</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-[11px] font-semibold text-slate-500">{marketplaceResultCount} active sponsorship opportunit{marketplaceResultCount === 1 ? 'y' : 'ies'} found.</div>
+              <button type="button" onClick={clearMarketplaceFilters} className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-bold text-slate-600 cursor-pointer">Clear filters</button>
+            </div>
+          </div>
+
           {sponsorAlerts.length > 0 && (
             <div ref={alertsPanelRef} className="space-y-2 scroll-mt-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -804,17 +918,78 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
             </div>
           )}
 
-          {standardPackages.length === 0 && suggestedPackages.length === 0 ? (
+          {filteredMarketplaceNeeds.length > 0 && (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Organizers Seeking Sponsorship</h2>
+                <p className="text-xs text-slate-500">Active, non-expired needs published directly by Organizer Pro accounts.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredMarketplaceNeeds.map((need) => {
+                  const inquired = Boolean(inquiredNeedIds[need.id]);
+                  return (
+                    <div key={need.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-5 shadow-xs hover:border-blue-400 transition-all">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase">Actively Seeking Sponsors</span>
+                          <div className="text-right">
+                            {need.priceOnRequest ? (
+                              <div className="text-sm font-extrabold text-blue-700">Price on request</div>
+                            ) : need.priceAmount !== null ? (
+                              <div className="text-lg font-extrabold text-slate-900">${Number(need.priceAmount).toLocaleString()}</div>
+                            ) : null}
+                            {need.matchScore !== null && <div className="text-[10px] font-bold text-emerald-700">{need.matchScore}% profile match</div>}
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base text-slate-900">{need.title}</h3>
+                          <p className="text-xs text-slate-500">{[need.organizerName, need.conferenceTitle].filter(Boolean).join(' · ')}</p>
+                        </div>
+                        {need.description && <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{need.description}</p>}
+                        <div className="flex flex-wrap gap-1.5">
+                          {[...(need.regions || []), ...(need.categories || []), ...(need.targetSectors || []), ...(need.opportunityTypes || [])].slice(0, 8).map((item) => (
+                            <span key={item} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">{item}</span>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                          <span>{need.totalSlots} sponsorship slot{need.totalSlots === 1 ? '' : 's'}</span>
+                          {need.deadline && <span>Deadline {need.deadline}</span>}
+                        </div>
+                        {need.benefits.length > 0 && <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-3">{need.benefits.slice(0, 4).join(' · ')}</div>}
+                      </div>
+                      <div className="grid grid-cols-[auto_1fr] gap-2">
+                        {renderSaveButton('internal_need', need.id, true)}
+                        <button
+                          type="button"
+                          onClick={() => handleNeedInquiry(need)}
+                          disabled={inquired || inquiringNeedId === need.id}
+                          className={
+                            'w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:cursor-default ' +
+                            (inquired ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-900 hover:bg-blue-950 text-white disabled:opacity-60')
+                          }
+                        >
+                          {inquired ? <CheckCircle2 className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                          {inquired ? 'Inquiry Sent' : 'Contact Organizer'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {marketplaceResultCount === 0 ? (
             <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center text-xs text-slate-400 font-medium">
-              No sponsorship packages have been published by organizers yet. Check back soon.
+              No active organizer sponsorship opportunities match these filters. Try clearing or broadening the filters.
             </div>
           ) : (
             <>
-              {standardPackages.length > 0 && (
+              {filteredStandardPackages.length > 0 && (
                 <div className="space-y-3">
                   <h2 className="text-sm font-bold text-slate-900">Published Sponsorship Packages</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {standardPackages.map((pkg) => (
+                    {filteredStandardPackages.map((pkg) => (
                       <div
                         key={pkg.id}
                         className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"
@@ -869,7 +1044,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                 </div>
               )}
 
-              {suggestedPackages.length > 0 && (
+              {filteredSuggestedPackages.length > 0 && (
                 <div className="space-y-3">
                   <div>
                     <h2 className="text-sm font-bold text-slate-900">Organizer-Suggested Sponsorship Opportunities</h2>
@@ -879,7 +1054,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {suggestedPackages.map(({ pkg, opportunityName, opportunityDescription, matchScore }) => (
+                    {filteredSuggestedPackages.map(({ pkg, opportunityName, opportunityDescription, matchScore }) => (
                       <div
                         key={pkg.id}
                         className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between space-y-6 shadow-xs hover:border-blue-400 transition-all"

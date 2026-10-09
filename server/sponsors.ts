@@ -362,7 +362,8 @@ async function ensureDealForInquiry(
 
 function toSponsorshipNeedDTO(
   row: SponsorshipNeedRow,
-  match?: number | SponsorNeedMatchDetail
+  match?: number | SponsorNeedMatchDetail,
+  organizerName = ""
 ) {
   const matchScore = typeof match === "number" ? match : match?.score;
   return {
@@ -370,6 +371,7 @@ function toSponsorshipNeedDTO(
     conferenceId: row.conference_id,
     conferenceTitle: row.conference_title,
     organizerId: row.organizer_id,
+    organizerName,
     title: row.title,
     description: row.description || "",
     categories: safeJson(row.categories, []),
@@ -749,10 +751,12 @@ sponsorsRouter.get(
       "SELECT * FROM sponsor_preferences WHERE sponsor_id = ?",
       [accountId]
     );
-    const rows = await dbAll<SponsorshipNeedRow>(
-      `SELECT * FROM sponsorship_needs
-        WHERE status='active' AND (deadline IS NULL OR deadline='' OR date(deadline)>=date('now'))
-        ORDER BY created_at DESC`
+    const rows = await dbAll<any>(
+      `SELECT n.*, u.name as organizer_name, u.organization as organizer_organization
+         FROM sponsorship_needs n
+         JOIN users u ON u.id=n.organizer_id
+        WHERE n.status='active' AND (n.deadline IS NULL OR n.deadline='' OR date(n.deadline)>=date('now'))
+        ORDER BY n.created_at DESC`
     );
     const ranked = rows
       .map((row) => ({ row, match: sponsorNeedMatchDetail(preference, row) }))
@@ -763,7 +767,11 @@ sponsorsRouter.get(
         [`sev_${crypto.randomUUID()}`, row.id, accountId]
       ).catch(() => {});
     }
-    res.json({ needs: ranked.map(({ row, match }) => toSponsorshipNeedDTO(row, match)) });
+    res.json({
+      needs: ranked.map(({ row, match }) =>
+        toSponsorshipNeedDTO(row, match, row.organizer_organization || row.organizer_name || "Organizer")
+      ),
+    });
   })
 );
 
