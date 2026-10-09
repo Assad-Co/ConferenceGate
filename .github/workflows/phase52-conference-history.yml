@@ -1,0 +1,31 @@
+name: Phase 52 Conference Catalogue & History
+
+on:
+  push:
+    branches:
+      - phase-52-conference-catalogue-history-enrichment
+
+permissions:
+  contents: write
+
+jobs:
+  patch-phase52:
+    if: ${{ !contains(github.event.head_commit.message, '[phase52-source]') && !contains(github.event.head_commit.message, '[phase52-cleanup]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-52-conference-catalogue-history-enrichment
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply guarded Phase 52 source patch
+        run: python scripts/phase52_patch.py
+      - name: Commit source changes
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add server/braveSearch.ts src/components/UserProfileView.tsx src/components/LinkedInImportedTabSections.tsx scripts/runBackgroundBootstrap.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "Phase 52: enrich conference catalogue and profile history [phase52-source]"
+          git push origin HEAD:phase-52-conference-catalogue-history-enrichment
