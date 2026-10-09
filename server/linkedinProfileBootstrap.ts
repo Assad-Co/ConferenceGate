@@ -1127,9 +1127,18 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
 
   const result = await response.json().catch(() => null);
   const items = Array.isArray(result) ? result : [];
-  const profile = objectValue(items.find((item) => item && typeof item === "object"));
-  if (!Object.keys(profile).length || Number(profile.status || 200) >= 400) {
-    return res.status(404).json({ error: "No public LinkedIn profile data was returned for this URL." });
+  const requestedSlug = profileSlug(requestedUrl);
+  const usableProfile = items.find((item) => {
+    if (!item || typeof item !== "object") return false;
+    const row = item as Record<string, any>;
+    if (row.success === false || Number(row.status || 200) >= 400 || row.error) return false;
+    const returnedUrl = row.linkedinUrl || row.profileUrl || row.url || row.inputUrl;
+    const returnedSlug = profileSlug(returnedUrl);
+    return !returnedSlug || !requestedSlug || returnedSlug === requestedSlug;
+  });
+  const profile = objectValue(usableProfile);
+  if (!Object.keys(profile).length) {
+    return res.status(404).json({ error: "No usable public LinkedIn profile data was returned for this URL. Existing ConferenceGate profile data was not changed." });
   }
 
   const requestedSlug = profileSlug(requestedUrl);

@@ -37,6 +37,8 @@ export interface LinkedInConferenceActivity {
 export interface LinkedInConferenceImportResult {
   activity: LinkedInConferenceActivity;
   imported: boolean;
+  preservedExisting?: boolean;
+  warning?: string;
   counts: {
     posts: number;
     conferenceActivity: number;

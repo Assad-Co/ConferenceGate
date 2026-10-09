@@ -638,6 +638,12 @@ activityRouter.get(
         : "committee";
     const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 160) : "";
     const conferenceId = typeof req.query.conferenceId === "string" ? req.query.conferenceId : "";
+    const countryFilter = typeof req.query.country === "string" ? req.query.country.trim().slice(0, 100) : "";
+    const organizationFilter = typeof req.query.organization === "string" ? req.query.organization.trim().slice(0, 140) : "";
+    const minExperienceYears = Math.max(0, Math.min(60, Number(req.query.minExperienceYears || 0) || 0));
+    const minPublications = Math.max(0, Math.min(5000, Number(req.query.minPublications || 0) || 0));
+    const verifiedOnly = req.query.verifiedOnly === "true";
+    const reviewerEligibleOnly = req.query.reviewerEligibleOnly === "true";
     const limit = Math.max(1, Math.min(100, Number(req.query.limit || 40)));
 
     let conferenceTerms: string[] = [];
@@ -666,7 +672,10 @@ activityRouter.get(
         ORDER BY created_at DESC
         LIMIT 500`
     );
-    const queryTokens = tokenSet([q, ...conferenceTerms]);
+    const userQueryTokens = tokenSet([q]);
+    const conferenceTokens = tokenSet(conferenceTerms);
+    const normalizedCountryFilter = countryFilter.toLowerCase();
+    const normalizedOrganizationFilter = organizationFilter.toLowerCase();
 
     const results = [];
     for (const professional of professionals) {
@@ -677,6 +686,9 @@ activityRouter.get(
             ? !!professional.session_chair_available
             : !!professional.speaker_available;
       if (!available) continue;
+      if (countryFilter && !String(professional.country || "").toLowerCase().includes(normalizedCountryFilter)) continue;
+      if (organizationFilter && !String(professional.organization || "").toLowerCase().includes(normalizedOrganizationFilter)) continue;
+      if (verifiedOnly && !(professional.linkedin_id || professional.google_id)) continue;
 
       const expertise = parseStringArray(professional.professional_expertise);
       const specialization = parseStringArray(professional.technical_specialization);
@@ -704,21 +716,31 @@ activityRouter.get(
       const recentPositions = positionRows.filter((item: any) => evidenceYear(item) >= cutoffYear).map(evidenceText).filter(Boolean).slice(0, 12);
       const certifications = certificationRows.map(evidenceText).filter(Boolean).slice(0, 20);
       const profileTokens = tokenSet([
-        professional.name, professional.title, professional.organization, professional.bio,
+        professional.name, professional.title, professional.organization, professional.country, professional.bio,
         ...expertise, ...specialization, ...interests, ...regions, ...recentPositions, ...certifications,
       ]);
 
-      if (q && !String([
-        professional.name,professional.title,professional.organization,professional.country,
-        ...expertise,...specialization,...interests,...recentPositions,...certifications,
-      ].filter(Boolean).join(" ")).toLowerCase().includes(q.toLowerCase()) && queryTokens.size > 0) {
-        const hasOverlap = [...queryTokens].some((token) => profileTokens.has(token));
-        if (!hasOverlap) continue;
+      // The organizer's typed search is a hard filter. Conference topics are used only to rank
+      // matching professionals; they must never let an unrelated typed query slip through.
+      if (q) {
+        const searchableText = String([
+          professional.name, professional.title, professional.organization, professional.country,
+          ...expertise, ...specialization, ...interests, ...recentPositions, ...certifications,
+        ].filter(Boolean).join(" ")).toLowerCase();
+        const phraseMatch = searchableText.includes(q.toLowerCase());
+        const tokenMatch = userQueryTokens.size > 0 && [...userQueryTokens].every((token) => profileTokens.has(token));
+        if (!phraseMatch && !tokenMatch) continue;
       }
 
-      let overlap = 0;
-      for (const token of queryTokens) if (profileTokens.has(token)) overlap += 1;
-      const relevance = queryTokens.size ? overlap / queryTokens.size : 0.5;
+      let userOverlap = 0;
+      for (const token of userQueryTokens) if (profileTokens.has(token)) userOverlap += 1;
+      let conferenceOverlap = 0;
+      for (const token of conferenceTokens) if (profileTokens.has(token)) conferenceOverlap += 1;
+      const userRelevance = userQueryTokens.size ? userOverlap / userQueryTokens.size : 1;
+      const conferenceRelevance = conferenceTokens.size ? conferenceOverlap / conferenceTokens.size : 0.5;
+      const relevance = userQueryTokens.size
+        ? userRelevance * 0.7 + conferenceRelevance * 0.3
+        : conferenceRelevance;
 
       const [reviewCountRow, roleCountRow, trust] = await Promise.all([
         dbGet<{ count: number }>("SELECT COUNT(*) as count FROM submission_reviews WHERE reviewer_id = ?", [professional.id]),
@@ -727,6 +749,10 @@ activityRouter.get(
       ]);
       const reviewCount = reviewCountRow?.count || 0;
       const completedRoleCount = roleCountRow?.count || 0;
+      const experienceYears = trust?.evidence.experienceYears || 0;
+      if (experienceYears < minExperienceYears) continue;
+      if (publicationRows.length < minPublications) continue;
+      if (reviewerEligibleOnly && !trust?.reviewerEligible) continue;
       const evidenceScore = Math.min(1, (reviewCount / 10) * 0.5 + (completedRoleCount / 5) * 0.3 + Math.min(0.2, (trust?.conferenceGateIndex || 0) / 500));
       const profileCompleteness = [professional.title, professional.organization, professional.bio, professional.country, expertise.length, specialization.length, interests.length, regions.length, recentPositions.length, certifications.length].filter(Boolean).length / 10;
       const score = Math.round(Math.max(0, Math.min(1, relevance * 0.6 + evidenceScore * 0.25 + profileCompleteness * 0.15)) * 100);
@@ -740,7 +766,7 @@ activityRouter.get(
         sessionChairAvailable: Boolean(professional.session_chair_available), speakerAvailable: Boolean(professional.speaker_available),
         verifiedReviews: reviewCount, verifiedCompletedRoles: completedRoleCount, matchScore: score,
         reviewerEligible: Boolean(trust?.reviewerEligible), reviewerEligibilityReason: trust?.eligibilityReason || "",
-        conferenceGateIndex: trust?.conferenceGateIndex || 0, experienceYears: trust?.evidence.experienceYears || 0,
+        conferenceGateIndex: trust?.conferenceGateIndex || 0, experienceYears,
         publicationCount: publicationRows.length, recentPositions, certifications,
       });
     }

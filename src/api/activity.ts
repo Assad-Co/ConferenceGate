@@ -161,12 +161,24 @@ export async function searchProfessionals(params: {
   roleType: 'committee' | 'chair' | 'speaker';
   q?: string;
   conferenceId?: string;
+  country?: string;
+  organization?: string;
+  minExperienceYears?: number;
+  minPublications?: number;
+  verifiedOnly?: boolean;
+  reviewerEligibleOnly?: boolean;
   limit?: number;
 }): Promise<ProfessionalDirectoryProfile[]> {
   const query = new URLSearchParams({
     roleType: params.roleType,
     ...(params.q ? { q: params.q } : {}),
     ...(params.conferenceId ? { conferenceId: params.conferenceId } : {}),
+    ...(params.country ? { country: params.country } : {}),
+    ...(params.organization ? { organization: params.organization } : {}),
+    ...(params.minExperienceYears ? { minExperienceYears: String(params.minExperienceYears) } : {}),
+    ...(params.minPublications ? { minPublications: String(params.minPublications) } : {}),
+    ...(params.verifiedOnly ? { verifiedOnly: 'true' } : {}),
+    ...(params.reviewerEligibleOnly ? { reviewerEligibleOnly: 'true' } : {}),
     ...(params.limit ? { limit: String(params.limit) } : {}),
   });
   const res = await fetch(`/api/activity/professionals/search?${query.toString()}`, { credentials: 'include' });

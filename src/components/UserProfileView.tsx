@@ -488,6 +488,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [selfReported, setSelfReported] = useState<SelfReportedAttendance[]>([]);
   const [selfReportedLoading, setSelfReportedLoading] = useState(false);
   const [isAddAttendanceOpen, setIsAddAttendanceOpen] = useState(false);
+  const [conferenceHistoryQuery, setConferenceHistoryQuery] = useState('');
+  const [conferenceHistorySource, setConferenceHistorySource] = useState<'all' | 'attended' | 'registered' | 'self-reported' | 'linkedin'>('all');
+  const [conferenceHistoryYear, setConferenceHistoryYear] = useState('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -542,6 +545,39 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       cancelled = true;
     };
   }, [currentUserId]);
+
+  const normalizedHistoryQuery = conferenceHistoryQuery.trim().toLowerCase();
+  const historyQueryTokens = normalizedHistoryQuery.split(/\s+/).filter(Boolean);
+  const historyMatches = (parts: unknown[], year?: string | number | null) => {
+    if (conferenceHistoryYear !== 'all' && String(year || '') !== conferenceHistoryYear) return false;
+    if (!historyQueryTokens.length) return true;
+    const haystack = parts.filter(Boolean).join(' ').toLowerCase();
+    return historyQueryTokens.every((token) => haystack.includes(token));
+  };
+  const filteredAttendanceRecords = attendanceRecords.filter((item) =>
+    historyMatches([item.conferenceTitle, item.organizerName, item.location, item.startDate, item.endDate], item.startDate?.slice(0, 4))
+  );
+  const filteredRegisteredConferences = REGISTERED_CONFERENCES.filter((item) =>
+    historyMatches([item.title, item.organizerName, item.location, item.roleLabel, item.eventDate], item.eventDate?.match(/\b20\d{2}\b/)?.[0])
+  );
+  const filteredSelfReported = selfReported.filter((item) =>
+    historyMatches([item.conferenceName, item.location, item.role, item.year], item.year)
+  );
+  const filteredLinkedInConferenceSignals = (linkedInConferenceActivity?.conferenceActivity || []).filter((signal) =>
+    ['PAST_CONFERENCE', 'UPCOMING_CONFERENCE', 'CONFERENCE_ROLE', 'CONFERENCE_MENTION'].includes(signal.kind) &&
+    historyMatches([signal.conferenceName, signal.label, signal.role, signal.evidenceText, signal.year], signal.year)
+  );
+  const conferenceHistoryYears = Array.from(new Set([
+    ...attendanceRecords.map((item) => item.startDate?.slice(0, 4)),
+    ...REGISTERED_CONFERENCES.map((item) => item.eventDate?.match(/\b20\d{2}\b/)?.[0]),
+    ...selfReported.map((item) => String(item.year || '')),
+    ...(linkedInConferenceActivity?.conferenceActivity || []).map((item) => item.year ? String(item.year) : ''),
+  ].filter((year): year is string => Boolean(year && /^20\d{2}$/.test(year))))).sort((a, b) => Number(b) - Number(a));
+  const conferenceHistoryMatchCount =
+    (conferenceHistorySource === 'all' || conferenceHistorySource === 'attended' ? filteredAttendanceRecords.length : 0) +
+    (conferenceHistorySource === 'all' || conferenceHistorySource === 'registered' ? filteredRegisteredConferences.length : 0) +
+    (conferenceHistorySource === 'all' || conferenceHistorySource === 'self-reported' ? filteredSelfReported.length : 0) +
+    (conferenceHistorySource === 'all' || conferenceHistorySource === 'linkedin' ? filteredLinkedInConferenceSignals.length : 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -1125,8 +1161,35 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
       {/* Tab Content */}
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+        {activeTab === 'conferences' && (
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+            <div className="flex flex-col lg:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={conferenceHistoryQuery}
+                  onChange={(event) => setConferenceHistoryQuery(event.target.value)}
+                  placeholder="Search conference, organizer, location, role…"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+              <select value={conferenceHistorySource} onChange={(event) => setConferenceHistorySource(event.target.value as typeof conferenceHistorySource)} className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold">
+                <option value="all">All sources</option><option value="attended">Attended</option><option value="registered">Registered</option><option value="self-reported">Self-reported</option><option value="linkedin">LinkedIn evidence</option>
+              </select>
+              <select value={conferenceHistoryYear} onChange={(event) => setConferenceHistoryYear(event.target.value)} className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold">
+                <option value="all">All years</option>
+                {conferenceHistoryYears.map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+              <button type="button" onClick={() => { setConferenceHistoryQuery(''); setConferenceHistorySource('all'); setConferenceHistoryYear('all'); }} className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-600 cursor-pointer">Clear</button>
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500">{conferenceHistoryMatchCount} matching history record{conferenceHistoryMatchCount === 1 ? '' : 's'}.</div>
+          </div>
+        )}
         <LinkedInImportedTabSections
           tab={activeTab}
+          conferenceQuery={conferenceHistoryQuery}
+          conferenceYear={conferenceHistoryYear}
+          showConferenceSignals={conferenceHistorySource === 'all' || conferenceHistorySource === 'linkedin'}
           onPaperTitlesChange={setLinkedInPaperTitles}
           onLeaveFeedback={activeTab === 'conferences' ? (signal) => {
             const rawRole = signal.role || '';
@@ -1245,7 +1308,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         )}
 
-        {activeTab === 'conferences' && (
+        {activeTab === 'conferences' && (conferenceHistorySource === 'all' || conferenceHistorySource === 'attended') && (
           <div className="space-y-4 mb-6">
             <div>
               <h3 className="text-base font-bold text-slate-900">Attended Conferences</h3>
@@ -1253,9 +1316,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 Conferences you explicitly marked Attended after the event start date. These are account-linked attendance confirmations; organizer ratings are routed only to the company stored with that exact conference.
               </p>
             </div>
-            {attendanceRecords.length > 0 ? (
+            {filteredAttendanceRecords.length > 0 ? (
               <div className="space-y-3">
-                {attendanceRecords.map((attendance) => (
+                {filteredAttendanceRecords.map((attendance) => (
                   <div key={attendance.id} className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <h4 className="font-bold text-xs text-slate-900">{attendance.conferenceTitle}</h4>
@@ -1299,7 +1362,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         )}
 
-        {activeTab === 'conferences' && (
+        {activeTab === 'conferences' && (conferenceHistorySource === 'all' || conferenceHistorySource === 'registered') && (
           <div className="space-y-4 pt-4 border-t border-slate-100">
             <div>
               <h3 className="text-base font-bold text-slate-900">ConferenceGate Registrations</h3>
@@ -1307,9 +1370,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 These records confirm registration through ConferenceGate. They do not claim attendance unless attendance is verified separately.
               </p>
             </div>
-            {REGISTERED_CONFERENCES.length > 0 ? (
+            {filteredRegisteredConferences.length > 0 ? (
               <div className="space-y-3">
-                {REGISTERED_CONFERENCES.map((conf) => (
+                {filteredRegisteredConferences.map((conf) => (
                   <div key={conf.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
                     <div>
                       <ConferenceLink
@@ -1352,7 +1415,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           </div>
         )}
 
-        {activeTab === 'conferences' && (
+        {activeTab === 'conferences' && (conferenceHistorySource === 'all' || conferenceHistorySource === 'self-reported') && (
           <div className="space-y-4 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900">Self-Reported Attendance</h3>
@@ -1373,9 +1436,9 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 Loading...
               </div>
-            ) : selfReported.length > 0 ? (
+            ) : filteredSelfReported.length > 0 ? (
               <div className="space-y-3">
-                {selfReported.map((entry) => (
+                {filteredSelfReported.map((entry) => (
                   <div
                     key={entry.id}
                     className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-start justify-between gap-3"
