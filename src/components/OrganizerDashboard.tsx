@@ -38,7 +38,7 @@ import {
   MessageSquareQuote,
   MapPin,
 } from 'lucide-react';
-import { Conference, AbstractSubmission, SponsorshipPackage, SponsorshipOpportunity, ReviewOpportunity } from '../types';
+import { Conference, AbstractSubmission, SponsorshipPackage, ReviewOpportunity } from '../types';
 import { formatDate } from '../utils/date';
 import { isSponsorVerified, sponsorVerificationReason, SPONSOR_RATING_THRESHOLD } from '../utils/sponsorVerification';
 import { generateInitialsAvatar, resolveAvatar } from '../utils/avatar';
@@ -106,8 +106,6 @@ interface OrganizerDashboardProps {
   registrationCountsByConference?: Record<string, number>;
   feedbackSummary?: { averageScore: number; responseCount: number };
   sponsorshipPackages: SponsorshipPackage[];
-  sponsorshipOpportunities: SponsorshipOpportunity[];
-  onActivateOpportunityPackage: (opp: { key: string; tier: string; price: number; slots: number; benefits: string[] }) => void;
   sponsorApplicants?: SponsorApplicant[];
   onDecideApplication?: (applicationId: string, status: 'Approved' | 'Rejected') => void;
   reviewableSponsors?: ReviewableSponsor[];
@@ -254,8 +252,6 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
   registrationCountsByConference = {},
   feedbackSummary = { averageScore: 0, responseCount: 0 },
   sponsorshipPackages,
-  sponsorshipOpportunities,
-  onActivateOpportunityPackage,
   sponsorApplicants = [],
   onDecideApplication = (_applicationId: string, _status: 'Approved' | 'Rejected') => {},
   reviewableSponsors = [],

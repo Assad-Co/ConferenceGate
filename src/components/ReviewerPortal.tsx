@@ -471,10 +471,9 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Professional Opportunity Center</h2>
+                <h2 className="text-lg font-bold text-slate-900">Open Opportunities</h2>
                 <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-                  ConferenceGate only shows opportunities that an organizer actually publishes. Your stored expertise
-                  is used to rank organizer-published opportunities; no committee, chair, or speaker vacancy is inferred from a conference page.
+                  Only organizer-published reviewer, committee, chair, and speaker openings are listed here.
                 </p>
               </div>
               <div className="relative w-full lg:w-80">
