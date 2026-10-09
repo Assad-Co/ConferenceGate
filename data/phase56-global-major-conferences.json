@@ -1,0 +1,151 @@
+[
+  {
+    "title": "25th WPC Energy Congress 2026",
+    "url": "https://wpcenergy2026.org/",
+    "start": "2026-10-11",
+    "end": "2026-10-15",
+    "city": "Riyadh",
+    "country": "Saudi Arabia",
+    "venue": "Riyadh Front Exhibition & Conference Center (RFECC)",
+    "format": "in-person",
+    "organizer": "WPC Energy",
+    "categories": [
+      "Energy",
+      "Petroleum & Geoscience",
+      "Engineering",
+      "Natural Gas & LNG",
+      "Hydrogen & CCUS",
+      "Climate & Sustainability",
+      "Artificial Intelligence",
+      "Business"
+    ],
+    "description": "The 25th WPC Energy Congress in Riyadh brings together global energy leaders, scientists, policymakers, operators and innovators under the theme Pathways to an Energy Future for All, covering energy security, petroleum, gas, carbon management, technology, investment and the energy transition.",
+    "program": {
+      "overview": "The official Congress programme runs 11–15 October 2026 and combines ministerial and strategic sessions, a peer-reviewed technical programme, synergy and special programmes, exhibition activity and networking. The technical programme spans five thematic blocks and 31 specialised forums.",
+      "themes": [
+        "Energy security and resilience",
+        "Oil and gas",
+        "Natural gas and LNG",
+        "CCUS and carbon markets",
+        "Energy transition",
+        "AI and digitalisation",
+        "Technology and innovation",
+        "Investment and policy",
+        "Young professionals and talent"
+      ]
+    },
+    "speakers": [
+      {
+        "name": "HRH Prince Abdulaziz bin Salman Al Saud",
+        "organization": "Ministry of Energy, Saudi Arabia",
+        "role": "Executive Speaker",
+        "title": "Minister of Energy"
+      },
+      {
+        "name": "Pedro Miras",
+        "organization": "WPC Energy",
+        "role": "Executive Speaker",
+        "title": "President"
+      },
+      {
+        "name": "Amin Nasser",
+        "organization": "Aramco",
+        "role": "Executive Speaker",
+        "title": "President & CEO"
+      },
+      {
+        "name": "Dr. Daniel Yergin",
+        "organization": "S&P Global",
+        "role": "Executive Speaker",
+        "title": "Vice Chairman"
+      },
+      {
+        "name": "Patrick Pouyanné",
+        "organization": "TotalEnergies",
+        "role": "Executive Speaker",
+        "title": "Chairman & CEO"
+      },
+      {
+        "name": "Wael Sawan",
+        "organization": "Shell",
+        "role": "Executive Speaker",
+        "title": "CEO"
+      },
+      {
+        "name": "Lorenzo Simonelli",
+        "organization": "Baker Hughes",
+        "role": "Executive Speaker",
+        "title": "Chairman & CEO"
+      },
+      {
+        "name": "Haitham Al Ghais",
+        "organization": "OPEC",
+        "role": "Executive Speaker",
+        "title": "Secretary General"
+      }
+    ],
+    "sponsors": [
+      {
+        "name": "Principal Buyer",
+        "role": "Congress Partner"
+      },
+      {
+        "name": "Dr. Sulaiman Al-Habib Medical Group",
+        "role": "Health Partner"
+      },
+      {
+        "name": "Kuwait Petroleum Corporation (KPC)",
+        "role": "Industry Sponsor"
+      },
+      {
+        "name": "Riyadh Bank",
+        "role": "Industry Sponsor"
+      }
+    ],
+    "fees": {
+      "registration_url": "https://wpcenergy2026.org/register/",
+      "registration_fees": [
+        {
+          "category": "Delegate — Regular",
+          "amount": 3150,
+          "currency": "USD",
+          "deadline": "2026-09-11",
+          "notes": "VAT included; official regular delegate price."
+        },
+        {
+          "category": "Delegate — Late",
+          "amount": 3450,
+          "currency": "USD",
+          "deadline": "2026-10-15",
+          "notes": "VAT included; valid through the end of the Congress."
+        },
+        {
+          "category": "Visitor",
+          "amount": 0,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Official visitor registration is free to attend."
+        }
+      ]
+    },
+    "venueInfo": {
+      "venue_name": "Riyadh Front Exhibition & Conference Center (RFECC)",
+      "address": "King Khalid International Airport Road, Riyadh 13413, Saudi Arabia",
+      "accommodation": "The venue is near King Khalid International Airport and multiple hotels; use the official Congress travel/venue guidance for current accommodation information.",
+      "hotels": []
+    },
+    "community": {
+      "overview": "WPC Energy convenes ministers, national and international energy companies, engineers, geoscientists, researchers, policymakers, investors, technology providers and young professionals from around the world."
+    },
+    "sourceUrls": [
+      "https://wpcenergy2026.org/",
+      "https://wpcenergy2026.org/congress/venue/",
+      "https://wpcenergy2026.org/programme/",
+      "https://wpcenergy2026.org/programme/all-programmes/",
+      "https://wpcenergy2026.org/programme/technical-programme/",
+      "https://wpcenergy2026.org/speakers/",
+      "https://wpcenergy2026.org/sponsors/",
+      "https://wpcenergy2026.org/register/"
+    ]
+  }
+]
