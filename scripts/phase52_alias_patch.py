@@ -2,9 +2,24 @@ from pathlib import Path
 
 p = Path('server/braveSearch.ts')
 text = p.read_text()
-old = '''      const candidates = await searchConferences(title, "low", false);\n      const exactTitleCandidates = candidates.filter(\n        (candidate) => conferenceIdentity(candidate.title) === requestedIdentity\n      );\n      const sameYear = requestedYear\n        ? exactTitleCandidates.find((candidate) => {\n            const candidateYear = yearOf(candidate);\n            return candidateYear === null || candidateYear === requestedYear;\n          })\n        : null;\n      const match = sameYear || exactTitleCandidates[0] || null;'''
-new = '''      const candidates = await searchConferences(title, "low", false);\n      const acronymAliases = (value: string): Set<string> => {\n        const aliases = new Set<string>();\n        const clean = value.replace(/\\b20\\d{2}\\b/g, " ");\n        for (const token of clean.match(/\\b[A-Z][A-Z0-9]{1,9}\\b/g) || []) {\n          aliases.add(token.toLowerCase());\n        }\n        const words = clean\n          .replace(/[^A-Za-z0-9 ]+/g, " ")\n          .split(/\\s+/)\n          .filter(Boolean)\n          .filter((word) => !/^(?:the|and|of|for|in|on|at|to|a|an)$/i.test(word));\n        if (words.length >= 2) {\n          const initials = words.map((word) => word[0]).join("").toLowerCase();\n          if (initials.length >= 3 && initials.length <= 10) aliases.add(initials);\n        }\n        return aliases;\n      };\n      const requestedAliases = acronymAliases(title);\n      const requestedCompact = requestedIdentity.replace(/\\s+/g, "");\n      const exactTitleCandidates = candidates.filter((candidate) => {\n        const candidateIdentity = conferenceIdentity(candidate.title);\n        if (candidateIdentity === requestedIdentity) return true;\n        const candidateCompact = candidateIdentity.replace(/\\s+/g, "");\n        const candidateAliases = acronymAliases(candidate.title);\n        return (requestedCompact.length >= 3 && candidateAliases.has(requestedCompact)) ||\n          (candidateCompact.length >= 3 && requestedAliases.has(candidateCompact));\n      });\n      const sameYear = requestedYear\n        ? exactTitleCandidates.find((candidate) => {\n            const candidateYear = yearOf(candidate);\n            return candidateYear === null || candidateYear === requestedYear;\n          })\n        : null;\n      const match = sameYear || exactTitleCandidates[0] || null;'''
+old = '''      const sameYear = requestedYear
+        ? exactTitleCandidates.find((candidate) => {
+            const candidateYear = yearOf(candidate);
+            return candidateYear === null || candidateYear === requestedYear;
+          })
+        : null;
+      const match = sameYear || exactTitleCandidates[0] || null;'''
+new = '''      const sameYear = requestedYear
+        ? exactTitleCandidates.find((candidate) => {
+            const candidateYear = yearOf(candidate);
+            return candidateYear === null || candidateYear === requestedYear;
+          })
+        : null;
+      // If the history entry names a year, never attach a stored edition that explicitly states
+      // another year. An undated candidate may still match because it does not contradict the
+      // profile; a dated 2027 record must not enrich a 2024 history entry.
+      const match = requestedYear ? (sameYear || null) : (exactTitleCandidates[0] || null);'''
 if text.count(old) != 1:
-    raise RuntimeError(f'expected one history match block, found {text.count(old)}')
+    raise RuntimeError(f'expected one year-match block, found {text.count(old)}')
 p.write_text(text.replace(old, new, 1))
-print('Phase 52 acronym/title alias matching added')
+print('Phase 52 strict edition-year matching added')
