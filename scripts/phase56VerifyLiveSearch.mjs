@@ -40,3 +40,4 @@ if (wpc(await get(`${base}?q=WPC`)).length === 0) {
   throw new Error('WPC is present in browse but missing from typed search');
 }
 console.log('LIVE_WPC_VERIFIED=true');
+// re-run after Phase 56.1 production deployment
