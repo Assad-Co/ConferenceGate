@@ -36,6 +36,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
 import { LinkedInProfilePanel } from './LinkedInProfilePanel';
 import { LinkedInImportedTabSections } from './LinkedInImportedTabSections';
+import { ConferenceHistoryDetails } from './ConferenceHistoryDetails';
 import {
   fetchLinkedInConferenceActivity,
   type LinkedInConferenceActivity,
@@ -1266,6 +1267,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                           <ExternalLink className="w-3 h-3" /> Official source
                         </a>
                       )}
+                      <ConferenceHistoryDetails
+                        title={attendance.conferenceTitle}
+                        year={attendance.startDate?.slice(0, 4)}
+                        evidenceContext="confirmed-attendance"
+                      />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
@@ -1314,6 +1320,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                         className="font-bold text-xs text-slate-900"
                       />
                       <p className="text-[11px] text-slate-500">{conf.location} • {conf.roleLabel}</p>
+                      <ConferenceHistoryDetails
+                        title={conf.title}
+                        year={conf.eventDate?.match(/\b20\d{2}\b/)?.[0]}
+                        evidenceContext="registration"
+                      />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {conf.id && attendanceByConferenceId.has(conf.id) ? (
@@ -1382,6 +1393,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                         <p className="text-[11px] text-slate-500">
                           {[entry.location, entry.year, entry.role].filter(Boolean).join(' • ')}
                         </p>
+                        <ConferenceHistoryDetails
+                          title={entry.conferenceName}
+                          year={entry.year}
+                          evidenceContext="self-reported"
+                        />
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

@@ -59,6 +59,7 @@ async function main() {
   // categories are available without waiting for the long discovery/enrichment cycle.
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
+  await runScript('scripts/syncPhase52MajorConferences.mjs');
   // Phase 28: the verified expansion is inserted after the first fast normalisation pass, so run
   // the DB-only quality pipeline again here. This makes newly added conferences customer-ready on
   // the same deploy instead of waiting for a later enrichment cycle, and records a depth/coverage

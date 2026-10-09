@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Linkedin, Loader2, ShieldAlert } from 'lucide-react';
+import { ConferenceHistoryDetails } from './ConferenceHistoryDetails';
 import {
   fetchLinkedInConferenceActivity,
   type LinkedInConferenceActivity,
@@ -84,6 +85,13 @@ function SignalCard({
           {[signal.role, signal.year, signal.kind.replaceAll('_', ' ')].filter(Boolean).join(' • ')}
         </p>
         {sourceLink(signal.sourceUrl)}
+        {['PAST_CONFERENCE', 'UPCOMING_CONFERENCE', 'CONFERENCE_ROLE', 'CONFERENCE_MENTION'].includes(signal.kind) && (
+          <ConferenceHistoryDetails
+            title={signal.conferenceName || signal.label}
+            year={signal.year}
+            evidenceContext="linkedin"
+          />
+        )}
       </div>
       <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
         {feedbackEligible && (
