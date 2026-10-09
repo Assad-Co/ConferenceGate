@@ -1134,7 +1134,10 @@ braveSearchRouter.post(
             return candidateYear === null || candidateYear === requestedYear;
           })
         : null;
-      const match = sameYear || exactTitleCandidates[0] || null;
+      // If the history entry names a year, never attach a stored edition that explicitly states
+      // another year. An undated candidate may still match because it does not contradict the
+      // profile; a dated 2027 record must not enrich a 2024 history entry.
+      const match = requestedYear ? (sameYear || null) : (exactTitleCandidates[0] || null);
 
       if (!match) {
         results.push({ key, matched: false });
