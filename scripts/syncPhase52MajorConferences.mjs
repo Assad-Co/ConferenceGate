@@ -35,9 +35,14 @@ function sectionAvailability(event) {
   };
 }
 
-const events = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), 'data', 'phase52-major-conference-expansion.json'), 'utf8')
-);
+const manifestFiles = [
+  'phase52-major-conference-expansion.json',
+  'phase56-global-major-conferences.json',
+];
+const events = manifestFiles.flatMap((file) => {
+  const filePath = path.join(process.cwd(), 'data', file);
+  return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : [];
+});
 
 const localPath = path.join(process.cwd(), 'data', 'app.db');
 fs.mkdirSync(path.dirname(localPath), { recursive: true });
