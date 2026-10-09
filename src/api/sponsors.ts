@@ -255,6 +255,7 @@ export interface SponsorshipNeed {
   conferenceId: string;
   conferenceTitle: string;
   organizerId: string;
+  organizerName?: string;
   title: string;
   description: string;
   categories: string[];

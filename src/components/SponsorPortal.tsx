@@ -470,7 +470,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
     }
     if (!marketplaceBudgetPass(need.priceAmount, need.priceOnRequest)) return false;
     return marketplaceTextPass([
-      need.title, need.conferenceTitle, need.description, need.deadline,
+      need.title, need.conferenceTitle, need.organizerName, need.description, need.deadline,
       ...(need.categories || []), ...(need.targetSectors || []), ...(need.regions || []),
       ...(need.opportunityTypes || []), ...(need.benefits || []),
     ]);
@@ -943,7 +943,7 @@ export const SponsorPortal: React.FC<SponsorPortalProps> = ({
                         </div>
                         <div>
                           <h3 className="font-bold text-base text-slate-900">{need.title}</h3>
-                          <p className="text-xs text-slate-500">{need.conferenceTitle}</p>
+                          <p className="text-xs text-slate-500">{[need.organizerName, need.conferenceTitle].filter(Boolean).join(' · ')}</p>
                         </div>
                         {need.description && <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">{need.description}</p>}
                         <div className="flex flex-wrap gap-1.5">
