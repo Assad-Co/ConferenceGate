@@ -45,6 +45,10 @@ async function main() {
   await runScript('scripts/syncVerifiedCalendarBatch.mjs');
   await runScript('scripts/ensureAapgLogos.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
+  // Verified flagship manifests are DB-only and must become searchable before slower imports.
+  // The later call remains intentionally idempotent so the post-import quality pass can reassert
+  // the authoritative fields after generic normalization/enrichment.
+  await runScript('scripts/syncPhase52MajorConferences.mjs');
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   // Restore the authoritative AAPG manifest after the generic fast normalization too, so the
   // first customer search after deploy sees the full customer-ready AAPG set.
