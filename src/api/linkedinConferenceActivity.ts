@@ -34,9 +34,12 @@ export interface LinkedInConferenceActivity {
   fetchedAt: string;
 }
 
+// Refreshes are non-destructive: a provider-side empty response can preserve the last good import.
 export interface LinkedInConferenceImportResult {
   activity: LinkedInConferenceActivity;
   imported: boolean;
+  preservedExisting?: boolean;
+  warning?: string;
   counts: {
     posts: number;
     conferenceActivity: number;

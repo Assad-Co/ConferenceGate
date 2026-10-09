@@ -24,6 +24,12 @@ export const ProfessionalRecruitmentPanel: React.FC<Props> = ({ conferences, onC
   const [selectedId, setSelectedId] = useState('');
   const [roleType, setRoleType] = useState<'committee' | 'chair' | 'speaker'>('committee');
   const [query, setQuery] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
+  const [organizationFilter, setOrganizationFilter] = useState('');
+  const [minExperienceYears, setMinExperienceYears] = useState(0);
+  const [minPublications, setMinPublications] = useState(0);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [reviewerEligibleOnly, setReviewerEligibleOnly] = useState(false);
   const [results, setResults] = useState<ProfessionalDirectoryProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -60,14 +66,36 @@ export const ProfessionalRecruitmentPanel: React.FC<Props> = ({ conferences, onC
   };
 
   const search = async () => {
-    if (!selectedId) { setMessage('Create or select a conference first.'); return; }
     setLoading(true); setMessage(null);
     try {
-      const found = await searchProfessionals({ roleType, q: query.trim() || undefined, conferenceId: selectedId, limit: 100 });
+      const found = await searchProfessionals({
+        roleType,
+        q: query.trim() || undefined,
+        conferenceId: selectedId || undefined,
+        country: countryFilter.trim() || undefined,
+        organization: organizationFilter.trim() || undefined,
+        minExperienceYears: minExperienceYears || undefined,
+        minPublications: minPublications || undefined,
+        verifiedOnly,
+        reviewerEligibleOnly,
+        limit: 100,
+      });
       setResults(found);
-      if (!found.length) setMessage('No available Professionals matched this search. Try a broader expertise term.');
+      if (!found.length) setMessage('No available Professionals matched these filters. Clear one or more filters and try again.');
     } catch (error: any) { setMessage(error?.message || 'Could not search the Professional Network.'); }
     finally { setLoading(false); }
+  };
+
+  const clearProfessionalFilters = () => {
+    setQuery('');
+    setCountryFilter('');
+    setOrganizationFilter('');
+    setMinExperienceYears(0);
+    setMinPublications(0);
+    setVerifiedOnly(false);
+    setReviewerEligibleOnly(false);
+    setResults([]);
+    setMessage(null);
   };
 
   const invite = async (person: ProfessionalDirectoryProfile) => {
@@ -129,9 +157,32 @@ export const ProfessionalRecruitmentPanel: React.FC<Props> = ({ conferences, onC
             {allTargets.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
           </select>
           <select value={roleType} onChange={(e) => setRoleType(e.target.value as any)} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold"><option value="committee">Technical Committee</option><option value="chair">Session Chair</option><option value="speaker">Speaker / Keynote</option></select>
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Expertise, position, certificate, organization…" className="p-3 rounded-xl bg-white border border-slate-200 text-xs" />
-          <button type="button" onClick={search} disabled={!selectedId || loading} className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold disabled:bg-slate-300 disabled:cursor-not-allowed cursor-pointer"><Search className="w-4 h-4" />Find Professionals</button>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void search(); }}
+            placeholder="Expertise, name, position, certificate…"
+            className="p-3 rounded-xl bg-white border border-slate-200 text-xs"
+          />
+          <button type="button" onClick={search} disabled={loading} className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold disabled:bg-slate-300 disabled:cursor-not-allowed cursor-pointer"><Search className="w-4 h-4" />Find Professionals</button>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+          <input value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} placeholder="Country" className="p-3 rounded-xl bg-white border border-slate-200 text-xs" />
+          <input value={organizationFilter} onChange={(e) => setOrganizationFilter(e.target.value)} placeholder="Organization" className="p-3 rounded-xl bg-white border border-slate-200 text-xs" />
+          <select value={minExperienceYears} onChange={(e) => setMinExperienceYears(Number(e.target.value))} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+            <option value={0}>Any experience</option><option value={5}>5+ years</option><option value={10}>10+ years</option><option value={15}>15+ years</option><option value={20}>20+ years</option>
+          </select>
+          <select value={minPublications} onChange={(e) => setMinPublications(Number(e.target.value))} className="p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold">
+            <option value={0}>Any publications</option><option value={1}>1+ publication</option><option value={5}>5+ publications</option><option value={10}>10+ publications</option><option value={25}>25+ publications</option>
+          </select>
+          <div className="flex items-center gap-4 px-3 rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-700">
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} />Verified identity</label>
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={reviewerEligibleOnly} onChange={(e) => setReviewerEligibleOnly(e.target.checked)} />Reviewer eligible</label>
+          </div>
+          <button type="button" onClick={clearProfessionalFilters} className="px-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-600 cursor-pointer">Clear filters</button>
+        </div>
+        {!selectedId && <p className="text-[11px] text-slate-500">Browse the Professional Network now. Select a conference or recruitment draft only when you are ready to invite or evaluate someone.</p>}
+        {results.length > 0 && <p className="text-[11px] font-semibold text-slate-500">{results.length} Professional{results.length === 1 ? '' : 's'} matched the current filters.</p>}
         {selectedDraft && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
             <div><div className="text-xs font-bold text-slate-900">{selectedDraft.title}</div><div className="text-[11px] text-slate-600">Accepted invitations: <b>{Number((selectedDraft as any).acceptedCount || 0)}</b>. Full wizard opens after at least one Professional accepts.</div></div>
@@ -152,7 +203,7 @@ export const ProfessionalRecruitmentPanel: React.FC<Props> = ({ conferences, onC
           </div>
           {Array.isArray((person as any).recentPositions) && (person as any).recentPositions.length > 0 && <div><div className="text-[10px] uppercase font-bold text-slate-400 mb-1">LinkedIn positions · past 7 years</div><div className="text-xs text-slate-700 space-y-1">{(person as any).recentPositions.slice(0,6).map((p: string, i: number) => <div key={i}>• {p}</div>)}</div></div>}
           {Array.isArray((person as any).certifications) && (person as any).certifications.length > 0 && <div><div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Digital / LinkedIn certifications</div><div className="flex flex-wrap gap-1">{(person as any).certifications.slice(0,8).map((c: string, i: number) => <span key={i} className="px-2 py-1 rounded-md bg-white border border-slate-200 text-[10px] text-slate-700">{c}</span>)}</div></div>}
-          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => invite(person)} disabled={invited[person.id] || loading} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-900 text-white text-xs font-bold disabled:bg-emerald-600 cursor-pointer"><Send className="w-3.5 h-3.5" />{invited[person.id] ? 'Invitation sent' : 'Invite'}</button><button type="button" onClick={() => setEvaluationTarget(person)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold cursor-pointer"><Star className="w-3.5 h-3.5" />Evaluate Professional</button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" title={!selectedId ? 'Select a conference or recruitment draft to invite this Professional.' : undefined} onClick={() => invite(person)} disabled={!selectedId || invited[person.id] || loading} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-900 text-white text-xs font-bold disabled:bg-slate-300 disabled:cursor-not-allowed cursor-pointer"><Send className="w-3.5 h-3.5" />{invited[person.id] ? 'Invitation sent' : 'Invite'}</button><button type="button" title={!selectedId ? 'Select a conference or recruitment draft before recording an organizer evaluation.' : undefined} disabled={!selectedId} onClick={() => setEvaluationTarget(person)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Star className="w-3.5 h-3.5" />Evaluate Professional</button></div>
         </div>)}
       </div>}
 

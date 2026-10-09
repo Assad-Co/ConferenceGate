@@ -528,8 +528,53 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
   }
 
   const result = await response.json().catch(() => null);
-  const posts = Array.isArray(result) ? result.filter((item) => item && typeof item === "object") : [];
-  const { conferenceActivity, callsForPapers } = classifyPosts(posts, requestedUrl);
+  const providerRows = Array.isArray(result)
+    ? result.filter((item) =>
+        item &&
+        typeof item === "object" &&
+        (item as any).success !== false &&
+        Number((item as any).status || 200) < 400 &&
+        !(item as any).error
+      )
+    : [];
+  const existing = await readStored(userId);
+
+  // A provider may return HTTP 200 with an empty/error-only dataset. Treat that as a transient
+  // import failure, not as evidence that the member suddenly has no conference history.
+  if (!providerRows.length) {
+    if (existing) {
+      return res.json({
+        activity: existing,
+        imported: false,
+        preservedExisting: true,
+        warning: "LinkedIn returned no usable public posts on this refresh. Existing imported conference activity was preserved.",
+        counts: {
+          posts: 0,
+          conferenceActivity: existing.conferenceActivity.length,
+          callsForPapers: existing.callsForPapers.length,
+          explicitMemberClaims: existing.conferenceActivity.filter((item: any) => item.memberClaimed).length,
+          conferenceRoles: existing.conferenceActivity.filter((item: any) => item.kind === "CONFERENCE_ROLE" && item.memberClaimed).length,
+          committeeLeadershipRoles: existing.conferenceActivity.filter((item: any) =>
+            item.kind === "CONFERENCE_ROLE" && item.memberClaimed && /committee|chair|moderator|panel|reviewer|workshop|instructor/i.test(item.role || "")
+          ).length,
+          pastConferenceClaims: existing.conferenceActivity.filter((item: any) => item.kind === "PAST_CONFERENCE" && item.memberClaimed).length,
+        },
+      });
+    }
+    return res.status(502).json({ error: "LinkedIn returned no usable public posts for this profile. Your ConferenceGate data was not changed." });
+  }
+
+  const posts = providerRows;
+  const classified = classifyPosts(posts, requestedUrl);
+  const stableSignalKey = (item: any) => [item.sourceUrl || "", item.kind || "", item.role || "", item.year || "", item.conferenceName || item.label || ""].join("|").toLowerCase();
+  const mergeEvidence = <T extends Record<string, any>>(previous: T[], next: T[]): T[] => {
+    const map = new Map<string, T>();
+    previous.forEach((item) => map.set(stableSignalKey(item), item));
+    next.forEach((item) => map.set(stableSignalKey(item), item));
+    return [...map.values()];
+  };
+  const conferenceActivity = mergeEvidence(existing?.conferenceActivity || [], classified.conferenceActivity).slice(0, 1000);
+  const callsForPapers = mergeEvidence(existing?.callsForPapers || [], classified.callsForPapers).slice(0, 500);
   const now = new Date().toISOString();
 
   await ensureSchema();

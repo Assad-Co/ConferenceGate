@@ -17,6 +17,9 @@ interface Props {
   tab: string;
   onPaperTitlesChange?: (titles: string[]) => void;
   onLeaveFeedback?: (signal: LinkedInConferenceSignal) => void;
+  conferenceQuery?: string;
+  conferenceYear?: string;
+  showConferenceSignals?: boolean;
 }
 
 function textFrom(record: any, keys: string[]): string {
@@ -109,7 +112,14 @@ function SignalCard({
   );
 }
 
-export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitlesChange, onLeaveFeedback }) => {
+export const LinkedInImportedTabSections: React.FC<Props> = ({
+  tab,
+  onPaperTitlesChange,
+  onLeaveFeedback,
+  conferenceQuery = '',
+  conferenceYear = 'all',
+  showConferenceSignals = true,
+}) => {
   const [profile, setProfile] = useState<LinkedInProfileEnrichment | null>(null);
   const [activity, setActivity] = useState<LinkedInConferenceActivity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,10 +142,16 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
   }, []);
 
   const allSignals = activity?.conferenceActivity || [];
-  const conferenceSignals = useMemo(
-    () => allSignals.filter((s) => ['PAST_CONFERENCE', 'UPCOMING_CONFERENCE', 'CONFERENCE_ROLE', 'CONFERENCE_MENTION'].includes(s.kind)),
-    [allSignals],
-  );
+  const conferenceSignals = useMemo(() => {
+    const queryTokens = conferenceQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return allSignals.filter((s) => {
+      if (!['PAST_CONFERENCE', 'UPCOMING_CONFERENCE', 'CONFERENCE_ROLE', 'CONFERENCE_MENTION'].includes(s.kind)) return false;
+      if (conferenceYear !== 'all' && String(s.year || '') !== conferenceYear) return false;
+      if (!queryTokens.length) return true;
+      const haystack = [s.conferenceName, s.label, s.role, s.year, s.evidenceText].filter(Boolean).join(' ').toLowerCase();
+      return queryTokens.every((token) => haystack.includes(token));
+    });
+  }, [allSignals, conferenceQuery, conferenceYear]);
   const paperSignals = useMemo(() => allSignals.filter((s) => s.kind === 'PAPER_ABSTRACT'), [allSignals]);
   const importedPublicationTitles = useMemo(
     () => (profile?.publications || [])
@@ -185,7 +201,7 @@ export const LinkedInImportedTabSections: React.FC<Props> = ({ tab, onPaperTitle
     );
   }
 
-  if (tab === 'conferences' && conferenceSignals.length > 0) {
+  if (tab === 'conferences' && showConferenceSignals && conferenceSignals.length > 0) {
     return (
       <section className="mb-6 pb-6 border-b border-slate-100 space-y-3">
         <div>

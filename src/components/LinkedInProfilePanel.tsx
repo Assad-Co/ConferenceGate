@@ -128,6 +128,7 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
   const [recoveryStatus, setRecoveryStatus] = useState<ProfessionalRecoveryStatus | null>(null);
   const [recovering, setRecovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<{ tone: 'success' | 'warning'; message: string } | null>(null);
 
   const load = async () => {
     const [profileResult, activityResult, recoveryResult] = await Promise.allSettled([
@@ -170,15 +171,42 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
     }
     setRefreshing(true);
     setError(null);
+    setImportNotice(null);
+
+    let profileError: string | null = null;
+    let activityError: string | null = null;
+    let activityWarning: string | null = null;
     try {
-      const [p, a] = await Promise.allSettled([
-        refreshLinkedInProfileEnrichment(url),
-        refreshLinkedInConferenceActivity(url),
-      ]);
-      if (p.status === 'rejected' && a.status === 'rejected') {
-        throw new Error(p.reason?.message || a.reason?.message || 'LinkedIn import failed.');
+      try {
+        await refreshLinkedInProfileEnrichment(url);
+      } catch (err: any) {
+        profileError = err?.message || 'Profile import failed.';
       }
+
+      // Run conference history after the profile import instead of starting two expensive
+      // provider jobs at once. This avoids provider concurrency/rate-limit collisions.
+      try {
+        const result = await refreshLinkedInConferenceActivity(url);
+        activityWarning = result.warning || (result.preservedExisting ? 'No new public posts were returned, so your existing imported conference history was preserved.' : null);
+      } catch (err: any) {
+        activityError = err?.message || 'Conference activity import failed.';
+      }
+
       await load();
+      if (profileError && activityError) {
+        throw new Error(`${profileError} ${activityError}`);
+      }
+      if (profileError || activityError || activityWarning) {
+        setImportNotice({
+          tone: 'warning',
+          message: [
+            profileError ? `Profile: ${profileError}` : 'Profile refreshed.',
+            activityError ? `Conference activity: ${activityError}` : (activityWarning || 'Conference activity refreshed.'),
+          ].join(' '),
+        });
+      } else {
+        setImportNotice({ tone: 'success', message: 'LinkedIn profile and conference activity refreshed successfully.' });
+      }
     } catch (err: any) {
       setError(err?.message || 'Could not refresh LinkedIn data.');
     } finally {
@@ -331,6 +359,11 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
         <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           {error}
+        </div>
+      )}
+      {importNotice && (
+        <div className={`rounded-xl border p-3 text-xs font-semibold ${importNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+          {importNotice.message}
         </div>
       )}
 
