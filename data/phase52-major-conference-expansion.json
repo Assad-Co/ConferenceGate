@@ -9,21 +9,59 @@
     "venue": "ADNEC Centre Abu Dhabi",
     "format": "in-person",
     "organizer": "dmg events / ADIPEC",
-    "categories": ["Energy", "Petroleum & Geoscience", "Engineering", "Artificial Intelligence", "Natural Gas & LNG", "Climate & Sustainability", "Business"],
+    "categories": [
+      "Energy",
+      "Petroleum & Geoscience",
+      "Engineering",
+      "Artificial Intelligence",
+      "Natural Gas & LNG",
+      "Climate & Sustainability",
+      "Business"
+    ],
     "description": "ADIPEC 2026 is a major global energy gathering in Abu Dhabi combining strategic leadership, technical engineering, energy security, upstream, gas and LNG, downstream, AI and digital technology, finance, infrastructure and lower-carbon energy systems.",
     "program": {
       "overview": "ADIPEC 2026 publishes 13 conference programmes and more than 380 sessions across strategic and technical conferences. The technical conference includes SPE and downstream programmes, with more than 190 technical sessions and over 1,100 expert speakers.",
-      "themes": ["Energy security and resilience", "Policy and governance", "Finance and investment", "AI, digital and technology", "Upstream", "Natural gas and LNG", "Downstream and chemicals", "Clean power and carbon management", "Infrastructure", "Workforce and skills"]
+      "themes": [
+        "Energy security and resilience",
+        "Policy and governance",
+        "Finance and investment",
+        "AI, digital and technology",
+        "Upstream",
+        "Natural gas and LNG",
+        "Downstream and chemicals",
+        "Clean power and carbon management",
+        "Infrastructure",
+        "Workforce and skills"
+      ]
     },
     "fees": {
       "registration_url": "https://www.adipec.com/conferences/about-the-conference/",
       "registration_fees": [
-        {"category": "Technical Pass", "amount": 2030, "currency": "USD", "deadline": null, "notes": "Standard price shown by the official conference site."},
-        {"category": "All Access", "amount": 7250, "currency": "USD", "deadline": null, "notes": "Standard price shown by the official conference site."}
+        {
+          "category": "Technical Pass",
+          "amount": 2030,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Standard price shown by the official conference site."
+        },
+        {
+          "category": "All Access",
+          "amount": 7250,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Standard price shown by the official conference site."
+        }
       ]
     },
-    "venueInfo": {"venue_name": "ADNEC Centre Abu Dhabi", "address": "Abu Dhabi, United Arab Emirates", "accommodation": null, "hotels": []},
-    "community": {"overview": "ADIPEC connects energy leaders, engineers, operators, investors, policymakers and technology providers across the global energy value chain."},
+    "venueInfo": {
+      "venue_name": "ADNEC Centre Abu Dhabi",
+      "address": "Abu Dhabi, United Arab Emirates",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "ADIPEC connects energy leaders, engineers, operators, investors, policymakers and technology providers across the global energy value chain."
+    },
     "sourceUrls": [
       "https://www.adipec.com/visit/",
       "https://www.adipec.com/conferences/about-the-conference/",
@@ -41,15 +79,42 @@
     "venue": "Reliant Park",
     "format": "in-person",
     "organizer": "Offshore Technology Conference (OTC)",
-    "categories": ["Energy", "Petroleum & Geoscience", "Engineering", "Offshore Energy", "Renewable Energy", "Hydrogen & CCUS"],
+    "categories": [
+      "Energy",
+      "Petroleum & Geoscience",
+      "Engineering",
+      "Offshore Energy",
+      "Renewable Energy",
+      "Hydrogen & CCUS"
+    ],
     "description": "OTC 2027 brings the global offshore energy community to Houston for technologies and technical knowledge spanning offshore oil and gas, offshore wind, carbon management, hydrogen, marine systems and emerging energy solutions.",
     "program": {
       "overview": "OTC 2027 publishes a comprehensive technical programme with peer-reviewed papers, expert presentations, panels, case studies and interactive sessions focused on offshore operations, engineering, digital transformation, sustainability and energy innovation.",
-      "themes": ["Offshore oil and gas", "Offshore wind", "Marine technology", "Carbon management", "Hydrogen", "Digital transformation", "Engineering excellence", "Energy innovation"]
+      "themes": [
+        "Offshore oil and gas",
+        "Offshore wind",
+        "Marine technology",
+        "Carbon management",
+        "Hydrogen",
+        "Digital transformation",
+        "Engineering excellence",
+        "Energy innovation"
+      ]
     },
-    "venueInfo": {"venue_name": "Reliant Park", "address": "Houston, Texas, United States", "accommodation": null, "hotels": []},
-    "community": {"overview": "OTC connects engineers, geoscientists, operators, service companies, researchers, innovators and decision-makers across offshore energy."},
-    "sourceUrls": ["https://2027.otcnet.org/", "https://2027.otcnet.org/program", "https://2027.otcnet.org/test-pricing"]
+    "venueInfo": {
+      "venue_name": "Reliant Park",
+      "address": "Houston, Texas, United States",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "OTC connects engineers, geoscientists, operators, service companies, researchers, innovators and decision-makers across offshore energy."
+    },
+    "sourceUrls": [
+      "https://2027.otcnet.org/",
+      "https://2027.otcnet.org/program",
+      "https://2027.otcnet.org/test-pricing"
+    ]
   },
   {
     "title": "International Petroleum Technology Conference (IPTC) 2027",
@@ -61,37 +126,128 @@
     "venue": "Bangkok Convention Centre at CentralWorld",
     "format": "in-person",
     "organizer": "IPTC (AAPG, EAGE, SEG & SPE), hosted by PTTEP",
-    "categories": ["Energy", "Petroleum & Geoscience", "Geoscience", "Engineering", "Artificial Intelligence", "Hydrogen & CCUS", "Climate & Sustainability"],
+    "categories": [
+      "Energy",
+      "Petroleum & Geoscience",
+      "Geoscience",
+      "Engineering",
+      "Artificial Intelligence",
+      "Hydrogen & CCUS",
+      "Climate & Sustainability"
+    ],
     "description": "IPTC 2027 is the 18th International Petroleum Technology Conference in Bangkok, integrating geoscience, reservoir engineering, drilling, production, facilities, gas, digitalisation and AI, decarbonisation and future-energy disciplines.",
     "cfp": {
       "status": "Closed",
       "abstract_submission_deadline": "2026-06-05",
       "notification_date": "Early September 2026",
       "submission_guidelines": "The official Call for Papers is closed. Paper proposals used a maximum 450-word abstract structured around objective/scope, methods, results/conclusions and novel/additive information.",
-      "topics_tracks": ["Geosciences", "Reservoir engineering", "Integrated reservoir engineering and geosciences", "Drilling and completions", "Production engineering", "Gas value chain", "Deepwater", "Unconventionals", "Digitalisation and AI", "Decarbonisation", "Future energy"]
+      "topics_tracks": [
+        "Geosciences",
+        "Reservoir engineering",
+        "Integrated reservoir engineering and geosciences",
+        "Drilling and completions",
+        "Production engineering",
+        "Gas value chain",
+        "Deepwater",
+        "Unconventionals",
+        "Digitalisation and AI",
+        "Decarbonisation",
+        "Future energy"
+      ]
     },
     "program": {
       "overview": "IPTC 2027 covers the upstream value chain from exploration and reservoir development through drilling, production, facilities, gas processing, digitalisation, AI, decarbonisation and future energy.",
-      "themes": ["Exploration and discovery", "Reservoir management", "Drilling and completions", "Production", "Gas processing", "Digitalisation and AI", "Decarbonisation", "Unconventionals", "Future energy"]
+      "themes": [
+        "Exploration and discovery",
+        "Reservoir management",
+        "Drilling and completions",
+        "Production",
+        "Gas processing",
+        "Digitalisation and AI",
+        "Decarbonisation",
+        "Unconventionals",
+        "Future energy"
+      ]
     },
     "committee": [
-      {"name": "Kanita Sartwattayu", "full_name": "Kanita Sartwattayu", "organization": "PTT Exploration and Production Public Company Limited", "role": "Executive Committee Chair", "title": "Chief Executive Officer", "email": null, "photo_url": null},
-      {"name": "Titi Thongjen", "full_name": "Titi Thongjen", "organization": "PTT Exploration and Production Public Company Limited", "role": "Programme Committee Chair", "title": "Executive Vice President, International Production Asset Group", "email": null, "photo_url": null},
-      {"name": "Padsakorn Suwanruji", "full_name": "Padsakorn Suwanruji", "organization": "PTT Exploration and Production Public Company Limited", "role": "Programme Committee Vice Chair", "title": "Acting Executive Vice President, Geosciences, Subsurface, and Exploration Group", "email": null, "photo_url": null}
+      {
+        "name": "Kanita Sartwattayu",
+        "full_name": "Kanita Sartwattayu",
+        "organization": "PTT Exploration and Production Public Company Limited",
+        "role": "Executive Committee Chair",
+        "title": "Chief Executive Officer",
+        "email": null,
+        "photo_url": null
+      },
+      {
+        "name": "Titi Thongjen",
+        "full_name": "Titi Thongjen",
+        "organization": "PTT Exploration and Production Public Company Limited",
+        "role": "Programme Committee Chair",
+        "title": "Executive Vice President, International Production Asset Group",
+        "email": null,
+        "photo_url": null
+      },
+      {
+        "name": "Padsakorn Suwanruji",
+        "full_name": "Padsakorn Suwanruji",
+        "organization": "PTT Exploration and Production Public Company Limited",
+        "role": "Programme Committee Vice Chair",
+        "title": "Acting Executive Vice President, Geosciences, Subsurface, and Exploration Group",
+        "email": null,
+        "photo_url": null
+      }
     ],
     "fees": {
       "registration_url": "https://www.iptcnet.org/register",
       "early_bird_deadline": "2027-02-22",
       "registration_fees": [
-        {"category": "Full Conference — Member — Early Bird", "amount": 1100, "currency": "USD", "deadline": "2027-02-22", "notes": null},
-        {"category": "Full Conference — Non-Member — Early Bird", "amount": 1300, "currency": "USD", "deadline": "2027-02-22", "notes": null},
-        {"category": "Speaker / Author / Committee / Session Chair — Early Bird", "amount": 900, "currency": "USD", "deadline": "2027-02-22", "notes": null},
-        {"category": "Student", "amount": 0, "currency": "USD", "deadline": null, "notes": "Complimentary with valid student ID."}
+        {
+          "category": "Full Conference — Member — Early Bird",
+          "amount": 1100,
+          "currency": "USD",
+          "deadline": "2027-02-22",
+          "notes": null
+        },
+        {
+          "category": "Full Conference — Non-Member — Early Bird",
+          "amount": 1300,
+          "currency": "USD",
+          "deadline": "2027-02-22",
+          "notes": null
+        },
+        {
+          "category": "Speaker / Author / Committee / Session Chair — Early Bird",
+          "amount": 900,
+          "currency": "USD",
+          "deadline": "2027-02-22",
+          "notes": null
+        },
+        {
+          "category": "Student",
+          "amount": 0,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Complimentary with valid student ID."
+        }
       ]
     },
-    "venueInfo": {"venue_name": "Bangkok Convention Centre at CentralWorld", "address": "Bangkok, Thailand", "accommodation": "The official IPTC site publishes travel, accommodation and airport-transfer information.", "hotels": []},
-    "community": {"overview": "IPTC connects more than 60 countries across NOCs, IOCs, independent operators, technical societies, service companies, technology providers and emerging energy talent."},
-    "sourceUrls": ["https://www.iptcnet.org/iptc-2027", "https://www.iptcnet.org/call-for-papers", "https://www.iptcnet.org/register", "https://www.iptcnet.org/executive-committee", "https://www.iptcnet.org/call-for-papers/programme-committee-leadership-message"]
+    "venueInfo": {
+      "venue_name": "Bangkok Convention Centre at CentralWorld",
+      "address": "Bangkok, Thailand",
+      "accommodation": "The official IPTC site publishes travel, accommodation and airport-transfer information.",
+      "hotels": []
+    },
+    "community": {
+      "overview": "IPTC connects more than 60 countries across NOCs, IOCs, independent operators, technical societies, service companies, technology providers and emerging energy talent."
+    },
+    "sourceUrls": [
+      "https://www.iptcnet.org/iptc-2027",
+      "https://www.iptcnet.org/call-for-papers",
+      "https://www.iptcnet.org/register",
+      "https://www.iptcnet.org/executive-committee",
+      "https://www.iptcnet.org/call-for-papers/programme-committee-leadership-message"
+    ]
   },
   {
     "title": "MWC Barcelona 2027",
@@ -103,16 +259,46 @@
     "venue": "Fira Gran Via",
     "format": "in-person",
     "organizer": "GSMA",
-    "categories": ["Telecommunications", "Artificial Intelligence", "Software & Cloud", "Cybersecurity", "Automotive & Mobility", "Healthcare", "Business"],
+    "categories": [
+      "Telecommunications",
+      "Artificial Intelligence",
+      "Software & Cloud",
+      "Cybersecurity",
+      "Automotive & Mobility",
+      "Healthcare",
+      "Business"
+    ],
     "description": "MWC Barcelona 2027 is GSMA's flagship connectivity and technology event, bringing together telecoms, AI, cloud, devices, enterprise technology and adjacent industries at Fira Gran Via in Barcelona.",
-    "cfp": {"status": "Speaker submissions open", "abstract_submission_deadline": "2026-11-05", "submission_guidelines": "MWC27 states that speaker submissions close on 5 November 2026 at 23:00 CET."},
+    "cfp": {
+      "status": "Speaker submissions open",
+      "abstract_submission_deadline": "2026-11-05",
+      "submission_guidelines": "MWC27 states that speaker submissions close on 5 November 2026 at 23:00 CET."
+    },
     "program": {
       "overview": "MWC27's thought-leadership programme is organised around six published themes.",
-      "themes": ["Networks Reinvented", "AI in Action", "Autonomous Enterprise", "AI of Tomorrow", "Trust at Scale", "The Next Era"]
+      "themes": [
+        "Networks Reinvented",
+        "AI in Action",
+        "Autonomous Enterprise",
+        "AI of Tomorrow",
+        "Trust at Scale",
+        "The Next Era"
+      ]
     },
-    "venueInfo": {"venue_name": "Fira Gran Via", "address": "Av. Joan Carles I, 64, L'Hospitalet de Llobregat, Barcelona, Spain", "accommodation": null, "hotels": []},
-    "community": {"overview": "MWC Barcelona convenes the global connectivity ecosystem across operators, technology companies, startups, policymakers, investors and enterprise leaders."},
-    "sourceUrls": ["https://www.mwcbarcelona.com/about/", "https://www.mwcbarcelona.com/themes", "https://www.mwcbarcelona.com/"]
+    "venueInfo": {
+      "venue_name": "Fira Gran Via",
+      "address": "Av. Joan Carles I, 64, L'Hospitalet de Llobregat, Barcelona, Spain",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "MWC Barcelona convenes the global connectivity ecosystem across operators, technology companies, startups, policymakers, investors and enterprise leaders."
+    },
+    "sourceUrls": [
+      "https://www.mwcbarcelona.com/about/",
+      "https://www.mwcbarcelona.com/themes",
+      "https://www.mwcbarcelona.com/"
+    ]
   },
   {
     "title": "Microsoft Ignite 2026",
@@ -124,15 +310,39 @@
     "venue": "Moscone Center",
     "format": "hybrid",
     "organizer": "Microsoft",
-    "categories": ["Artificial Intelligence", "Software & Cloud", "Cybersecurity", "Data Science", "Business", "Technology"],
+    "categories": [
+      "Artificial Intelligence",
+      "Software & Cloud",
+      "Cybersecurity",
+      "Data Science",
+      "Business",
+      "Technology"
+    ],
     "description": "Microsoft Ignite 2026 is Microsoft's major AI, cloud and technology learning event for business leaders, security leaders, IT professionals, developers and partners, with an in-person San Francisco programme and digital experience.",
     "program": {
       "overview": "Ignite combines product and roadmap sessions, practical technical learning, hands-on labs, certifications, expert guidance and community collaboration across Microsoft's AI and cloud ecosystem.",
-      "themes": ["Frontier AI", "Cloud", "Security", "Developer platforms", "IT operations", "Data", "Hands-on technical learning"]
+      "themes": [
+        "Frontier AI",
+        "Cloud",
+        "Security",
+        "Developer platforms",
+        "IT operations",
+        "Data",
+        "Hands-on technical learning"
+      ]
     },
-    "venueInfo": {"venue_name": "Moscone Center", "address": "San Francisco, California, United States", "accommodation": null, "hotels": []},
-    "community": {"overview": "Microsoft Ignite connects business leaders, security leaders, IT professionals, developers, partners and Microsoft experts."},
-    "sourceUrls": ["https://ignite.microsoft.com/en-US/home"]
+    "venueInfo": {
+      "venue_name": "Moscone Center",
+      "address": "San Francisco, California, United States",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "Microsoft Ignite connects business leaders, security leaders, IT professionals, developers, partners and Microsoft experts."
+    },
+    "sourceUrls": [
+      "https://ignite.microsoft.com/en-US/home"
+    ]
   },
   {
     "title": "AWS re:Invent 2026",
@@ -144,19 +354,54 @@
     "venue": "Las Vegas multi-venue campus",
     "format": "hybrid",
     "organizer": "Amazon Web Services (AWS)",
-    "categories": ["Artificial Intelligence", "Software & Cloud", "Cybersecurity", "Data Science", "Technology", "Business"],
+    "categories": [
+      "Artificial Intelligence",
+      "Software & Cloud",
+      "Cybersecurity",
+      "Data Science",
+      "Technology",
+      "Business"
+    ],
     "description": "AWS re:Invent 2026 is a five-day cloud and AI conference in Las Vegas with thousands of sessions, hands-on workshops, labs, technical deep dives, keynotes and direct access to AWS experts and engineers.",
     "program": {
       "overview": "The official programme lists more than 2,200 sessions across cloud, AI, security, migration, developer productivity, architecture and hands-on technical learning.",
-      "themes": ["Artificial intelligence", "Cloud architecture", "Security", "Migration", "Developer productivity", "Data", "Hands-on labs and workshops"]
+      "themes": [
+        "Artificial intelligence",
+        "Cloud architecture",
+        "Security",
+        "Migration",
+        "Developer productivity",
+        "Data",
+        "Hands-on labs and workshops"
+      ]
     },
     "fees": {
       "registration_url": "https://aws.amazon.com/events/reinvent/",
-      "registration_fees": [{"category": "Full conference pass", "amount": 2499, "currency": "USD", "deadline": null, "notes": "Official full price after the early-bird period."}]
+      "registration_fees": [
+        {
+          "category": "Full conference pass",
+          "amount": 2499,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Official full price after the early-bird period."
+        }
+      ]
     },
-    "venueInfo": {"venue_name": "Las Vegas multi-venue campus", "address": "Las Vegas, Nevada, United States", "accommodation": "Conference content runs across Caesars Forum, Caesars Palace, Encore, MGM Grand, The Venetian and Wynn.", "hotels": []},
-    "community": {"overview": "re:Invent brings together cloud practitioners, security professionals, developers, architects and business decision-makers from across industries."},
-    "sourceUrls": ["https://aws.amazon.com/events/reinvent/", "https://aws.amazon.com/events/reinvent/faqs/", "https://aws.amazon.com/events/reinvent/agenda/", "https://aws.amazon.com/events/reinvent/pricing/"]
+    "venueInfo": {
+      "venue_name": "Las Vegas multi-venue campus",
+      "address": "Las Vegas, Nevada, United States",
+      "accommodation": "Conference content runs across Caesars Forum, Caesars Palace, Encore, MGM Grand, The Venetian and Wynn.",
+      "hotels": []
+    },
+    "community": {
+      "overview": "re:Invent brings together cloud practitioners, security professionals, developers, architects and business decision-makers from across industries."
+    },
+    "sourceUrls": [
+      "https://aws.amazon.com/events/reinvent/",
+      "https://aws.amazon.com/events/reinvent/faqs/",
+      "https://aws.amazon.com/events/reinvent/agenda/",
+      "https://aws.amazon.com/events/reinvent/pricing/"
+    ]
   },
   {
     "title": "GITEX GLOBAL 2026",
@@ -168,15 +413,41 @@
     "venue": "Expo City Dubai",
     "format": "in-person",
     "organizer": "Dubai World Trade Centre / GITEX GLOBAL",
-    "categories": ["Artificial Intelligence", "Cybersecurity", "Software & Cloud", "Telecommunications", "Robotics & Automation", "Business", "Technology"],
+    "categories": [
+      "Artificial Intelligence",
+      "Cybersecurity",
+      "Software & Cloud",
+      "Telecommunications",
+      "Robotics & Automation",
+      "Business",
+      "Technology"
+    ],
     "description": "GITEX GLOBAL 2026 moves to Expo City Dubai for a five-day technology and AI event spanning conferences, workshops, exhibitions, networking and next-generation business partnerships.",
     "program": {
       "overview": "The 2026 event includes the GITEX Summit on 7 December followed by the GITEX GLOBAL Expo from 8–11 December, with conference content across AI, cybersecurity, mobility, sustainable technology and the intelligent economy.",
-      "themes": ["Artificial intelligence", "Cybersecurity", "Mobility", "Sustainable technology", "Intelligent economy", "Digital infrastructure"]
+      "themes": [
+        "Artificial intelligence",
+        "Cybersecurity",
+        "Mobility",
+        "Sustainable technology",
+        "Intelligent economy",
+        "Digital infrastructure"
+      ]
     },
-    "venueInfo": {"venue_name": "Expo City Dubai", "address": "Dubai, United Arab Emirates", "accommodation": null, "hotels": []},
-    "community": {"overview": "GITEX connects technology creators, investors, startups, enterprises, government leaders and technology professionals from around the world."},
-    "sourceUrls": ["https://www.gitex.com/", "https://www.gitex.com/about", "https://visit.gitex.com/"]
+    "venueInfo": {
+      "venue_name": "Expo City Dubai",
+      "address": "Dubai, United Arab Emirates",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "GITEX connects technology creators, investors, startups, enterprises, government leaders and technology professionals from around the world."
+    },
+    "sourceUrls": [
+      "https://www.gitex.com/",
+      "https://www.gitex.com/about",
+      "https://visit.gitex.com/"
+    ]
   },
   {
     "title": "BIO International Convention 2027",
@@ -188,14 +459,189 @@
     "venue": "Philadelphia, Pennsylvania",
     "format": "in-person",
     "organizer": "Biotechnology Innovation Organization (BIO)",
-    "categories": ["Pharmaceuticals & Biotechnology", "Life Sciences", "Healthcare", "Business", "Science", "Investment"],
+    "categories": [
+      "Pharmaceuticals & Biotechnology",
+      "Life Sciences",
+      "Healthcare",
+      "Business",
+      "Science",
+      "Investment"
+    ],
     "description": "BIO International Convention 2027 returns to Philadelphia and brings together the global biotechnology ecosystem across biopharma, startups, academia, government, research, business development and investment.",
     "program": {
       "overview": "BIO's convention format combines an industry programme, company presentations, BIO Partnering, exhibition activity, sponsorship and networking across the biotechnology ecosystem.",
-      "themes": ["Biotechnology", "Biopharma", "Life sciences innovation", "Partnering", "Investment", "Research and development", "Patient and public health"]
+      "themes": [
+        "Biotechnology",
+        "Biopharma",
+        "Life sciences innovation",
+        "Partnering",
+        "Investment",
+        "Research and development",
+        "Patient and public health"
+      ]
     },
-    "venueInfo": {"venue_name": "Philadelphia, Pennsylvania", "address": "Philadelphia, Pennsylvania, United States", "accommodation": null, "hotels": []},
-    "community": {"overview": "BIO states that the convention represents the full biotechnology ecosystem and connects roughly 20,000 industry leaders from around the world."},
-    "sourceUrls": ["https://convention.bio.org/future-dates", "https://convention.bio.org/about-bio", "https://convention.bio.org/become-sponsor"]
+    "venueInfo": {
+      "venue_name": "Philadelphia, Pennsylvania",
+      "address": "Philadelphia, Pennsylvania, United States",
+      "accommodation": null,
+      "hotels": []
+    },
+    "community": {
+      "overview": "BIO states that the convention represents the full biotechnology ecosystem and connects roughly 20,000 industry leaders from around the world."
+    },
+    "sourceUrls": [
+      "https://convention.bio.org/future-dates",
+      "https://convention.bio.org/about-bio",
+      "https://convention.bio.org/become-sponsor"
+    ]
+  },
+  {
+    "title": "25th WPC Energy Congress 2026",
+    "url": "https://wpcenergy2026.org/",
+    "start": "2026-10-11",
+    "end": "2026-10-15",
+    "city": "Riyadh",
+    "country": "Saudi Arabia",
+    "venue": "Riyadh Front Exhibition & Conference Center (RFECC)",
+    "format": "in-person",
+    "organizer": "WPC Energy",
+    "categories": [
+      "Energy",
+      "Petroleum & Geoscience",
+      "Engineering",
+      "Natural Gas & LNG",
+      "Hydrogen & CCUS",
+      "Climate & Sustainability",
+      "Artificial Intelligence",
+      "Business"
+    ],
+    "description": "The 25th WPC Energy Congress in Riyadh brings together global energy leaders, scientists, policymakers, operators and innovators under the theme Pathways to an Energy Future for All, covering energy security, petroleum, gas, carbon management, technology, investment and the energy transition.",
+    "program": {
+      "overview": "The official Congress programme runs 11–15 October 2026 and combines ministerial and strategic sessions, a peer-reviewed technical programme, synergy and special programmes, exhibition activity and networking. The technical programme spans five thematic blocks and 31 specialised forums.",
+      "themes": [
+        "Energy security and resilience",
+        "Oil and gas",
+        "Natural gas and LNG",
+        "CCUS and carbon markets",
+        "Energy transition",
+        "AI and digitalisation",
+        "Technology and innovation",
+        "Investment and policy",
+        "Young professionals and talent"
+      ]
+    },
+    "speakers": [
+      {
+        "name": "HRH Prince Abdulaziz bin Salman Al Saud",
+        "organization": "Ministry of Energy, Saudi Arabia",
+        "role": "Executive Speaker",
+        "title": "Minister of Energy"
+      },
+      {
+        "name": "Pedro Miras",
+        "organization": "WPC Energy",
+        "role": "Executive Speaker",
+        "title": "President"
+      },
+      {
+        "name": "Amin Nasser",
+        "organization": "Aramco",
+        "role": "Executive Speaker",
+        "title": "President & CEO"
+      },
+      {
+        "name": "Dr. Daniel Yergin",
+        "organization": "S&P Global",
+        "role": "Executive Speaker",
+        "title": "Vice Chairman"
+      },
+      {
+        "name": "Patrick Pouyanné",
+        "organization": "TotalEnergies",
+        "role": "Executive Speaker",
+        "title": "Chairman & CEO"
+      },
+      {
+        "name": "Wael Sawan",
+        "organization": "Shell",
+        "role": "Executive Speaker",
+        "title": "CEO"
+      },
+      {
+        "name": "Lorenzo Simonelli",
+        "organization": "Baker Hughes",
+        "role": "Executive Speaker",
+        "title": "Chairman & CEO"
+      },
+      {
+        "name": "Haitham Al Ghais",
+        "organization": "OPEC",
+        "role": "Executive Speaker",
+        "title": "Secretary General"
+      }
+    ],
+    "sponsors": [
+      {
+        "name": "Principal Buyer",
+        "role": "Congress Partner"
+      },
+      {
+        "name": "Dr. Sulaiman Al-Habib Medical Group",
+        "role": "Health Partner"
+      },
+      {
+        "name": "Kuwait Petroleum Corporation (KPC)",
+        "role": "Industry Sponsor"
+      },
+      {
+        "name": "Riyadh Bank",
+        "role": "Industry Sponsor"
+      }
+    ],
+    "fees": {
+      "registration_url": "https://wpcenergy2026.org/register/",
+      "registration_fees": [
+        {
+          "category": "Delegate — Regular",
+          "amount": 3150,
+          "currency": "USD",
+          "deadline": "2026-09-11",
+          "notes": "VAT included; official regular delegate price."
+        },
+        {
+          "category": "Delegate — Late",
+          "amount": 3450,
+          "currency": "USD",
+          "deadline": "2026-10-15",
+          "notes": "VAT included; valid through the end of the Congress."
+        },
+        {
+          "category": "Visitor",
+          "amount": 0,
+          "currency": "USD",
+          "deadline": null,
+          "notes": "Official visitor registration is free to attend."
+        }
+      ]
+    },
+    "venueInfo": {
+      "venue_name": "Riyadh Front Exhibition & Conference Center (RFECC)",
+      "address": "King Khalid International Airport Road, Riyadh 13413, Saudi Arabia",
+      "accommodation": "The venue is near King Khalid International Airport and multiple hotels; use the official Congress travel/venue guidance for current accommodation information.",
+      "hotels": []
+    },
+    "community": {
+      "overview": "WPC Energy convenes ministers, national and international energy companies, engineers, geoscientists, researchers, policymakers, investors, technology providers and young professionals from around the world."
+    },
+    "sourceUrls": [
+      "https://wpcenergy2026.org/",
+      "https://wpcenergy2026.org/congress/venue/",
+      "https://wpcenergy2026.org/programme/",
+      "https://wpcenergy2026.org/programme/all-programmes/",
+      "https://wpcenergy2026.org/programme/technical-programme/",
+      "https://wpcenergy2026.org/speakers/",
+      "https://wpcenergy2026.org/sponsors/",
+      "https://wpcenergy2026.org/register/"
+    ]
   }
 ]

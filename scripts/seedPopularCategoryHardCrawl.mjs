@@ -36,6 +36,7 @@ const SEEDS = [
   ['IEEE ECCE 2026','https://www.ieee-ecce.org/2026/','2026-10-04','2026-10-08','Vancouver','Canada',['Electrical Engineering','Engineering','Energy','Renewable Energy']],
   ['AIChE Annual Meeting 2026','https://www.aiche.org/conferences/aiche-annual-meeting/2026','2026-11-08','2026-11-12','Minneapolis','United States',['Chemical Engineering','Engineering','Energy','Science']],
   ['2026 MRS Fall Meeting & Exhibit','https://www.mrs.org/meetings-events/fall-meetings-exhibits/2026-mrs-fall-meeting','2026-11-29','2026-12-04','Boston','United States',['Materials Science','Science','Physics','Chemistry']],
+  ['25th WPC Energy Congress 2026','https://wpcenergy2026.org/','2026-10-11','2026-10-15','Riyadh','Saudi Arabia',['Energy','Petroleum & Geoscience','Engineering','Natural Gas & LNG','Hydrogen & CCUS','Climate & Sustainability','Artificial Intelligence','Business']],
   ['ADIPEC 2026','https://www.adipec.com/','2026-11-02','2026-11-05','Abu Dhabi','United Arab Emirates',['Energy','Petroleum & Geoscience','Engineering','Hydrogen & CCUS','Climate & Sustainability']],
   ['RE+ 2026','https://www.re-plus.com/','2026-11-16','2026-11-19','Las Vegas','United States',['Renewable Energy','Energy','Climate & Sustainability','Engineering']],
   ['GHGT-18','https://ghgt.info/','2026-10-25','2026-10-29','Perth','Australia',['Hydrogen & CCUS','Climate & Sustainability','Energy','Engineering','Environment']],
