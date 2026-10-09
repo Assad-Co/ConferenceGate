@@ -36,7 +36,6 @@ import { EditProfileModal } from './EditProfileModal';
 import { ProfessionalPreferencesModal } from './ProfessionalPreferencesModal';
 import { LinkedInProfilePanel } from './LinkedInProfilePanel';
 import { LinkedInImportedTabSections } from './LinkedInImportedTabSections';
-import { ConferenceGateIndexCard } from './ConferenceGateIndexCard';
 import {
   fetchLinkedInConferenceActivity,
   type LinkedInConferenceActivity,
@@ -1827,7 +1826,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
         {activeTab === 'badges' && (
           <div className="space-y-6">
-            <h3 className="text-base font-bold text-slate-900">Verified Conference Identity Badges</h3>
+            <h3 className="text-base font-bold text-slate-900">Verified Conference Badges</h3>
             {userProfile.verifiedAchievements.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {userProfile.verifiedAchievements.map((b) => (
@@ -1857,8 +1856,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 ConferenceGate separates platform-verified activity, official-source evidence, and self-reported history.
               </p>
             </div>
-
-            <ConferenceGateIndexCard />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">

@@ -12,8 +12,6 @@ import {
   UserCheck,
   Briefcase,
   Layers,
-  QrCode,
-  ShieldCheck,
   Home,
   Camera,
   LogOut,
@@ -35,10 +33,9 @@ interface NavbarProps {
   onSponsorLogoChange?: (dataUrl: string) => void;
   notifications?: NotificationItem[];
   unreadMessageCount?: number;
-  onOpenAIAssistant?: () => void;
-  onOpenAIModal?: () => void;
   onOpenMessages?: () => void;
   onOpenDigitalBadge?: () => void;
+  onOpenOrganizationDirectory?: () => void;
   onSearch?: (query: string) => void;
   onOpenNotifications?: () => void;
   onOpenSponsorAlerts?: () => void;
@@ -64,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadMessageCount = 0,
   onOpenMessages = () => {},
   onOpenDigitalBadge = () => {},
+  onOpenOrganizationDirectory = () => {},
   onSearch = (_query: string) => {},
   onOpenNotifications,
   onOpenSponsorAlerts,
@@ -125,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     : isSponsorRole && sponsorIdentity
     ? { name: sponsorIdentity.name, avatar: sponsorIdentity.logo }
     : userProfile;
-  const identityLabel = isOrganizerRole ? 'Verified Organizer' : isSponsorRole ? 'Verified Sponsor' : 'Verified Identity';
+  const identityLabel = isOrganizerRole ? 'Organizer Account' : isSponsorRole ? 'Sponsor Account' : 'Professional Account';
   // Clicking your own identity always opens the Profile page (Notifications, Conferences
   // History, and an Edit Profile button there) — the organizer/sponsor dashboards themselves
   // are reached via the logo or the dedicated nav pill instead.
@@ -193,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search conferences, abstracts, topics..."
+                  placeholder="Search conferences and topics..."
                   className="w-full pl-9 pr-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 focus:bg-white text-xs text-slate-800 rounded-md border border-transparent focus:border-blue-500 focus:outline-hidden transition-all placeholder:text-slate-500"
                 />
                 <Search className="w-4 h-4 text-slate-600 absolute left-2.5 top-1.5" />
@@ -332,14 +330,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Digital Event Badge Quick Access */}
             <button
-              onClick={onOpenDigitalBadge}
+              onClick={onOpenOrganizationDirectory}
               className="p-1 sm:p-1.5 md:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
-              title="Digital Attendee Badge & QR Check-In"
+              title="Organizations & Reputation"
             >
-              <QrCode className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
             </button>
+
+            {isAttendeeRole && (
+              <button
+                onClick={onOpenDigitalBadge}
+                className="p-1 sm:p-1.5 md:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+                title="ConferenceGate Professional Badge"
+              >
+                <Award className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Direct Messages Icon */}
             <button
@@ -392,8 +399,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
                 <div className="hidden 2xl:block text-left pr-1">
                   <div className="text-xs font-bold text-slate-900 line-clamp-1">{identity.name}</div>
-                  <div className="text-[10px] font-medium text-emerald-600 flex items-center gap-0.5">
-                    <ShieldCheck className="w-3 h-3" />
+                  <div className="text-[10px] font-medium text-slate-500 flex items-center gap-0.5">
+                    <UserCheck className="w-3 h-3" />
                     <span>{identityLabel}</span>
                   </div>
                 </div>

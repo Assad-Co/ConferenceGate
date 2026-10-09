@@ -91,7 +91,6 @@ import {
 } from './api/messages';
 import {
   fetchSponsorshipPackages,
-  createSponsorshipPackage,
   applyForSponsorship,
   fetchMySponsorApplications,
   fetchApplicantsForMyPackages,
@@ -117,7 +116,6 @@ import { LiveSearchResult, searchConferencesOnTheWeb } from './api/search';
 import {
   sampleConferences,
   currentUserProfile,
-  sampleSponsorshipOpportunities,
 } from './data/mockData';
 import {
   Conference,
@@ -244,47 +242,6 @@ export function App() {
   const refreshOrganizerSponsorData = () => {
     fetchApplicantsForMyPackages().then(setPackageApplicants).catch(() => {});
     fetchReviewableSponsors().then(setReviewableSponsorsReal).catch(() => {});
-  };
-
-  const handleActivateOpportunityPackage = async (opp: {
-    key: string;
-    name: string;
-    tier: string;
-    price: number;
-    slots: number;
-    benefits: string[];
-  }) => {
-    const targetConference = myConferences[0];
-    if (!targetConference) {
-      showToast({
-        type: 'info',
-        title: 'Create a conference first',
-        message: 'Publish a conference from the Wizard tab before activating sponsorship packages.',
-      });
-      return;
-    }
-    try {
-      const pkg = await createSponsorshipPackage({
-        conferenceId: targetConference.id,
-        tier: opp.tier,
-        price: opp.price,
-        benefits: opp.benefits,
-        totalSlots: opp.slots,
-        sourceOpportunityId: opp.key,
-      });
-      setSponsorshipPackagesReal((prev) => [pkg, ...prev]);
-      showToast({
-        type: 'success',
-        title: 'Package activated',
-        message: `${opp.tier} is now live in the Sponsor Marketplace for ${targetConference.title}.`,
-      });
-    } catch (e) {
-      showToast({
-        type: 'info',
-        title: "Couldn't activate package",
-        message: e instanceof Error ? e.message : 'Please try again.',
-      });
-    }
   };
 
   const handleApplyForSponsorship = async (packageId: string) => {
@@ -1791,8 +1748,6 @@ export function App() {
             registrationCountsByConference={registrationCountsByConference}
             feedbackSummary={feedbackSummary}
             sponsorshipPackages={organizerOwnPackages}
-            sponsorshipOpportunities={sampleSponsorshipOpportunities}
-            onActivateOpportunityPackage={handleActivateOpportunityPackage}
             sponsorApplicants={packageApplicants}
             onDecideApplication={handleDecideApplication}
             reviewableSponsors={reviewableSponsorsReal}
@@ -1920,7 +1875,6 @@ export function App() {
           if (tab === 'profile') setProfileInitialTab('conferences');
           setActiveTab(tab);
         }}
-        onOpenBadge={() => setIsBadgeOpen(true)}
         role={authUser.role}
       />
 
