@@ -1,0 +1,19 @@
+name: Phase 56 Live Search Verify 2
+
+on:
+  push:
+    branches:
+      - phase56-live-search-verification
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase56-live-search-verification
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify WPC in production Discover search
+        run: node scripts/phase56VerifyLiveSearch.mjs
