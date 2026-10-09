@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Logo } from './Logo';
 
@@ -12,21 +12,6 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role }) => {
-  const [release, setRelease] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/health')
-      .then((response) => response.json())
-      .then((data) => {
-        if (active && typeof data?.release === 'string') setRelease(data.release);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-
   return (
     <footer className="bg-blue-50 text-slate-500 py-12 border-t border-blue-100 mt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,7 +20,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role
           <div className="space-y-4">
             <Logo className="h-10 w-auto" />
             <p className="text-xs text-slate-500 leading-relaxed">
-              ConferenceGate builds a conference-specific professional record from presentations, peer reviews, completed roles, certificates, and organizer-confirmed activity. Imported and self-reported evidence stays clearly labeled.
+              ConferenceGate connects professionals, organizers, reviewers, and sponsors across the full conference journey—from discovery and submissions to committee roles, sponsorship, and verified professional records. Turn every conference interaction into lasting professional value.
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
@@ -93,11 +78,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, onOpenBadge, role
           <p>© {new Date().getFullYear()} Conference Gate — Your Gateway to Conferences, Connections & Opportunity. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <span>Discover. Connect. Submit. Review. Organize. Sponsor.</span>
-            {release && (
-              <span className="px-2 py-1 rounded-md bg-white border border-slate-200 font-mono text-[9px] text-slate-500">
-                Release {release}
-              </span>
-            )}
           </div>
         </div>
       </div>
