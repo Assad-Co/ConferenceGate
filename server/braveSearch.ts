@@ -1101,9 +1101,33 @@ braveSearchRouter.post(
       }
 
       const candidates = await searchConferences(title, "low", false);
-      const exactTitleCandidates = candidates.filter(
-        (candidate) => conferenceIdentity(candidate.title) === requestedIdentity
-      );
+      const acronymAliases = (value: string): Set<string> => {
+        const aliases = new Set<string>();
+        const clean = value.replace(/\b20\d{2}\b/g, " ");
+        for (const token of clean.match(/\b[A-Z][A-Z0-9]{1,9}\b/g) || []) {
+          aliases.add(token.toLowerCase());
+        }
+        const words = clean
+          .replace(/[^A-Za-z0-9 ]+/g, " ")
+          .split(/\s+/)
+          .filter(Boolean)
+          .filter((word) => !/^(?:the|and|of|for|in|on|at|to|a|an)$/i.test(word));
+        if (words.length >= 2) {
+          const initials = words.map((word) => word[0]).join("").toLowerCase();
+          if (initials.length >= 3 && initials.length <= 10) aliases.add(initials);
+        }
+        return aliases;
+      };
+      const requestedAliases = acronymAliases(title);
+      const requestedCompact = requestedIdentity.replace(/\s+/g, "");
+      const exactTitleCandidates = candidates.filter((candidate) => {
+        const candidateIdentity = conferenceIdentity(candidate.title);
+        if (candidateIdentity === requestedIdentity) return true;
+        const candidateCompact = candidateIdentity.replace(/\s+/g, "");
+        const candidateAliases = acronymAliases(candidate.title);
+        return (requestedCompact.length >= 3 && candidateAliases.has(requestedCompact)) ||
+          (candidateCompact.length >= 3 && requestedAliases.has(candidateCompact));
+      });
       const sameYear = requestedYear
         ? exactTitleCandidates.find((candidate) => {
             const candidateYear = yearOf(candidate);
