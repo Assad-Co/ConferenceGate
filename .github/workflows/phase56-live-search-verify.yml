@@ -1,0 +1,45 @@
+name: Phase 56 Live Search Verify
+
+on:
+  push:
+    branches:
+      - phase56-live-search-verification
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query live ConferenceGate search
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://conferencegate.onrender.com/api/search/conferences?q=WPC'
+          for i in $(seq 1 18); do
+            body="$(curl -fsS --max-time 20 "$url" || true)"
+            echo "$body" > /tmp/wpc.json
+            if python - <<'PY'
+import json
+p='/tmp/wpc.json'
+try:
+    data=json.load(open(p))
+except Exception:
+    raise SystemExit(1)
+rows=data.get('results') or []
+match=[r for r in rows if 'wpc' in str(r.get('title','')).lower() or 'world petroleum' in str(r.get('title','')).lower()]
+if not match:
+    raise SystemExit(1)
+r=match[0]
+print('MATCH_TITLE=' + str(r.get('title','')))
+print('MATCH_START=' + str(r.get('startDate','')))
+print('MATCH_LOCATION=' + str(r.get('location','')))
+print('MATCH_ORGANIZATION=' + str(r.get('organization','')))
+print('MATCH_PREPARED=' + str(r.get('prepared','')))
+PY
+            then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'WPC not found in live stored search after retries'
+          cat /tmp/wpc.json || true
+          exit 1
