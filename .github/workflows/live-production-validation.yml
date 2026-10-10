@@ -35,3 +35,8 @@ jobs:
           done
           echo "Production did not become launch-ready for commit ${GITHUB_SHA} within the validation window."
           exit 1
+
+      - name: Organizer conference import route smoke test
+        env:
+          CONFERENCEGATE_BASE_URL: https://conferencegate.onrender.com
+        run: node scripts/smokeOrganizerImportApi.mjs
