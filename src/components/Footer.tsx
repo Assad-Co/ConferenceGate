@@ -16,9 +16,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="space-y-4">
             <Logo className="h-10 w-auto" />
-            <p className="text-xs text-slate-500 leading-relaxed">
-              ConferenceGate connects professionals, organizers, reviewers, and sponsors across the full conference journey—from discovery and submissions to committee roles, sponsorship, and verified professional records. Turn every conference interaction into lasting professional value.
-            </p>
+            <div className="space-y-2 text-xs text-slate-600 leading-relaxed max-w-2xl">
+              <p className="font-semibold text-slate-700">
+                ConferenceGate brings conferences, opportunities, and verified professional records into one platform.
+              </p>
+              <p>
+                <span className="font-bold text-slate-800">Mission:</span>{' '}
+                To simplify conference discovery, participation, and professional growth worldwide.
+              </p>
+              <p>
+                <span className="font-bold text-slate-800">Vision:</span>{' '}
+                To become the global gateway for trusted conference engagement and professional recognition.
+              </p>
+            </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
               <span>Verified Conference Record · Source-labeled evidence</span>
@@ -66,7 +76,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
         </div>
 
         <div className="pt-8 border-t border-slate-200 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Conference Gate — Your Gateway to Conferences, Connections & Opportunity. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Conference Gate. All rights reserved.</p>
         </div>
       </div>
     </footer>
