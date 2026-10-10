@@ -34,14 +34,33 @@ function parseDetails(value: string | null): Record<string, unknown> | null {
   }
 }
 
-async function ensurePaidWorkspace(userId: string): Promise<{
+async function ensurePaidWorkspace(
+  userId: string,
+  expectedRole?: "organizer" | "sponsor"
+): Promise<{
   user: UserRow;
   workspace: AccountWorkspaceRow;
   membership: AccountWorkspaceMemberRow;
 }> {
   const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
-  if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+  if (!user) {
     throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
+  }
+
+  const ownerPreview = isOwnerPreviewEmail(user.email);
+  const accountRole =
+    user.role === "organizer" || user.role === "sponsor"
+      ? (user.role as "organizer" | "sponsor")
+      : null;
+  if (!accountRole && !ownerPreview) {
+    throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
+  }
+  if (expectedRole && accountRole && accountRole !== expectedRole && !ownerPreview) {
+    throw Object.assign(new Error(`${expectedRole === "organizer" ? "Organizer" : "Sponsor"} account required.`), { status: 403 });
+  }
+  const effectiveRole = expectedRole || accountRole;
+  if (!effectiveRole) {
+    throw Object.assign(new Error("Select an Organizer or Sponsor workspace."), { status: 403 });
   }
 
   let membership = await dbGet<AccountWorkspaceMemberRow>(
@@ -51,7 +70,7 @@ async function ensurePaidWorkspace(userId: string): Promise<{
       WHERE m.user_id=? AND m.status='active' AND w.account_role=?
       ORDER BY CASE WHEN m.member_role='owner' THEN 0 ELSE 1 END, m.created_at ASC
       LIMIT 1`,
-    [userId, user.role]
+    [userId, effectiveRole]
   );
 
   if (membership) {
@@ -63,7 +82,7 @@ async function ensurePaidWorkspace(userId: string): Promise<{
       throw Object.assign(new Error("Workspace not found."), { status: 404 });
     }
     const owner = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [workspace.owner_id]);
-    if (!owner || !["active", "trialing"].includes(owner.subscription_status || "")) {
+    if (!owner || (!ownerPreview && !["active", "trialing"].includes(owner.subscription_status || ""))) {
       throw Object.assign(new Error("The workspace owner's paid subscription is not active."), { status: 402 });
     }
     return { user, workspace, membership };
@@ -75,17 +94,17 @@ async function ensurePaidWorkspace(userId: string): Promise<{
 
   let workspace = await dbGet<AccountWorkspaceRow>(
     "SELECT * FROM account_workspaces WHERE owner_id=? AND account_role=?",
-    [userId, user.role]
+    [userId, effectiveRole]
   );
   if (!workspace) {
     const workspaceId = `ws_${crypto.randomUUID()}`;
     const defaultName =
       user.organization?.trim() ||
-      `${user.name}'s ${user.role === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
+      `${user.name}'s ${effectiveRole === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
     const seatLimit = Math.max(2, Math.min(1000, Number(process.env.WORKSPACE_SEAT_LIMIT || 10)));
     await dbRun(
       "INSERT INTO account_workspaces(id,owner_id,account_role,name,seat_limit) VALUES(?,?,?,?,?)",
-      [workspaceId, userId, user.role, defaultName, seatLimit]
+      [workspaceId, userId, effectiveRole, defaultName, seatLimit]
     );
     workspace = (await dbGet<AccountWorkspaceRow>("SELECT * FROM account_workspaces WHERE id=?", [workspaceId]))!;
   }
@@ -681,7 +700,7 @@ function extractImportFromHtml(html: string, sourceUrl: string): RawEventExtract
 workspacesRouter.post(
   "/organizer/import-conference",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
-    const context = await ensurePaidWorkspace(req.userId!);
+    const context = await ensurePaidWorkspace(req.userId!, "organizer");
     if (context.workspace.account_role !== "organizer") {
       return res.status(403).json({ error: "Organizer Pro workspace required." });
     }
