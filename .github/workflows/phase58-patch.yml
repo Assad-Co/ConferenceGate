@@ -1,0 +1,162 @@
+name: Phase 58 Patch Conference Import
+
+on:
+  push:
+    branches:
+      - phase-58-conference-import-prefill
+    paths:
+      - .github/workflows/phase58-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: phase-58-conference-import-prefill
+          fetch-depth: 0
+
+      - name: Patch organizer import authorization
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('server/workspaces.ts')
+          text = path.read_text()
+
+          old = '''async function ensurePaidWorkspace(userId: string): Promise<{
+  user: UserRow;
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}> {
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
+  if (!user || (user.role !== "organizer" && user.role !== "sponsor")) {
+    throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
+  }
+
+  let membership = await dbGet<AccountWorkspaceMemberRow>(
+    `SELECT m.*
+       FROM account_workspace_members m
+       JOIN account_workspaces w ON w.id=m.workspace_id
+      WHERE m.user_id=? AND m.status='active' AND w.account_role=?
+      ORDER BY CASE WHEN m.member_role='owner' THEN 0 ELSE 1 END, m.created_at ASC
+      LIMIT 1`,
+    [userId, user.role]
+  );
+'''
+          new = '''async function ensurePaidWorkspace(
+  userId: string,
+  expectedRole?: "organizer" | "sponsor"
+): Promise<{
+  user: UserRow;
+  workspace: AccountWorkspaceRow;
+  membership: AccountWorkspaceMemberRow;
+}> {
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
+  if (!user) {
+    throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
+  }
+
+  const ownerPreview = isOwnerPreviewEmail(user.email);
+  const accountRole =
+    user.role === "organizer" || user.role === "sponsor"
+      ? (user.role as "organizer" | "sponsor")
+      : null;
+  if (!accountRole && !ownerPreview) {
+    throw Object.assign(new Error("Organizer or Sponsor account required."), { status: 403 });
+  }
+  if (expectedRole && accountRole && accountRole !== expectedRole && !ownerPreview) {
+    throw Object.assign(new Error(`${expectedRole === "organizer" ? "Organizer" : "Sponsor"} account required.`), { status: 403 });
+  }
+  const effectiveRole = expectedRole || accountRole;
+  if (!effectiveRole) {
+    throw Object.assign(new Error("Select an Organizer or Sponsor workspace."), { status: 403 });
+  }
+
+  let membership = await dbGet<AccountWorkspaceMemberRow>(
+    `SELECT m.*
+       FROM account_workspace_members m
+       JOIN account_workspaces w ON w.id=m.workspace_id
+      WHERE m.user_id=? AND m.status='active' AND w.account_role=?
+      ORDER BY CASE WHEN m.member_role='owner' THEN 0 ELSE 1 END, m.created_at ASC
+      LIMIT 1`,
+    [userId, effectiveRole]
+  );
+'''
+          if old not in text:
+              raise SystemExit('ensurePaidWorkspace opening block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    if (!owner || !["active", "trialing"].includes(owner.subscription_status || "")) {
+      throw Object.assign(new Error("The workspace owner's paid subscription is not active."), { status: 402 });
+    }
+'''
+          new = '''    if (!owner || (!ownerPreview && !["active", "trialing"].includes(owner.subscription_status || ""))) {
+      throw Object.assign(new Error("The workspace owner's paid subscription is not active."), { status: 402 });
+    }
+'''
+          if old not in text:
+              raise SystemExit('workspace owner subscription block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    [userId, user.role]
+  );
+  if (!workspace) {
+'''
+          new = '''    [userId, effectiveRole]
+  );
+  if (!workspace) {
+'''
+          if old not in text:
+              raise SystemExit('workspace role lookup block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      `${user.name}'s ${user.role === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
+'''
+          new = '''      `${user.name}'s ${effectiveRole === "organizer" ? "Organizer" : "Sponsor"} Workspace`;
+'''
+          if old not in text:
+              raise SystemExit('workspace name role block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''      [workspaceId, userId, user.role, defaultName, seatLimit]
+'''
+          new = '''      [workspaceId, userId, effectiveRole, defaultName, seatLimit]
+'''
+          if old not in text:
+              raise SystemExit('workspace create role block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    const context = await ensurePaidWorkspace(req.userId!);
+    if (context.workspace.account_role !== "organizer") {
+      return res.status(403).json({ error: "Organizer Pro workspace required." });
+    }
+
+    const submitted = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+'''
+          new = '''    const context = await ensurePaidWorkspace(req.userId!, "organizer");
+    if (context.workspace.account_role !== "organizer") {
+      return res.status(403).json({ error: "Organizer Pro workspace required." });
+    }
+
+    const submitted = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+'''
+          if old not in text:
+              raise SystemExit('organizer import context block not found')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "ConferenceGate Automation"
+          git config user.email "actions@conferencegate.local"
+          git add server/workspaces.ts
+          git commit -m "Fix organizer conference import authorization [phase58-patched]"
+          git push origin HEAD:phase-58-conference-import-prefill
