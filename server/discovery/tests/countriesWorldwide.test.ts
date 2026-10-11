@@ -10,7 +10,6 @@ import {
 } from "../countries";
 
 test("worldwide geography covers sovereign states and major conference territories", () => {
-  // 195 sovereign states plus independently represented conference territories/economies.
   assert.ok(COUNTRIES.length >= 210, `expected worldwide coverage, got ${COUNTRIES.length}`);
   for (const name of [
     "Saudi Arabia",
