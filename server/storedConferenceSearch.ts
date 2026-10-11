@@ -1,3 +1,5 @@
+import { COUNTRIES } from "./discovery/countries";
+
 export interface StoredConferenceSearchFields {
   title: unknown;
   acronym?: unknown;
@@ -74,15 +76,15 @@ const QUERY_STOP_WORDS = new Set([
   "worldwide", "world", "global", "international"
 ]);
 
-/** Multi-word geographic concepts become one semantic token before tokenisation. This lets a query
- * such as "Middle East energy 2027" match a Bahrain record even when the record never literally
- * says "Middle East". */
+/** Multi-word concepts become one semantic token before tokenisation. */
 const QUERY_PHRASES: Array<[RegExp, string]> = [
   [/\bmiddle\s+east\b/g, "middleeast"],
   [/\bnorth\s+america\b/g, "northamerica"],
   [/\bsouth\s+america\b/g, "southamerica"],
-  [/\blatin\s+america\b/g, "southamerica"],
+  [/\blatin\s+america\b/g, "latinamerica"],
+  [/\bcentral\s+america\b/g, "centralamerica"],
   [/\basia\s+pacific\b/g, "asiapacific"],
+  [/\bsub[-\s]?saharan\s+africa\b/g, "subsaharanafrica"],
   [/\boil\s+(?:and|&)\s+gas\b/g, "petroleum"],
   [/\bearth\s+science(?:s)?\b/g, "geoscience"],
   [/\bhealth\s+care\b/g, "healthcare"],
@@ -90,19 +92,6 @@ const QUERY_PHRASES: Array<[RegExp, string]> = [
   [/\bcomputer\s+science\b/g, "computerscience"],
   [/\bdata\s+science\b/g, "datascience"]
 ];
-
-const GEO_PATTERNS: Record<string, RegExp> = {
-  gcc: /\b(saudi arabia|united arab emirates|uae|bahrain|qatar|kuwait|oman)\b/,
-  gulf: /\b(saudi arabia|united arab emirates|uae|bahrain|qatar|kuwait|oman)\b/,
-  middleeast: /\b(saudi arabia|united arab emirates|uae|bahrain|qatar|kuwait|oman|jordan|lebanon|iraq|iran|israel|palestine|yemen|syria|egypt|turkey|türkiye)\b/,
-  europe: /\b(united kingdom|uk|ireland|france|germany|spain|portugal|italy|netherlands|belgium|luxembourg|switzerland|austria|poland|czechia|czech republic|slovakia|hungary|romania|bulgaria|greece|croatia|slovenia|serbia|bosnia|montenegro|albania|north macedonia|norway|sweden|finland|denmark|iceland|estonia|latvia|lithuania|ukraine|moldova|malta|cyprus)\b/,
-  asia: /\b(china|japan|south korea|korea|india|pakistan|bangladesh|sri lanka|nepal|bhutan|singapore|malaysia|indonesia|thailand|vietnam|philippines|cambodia|laos|myanmar|mongolia|kazakhstan|uzbekistan|kyrgyzstan|tajikistan|turkmenistan|taiwan|hong kong|macau|brunei)\b/,
-  asiapacific: /\b(china|japan|south korea|korea|india|singapore|malaysia|indonesia|thailand|vietnam|philippines|taiwan|hong kong|australia|new zealand|papua new guinea|fiji)\b/,
-  africa: /\b(egypt|morocco|algeria|tunisia|libya|south africa|nigeria|ghana|kenya|ethiopia|tanzania|uganda|rwanda|senegal|ivory coast|cote d ivoire|angola|mozambique|namibia|botswana|zambia|zimbabwe|mauritius)\b/,
-  northamerica: /\b(united states|usa|u s a|canada|mexico)\b/,
-  southamerica: /\b(brazil|argentina|chile|colombia|peru|ecuador|uruguay|paraguay|bolivia|venezuela|guyana|suriname|costa rica|panama|guatemala|dominican republic|puerto rico)\b/,
-  oceania: /\b(australia|new zealand|papua new guinea|fiji|samoa|tonga|vanuatu)\b/
-};
 
 const SEMANTIC_PATTERNS: Record<string, RegExp> = {
   ai: /\bai\b|artificial intelligence|machine learning|deep learning|generative ai|computer vision|natural language processing/,
@@ -125,6 +114,53 @@ function normalize(value: unknown): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Build regional matching from the canonical worldwide country table instead of maintaining a
+ * second hand-written list. Adding a country to discovery geography therefore automatically makes
+ * it searchable through its broad region as well.
+ */
+function countryPattern(predicate: (country: (typeof COUNTRIES)[number]) => boolean): RegExp {
+  const names = COUNTRIES
+    .filter(predicate)
+    .flatMap((country) => [country.name, country.iso2.length > 2 ? country.iso2 : "", country.iso3, ...country.aliases])
+    .map(normalize)
+    .filter((value) => value.length > 2)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegex);
+  return new RegExp(`(?:^|[^a-z0-9])(?:${names.join("|")})(?:[^a-z0-9]|$)`);
+}
+
+const GCC_COUNTRIES = new Set(["Saudi Arabia", "United Arab Emirates", "Bahrain", "Qatar", "Kuwait", "Oman"]);
+const MIDDLE_EAST_EXTENDED = new Set(["Egypt", "Turkey", "Cyprus"]);
+const CENTRAL_AMERICA = new Set(["Belize", "Costa Rica", "El Salvador", "Guatemala", "Honduras", "Nicaragua", "Panama"]);
+const CARIBBEAN = new Set([
+  "Antigua and Barbuda", "Bahamas", "Barbados", "Cuba", "Dominica", "Dominican Republic", "Grenada",
+  "Haiti", "Jamaica", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines",
+  "Trinidad and Tobago", "Puerto Rico", "Aruba", "Curaçao", "Sint Maarten", "Cayman Islands",
+  "British Virgin Islands", "U.S. Virgin Islands", "Bermuda",
+]);
+
+const GEO_PATTERNS: Record<string, RegExp> = {
+  gcc: countryPattern((country) => GCC_COUNTRIES.has(country.name)),
+  gulf: countryPattern((country) => GCC_COUNTRIES.has(country.name)),
+  middleeast: countryPattern((country) => country.region === "Middle East" || MIDDLE_EAST_EXTENDED.has(country.name)),
+  europe: countryPattern((country) => country.region === "Europe"),
+  asia: countryPattern((country) => country.region === "Asia"),
+  asiapacific: countryPattern((country) => country.region === "Asia" || country.region === "Oceania"),
+  africa: countryPattern((country) => country.region === "Africa"),
+  subsaharanafrica: countryPattern((country) => country.region === "Africa" && !["Algeria", "Egypt", "Libya", "Morocco", "Tunisia"].includes(country.name)),
+  northamerica: countryPattern((country) => country.region === "North America"),
+  southamerica: countryPattern((country) => country.region === "South America"),
+  latinamerica: countryPattern((country) => country.region === "South America" || country.name === "Mexico" || CENTRAL_AMERICA.has(country.name) || CARIBBEAN.has(country.name)),
+  centralamerica: countryPattern((country) => CENTRAL_AMERICA.has(country.name)),
+  caribbean: countryPattern((country) => CARIBBEAN.has(country.name)),
+  oceania: countryPattern((country) => country.region === "Oceania"),
+};
 
 /** Flattens only explicitly supplied stored conference sections. Object keys are included so a
  * query such as "abstract deadline September" can match a stored
@@ -169,8 +205,7 @@ function wordStartMatcher(token: string): RegExp {
   return matcher;
 }
 
-/** A token can match literally, by a conservative subject synonym, or by a geographic region.
- * Geographic expansion operates on stored text only; it never fabricates a location. */
+/** A token can match literally, by a conservative subject synonym, or by a geographic region. */
 function tokenMatches(text: string, token: string): boolean {
   const geo = GEO_PATTERNS[token];
   if (geo) return geo.test(text) || wordStartMatcher(token).test(text);
@@ -187,9 +222,7 @@ function hasMeaningfulValue(value: unknown): boolean {
   return true;
 }
 
-/** Prefer deeply prepared records when relevance is otherwise similar. The bonus is deliberately
- * capped well below a direct title/topic hit, so completeness can break ties but cannot overpower
- * what the visitor actually searched for. */
+/** Prefer deeply prepared records when relevance is otherwise similar. */
 function deepCoverageBonus(fields: StoredConferenceSearchFields): number {
   const sections = [
     fields.callForPapers,
@@ -204,10 +237,7 @@ function deepCoverageBonus(fields: StoredConferenceSearchFields): number {
   return sections.filter(hasMeaningfulValue).length * 6;
 }
 
-/** Returns null when the stored record does not satisfy every meaningful query concept. Higher
- * scores represent direct identity/topic matches; incidental matches in long tab text rank last.
- * Natural-language filler, "worldwide", and common discovery verbs do not accidentally narrow the
- * catalogue. Regional concepts such as GCC, Europe and Middle East resolve against country data. */
+/** Returns null when the stored record does not satisfy every meaningful query concept. */
 export function scoreStoredConferenceRecord(
   query: string,
   fields: StoredConferenceSearchFields
