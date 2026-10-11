@@ -43,6 +43,8 @@ test("common global aliases resolve to one canonical country", () => {
     ["Republic of Korea", "South Korea"],
     ["Cape Verde", "Cabo Verde"],
     ["Swaziland", "Eswatini"],
+    ["BVI", "British Virgin Islands"],
+    ["Tahiti", "French Polynesia"],
   ];
 
   for (const [input, expected] of cases) {
