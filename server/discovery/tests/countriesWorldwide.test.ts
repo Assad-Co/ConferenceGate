@@ -54,7 +54,7 @@ test("country detection works inside conference location prose", () => {
   assert.equal(findCountryInText("Riyadh Front, Riyadh, KSA")?.name, "Saudi Arabia");
   assert.equal(findCountryInText("Dubai World Trade Centre | UAE")?.name, "United Arab Emirates");
   assert.equal(findCountryInText("Abidjan, Côte d’Ivoire")?.name, "Côte d'Ivoire");
-  assert.equal(findCountryInText("Macao SAR, China")?.name, "Macao");
+  assert.equal(findCountryInText("Cotai Convention Centre, Macao SAR")?.name, "Macao");
 });
 
 test("regional lookup is canonical and broad", () => {
