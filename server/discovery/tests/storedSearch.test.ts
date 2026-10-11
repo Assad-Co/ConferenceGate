@@ -67,13 +67,27 @@ test("natural-language worldwide search does not over-constrain results", () => 
   );
 });
 
-test("regional discovery resolves region concepts from country data", () => {
-  const bahrainRecord = {
-    ...base,
-    location: { city: "Manama", country: "Bahrain" },
-  };
+test("regional discovery resolves region concepts from canonical country data", () => {
+  const bahrainRecord = { ...base, location: { city: "Manama", country: "Bahrain" } };
   assert.notEqual(scoreStoredConferenceRecord("GCC petroleum 2027", bahrainRecord), null);
   assert.notEqual(scoreStoredConferenceRecord("Middle East geoscience 2027", bahrainRecord), null);
+
+  const nigeriaRecord = { ...base, location: { city: "Lagos", country: "Nigeria" } };
+  assert.notEqual(scoreStoredConferenceRecord("Africa petroleum 2027", nigeriaRecord), null);
+
+  const boliviaRecord = { ...base, location: { city: "La Paz", country: "Bolivia" } };
+  assert.notEqual(scoreStoredConferenceRecord("Latin America petroleum 2027", boliviaRecord), null);
+
+  const fijiRecord = { ...base, location: { city: "Nadi", country: "Fiji" } };
+  assert.notEqual(scoreStoredConferenceRecord("Asia Pacific petroleum 2027", fijiRecord), null);
+
+  const panamaRecord = { ...base, location: { city: "Panama City", country: "Panama" } };
+  assert.notEqual(scoreStoredConferenceRecord("Central America petroleum 2027", panamaRecord), null);
+});
+
+test("regional discovery does not leak an unrelated region", () => {
+  const nigeriaRecord = { ...base, location: { city: "Lagos", country: "Nigeria" } };
+  assert.equal(scoreStoredConferenceRecord("Europe petroleum 2027", nigeriaRecord), null);
 });
 
 test("semantic specialties bridge common professional search language", () => {
