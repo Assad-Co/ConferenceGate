@@ -1,11 +1,6 @@
-name: Live Customer Journey Acceptance
+name: Live Three-Account Customer Journey Acceptance
 
 on:
-  push:
-    branches:
-      - phase-11-5-live-customer-acceptance
-    paths:
-      - .github/workflows/live-customer-journey-acceptance.yml
   workflow_dispatch:
 
 permissions:
@@ -22,7 +17,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Run live Organizer and Sponsor acceptance
+      - name: Run live Professional, Organizer, and Sponsor acceptance
         env:
           PHASE11_BASE_URL: https://conferencegate.onrender.com
-        run: node scripts/verifyLiveCustomerJourneys.mjs
+        run: node scripts/verifyLiveThreeAccountAccess.mjs
