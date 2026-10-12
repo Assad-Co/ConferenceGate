@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - name: Clean install
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prepare image upload UX
+        run: node scripts/patchImageUploadUX.mjs
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Sponsor and marketplace alert worker syntax
