@@ -116,9 +116,64 @@ replaceOnce(
   'committee member list photo closing'
 );
 
+// The conference importer is intentionally not restricted to an organizer's official site.
+// Any safe public conference-related webpage may be used as a source; the extracted result
+// remains a reviewable draft and is never auto-published.
+replaceOnce(
+  'Import from the official conference page',
+  'Import from any public webpage',
+  'generic webpage import heading'
+);
+replaceOnce(
+  'ConferenceGate reads the public official page and prefills only facts it can extract. Nothing is published until you review the wizard and submit it.',
+  'Paste any relevant public webpage — conference site, event page, organizer or society page, university page, sponsor page, or other public source. ConferenceGate prefills only facts it can extract. Nothing is published until you review the wizard and submit it.',
+  'generic webpage import helper copy'
+);
+replaceOnce(
+  'placeholder="https://official-conference-site.org/2027"',
+  'placeholder="https://any-public-conference-page.org/event"',
+  'generic webpage import placeholder'
+);
+replaceOnce(
+  "'Could not import the official conference page.'",
+  "'Could not import this public webpage.'",
+  'generic webpage import error copy'
+);
+
 if (changed) {
   fs.writeFileSync(path, source, 'utf8');
-  console.log('Applied Conference Gate image upload UX patch.');
+  console.log('Applied Conference Gate image upload and webpage import UX patch.');
 } else {
-  console.log('Conference Gate image upload UX patch already applied.');
+  console.log('Conference Gate image upload and webpage import UX patch already applied.');
 }
+
+function patchFile(fileUrl, replacements, label) {
+  let text = fs.readFileSync(fileUrl, 'utf8');
+  let fileChanged = false;
+  for (const [before, after, description] of replacements) {
+    if (text.includes(after)) continue;
+    if (!text.includes(before)) {
+      throw new Error(`${label} patch could not find expected source for: ${description}`);
+    }
+    text = text.replace(before, after);
+    fileChanged = true;
+  }
+  if (fileChanged) {
+    fs.writeFileSync(fileUrl, text, 'utf8');
+    console.log(`Applied ${label} patch.`);
+  }
+}
+
+patchFile(
+  new URL('../server/workspaces.ts', import.meta.url),
+  [
+    ['// Paid Organizer Pro helper: fetch one organizer-supplied official conference page, extract only', '// Paid Organizer Pro helper: fetch one organizer-supplied public webpage, extract only', 'server helper comment'],
+    ['return res.status(400).json({ error: "Provide the official conference URL." });', 'return res.status(400).json({ error: "Provide a public webpage URL related to the conference." });', 'missing URL error'],
+    ['return res.status(400).json({ error: "Provide a valid public conference URL." });', 'return res.status(400).json({ error: "Provide a valid public webpage URL." });', 'invalid URL error'],
+    ['return res.status(400).json({ error: "Only http(s) conference URLs are supported." });', 'return res.status(400).json({ error: "Only public http(s) webpage URLs are supported." });', 'protocol error'],
+    ['error: "That URL cannot be fetched safely. Use the public official conference page.",', 'error: "That URL cannot be fetched safely. Use another public webpage that ConferenceGate can access securely.",', 'blocked URL error'],
+    ['note: "The official page was reachable but did not expose structured conference facts. ConferenceGate kept the source URL and opened an empty reviewable draft instead of failing; enter the missing fields manually or try a conference-specific page."', 'note: "The webpage was reachable but did not expose usable conference facts. ConferenceGate kept the source URL and opened an empty reviewable draft instead of failing; enter the missing fields manually or try another relevant public page."', 'empty extraction note'],
+    ['"Imported fields are a draft from the supplied official page. Review every field before publishing." +', '"Imported fields are a draft from the supplied public webpage. Review every field before publishing." +', 'success note'],
+  ],
+  'any-public-webpage import server'
+);
