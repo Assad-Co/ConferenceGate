@@ -2,7 +2,9 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-// Organizer UI compatibility patches run before Vite scans application modules.
+// Production-data and Organizer UI compatibility patches run before Vite scans application modules.
+// @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
+import './scripts/patchRealProductionData.mjs';
 // @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
 import './scripts/patchImageUploadUX.mjs';
 // @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
