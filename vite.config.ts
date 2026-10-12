@@ -2,6 +2,10 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+// Repair the rich launch catalogue before Vite/server bundling so production never has to
+// silently downgrade to the thinner CSV fallback because of a malformed JSON boundary.
+// @ts-ignore -- side-effect-only maintenance script; scripts are excluded from app TS checks.
+import './scripts/repairLaunchDatasetJson.mjs';
 // Production-data and Organizer UI compatibility patches run before Vite scans application modules.
 // @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
 import './scripts/patchRealProductionData.mjs';
