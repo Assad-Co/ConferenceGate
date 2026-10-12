@@ -80,6 +80,71 @@ function normalizedFormat(format: string | null | undefined): string {
   return normalized;
 }
 
+function normalizedOrganizerText(value: string | null | undefined): string {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const ORGANIZER_ALIAS_GROUPS = [
+  ['ieee', 'institute of electrical and electronics engineers'],
+  ['acm', 'association for computing machinery'],
+  ['spe', 'society of petroleum engineers'],
+  ['aapg', 'american association of petroleum geologists'],
+  ['eage', 'european association of geoscientists and engineers', 'european association of geoscientists engineers'],
+  ['seg', 'society of exploration geophysicists'],
+  ['agu', 'american geophysical union'],
+  ['egu', 'european geosciences union'],
+  ['acs', 'american chemical society'],
+  ['aps', 'american physical society'],
+  ['asme', 'american society of mechanical engineers'],
+  ['aiche', 'american institute of chemical engineers'],
+  ['rsna', 'radiological society of north america'],
+  ['himss', 'healthcare information and management systems society'],
+  ['wpc', 'world petroleum council'],
+] as const;
+
+function organizerAliases(value: string | null | undefined): Set<string> {
+  const normalized = normalizedOrganizerText(value);
+  const aliases = new Set<string>();
+  if (!normalized) return aliases;
+  aliases.add(normalized);
+
+  const original = String(value || '');
+  for (const match of original.matchAll(/\(([A-Za-z][A-Za-z0-9-]{1,12})\)/g)) {
+    aliases.add(normalizedOrganizerText(match[1]));
+  }
+
+  for (const group of ORGANIZER_ALIAS_GROUPS) {
+    if (group.some((alias) => normalized.includes(alias))) {
+      group.forEach((alias) => aliases.add(alias));
+    }
+  }
+  return aliases;
+}
+
+export function organizerMatchesFilter(
+  organization: string | null | undefined,
+  filter: string | null | undefined
+): boolean {
+  const wanted = organizerAliases(filter);
+  if (!wanted.size) return true;
+  const actual = organizerAliases(organization);
+  for (const wantedAlias of wanted) {
+    for (const actualAlias of actual) {
+      if (actualAlias === wantedAlias || actualAlias.includes(wantedAlias) || wantedAlias.includes(actualAlias)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function filterStoredDiscoveryResults(
   results: LiveSearchResult[],
   filters: DiscoveryResultFilters
@@ -87,7 +152,7 @@ export function filterStoredDiscoveryResults(
   const country = filters.country.trim().toLowerCase();
   const city = filters.city.trim().toLowerCase();
   const category = filters.category.trim().toLowerCase();
-  const organizer = filters.organizer.trim().toLowerCase();
+  const organizer = filters.organizer.trim();
   const wantedFormat = normalizedFormat(filters.format);
   const requiredSection = filters.requiredSection.trim().toLowerCase();
   const minimumDetails = Math.max(filters.minimumDetailSections, filters.richDetailsOnly ? 6 : 0);
@@ -117,7 +182,7 @@ export function filterStoredDiscoveryResults(
       if (!categoryText.includes(category)) return false;
     }
 
-    if (organizer && !String(result.organization || '').toLowerCase().includes(organizer)) return false;
+    if (organizer && !organizerMatchesFilter(result.organization, organizer)) return false;
     if (filters.cfpOnly && result.cfpOpen !== true) return false;
     if (requiredSection && !result.sections?.includes(requiredSection)) return false;
     if (minimumDetails > 0 && resultDetailCoverage(result) < minimumDetails) return false;
