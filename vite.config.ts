@@ -2,11 +2,11 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-// The organizer wizard is intentionally upgraded before Vite scans application modules. Keeping
-// this build-time compatibility patch lets the very large legacy dashboard adopt the shared image
-// uploader without duplicating the component or changing existing conference API contracts.
+// Organizer UI compatibility patches run before Vite scans application modules.
 // @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
 import './scripts/patchImageUploadUX.mjs';
+// @ts-ignore -- side-effect-only local maintenance script; scripts are excluded from app TS checks.
+import './scripts/patchSponsorEvaluationCTA.mjs';
 
 export default defineConfig(() => {
   return {
