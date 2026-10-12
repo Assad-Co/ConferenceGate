@@ -110,7 +110,6 @@ export function filterStoredDiscoveryResults(
       const categoryText = [
         result.category,
         ...(result.categories || []),
-        ...(result.topics || []),
         result.title,
         result.description,
         result.snippet,
