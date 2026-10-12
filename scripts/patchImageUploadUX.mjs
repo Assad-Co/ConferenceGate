@@ -7,7 +7,7 @@ let changed = false;
 function replaceOnce(before, after, description) {
   if (source.includes(after)) return;
   if (!source.includes(before)) {
-    throw new Error(`Image upload UX patch could not find expected source for: ${description}`);
+    throw new Error(`Conference Gate UX patch could not find expected source for: ${description}`);
   }
   source = source.replace(before, after);
   changed = true;
@@ -117,8 +117,6 @@ replaceOnce(
 );
 
 // The conference importer is intentionally not restricted to an organizer's official site.
-// Any safe public conference-related webpage may be used as a source; the extracted result
-// remains a reviewable draft and is never auto-published.
 replaceOnce(
   'Import from the official conference page',
   'Import from any public webpage',
@@ -140,11 +138,84 @@ replaceOnce(
   'generic webpage import error copy'
 );
 
+// Make verified organizer → sponsor feedback visible from the commercial workflow.
+replaceOnce(
+  "  const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);",
+  "  const [sponsorshipDeals, setSponsorshipDeals] = useState<SponsorshipDeal[]>([]);\n  const [sponsorEvaluationTarget, setSponsorEvaluationTarget] = useState<{ sponsorId: string; conferenceTitle: string } | null>(null);",
+  'sponsor evaluation target state'
+);
+
+replaceOnce(
+`                {sponsorshipDeals.map((deal) => {
+                  const draft = dealDraft(deal);
+                  return (`,
+`                {sponsorshipDeals.map((deal) => {
+                  const draft = dealDraft(deal);
+                  const sponsorCanBeEvaluated = sponsorApplicants.some((application) =>
+                    application.status === 'Approved' &&
+                    application.sponsor?.id === deal.sponsorId &&
+                    application.conferenceTitle === deal.conferenceTitle
+                  );
+                  return (`,
+  'deal room sponsor evaluation eligibility'
+);
+
+replaceOnce(
+`                        <div className="text-right">
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">Agreed amount</div>
+                          <div className="text-lg font-extrabold text-blue-700">
+                            {deal.agreedAmount === null ? 'Not set' : `${deal.currency} ${Number(deal.agreedAmount).toLocaleString()}`}
+                          </div>
+                        </div>`,
+`                        <div className="text-right space-y-2">
+                          <div>
+                            <div className="text-[10px] text-slate-400 uppercase font-bold">Agreed amount</div>
+                            <div className="text-lg font-extrabold text-blue-700">
+                              {deal.agreedAmount === null ? 'Not set' : `${deal.currency} ${Number(deal.agreedAmount).toLocaleString()}`}
+                            </div>
+                          </div>
+                          {sponsorCanBeEvaluated && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSponsorEvaluationTarget({ sponsorId: deal.sponsorId, conferenceTitle: deal.conferenceTitle });
+                                setActiveTab('feedback');
+                                window.setTimeout(() => {
+                                  document.getElementById('sponsor-evaluation')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 80);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl cursor-pointer"
+                            >
+                              <MessageSquareQuote className="w-3.5 h-3.5" />
+                              Evaluate Sponsor
+                            </button>
+                          )}
+                        </div>`,
+  'deal room evaluate sponsor button'
+);
+
+replaceOnce(
+`            <SponsorEvaluationPanel
+              sponsors={reviewableSponsors}
+              conferences={conferences}
+              onSubmit={onReviewSponsor}
+            />`,
+`            <SponsorEvaluationPanel
+              key={`${sponsorEvaluationTarget?.sponsorId || 'default'}:${sponsorEvaluationTarget?.conferenceTitle || 'default'}`}
+              sponsors={reviewableSponsors}
+              conferences={conferences}
+              initialSponsorId={sponsorEvaluationTarget?.sponsorId}
+              initialConferenceTitle={sponsorEvaluationTarget?.conferenceTitle}
+              onSubmit={onReviewSponsor}
+            />`,
+  'sponsor evaluation preselection'
+);
+
 if (changed) {
   fs.writeFileSync(path, source, 'utf8');
-  console.log('Applied Conference Gate image upload and webpage import UX patch.');
+  console.log('Applied Conference Gate organizer UX patch.');
 } else {
-  console.log('Conference Gate image upload and webpage import UX patch already applied.');
+  console.log('Conference Gate organizer UX patch already applied.');
 }
 
 function patchFile(fileUrl, replacements, label) {
@@ -163,6 +234,63 @@ function patchFile(fileUrl, replacements, label) {
     console.log(`Applied ${label} patch.`);
   }
 }
+
+patchFile(
+  new URL('../src/components/SponsorEvaluationPanel.tsx', import.meta.url),
+  [
+    [
+`  onSubmit: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string; ratings: Record<string, number>; overallScore: number }) => void | Promise<void>;
+  sponsorsLoading?: boolean;
+}> = ({ sponsors, conferences, onSubmit, sponsorsLoading = false }) => {
+  const [sponsorId, setSponsorId] = useState(sponsors[0]?.id || '');
+  const [conferenceTitle, setConferenceTitle] = useState('');`,
+`  onSubmit: (sponsorId: string, review: { conferenceTitle: string; rating: number; comment: string; ratings: Record<string, number>; overallScore: number }) => void | Promise<void>;
+  sponsorsLoading?: boolean;
+  initialSponsorId?: string;
+  initialConferenceTitle?: string;
+}> = ({ sponsors, conferences, onSubmit, sponsorsLoading = false, initialSponsorId, initialConferenceTitle }) => {
+  const [sponsorId, setSponsorId] = useState(initialSponsorId || sponsors[0]?.id || '');
+  const [conferenceTitle, setConferenceTitle] = useState(initialConferenceTitle || '');`,
+      'evaluation target props'
+    ],
+    [
+`    if (!sponsors.some((sponsor) => sponsor.id === sponsorId)) {
+      setSponsorId(sponsors[0].id);
+    }
+  }, [sponsors, sponsorId]);`,
+`    if (initialSponsorId && sponsors.some((sponsor) => sponsor.id === initialSponsorId)) {
+      if (sponsorId !== initialSponsorId) setSponsorId(initialSponsorId);
+      return;
+    }
+    if (!sponsors.some((sponsor) => sponsor.id === sponsorId)) {
+      setSponsorId(sponsors[0].id);
+    }
+  }, [sponsors, sponsorId, initialSponsorId]);`,
+      'initial sponsor selection'
+    ],
+    [
+`    if (!eligibleConferenceTitles.includes(conferenceTitle)) {
+      setConferenceTitle(eligibleConferenceTitles[0]);
+    }
+  }, [conferenceTitle, eligibleConferenceTitles]);`,
+`    if (initialConferenceTitle && eligibleConferenceTitles.includes(initialConferenceTitle)) {
+      if (conferenceTitle !== initialConferenceTitle) setConferenceTitle(initialConferenceTitle);
+      return;
+    }
+    if (!eligibleConferenceTitles.includes(conferenceTitle)) {
+      setConferenceTitle(eligibleConferenceTitles[0]);
+    }
+  }, [conferenceTitle, eligibleConferenceTitles, initialConferenceTitle]);`,
+      'initial conference selection'
+    ],
+    [
+`    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">`,
+`    <div id="sponsor-evaluation" className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4 scroll-mt-6">`,
+      'sponsor evaluation anchor'
+    ],
+  ],
+  'sponsor evaluation deep-link'
+);
 
 patchFile(
   new URL('../server/workspaces.ts', import.meta.url),
