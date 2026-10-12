@@ -1,13 +1,13 @@
-// Country normalization.
+// Country normalization for Conference Gate's worldwide discovery catalogue.
 //
-// "USA", "U.S.", "United States of America" and "US" all name one place, and Conference Gate
-// already has a spelling for it — the one its own location filters use ("United States", "United
-// Kingdom", "United Arab Emirates", "South Korea", "Czechia"). Those spellings are the canonical
-// forms here, so a discovered conference lands in the same bucket as one an organiser created.
+// A conference source may say "USA", "U.S.", "United States of America", "US", "KSA",
+// "Türkiye", "Macao" or a local-language country name. Those all need to resolve to the same
+// canonical location bucket or country filters, regional search and deduplication become unreliable.
 //
-// The raw location string is never modified by any of this; it is preserved separately for
-// auditing (section 14). A name that cannot be resolved leaves `country` null rather than being
-// guessed at.
+// The table intentionally covers the 195 commonly recognised sovereign states plus major
+// conference-hosting territories/economies that appear independently in event data. The raw source
+// location is preserved elsewhere for provenance; an unrecognised value remains null rather than
+// being guessed.
 
 export interface CountryRecord {
   /** The spelling Conference Gate uses. */
@@ -18,149 +18,246 @@ export interface CountryRecord {
   aliases: string[];
 }
 
-// Ordered by nothing in particular; lookups are by index built below.
+const c = (
+  name: string,
+  iso2: string,
+  iso3: string,
+  region: string,
+  aliases: string[] = []
+): CountryRecord => ({ name, iso2, iso3, region, aliases });
+
 export const COUNTRIES: CountryRecord[] = [
-  { name: "Afghanistan", iso2: "AF", iso3: "AFG", region: "Asia", aliases: [] },
-  { name: "Albania", iso2: "AL", iso3: "ALB", region: "Europe", aliases: [] },
-  { name: "Algeria", iso2: "DZ", iso3: "DZA", region: "Africa", aliases: [] },
-  { name: "Argentina", iso2: "AR", iso3: "ARG", region: "South America", aliases: [] },
-  { name: "Armenia", iso2: "AM", iso3: "ARM", region: "Asia", aliases: [] },
-  { name: "Australia", iso2: "AU", iso3: "AUS", region: "Oceania", aliases: [] },
-  { name: "Austria", iso2: "AT", iso3: "AUT", region: "Europe", aliases: ["österreich", "osterreich"] },
-  { name: "Azerbaijan", iso2: "AZ", iso3: "AZE", region: "Asia", aliases: [] },
-  { name: "Bahrain", iso2: "BH", iso3: "BHR", region: "Middle East", aliases: [] },
-  { name: "Bangladesh", iso2: "BD", iso3: "BGD", region: "Asia", aliases: [] },
-  { name: "Belarus", iso2: "BY", iso3: "BLR", region: "Europe", aliases: [] },
-  { name: "Belgium", iso2: "BE", iso3: "BEL", region: "Europe", aliases: ["belgique", "belgië", "belgie"] },
-  { name: "Bolivia", iso2: "BO", iso3: "BOL", region: "South America", aliases: [] },
-  { name: "Bosnia and Herzegovina", iso2: "BA", iso3: "BIH", region: "Europe", aliases: ["bosnia"] },
-  { name: "Botswana", iso2: "BW", iso3: "BWA", region: "Africa", aliases: [] },
-  { name: "Brazil", iso2: "BR", iso3: "BRA", region: "South America", aliases: ["brasil"] },
-  { name: "Brunei", iso2: "BN", iso3: "BRN", region: "Asia", aliases: ["brunei darussalam"] },
-  { name: "Bulgaria", iso2: "BG", iso3: "BGR", region: "Europe", aliases: [] },
-  { name: "Cambodia", iso2: "KH", iso3: "KHM", region: "Asia", aliases: [] },
-  { name: "Cameroon", iso2: "CM", iso3: "CMR", region: "Africa", aliases: [] },
-  { name: "Canada", iso2: "CA", iso3: "CAN", region: "North America", aliases: [] },
-  { name: "Chile", iso2: "CL", iso3: "CHL", region: "South America", aliases: [] },
-  { name: "China", iso2: "CN", iso3: "CHN", region: "Asia", aliases: ["people's republic of china", "prc", "mainland china"] },
-  { name: "Colombia", iso2: "CO", iso3: "COL", region: "South America", aliases: [] },
-  { name: "Costa Rica", iso2: "CR", iso3: "CRI", region: "North America", aliases: [] },
-  { name: "Croatia", iso2: "HR", iso3: "HRV", region: "Europe", aliases: ["hrvatska"] },
-  { name: "Cuba", iso2: "CU", iso3: "CUB", region: "North America", aliases: [] },
-  { name: "Cyprus", iso2: "CY", iso3: "CYP", region: "Europe", aliases: [] },
-  { name: "Czechia", iso2: "CZ", iso3: "CZE", region: "Europe", aliases: ["czech republic", "česká republika", "ceska republika"] },
-  { name: "Denmark", iso2: "DK", iso3: "DNK", region: "Europe", aliases: ["danmark"] },
-  { name: "Ecuador", iso2: "EC", iso3: "ECU", region: "South America", aliases: [] },
-  { name: "Egypt", iso2: "EG", iso3: "EGY", region: "Africa", aliases: ["arab republic of egypt"] },
-  { name: "Estonia", iso2: "EE", iso3: "EST", region: "Europe", aliases: ["eesti"] },
-  { name: "Ethiopia", iso2: "ET", iso3: "ETH", region: "Africa", aliases: [] },
-  { name: "Finland", iso2: "FI", iso3: "FIN", region: "Europe", aliases: ["suomi"] },
-  { name: "France", iso2: "FR", iso3: "FRA", region: "Europe", aliases: [] },
-  { name: "Georgia", iso2: "GE", iso3: "GEO", region: "Asia", aliases: [] },
-  { name: "Germany", iso2: "DE", iso3: "DEU", region: "Europe", aliases: ["deutschland", "federal republic of germany", "brd"] },
-  { name: "Ghana", iso2: "GH", iso3: "GHA", region: "Africa", aliases: [] },
-  { name: "Greece", iso2: "GR", iso3: "GRC", region: "Europe", aliases: ["hellas", "ελλάδα"] },
-  { name: "Hong Kong", iso2: "HK", iso3: "HKG", region: "Asia", aliases: ["hong kong sar", "hong kong s.a.r."] },
-  { name: "Hungary", iso2: "HU", iso3: "HUN", region: "Europe", aliases: ["magyarország", "magyarorszag"] },
-  { name: "Iceland", iso2: "IS", iso3: "ISL", region: "Europe", aliases: ["ísland"] },
-  { name: "India", iso2: "IN", iso3: "IND", region: "Asia", aliases: ["bharat", "republic of india"] },
-  { name: "Indonesia", iso2: "ID", iso3: "IDN", region: "Asia", aliases: [] },
-  { name: "Iran", iso2: "IR", iso3: "IRN", region: "Middle East", aliases: ["islamic republic of iran"] },
-  { name: "Iraq", iso2: "IQ", iso3: "IRQ", region: "Middle East", aliases: [] },
-  { name: "Ireland", iso2: "IE", iso3: "IRL", region: "Europe", aliases: ["republic of ireland", "éire", "eire"] },
-  { name: "Israel", iso2: "IL", iso3: "ISR", region: "Middle East", aliases: [] },
-  { name: "Italy", iso2: "IT", iso3: "ITA", region: "Europe", aliases: ["italia"] },
-  { name: "Japan", iso2: "JP", iso3: "JPN", region: "Asia", aliases: ["nippon", "nihon", "日本"] },
-  { name: "Jordan", iso2: "JO", iso3: "JOR", region: "Middle East", aliases: ["hashemite kingdom of jordan"] },
-  { name: "Kazakhstan", iso2: "KZ", iso3: "KAZ", region: "Asia", aliases: [] },
-  { name: "Kenya", iso2: "KE", iso3: "KEN", region: "Africa", aliases: [] },
-  { name: "Kuwait", iso2: "KW", iso3: "KWT", region: "Middle East", aliases: [] },
-  { name: "Latvia", iso2: "LV", iso3: "LVA", region: "Europe", aliases: [] },
-  { name: "Lebanon", iso2: "LB", iso3: "LBN", region: "Middle East", aliases: [] },
-  { name: "Lithuania", iso2: "LT", iso3: "LTU", region: "Europe", aliases: [] },
-  { name: "Luxembourg", iso2: "LU", iso3: "LUX", region: "Europe", aliases: [] },
-  { name: "Malaysia", iso2: "MY", iso3: "MYS", region: "Asia", aliases: [] },
-  { name: "Malta", iso2: "MT", iso3: "MLT", region: "Europe", aliases: [] },
-  { name: "Mexico", iso2: "MX", iso3: "MEX", region: "North America", aliases: ["méxico", "estados unidos mexicanos"] },
-  { name: "Morocco", iso2: "MA", iso3: "MAR", region: "Africa", aliases: ["maroc"] },
-  { name: "Mozambique", iso2: "MZ", iso3: "MOZ", region: "Africa", aliases: [] },
-  { name: "Nepal", iso2: "NP", iso3: "NPL", region: "Asia", aliases: [] },
-  { name: "Netherlands", iso2: "NL", iso3: "NLD", region: "Europe", aliases: ["the netherlands", "holland", "nederland"] },
-  { name: "New Zealand", iso2: "NZ", iso3: "NZL", region: "Oceania", aliases: ["aotearoa"] },
-  { name: "Nigeria", iso2: "NG", iso3: "NGA", region: "Africa", aliases: [] },
-  { name: "Norway", iso2: "NO", iso3: "NOR", region: "Europe", aliases: ["norge"] },
-  { name: "Oman", iso2: "OM", iso3: "OMN", region: "Middle East", aliases: ["sultanate of oman"] },
-  { name: "Pakistan", iso2: "PK", iso3: "PAK", region: "Asia", aliases: [] },
-  { name: "Panama", iso2: "PA", iso3: "PAN", region: "North America", aliases: [] },
-  { name: "Peru", iso2: "PE", iso3: "PER", region: "South America", aliases: ["perú"] },
-  { name: "Philippines", iso2: "PH", iso3: "PHL", region: "Asia", aliases: ["the philippines"] },
-  { name: "Poland", iso2: "PL", iso3: "POL", region: "Europe", aliases: ["polska"] },
-  { name: "Portugal", iso2: "PT", iso3: "PRT", region: "Europe", aliases: [] },
-  { name: "Qatar", iso2: "QA", iso3: "QAT", region: "Middle East", aliases: [] },
-  { name: "Romania", iso2: "RO", iso3: "ROU", region: "Europe", aliases: ["românia"] },
-  { name: "Russia", iso2: "RU", iso3: "RUS", region: "Europe", aliases: ["russian federation"] },
-  { name: "Rwanda", iso2: "RW", iso3: "RWA", region: "Africa", aliases: [] },
-  { name: "Saudi Arabia", iso2: "SA", iso3: "SAU", region: "Middle East", aliases: ["ksa", "kingdom of saudi arabia"] },
-  { name: "Senegal", iso2: "SN", iso3: "SEN", region: "Africa", aliases: [] },
-  { name: "Serbia", iso2: "RS", iso3: "SRB", region: "Europe", aliases: [] },
-  { name: "Singapore", iso2: "SG", iso3: "SGP", region: "Asia", aliases: [] },
-  { name: "Slovakia", iso2: "SK", iso3: "SVK", region: "Europe", aliases: ["slovak republic"] },
-  { name: "Slovenia", iso2: "SI", iso3: "SVN", region: "Europe", aliases: [] },
-  { name: "South Africa", iso2: "ZA", iso3: "ZAF", region: "Africa", aliases: ["rsa", "republic of south africa"] },
-  { name: "South Korea", iso2: "KR", iso3: "KOR", region: "Asia", aliases: ["korea", "republic of korea", "korea, republic of", "korea (south)", "대한민국"] },
-  { name: "Spain", iso2: "ES", iso3: "ESP", region: "Europe", aliases: ["españa", "espana"] },
-  { name: "Sri Lanka", iso2: "LK", iso3: "LKA", region: "Asia", aliases: [] },
-  { name: "Suriname", iso2: "SR", iso3: "SUR", region: "South America", aliases: [] },
-  { name: "Sweden", iso2: "SE", iso3: "SWE", region: "Europe", aliases: ["sverige"] },
-  { name: "Switzerland", iso2: "CH", iso3: "CHE", region: "Europe", aliases: ["suisse", "schweiz", "svizzera", "confoederatio helvetica"] },
-  { name: "Taiwan", iso2: "TW", iso3: "TWN", region: "Asia", aliases: ["chinese taipei", "taiwan, province of china"] },
-  { name: "Tanzania", iso2: "TZ", iso3: "TZA", region: "Africa", aliases: ["united republic of tanzania"] },
-  { name: "Thailand", iso2: "TH", iso3: "THA", region: "Asia", aliases: [] },
-  { name: "Tunisia", iso2: "TN", iso3: "TUN", region: "Africa", aliases: ["tunisie"] },
-  { name: "Turkey", iso2: "TR", iso3: "TUR", region: "Europe", aliases: ["türkiye", "turkiye", "republic of türkiye"] },
-  { name: "Uganda", iso2: "UG", iso3: "UGA", region: "Africa", aliases: [] },
-  { name: "Ukraine", iso2: "UA", iso3: "UKR", region: "Europe", aliases: [] },
-  {
-    name: "United Arab Emirates",
-    iso2: "AE",
-    iso3: "ARE",
-    region: "Middle East",
-    aliases: ["uae", "u.a.e.", "emirates", "the emirates"],
-  },
-  {
-    name: "United Kingdom",
-    iso2: "GB",
-    iso3: "GBR",
-    region: "Europe",
-    aliases: [
-      "uk", "u.k.", "great britain", "britain", "england", "scotland", "wales",
-      "northern ireland", "united kingdom of great britain and northern ireland",
-    ],
-  },
-  {
-    name: "United States",
-    iso2: "US",
-    iso3: "USA",
-    region: "North America",
-    aliases: [
-      "usa", "u.s.", "u.s.a.", "us", "united states of america", "america",
-      "the united states", "the us", "u s a",
-    ],
-  },
-  { name: "Uruguay", iso2: "UY", iso3: "URY", region: "South America", aliases: [] },
-  { name: "Uzbekistan", iso2: "UZ", iso3: "UZB", region: "Asia", aliases: [] },
-  { name: "Venezuela", iso2: "VE", iso3: "VEN", region: "South America", aliases: [] },
-  { name: "Vietnam", iso2: "VN", iso3: "VNM", region: "Asia", aliases: ["viet nam", "socialist republic of vietnam"] },
-  { name: "Zambia", iso2: "ZM", iso3: "ZMB", region: "Africa", aliases: [] },
-  { name: "Zimbabwe", iso2: "ZW", iso3: "ZWE", region: "Africa", aliases: [] },
+  c("Afghanistan", "AF", "AFG", "Asia"),
+  c("Albania", "AL", "ALB", "Europe"),
+  c("Algeria", "DZ", "DZA", "Africa"),
+  c("Andorra", "AD", "AND", "Europe"),
+  c("Angola", "AO", "AGO", "Africa"),
+  c("Antigua and Barbuda", "AG", "ATG", "North America", ["antigua & barbuda"]),
+  c("Argentina", "AR", "ARG", "South America"),
+  c("Armenia", "AM", "ARM", "Asia"),
+  c("Australia", "AU", "AUS", "Oceania"),
+  c("Austria", "AT", "AUT", "Europe", ["österreich", "osterreich"]),
+  c("Azerbaijan", "AZ", "AZE", "Asia"),
+  c("Bahamas", "BS", "BHS", "North America", ["the bahamas"]),
+  c("Bahrain", "BH", "BHR", "Middle East", ["kingdom of bahrain"]),
+  c("Bangladesh", "BD", "BGD", "Asia"),
+  c("Barbados", "BB", "BRB", "North America"),
+  c("Belarus", "BY", "BLR", "Europe"),
+  c("Belgium", "BE", "BEL", "Europe", ["belgique", "belgië", "belgie"]),
+  c("Belize", "BZ", "BLZ", "North America"),
+  c("Benin", "BJ", "BEN", "Africa"),
+  c("Bhutan", "BT", "BTN", "Asia"),
+  c("Bolivia", "BO", "BOL", "South America", ["bolivia plurinational state of"]),
+  c("Bosnia and Herzegovina", "BA", "BIH", "Europe", ["bosnia", "bosnia & herzegovina"]),
+  c("Botswana", "BW", "BWA", "Africa"),
+  c("Brazil", "BR", "BRA", "South America", ["brasil"]),
+  c("Brunei", "BN", "BRN", "Asia", ["brunei darussalam"]),
+  c("Bulgaria", "BG", "BGR", "Europe"),
+  c("Burkina Faso", "BF", "BFA", "Africa"),
+  c("Burundi", "BI", "BDI", "Africa"),
+  c("Cabo Verde", "CV", "CPV", "Africa", ["cape verde"]),
+  c("Cambodia", "KH", "KHM", "Asia"),
+  c("Cameroon", "CM", "CMR", "Africa"),
+  c("Canada", "CA", "CAN", "North America"),
+  c("Central African Republic", "CF", "CAF", "Africa", ["car"]),
+  c("Chad", "TD", "TCD", "Africa"),
+  c("Chile", "CL", "CHL", "South America"),
+  c("China", "CN", "CHN", "Asia", ["people's republic of china", "peoples republic of china", "prc", "mainland china"]),
+  c("Colombia", "CO", "COL", "South America"),
+  c("Comoros", "KM", "COM", "Africa"),
+  c("Congo", "CG", "COG", "Africa", ["republic of the congo", "congo brazzaville"]),
+  c("Democratic Republic of the Congo", "CD", "COD", "Africa", ["drc", "dr congo", "congo kinshasa", "congo democratic republic of the"]),
+  c("Costa Rica", "CR", "CRI", "North America"),
+  c("Côte d'Ivoire", "CI", "CIV", "Africa", ["cote d'ivoire", "cote divoire", "ivory coast"]),
+  c("Croatia", "HR", "HRV", "Europe", ["hrvatska"]),
+  c("Cuba", "CU", "CUB", "North America"),
+  c("Cyprus", "CY", "CYP", "Europe"),
+  c("Czechia", "CZ", "CZE", "Europe", ["czech republic", "česká republika", "ceska republika"]),
+  c("Denmark", "DK", "DNK", "Europe", ["danmark"]),
+  c("Djibouti", "DJ", "DJI", "Africa"),
+  c("Dominica", "DM", "DMA", "North America"),
+  c("Dominican Republic", "DO", "DOM", "North America"),
+  c("Ecuador", "EC", "ECU", "South America"),
+  c("Egypt", "EG", "EGY", "Africa", ["arab republic of egypt"]),
+  c("El Salvador", "SV", "SLV", "North America"),
+  c("Equatorial Guinea", "GQ", "GNQ", "Africa"),
+  c("Eritrea", "ER", "ERI", "Africa"),
+  c("Estonia", "EE", "EST", "Europe", ["eesti"]),
+  c("Eswatini", "SZ", "SWZ", "Africa", ["swaziland"]),
+  c("Ethiopia", "ET", "ETH", "Africa"),
+  c("Fiji", "FJ", "FJI", "Oceania"),
+  c("Finland", "FI", "FIN", "Europe", ["suomi"]),
+  c("France", "FR", "FRA", "Europe"),
+  c("Gabon", "GA", "GAB", "Africa"),
+  c("Gambia", "GM", "GMB", "Africa", ["the gambia"]),
+  c("Georgia", "GE", "GEO", "Asia"),
+  c("Germany", "DE", "DEU", "Europe", ["deutschland", "federal republic of germany", "brd"]),
+  c("Ghana", "GH", "GHA", "Africa"),
+  c("Greece", "GR", "GRC", "Europe", ["hellas", "ellada", "ελλάδα"]),
+  c("Grenada", "GD", "GRD", "North America"),
+  c("Guatemala", "GT", "GTM", "North America"),
+  c("Guinea", "GN", "GIN", "Africa"),
+  c("Guinea-Bissau", "GW", "GNB", "Africa", ["guinea bissau"]),
+  c("Guyana", "GY", "GUY", "South America"),
+  c("Haiti", "HT", "HTI", "North America"),
+  c("Honduras", "HN", "HND", "North America"),
+  c("Hungary", "HU", "HUN", "Europe", ["magyarország", "magyarorszag"]),
+  c("Iceland", "IS", "ISL", "Europe", ["ísland", "island"]),
+  c("India", "IN", "IND", "Asia", ["bharat", "republic of india"]),
+  c("Indonesia", "ID", "IDN", "Asia"),
+  c("Iran", "IR", "IRN", "Middle East", ["islamic republic of iran"]),
+  c("Iraq", "IQ", "IRQ", "Middle East"),
+  c("Ireland", "IE", "IRL", "Europe", ["republic of ireland", "éire", "eire"]),
+  c("Israel", "IL", "ISR", "Middle East"),
+  c("Italy", "IT", "ITA", "Europe", ["italia"]),
+  c("Jamaica", "JM", "JAM", "North America"),
+  c("Japan", "JP", "JPN", "Asia", ["nippon", "nihon", "日本"]),
+  c("Jordan", "JO", "JOR", "Middle East", ["hashemite kingdom of jordan"]),
+  c("Kazakhstan", "KZ", "KAZ", "Asia"),
+  c("Kenya", "KE", "KEN", "Africa"),
+  c("Kiribati", "KI", "KIR", "Oceania"),
+  c("North Korea", "KP", "PRK", "Asia", ["democratic people's republic of korea", "dprk", "korea north"]),
+  c("South Korea", "KR", "KOR", "Asia", ["korea", "republic of korea", "korea republic of", "korea (south)", "대한민국"]),
+  c("Kuwait", "KW", "KWT", "Middle East", ["state of kuwait"]),
+  c("Kyrgyzstan", "KG", "KGZ", "Asia", ["kyrgyz republic"]),
+  c("Laos", "LA", "LAO", "Asia", ["lao pdr", "lao people's democratic republic"]),
+  c("Latvia", "LV", "LVA", "Europe"),
+  c("Lebanon", "LB", "LBN", "Middle East"),
+  c("Lesotho", "LS", "LSO", "Africa"),
+  c("Liberia", "LR", "LBR", "Africa"),
+  c("Libya", "LY", "LBY", "Africa"),
+  c("Liechtenstein", "LI", "LIE", "Europe"),
+  c("Lithuania", "LT", "LTU", "Europe"),
+  c("Luxembourg", "LU", "LUX", "Europe"),
+  c("Madagascar", "MG", "MDG", "Africa"),
+  c("Malawi", "MW", "MWI", "Africa"),
+  c("Malaysia", "MY", "MYS", "Asia"),
+  c("Maldives", "MV", "MDV", "Asia"),
+  c("Mali", "ML", "MLI", "Africa"),
+  c("Malta", "MT", "MLT", "Europe"),
+  c("Marshall Islands", "MH", "MHL", "Oceania"),
+  c("Mauritania", "MR", "MRT", "Africa"),
+  c("Mauritius", "MU", "MUS", "Africa"),
+  c("Mexico", "MX", "MEX", "North America", ["méxico", "estados unidos mexicanos"]),
+  c("Micronesia", "FM", "FSM", "Oceania", ["federated states of micronesia", "micronesia federated states of"]),
+  c("Moldova", "MD", "MDA", "Europe", ["republic of moldova"]),
+  c("Monaco", "MC", "MCO", "Europe"),
+  c("Mongolia", "MN", "MNG", "Asia"),
+  c("Montenegro", "ME", "MNE", "Europe"),
+  c("Morocco", "MA", "MAR", "Africa", ["maroc", "kingdom of morocco"]),
+  c("Mozambique", "MZ", "MOZ", "Africa"),
+  c("Myanmar", "MM", "MMR", "Asia", ["burma"]),
+  c("Namibia", "NA", "NAM", "Africa"),
+  c("Nauru", "NR", "NRU", "Oceania"),
+  c("Nepal", "NP", "NPL", "Asia"),
+  c("Netherlands", "NL", "NLD", "Europe", ["the netherlands", "holland", "nederland"]),
+  c("New Zealand", "NZ", "NZL", "Oceania", ["aotearoa"]),
+  c("Nicaragua", "NI", "NIC", "North America"),
+  c("Niger", "NE", "NER", "Africa"),
+  c("Nigeria", "NG", "NGA", "Africa"),
+  c("North Macedonia", "MK", "MKD", "Europe", ["macedonia", "republic of north macedonia"]),
+  c("Norway", "NO", "NOR", "Europe", ["norge"]),
+  c("Oman", "OM", "OMN", "Middle East", ["sultanate of oman"]),
+  c("Pakistan", "PK", "PAK", "Asia"),
+  c("Palau", "PW", "PLW", "Oceania"),
+  c("Palestine", "PS", "PSE", "Middle East", ["state of palestine", "palestinian territories", "occupied palestinian territory"]),
+  c("Panama", "PA", "PAN", "North America"),
+  c("Papua New Guinea", "PG", "PNG", "Oceania", ["png"]),
+  c("Paraguay", "PY", "PRY", "South America"),
+  c("Peru", "PE", "PER", "South America", ["perú"]),
+  c("Philippines", "PH", "PHL", "Asia", ["the philippines"]),
+  c("Poland", "PL", "POL", "Europe", ["polska"]),
+  c("Portugal", "PT", "PRT", "Europe"),
+  c("Qatar", "QA", "QAT", "Middle East", ["state of qatar"]),
+  c("Romania", "RO", "ROU", "Europe", ["românia", "romania"]),
+  c("Russia", "RU", "RUS", "Europe", ["russian federation"]),
+  c("Rwanda", "RW", "RWA", "Africa"),
+  c("Saint Kitts and Nevis", "KN", "KNA", "North America", ["st kitts and nevis", "st. kitts and nevis"]),
+  c("Saint Lucia", "LC", "LCA", "North America", ["st lucia", "st. lucia"]),
+  c("Saint Vincent and the Grenadines", "VC", "VCT", "North America", ["st vincent and the grenadines", "st. vincent and the grenadines"]),
+  c("Samoa", "WS", "WSM", "Oceania"),
+  c("San Marino", "SM", "SMR", "Europe"),
+  c("São Tomé and Príncipe", "ST", "STP", "Africa", ["sao tome and principe", "são tomé & príncipe"]),
+  c("Saudi Arabia", "SA", "SAU", "Middle East", ["ksa", "kingdom of saudi arabia", "saudi"]),
+  c("Senegal", "SN", "SEN", "Africa"),
+  c("Serbia", "RS", "SRB", "Europe"),
+  c("Seychelles", "SC", "SYC", "Africa"),
+  c("Sierra Leone", "SL", "SLE", "Africa"),
+  c("Singapore", "SG", "SGP", "Asia", ["republic of singapore"]),
+  c("Slovakia", "SK", "SVK", "Europe", ["slovak republic"]),
+  c("Slovenia", "SI", "SVN", "Europe"),
+  c("Solomon Islands", "SB", "SLB", "Oceania"),
+  c("Somalia", "SO", "SOM", "Africa"),
+  c("South Africa", "ZA", "ZAF", "Africa", ["rsa", "republic of south africa"]),
+  c("South Sudan", "SS", "SSD", "Africa"),
+  c("Spain", "ES", "ESP", "Europe", ["españa", "espana"]),
+  c("Sri Lanka", "LK", "LKA", "Asia"),
+  c("Sudan", "SD", "SDN", "Africa"),
+  c("Suriname", "SR", "SUR", "South America"),
+  c("Sweden", "SE", "SWE", "Europe", ["sverige"]),
+  c("Switzerland", "CH", "CHE", "Europe", ["suisse", "schweiz", "svizzera", "confoederatio helvetica"]),
+  c("Syria", "SY", "SYR", "Middle East", ["syrian arab republic"]),
+  c("Tajikistan", "TJ", "TJK", "Asia"),
+  c("Tanzania", "TZ", "TZA", "Africa", ["united republic of tanzania"]),
+  c("Thailand", "TH", "THA", "Asia"),
+  c("Timor-Leste", "TL", "TLS", "Asia", ["east timor", "timor leste"]),
+  c("Togo", "TG", "TGO", "Africa"),
+  c("Tonga", "TO", "TON", "Oceania"),
+  c("Trinidad and Tobago", "TT", "TTO", "North America", ["trinidad & tobago"]),
+  c("Tunisia", "TN", "TUN", "Africa", ["tunisie"]),
+  c("Turkey", "TR", "TUR", "Europe", ["türkiye", "turkiye", "republic of türkiye", "republic of turkiye"]),
+  c("Turkmenistan", "TM", "TKM", "Asia"),
+  c("Tuvalu", "TV", "TUV", "Oceania"),
+  c("Uganda", "UG", "UGA", "Africa"),
+  c("Ukraine", "UA", "UKR", "Europe"),
+  c("United Arab Emirates", "AE", "ARE", "Middle East", ["uae", "u.a.e.", "emirates", "the emirates"]),
+  c("United Kingdom", "GB", "GBR", "Europe", ["uk", "u.k.", "great britain", "britain", "england", "scotland", "wales", "northern ireland", "united kingdom of great britain and northern ireland"]),
+  c("United States", "US", "USA", "North America", ["usa", "u.s.", "u.s.a.", "us", "united states of america", "america", "the united states", "the us", "u s a"]),
+  c("Uruguay", "UY", "URY", "South America"),
+  c("Uzbekistan", "UZ", "UZB", "Asia"),
+  c("Vanuatu", "VU", "VUT", "Oceania"),
+  c("Vatican City", "VA", "VAT", "Europe", ["holy see", "vatican"]),
+  c("Venezuela", "VE", "VEN", "South America", ["bolivarian republic of venezuela"]),
+  c("Vietnam", "VN", "VNM", "Asia", ["viet nam", "socialist republic of vietnam"]),
+  c("Yemen", "YE", "YEM", "Middle East"),
+  c("Zambia", "ZM", "ZMB", "Africa"),
+  c("Zimbabwe", "ZW", "ZWE", "Africa"),
+
+  // Major conference-hosting territories/economies commonly represented independently in event feeds.
+  c("Hong Kong", "HK", "HKG", "Asia", ["hong kong sar", "hong kong s.a.r.", "hong kong china"]),
+  c("Macao", "MO", "MAC", "Asia", ["macau", "macao sar", "macau sar", "macao china"]),
+  c("Taiwan", "TW", "TWN", "Asia", ["chinese taipei", "taiwan province of china"]),
+  c("Puerto Rico", "PR", "PRI", "North America"),
+  c("Bermuda", "BM", "BMU", "North America"),
+  c("Cayman Islands", "KY", "CYM", "North America"),
+  c("British Virgin Islands", "VG", "VGB", "North America", ["bvi"]),
+  c("U.S. Virgin Islands", "VI", "VIR", "North America", ["us virgin islands", "united states virgin islands"]),
+  c("Aruba", "AW", "ABW", "North America"),
+  c("Curaçao", "CW", "CUW", "North America", ["curacao"]),
+  c("Sint Maarten", "SX", "SXM", "North America", ["st maarten", "st. maarten"]),
+  c("Guam", "GU", "GUM", "Oceania"),
+  c("Northern Mariana Islands", "MP", "MNP", "Oceania", ["cnmi"]),
+  c("American Samoa", "AS", "ASM", "Oceania"),
+  c("New Caledonia", "NC", "NCL", "Oceania"),
+  c("French Polynesia", "PF", "PYF", "Oceania", ["tahiti"]),
+  c("Greenland", "GL", "GRL", "North America"),
+  c("Faroe Islands", "FO", "FRO", "Europe"),
+  c("Gibraltar", "GI", "GIB", "Europe"),
+  c("Isle of Man", "IM", "IMN", "Europe"),
+  c("Jersey", "JE", "JEY", "Europe"),
+  c("Guernsey", "GG", "GGY", "Europe"),
+  c("Réunion", "RE", "REU", "Africa", ["reunion"]),
+  c("Mayotte", "YT", "MYT", "Africa"),
+  c("Åland Islands", "AX", "ALA", "Europe", ["aland islands", "aland"]),
 ];
 
 function normalizeKey(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[.'’]/g, "")
+    .replace(/&/g, " and ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -174,11 +271,11 @@ for (const country of COUNTRIES) {
 }
 
 /**
- * Resolves a country name, code or alias to Conference Gate's own spelling.
+ * Resolves a country name, code or alias to Conference Gate's canonical spelling.
  *
- * Two-letter tokens are only accepted when they are an exact ISO code, because plenty of ordinary
- * words ("in", "at") would otherwise resolve to a country. Anything unrecognised returns null —
- * an unknown country is recorded as unknown, never as the nearest-looking guess.
+ * Two-letter tokens are accepted only when they are exact ISO codes because ordinary words such as
+ * "in" and "at" must never resolve to countries. Anything unrecognised returns null — an unknown
+ * country is recorded as unknown rather than coerced into the nearest-looking name.
  */
 export function normalizeCountry(value: string | null | undefined): CountryRecord | null {
   if (!value || typeof value !== "string") return null;
@@ -187,7 +284,7 @@ export function normalizeCountry(value: string | null | undefined): CountryRecor
   return INDEX.get(key) ?? null;
 }
 
-/** Finds a country named anywhere inside a longer location string ("Doha, Qatar"). */
+/** Finds a country or recognised alias named anywhere inside a longer location string. */
 export function findCountryInText(text: string | null | undefined): CountryRecord | null {
   if (!text) return null;
   const normalized = normalizeKey(text);
@@ -199,16 +296,17 @@ export function findCountryInText(text: string | null | undefined): CountryRecor
     if (match) return match;
   }
 
-  // Otherwise look for any country name as a whole-word substring, longest name first so
-  // "United States" is preferred over a shorter accidental match.
-  const byLength = [...COUNTRIES].sort((a, b) => b.name.length - a.name.length);
-  for (const country of byLength) {
-    const names = [country.name, ...country.aliases].filter((name) => name.length > 3);
-    for (const name of names) {
-      const needle = normalizeKey(name);
-      const re = new RegExp(`(?:^|[^a-z])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[^a-z]|$)`);
-      if (re.test(normalized)) return country;
-    }
+  // Otherwise scan every canonical name and alias, longest first. Length ordering matters for
+  // country pairs such as Congo / Democratic Republic of the Congo and Korea / South Korea.
+  const candidates = COUNTRIES
+    .flatMap((country) => [country.name, ...country.aliases].map((name) => ({ country, name })))
+    .filter(({ name }) => normalizeKey(name).length > 3)
+    .sort((a, b) => normalizeKey(b.name).length - normalizeKey(a.name).length);
+
+  for (const { country, name } of candidates) {
+    const needle = normalizeKey(name);
+    const re = new RegExp(`(?:^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[^a-z0-9]|$)`);
+    if (re.test(normalized)) return country;
   }
   return null;
 }
@@ -216,4 +314,15 @@ export function findCountryInText(text: string | null | undefined): CountryRecor
 export function regionForCountry(name: string | null): string | null {
   const country = normalizeCountry(name);
   return country ? country.region : null;
+}
+
+/** Canonical country names for global facets/dropdowns. */
+export function worldwideCountryNames(): string[] {
+  return COUNTRIES.map((country) => country.name).sort((a, b) => a.localeCompare(b));
+}
+
+/** Countries belonging to a broad Conference Gate region. */
+export function countriesInRegion(region: string): CountryRecord[] {
+  const key = normalizeKey(region);
+  return COUNTRIES.filter((country) => normalizeKey(country.region) === key);
 }

@@ -59,3 +59,71 @@ test("direct title matches outrank incidental long-section matches", () => {
 test("records missing any meaningful query token are excluded", () => {
   assert.equal(scoreStoredConferenceRecord("ExxonMobil Canada", base), null);
 });
+
+test("natural-language worldwide search does not over-constrain results", () => {
+  assert.notEqual(
+    scoreStoredConferenceRecord("Find worldwide petroleum conferences in 2027", base),
+    null
+  );
+});
+
+test("regional discovery resolves region concepts from canonical country data", () => {
+  const bahrainRecord = { ...base, location: { city: "Manama", country: "Bahrain" } };
+  assert.notEqual(scoreStoredConferenceRecord("GCC petroleum 2027", bahrainRecord), null);
+  assert.notEqual(scoreStoredConferenceRecord("Middle East geoscience 2027", bahrainRecord), null);
+
+  const nigeriaRecord = { ...base, location: { city: "Lagos", country: "Nigeria" } };
+  assert.notEqual(scoreStoredConferenceRecord("Africa petroleum 2027", nigeriaRecord), null);
+
+  const boliviaRecord = { ...base, location: { city: "La Paz", country: "Bolivia" } };
+  assert.notEqual(scoreStoredConferenceRecord("Latin America petroleum 2027", boliviaRecord), null);
+
+  const fijiRecord = { ...base, location: { city: "Nadi", country: "Fiji" } };
+  assert.notEqual(scoreStoredConferenceRecord("Asia Pacific petroleum 2027", fijiRecord), null);
+
+  const panamaRecord = { ...base, location: { city: "Panama City", country: "Panama" } };
+  assert.notEqual(scoreStoredConferenceRecord("Central America petroleum 2027", panamaRecord), null);
+});
+
+test("regional discovery does not leak an unrelated region", () => {
+  const nigeriaRecord = { ...base, location: { city: "Lagos", country: "Nigeria" } };
+  assert.equal(scoreStoredConferenceRecord("Europe petroleum 2027", nigeriaRecord), null);
+});
+
+test("semantic specialties bridge common professional search language", () => {
+  const earthScienceRecord = {
+    ...base,
+    title: "Earth Science Research Meeting 2027",
+    topics: ["Geology", "Geophysics", "Geochemistry"],
+    categories: ["Earth Sciences"],
+  };
+  assert.notEqual(scoreStoredConferenceRecord("geoscience 2027", earthScienceRecord), null);
+});
+
+test("deeply prepared records win relevance ties without beating a direct identity match", () => {
+  const deep = scoreStoredConferenceRecord("Carbon Capture", base)!;
+  const thin = scoreStoredConferenceRecord("Carbon Capture", {
+    ...base,
+    callForPapers: null,
+    programAgenda: null,
+    keynoteSpeakers: null,
+    technicalCommittee: null,
+    sponsorsExhibitors: null,
+    venueAccommodation: null,
+    feesPricing: null,
+    community: null,
+  })!;
+  assert.ok(deep > thin);
+
+  const direct = scoreStoredConferenceRecord("International Geoscience Congress 2027", base)!;
+  const incidental = scoreStoredConferenceRecord("International Geoscience Congress 2027", {
+    ...base,
+    title: "Other Meeting",
+    acronym: "OM",
+    topics: [],
+    categories: [],
+    description: "",
+    callForPapers: { notes: "International Geoscience Congress 2027" },
+  })!;
+  assert.ok(direct > incidental);
+});
