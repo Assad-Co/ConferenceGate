@@ -34,6 +34,12 @@ async function main() {
   // forward-looking subscription-status history trigger after the server has initialized users.
   await runScript('scripts/ensureGrowthSchema.mjs');
 
+  // Phase 57: register the much larger first-party organizer universe before any discovery worker
+  // starts. This does no web crawling; it only upserts trusted source domains into discovery_domains.
+  // The scheduled discovery worker can then expand toward the 1,000+ publish-ready target using the
+  // existing robots, validation, dedupe and controlled-publication gates.
+  await runScript('scripts/syncMegaOrganizerRegistry.mjs');
+
   // Legacy Turso -> SQLite recovery is migration-only. When Turso itself is the active production
   // backend and no explicit DATABASE_PATH migration target exists, the guard exits cleanly instead
   // of trying to copy the live database into an unused ephemeral SQLite file.
@@ -64,6 +70,9 @@ async function main() {
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
   await runScript('scripts/syncPhase52MajorConferences.mjs');
+  // Reassert the Phase 57 source universe after all imports in case a migration or restoration
+  // replaced discovery_domains during startup.
+  await runScript('scripts/syncMegaOrganizerRegistry.mjs');
   // Phase 28: the verified expansion is inserted after the first fast normalisation pass, so run
   // the DB-only quality pipeline again here. This makes newly added conferences customer-ready on
   // the same deploy instead of waiting for a later enrichment cycle, and records a depth/coverage
@@ -83,6 +92,8 @@ async function main() {
   // account/action/entity so repeated deploys cannot flood customer notifications.
   await runScript('scripts/refreshMarketplaceActionAlerts.mjs');
   await runScript('scripts/enrichConferenceImages.mjs', { IMAGE_ENRICH_LIMIT: process.env.IMAGE_ENRICH_LIMIT || '250' });
+  // Lightweight DB-only measurement of progress toward the worldwide 1,000+ publish-ready target.
+  await runScript('scripts/megaConferenceCoverageReport.mjs');
 
   // This loop already performs Popular Search seeding, sanitization, AAPG/calendar reconciliation,
   // Firecrawl/direct deep research, Apify fallback, logo recovery and coverage reporting.

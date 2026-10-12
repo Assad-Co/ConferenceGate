@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const INTERVAL_HOURS = Math.max(1, Number(process.env.CONFERENCE_ENRICH_INTERVAL_HOURS || 6));
 const INTERVAL_MS = INTERVAL_HOURS * 60 * 60 * 1000;
@@ -47,10 +49,26 @@ const DEFAULT_PRIORITY_ORGS = [
   'mwcshanghai.com','aaic.alz.org','meos-geo.com'
 ];
 
+function megaPriorityDomains() {
+  const file = path.join(process.cwd(), 'data', 'phase57-mega-organizer-registry.json');
+  if (!fs.existsSync(file)) return [];
+  try {
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return (Array.isArray(manifest.sources) ? manifest.sources : [])
+      .filter((source) => Number(source?.tier || 3) === 1 && source?.domain)
+      .map((source) => String(source.domain).trim().toLowerCase())
+      .filter(Boolean);
+  } catch (error) {
+    console.warn(`[conference-enrich-loop] could not read Phase 57 registry: ${error?.message || error}`);
+    return [];
+  }
+}
+
 function priorityOrganizations() {
   const configured = String(process.env.PRIORITY_CONFERENCE_ORGS || '')
     .split(',').map((value) => value.trim()).filter(Boolean);
-  return configured.length ? configured : DEFAULT_PRIORITY_ORGS;
+  if (configured.length) return configured;
+  return [...new Set([...megaPriorityDomains(), ...DEFAULT_PRIORITY_ORGS])];
 }
 
 async function cycle() {
@@ -60,6 +78,9 @@ async function cycle() {
   // records. Without this step the static CSV catalogue could be browsed but its detail tabs could
   // never fill, because the workers only iterate discovery_events.
   await runScript('scripts/seedLaunchCatalogueForEnrichment.mjs');
+  // Phase 57 source registration is idempotent. Running it every cycle means a restored/migrated DB
+  // immediately regains the full worldwide organizer universe without waiting for a redeploy.
+  await runScript('scripts/syncMegaOrganizerRegistry.mjs');
   await runScript('scripts/seedPopularCategoryHardCrawl.mjs');
   await runScript('scripts/syncRequestedCategoryExpansion.mjs');
   await runScript('scripts/backfillStoredSponsorshipCatalog.mjs');
@@ -69,24 +90,27 @@ async function cycle() {
   // no longer consume all discovery capacity while weak categories stay nearly empty.
   await runScript('scripts/coverageDrivenCategoryHarvest.mjs');
 
-  // First sweep the globally important conference brands across many categories. This keeps
-  // flagship events from waiting behind hundreds of lower-priority domains in the weekly registry.
+  // First sweep the globally important conference brands across many categories. Phase 57 expands
+  // this tier materially while retaining the existing verified flagship list. Every candidate still
+  // flows through robots, extraction, validation and dedupe before storage/publication.
   const priorityOrgs = priorityOrganizations();
   await runDiscoveryCli([
     'harvest',
     '--orgs', priorityOrgs.join(','),
-    '--max-pages', String(process.env.PRIORITY_ORG_MAX_PAGES || 480),
+    '--max-pages', String(process.env.PRIORITY_ORG_MAX_PAGES || 720),
     '--org-pages', String(process.env.PRIORITY_ORG_PAGES_PER_DOMAIN || 14),
     '--years', '2026,2027,2028',
     '--quiet',
   ]);
 
-  // Then grow the long-tail catalogue from the full authoritative registry.
+  // Then grow the long-tail catalogue from the complete source registry, including lower-tier
+  // Phase 57 organizers. More domains are rotated per cycle so the 1,000+ target is reachable
+  // without allowing one giant organizer site to consume the whole page budget.
   await runDiscoveryCli([
     'harvest',
-    '--max-org-domains', String(process.env.POPULAR_ORG_DOMAINS_PER_CYCLE || 40),
-    '--max-pages', String(process.env.POPULAR_ORG_MAX_PAGES || 480),
-    '--org-pages', String(process.env.POPULAR_ORG_PAGES_PER_DOMAIN || 12),
+    '--max-org-domains', String(process.env.POPULAR_ORG_DOMAINS_PER_CYCLE || 70),
+    '--max-pages', String(process.env.POPULAR_ORG_MAX_PAGES || 720),
+    '--org-pages', String(process.env.POPULAR_ORG_PAGES_PER_DOMAIN || 10),
     '--years', '2026,2027,2028',
     '--quiet',
   ]);
@@ -99,10 +123,10 @@ async function cycle() {
   await runScript('scripts/finalizeConferenceCoverage.mjs');
   await runScript('scripts/enrichAllConferenceDetails.mjs', {
     DEEP_ENRICH_MAX_LINKS: process.env.DEEP_ENRICH_MAX_LINKS || '16',
-    DEEP_ENRICH_FIRECRAWL_MAX_PAGES: process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || '250',
+    DEEP_ENRICH_FIRECRAWL_MAX_PAGES: process.env.DEEP_ENRICH_FIRECRAWL_MAX_PAGES || '300',
   });
   await runScript('scripts/enrichConferenceApifyFallback.mjs', {
-    DEEP_ENRICH_APIFY_MAX_RUNS: process.env.DEEP_ENRICH_APIFY_MAX_RUNS || '120',
+    DEEP_ENRICH_APIFY_MAX_RUNS: process.env.DEEP_ENRICH_APIFY_MAX_RUNS || '140',
     DEEP_ENRICH_APIFY_MAX_PAGES: process.env.DEEP_ENRICH_APIFY_MAX_PAGES || '20',
     DEEP_ENRICH_MIN_TABS: process.env.DEEP_ENRICH_MIN_TABS || '6',
   });
@@ -128,7 +152,7 @@ async function cycle() {
   // After the authoritative AAPG pass, fetch real event artwork separately from the organiser logo.
   // This also repairs older AAPG records whose card/hero image was previously just the AAPG mark.
   await runScript('scripts/enrichConferenceImages.mjs', {
-    IMAGE_ENRICH_LIMIT: process.env.AAPG_IMAGE_ENRICH_LIMIT || '150',
+    IMAGE_ENRICH_LIMIT: process.env.AAPG_IMAGE_ENRICH_LIMIT || '200',
     IMAGE_ENRICH_CONCURRENCY: process.env.IMAGE_ENRICH_CONCURRENCY || '5',
   });
   // Run sponsorship discovery last as well. Some authoritative conference syncs intentionally
@@ -140,6 +164,7 @@ async function cycle() {
   // watcher, so the normal six-hour enrichment cycle is safe for instant/daily/weekly preferences.
   await runScript('scripts/refreshSponsorWatchlistAlerts.mjs');
   await runScript('scripts/popularCategoryCoverageReport.mjs');
+  await runScript('scripts/megaConferenceCoverageReport.mjs');
   console.log(`[conference-enrich-loop] cycle complete; next in ${INTERVAL_HOURS}h`);
 }
 
