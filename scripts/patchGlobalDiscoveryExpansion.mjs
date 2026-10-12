@@ -26,7 +26,7 @@ if (datasetChanged) {
 
 const countrySource = fs.readFileSync(countriesPath, 'utf8');
 const worldwideCountries = [...new Set(
-  [...countrySource.matchAll(/\bname:\s*["']([^"']+)["']/g)].map((match) => match[1].trim()).filter(Boolean)
+  [...countrySource.matchAll(/\bc\(\s*"([^"]+)"/g)].map((match) => match[1].trim()).filter(Boolean)
 )].sort((a, b) => a.localeCompare(b));
 if (worldwideCountries.length < 190) {
   throw new Error(`Expected a worldwide country registry, found only ${worldwideCountries.length} names.`);
