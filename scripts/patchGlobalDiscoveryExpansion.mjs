@@ -110,7 +110,7 @@ let discoveryChanged = false;
 
 {
   const before = `                <option value=\"\">Any organizer / society</option>\n                {organizerOptions.map((organizer) => <option key={organizer} value={organizer}>{organizer}</option>)}`;
-  const after = `                <option value=\"\">Any organizer / society</option>\n                <optgroup label=\"Major global organizers\">\n                  {FAMOUS_ORGANIZERS.map((organizer) => <option key={\`featured-${organizer}\`} value={organizer}>{organizer}</option>)}\n                </optgroup>\n                <optgroup label=\"All organizers in Conference Gate\">\n                  {organizerOptions.filter((organizer) => !FAMOUS_ORGANIZERS.includes(organizer as (typeof FAMOUS_ORGANIZERS)[number]))\n                    .map((organizer) => <option key={organizer} value={organizer}>{organizer}</option>)}\n                </optgroup>`;
+  const after = `                <option value=\"\">Any organizer / society</option>\n                <optgroup label=\"Major global organizers\">\n                  {FAMOUS_ORGANIZERS.map((organizer) => <option key={'featured-' + organizer} value={organizer}>{organizer}</option>)}\n                </optgroup>\n                <optgroup label=\"All organizers in Conference Gate\">\n                  {organizerOptions.filter((organizer) => !FAMOUS_ORGANIZERS.includes(organizer as (typeof FAMOUS_ORGANIZERS)[number]))\n                    .map((organizer) => <option key={organizer} value={organizer}>{organizer}</option>)}\n                </optgroup>`;
   const result = replaceOnce(discovery, before, after, 'organizer grouped options');
   discovery = result.source;
   discoveryChanged ||= result.changed;
