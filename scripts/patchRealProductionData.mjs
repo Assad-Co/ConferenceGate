@@ -45,6 +45,30 @@ replaceOnce(
   'created conference demo merge'
 );
 
+replaceOnce(
+`  // Discover shows only real, organizer-created conferences (submitted through the app) plus
+  // live web results — never the static seed catalog, which was only ever meant as starter
+  // demo data, not something to present as if it were live/current. attendeeCount is overridden
+  // here with the real registration count for every conference — never the stored value, which
+  // is only ever a stale snapshot from creation time (0 for new ones).
+  const sampleConferenceIds = React.useMemo(() => new Set(sampleConferences.map((c) => c.id)), []);
+  const discoverConferences = React.useMemo(
+    () =>
+      conferences
+        .filter((c) => !sampleConferenceIds.has(c.id))
+        .map((c) => ({ ...c, attendeeCount: registrationCountsByConference[c.id] ?? 0 })),
+    [conferences, sampleConferenceIds, registrationCountsByConference]
+  );`,
+`  // ConferenceGate-native records are now all persisted records. Public worldwide records are
+  // provided separately by the Discover catalogue. attendeeCount is always the live registration
+  // count rather than a snapshot copied at conference creation time.
+  const discoverConferences = React.useMemo(
+    () => conferences.map((c) => ({ ...c, attendeeCount: registrationCountsByConference[c.id] ?? 0 })),
+    [conferences, registrationCountsByConference]
+  );`,
+  'obsolete demo conference discover filter'
+);
+
 if (changed) {
   fs.writeFileSync(fileUrl, source, 'utf8');
   console.log('Removed demo conference records from production app state.');
