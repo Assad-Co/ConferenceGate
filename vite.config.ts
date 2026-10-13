@@ -17,6 +17,8 @@ import './scripts/patchImageUploadUX.mjs';
 import './scripts/patchSponsorEvaluationCTA.mjs';
 // @ts-ignore -- side-effect-only signup UX patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalSignupOnboarding.mjs';
+// @ts-ignore -- side-effect-only Professional navigation patch; scripts are excluded from app TS checks.
+import './scripts/patchProfessionalNavigation.mjs';
 
 export default defineConfig(() => {
   return {
