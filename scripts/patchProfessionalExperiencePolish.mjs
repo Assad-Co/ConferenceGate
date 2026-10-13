@@ -8,8 +8,9 @@ function patch(pathname, replacements) {
   const file = path.join(root, pathname);
   let source = fs.readFileSync(file, 'utf8');
   for (const replacement of replacements) {
-    const { before, after, regex } = replacement;
-    if (typeof after === 'string' && source.includes(after)) continue;
+    const { before, after, regex, marker } = replacement;
+    if (marker && source.includes(marker)) continue;
+    if (!marker && typeof after === 'string' && source.includes(after)) continue;
     if (regex) {
       if (!regex.test(source)) throw new Error(`Professional polish regex target missing in ${pathname}: ${regex}`);
       source = source.replace(regex, after);
@@ -35,6 +36,7 @@ patch('src/api/auth.ts', [
   },
   {
     regex: /export async function updateProfessionalPreferences\(payload: ProfessionalPreferencesPayload\): Promise<AuthUser> \{[\s\S]*?\n\}/,
+    marker: 'const { reviewerAvailable, ...matchingProfile } = payload;',
     after: `export async function updateProfessionalPreferences(payload: ProfessionalPreferencesPayload): Promise<AuthUser> {\n  const { reviewerAvailable, ...matchingProfile } = payload;\n  const res = await fetch('/api/auth/me/professional-preferences', {\n    method: 'PATCH',\n    headers: { 'Content-Type': 'application/json' },\n    credentials: 'include',\n    body: JSON.stringify(matchingProfile),\n  });\n  await parseResponse(res);\n\n  const availabilityRes = await fetch('/api/auth/me/reviewer-availability', {\n    method: 'PATCH',\n    headers: { 'Content-Type': 'application/json' },\n    credentials: 'include',\n    body: JSON.stringify({ available: reviewerAvailable }),\n  });\n  const data = await parseResponse(availabilityRes);\n  return data.user;\n}`,
   },
 ]);
@@ -64,8 +66,8 @@ patch('src/components/UserProfileView.tsx', [
     after: `            researchInterests: userProfile.researchInterests || [],\n            preferredRegions: userProfile.preferredRegions || [],\n            reviewerAvailable: Boolean(userProfile.reviewerInfo.available),\n            committeeAvailable: Boolean(userProfile.committeeAvailable),`,
   },
   {
-    regex: /(const opportunityProfileGaps = \[[\s\S]*?\]\.filter\(Boolean\) as string\[\];)/,
-    after: `$1\n\n  const profileCompletenessChecks = [\n    { key: 'photo', done: hasCustomAvatar, label: 'Add professional photo', action: () => avatarInputRef.current?.click() },\n    { key: 'basics', done: Boolean(userProfile.title && userProfile.organization), label: 'Complete role & organization', action: () => setIsEditProfileOpen(true) },\n    { key: 'expertise', done: (userProfile.expertise || []).length > 0, label: 'Add expertise', action: () => setIsProfessionalPreferencesOpen(true) },\n    { key: 'linkedin', done: Boolean(userProfile.linkedinUrl), label: 'Import LinkedIn', action: () => setIsEditProfileOpen(true) },\n    { key: 'publications', done: (userProfile.publications || []).length > 0 || linkedInPublicationCount > 0 || externalConfirmed.length > 0, label: 'Add publications', action: () => setActiveTab('papers') },\n    { key: 'availability', done: opportunityAvailabilityEnabled, label: 'Set availability', action: () => setIsProfessionalPreferencesOpen(true) },\n  ];\n  const profileCompleteness = Math.round((profileCompletenessChecks.filter((item) => item.done).length / profileCompletenessChecks.length) * 100);\n  const profileCompletenessGaps = profileCompletenessChecks.filter((item) => !item.done);`,
+    before: `  const opportunityProfileGaps = [\n    (userProfile.expertise || []).length >= 3 ? null : 'Add 3+ expertise terms',\n    (userProfile.technicalSpecialization || []).length > 0 ? null : 'Add specialization',\n    (userProfile.researchInterests || []).length > 0 ? null : 'Add research interests',\n    (userProfile.preferredRegions || []).length > 0 ? null : 'Choose preferred regions',\n    opportunityAvailabilityEnabled ? null : 'Enable at least one role',\n  ].filter((item): item is string => Boolean(item));`,
+    after: `  const opportunityProfileGaps = [\n    (userProfile.expertise || []).length >= 3 ? null : 'Add 3+ expertise terms',\n    (userProfile.technicalSpecialization || []).length > 0 ? null : 'Add specialization',\n    (userProfile.researchInterests || []).length > 0 ? null : 'Add research interests',\n    (userProfile.preferredRegions || []).length > 0 ? null : 'Choose preferred regions',\n    opportunityAvailabilityEnabled ? null : 'Enable at least one role',\n  ].filter((item): item is string => Boolean(item));\n\n  const profileCompletenessActions = [\n    { key: 'photo', done: effectiveHasCustomAvatar, label: 'Add professional photo', action: () => avatarInputRef.current?.click() },\n    { key: 'basics', done: Boolean(userProfile.title && userProfile.organization), label: 'Complete role & organization', action: () => setIsEditProfileOpen(true) },\n    { key: 'expertise', done: (userProfile.expertise || []).length > 0, label: 'Add expertise', action: () => setIsProfessionalPreferencesOpen(true) },\n    { key: 'linkedin', done: Boolean(userProfile.linkedinUrl), label: 'Import LinkedIn', action: () => setIsEditProfileOpen(true) },\n    { key: 'publications', done: (userProfile.publications || []).length > 0 || linkedInPublicationCount > 0 || externalConfirmed.length > 0, label: 'Add publications', action: () => setActiveTab('papers') },\n    { key: 'availability', done: opportunityAvailabilityEnabled, label: 'Set availability', action: () => setIsProfessionalPreferencesOpen(true) },\n  ];\n  const profileCompletenessGaps = profileCompletenessActions.filter((item) => !item.done);`,
   },
   {
     before: `        {variant === 'professional' && (\n          <div className="px-6 sm:px-8 py-5 border-t border-slate-200 bg-white">\n            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">\n              <div>\n                <h3 className="text-sm font-extrabold text-slate-900">Opportunity Matching Profile</h3>`,
