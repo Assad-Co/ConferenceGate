@@ -19,6 +19,8 @@ import './scripts/patchSponsorEvaluationCTA.mjs';
 import './scripts/patchProfessionalSignupOnboarding.mjs';
 // @ts-ignore -- side-effect-only Professional navigation patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalNavigation.mjs';
+// @ts-ignore -- side-effect-only Professional experience polish patch; scripts are excluded from app TS checks.
+import './scripts/patchProfessionalExperiencePolish.mjs';
 
 export default defineConfig(() => {
   return {
