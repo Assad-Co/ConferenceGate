@@ -41,6 +41,10 @@ import './scripts/patchLinkedInCompleteProfileMerge.mjs';
 import './scripts/patchPapersAbstractsCompleteness.mjs';
 // @ts-ignore -- side-effect-only final Professional acceptance cleanup.
 import './scripts/patchProfessionalFinalAcceptance.mjs';
+// @ts-ignore -- side-effect-only heavy conference/public-evidence enrichment patch.
+import './scripts/patchHeavyProfessionalConferenceEvidence.mjs';
+// @ts-ignore -- side-effect-only post-merge readStored compatibility patch.
+import './scripts/patchHeavyProfessionalConferenceReadStored.mjs';
 
 export default defineConfig(() => {
   return {
