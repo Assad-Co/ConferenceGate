@@ -29,6 +29,8 @@ import './scripts/patchLinkedInDeepProfessional.mjs';
 import './scripts/patchProfessionalControlsClarity.mjs';
 // @ts-ignore -- side-effect-only Professional profile simplification patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalProfileSimplify.mjs';
+// @ts-ignore -- side-effect-only Professional profile/communication reliability patch.
+import './scripts/patchProfessionalCommunicationReliability.mjs';
 
 export default defineConfig(() => {
   return {
