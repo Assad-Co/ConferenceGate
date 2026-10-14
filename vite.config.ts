@@ -39,6 +39,8 @@ import './scripts/patchLinkedInFullCareerHistory.mjs';
 import './scripts/patchLinkedInCompleteProfileMerge.mjs';
 // @ts-ignore -- side-effect-only papers/abstracts completeness patch.
 import './scripts/patchPapersAbstractsCompleteness.mjs';
+// @ts-ignore -- side-effect-only final Professional acceptance cleanup.
+import './scripts/patchProfessionalFinalAcceptance.mjs';
 
 export default defineConfig(() => {
   return {
