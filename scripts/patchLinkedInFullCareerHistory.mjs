@@ -17,26 +17,44 @@ function patchFile(relativePath, transform) {
 }
 
 patchFile('src/components/LinkedInProfilePanel.tsx', (source) => {
+  // Remove the obsolete date filter helper. A member's full provider-returned career history
+  // should be visible regardless of age.
   source = source.replace(
     /function experienceWithinSevenYears\(item: any\): boolean \{[\s\S]*?\n\}\n\nfunction educationTitle/,
     'function educationTitle'
   );
 
-  source = source.replace('Experience — Past 7 Years', 'Experience — Full Career History');
+  // An older compatibility patch created two career sections and capped each at 50 records.
+  // Keep one clear section and render every stored provider-returned position.
+  source = source.replace('Complete LinkedIn Position History', 'LinkedIn Experience — Full Career History');
+  source = source.replace(
+    'All positions returned by the consent-based LinkedIn import are retained; ConferenceGate no longer hides roles older than seven years.',
+    'All positions returned by the consent-based LinkedIn import are retained and displayed with no year or item-count cutoff.'
+  );
+  source = source.replaceAll(
+    'profile!.experience.slice(0, 50).map((item, index) => (',
+    'profile!.experience.map((item, index) => ('
+  );
   source = source.replace(
     'profile!.experience.filter(experienceWithinSevenYears).slice(0, 20).map((item, index) => (',
     'profile!.experience.map((item, index) => ('
   );
-  source = source.replace(
-    'All positions returned by your LinkedIn profile import are shown here, with no seven-year cutoff.',
-    'All positions returned by your LinkedIn profile import are shown here with no year or item-count cutoff.'
-  );
+
+  // Remove the second legacy Experience block left behind by the earlier deep-profile patch.
+  const duplicateExperienceSection = /\n\s*\{\(profile\?\.experience\.length \|\| 0\) > 0 && \(\n\s*<section>\n[\s\S]*?Professional Positions — Full Imported History[\s\S]*?\n\s*<\/section>\n\s*\)\}\n(?=\n\s*\{\(profile\?\.education\.length)/;
+  source = source.replace(duplicateExperienceSection, '\n');
 
   if (source.includes('experienceWithinSevenYears')) {
     throw new Error('LinkedIn full career history patch failed: seven-year filter still exists');
   }
-  if (source.includes('profile!.experience.filter(') || source.includes('profile!.experience.slice(0, 20)')) {
-    throw new Error('LinkedIn full career history patch failed: experience display is still capped');
+  if (source.includes('profile!.experience.slice(0,') || source.includes('profile!.experience.filter(')) {
+    throw new Error('LinkedIn full career history patch failed: experience display is still capped or filtered');
+  }
+  if (source.includes('Professional Positions — Full Imported History')) {
+    throw new Error('LinkedIn full career history patch failed: duplicate legacy Experience section remains');
+  }
+  if (!source.includes('LinkedIn Experience — Full Career History')) {
+    throw new Error('LinkedIn full career history patch failed: canonical career-history section is missing');
   }
   return source;
 });
