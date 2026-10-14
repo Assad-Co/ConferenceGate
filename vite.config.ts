@@ -35,6 +35,8 @@ import './scripts/patchProfessionalCommunicationReliability.mjs';
 import './scripts/patchProfessionalFinalPolish.mjs';
 // @ts-ignore -- side-effect-only LinkedIn full career-history preservation patch.
 import './scripts/patchLinkedInFullCareerHistory.mjs';
+// @ts-ignore -- side-effect-only complete LinkedIn evidence/profile merge patch.
+import './scripts/patchLinkedInCompleteProfileMerge.mjs';
 
 export default defineConfig(() => {
   return {
