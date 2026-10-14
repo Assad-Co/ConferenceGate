@@ -31,6 +31,8 @@ import './scripts/patchProfessionalControlsClarity.mjs';
 import './scripts/patchProfessionalProfileSimplify.mjs';
 // @ts-ignore -- side-effect-only Professional profile/communication reliability patch.
 import './scripts/patchProfessionalCommunicationReliability.mjs';
+// @ts-ignore -- side-effect-only final Professional navigation/profile polish.
+import './scripts/patchProfessionalFinalPolish.mjs';
 
 export default defineConfig(() => {
   return {
