@@ -47,6 +47,8 @@ import './scripts/patchHeavyProfessionalConferenceEvidence.mjs';
 import './scripts/patchHeavyProfessionalConferenceReadStored.mjs';
 // @ts-ignore -- side-effect-only verified Professional role counter patch.
 import './scripts/patchProfessionalRoleEvidenceCounts.mjs';
+// @ts-ignore -- side-effect-only final Professional declutter patch.
+import './scripts/patchProfessionalFinalDeclutter.mjs';
 
 export default defineConfig(() => {
   return {
