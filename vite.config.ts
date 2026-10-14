@@ -37,6 +37,8 @@ import './scripts/patchProfessionalFinalPolish.mjs';
 import './scripts/patchLinkedInFullCareerHistory.mjs';
 // @ts-ignore -- side-effect-only complete LinkedIn evidence/profile merge patch.
 import './scripts/patchLinkedInCompleteProfileMerge.mjs';
+// @ts-ignore -- side-effect-only papers/abstracts completeness patch.
+import './scripts/patchPapersAbstractsCompleteness.mjs';
 
 export default defineConfig(() => {
   return {
