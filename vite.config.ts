@@ -21,6 +21,8 @@ import './scripts/patchProfessionalSignupOnboarding.mjs';
 import './scripts/patchProfessionalNavigation.mjs';
 // @ts-ignore -- side-effect-only Professional experience polish patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalExperiencePolish.mjs';
+// @ts-ignore -- side-effect-only save-only conference UX patch; scripts are excluded from app TS checks.
+import './scripts/patchMyConferencesSaveOnly.mjs';
 
 export default defineConfig(() => {
   return {
