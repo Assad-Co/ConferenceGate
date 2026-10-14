@@ -27,6 +27,8 @@ import './scripts/patchMyConferencesSaveOnly.mjs';
 import './scripts/patchLinkedInDeepProfessional.mjs';
 // @ts-ignore -- side-effect-only Professional action clarity patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalControlsClarity.mjs';
+// @ts-ignore -- side-effect-only Professional profile simplification patch; scripts are excluded from app TS checks.
+import './scripts/patchProfessionalProfileSimplify.mjs';
 
 export default defineConfig(() => {
   return {
