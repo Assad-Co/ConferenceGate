@@ -22,3 +22,17 @@ if (!source.includes(mergedMarker)) {
 if (!source.includes(mergedMarker)) {
   throw new Error('Curated conference evidence is still not merged into Conference History');
 }
+
+// The older complete-profile patch runs again when Vite loads. Teach that script that the
+// conditional raw-post read introduced above is equivalent, so repeated builds stay idempotent.
+const legacyPatchFile = path.join(root, 'scripts/patchLinkedInCompleteProfileMerge.mjs');
+let legacyPatch = fs.readFileSync(legacyPatchFile, 'utf8');
+const oldGuard = `  if (!source.includes('rawPosts: parseArray(row.raw_posts)')) throw new Error('LinkedIn complete merge: stored raw posts are not readable');`;
+const newGuard = `  if (!(source.includes('rawPosts: parseArray(row.raw_posts)') || source.includes('rawPosts: row ? parseArray(row.raw_posts) : []'))) throw new Error('LinkedIn complete merge: stored raw posts are not readable');`;
+if (legacyPatch.includes(oldGuard)) {
+  legacyPatch = legacyPatch.replace(oldGuard, newGuard);
+  fs.writeFileSync(legacyPatchFile, legacyPatch);
+  console.log('LinkedIn complete-profile patch made idempotent with curated history.');
+} else if (!legacyPatch.includes(newGuard)) {
+  throw new Error('Could not make complete-profile merge patch compatible with curated history');
+}
