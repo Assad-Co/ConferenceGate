@@ -15,7 +15,10 @@ assert(profile.includes('previousProfile?.photoUrl || null'), 'previous LinkedIn
 assert(profile.includes('manual_avatar_override:${userId}'), 'manual ConferenceGate avatar protection is missing');
 assert(!profile.includes('isOwnerPreviewEmail(user.email)') || profile.includes('router.post("/refresh", requireMember'), 'normal refresh must stay available to all authenticated members');
 
-assert(conference.includes('rawPosts: parseArray(row.raw_posts)'), 'stored raw LinkedIn posts are not read');
+assert(
+  conference.includes('rawPosts: parseArray(row.raw_posts)') || conference.includes('rawPosts: row ? parseArray(row.raw_posts) : []'),
+  'stored raw LinkedIn posts are not read',
+);
 assert(conference.includes('const rawPosts = mergeRawLinkedInPosts('), 'raw LinkedIn post history is replaced instead of merged');
 assert(conference.includes('JSON.stringify(rawPosts)'), 'merged raw posts are not persisted');
 assert(!conference.includes('mergeEvidence(existing?.conferenceActivity || [], classified.conferenceActivity).slice('), 'merged conference evidence is capped');
