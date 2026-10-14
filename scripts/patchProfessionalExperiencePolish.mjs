@@ -7,6 +7,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 function patch(pathname, replacements) {
   const file = path.join(root, pathname);
   let source = fs.readFileSync(file, 'utf8');
+  // The newer save-only Discover UX intentionally rewrites the earlier saved/followed card block.
+  // Once that state exists, the older Professional-polish Discovery mutations are already superseded.
+  if (pathname === 'src/components/DiscoveryEngineAdvanced.tsx' && source.includes('Remove from saved conferences')) {
+    fs.writeFileSync(file, source);
+    return;
+  }
   for (const replacement of replacements) {
     const { before, after, regex, marker } = replacement;
     if (marker && source.includes(marker)) continue;

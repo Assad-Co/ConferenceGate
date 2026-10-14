@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bookmark, Bell, CalendarCheck, CheckCircle2, Award, Globe2 } from 'lucide-react';
+import { Bookmark, CheckCircle2, Award, Globe2 } from 'lucide-react';
 import type { AbstractSubmission, Conference, ProfessionalInvitation, UserProfile } from '../types';
 import type { ConferenceAttendance, ConferenceRegistration } from '../api/activity';
 import { searchConferencesOnTheWeb, type LiveSearchResult } from '../api/search';
@@ -20,7 +20,7 @@ interface MyConferencesHubProps {
   onOpenExternalResult: (result: LiveSearchResult) => void;
 }
 
-type HubTab = 'saved' | 'following' | 'registered' | 'attended' | 'certificates';
+type HubTab = 'saved' | 'attended' | 'certificates';
 
 type HubConference =
   | { kind: 'native'; id: string; conference: Conference }
@@ -28,8 +28,6 @@ type HubConference =
 
 const tabs: Array<{ id: HubTab; label: string; icon: React.ElementType }> = [
   { id: 'saved', label: 'Saved', icon: Bookmark },
-  { id: 'following', label: 'Following', icon: Bell },
-  { id: 'registered', label: 'Registered', icon: CalendarCheck },
   { id: 'attended', label: 'Attended', icon: CheckCircle2 },
   { id: 'certificates', label: 'Certificates', icon: Award },
 ];
@@ -37,7 +35,7 @@ const tabs: Array<{ id: HubTab; label: string; icon: React.ElementType }> = [
 export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
   conferences,
   savedConferenceIds,
-  followedConferenceIds,
+  followedConferenceIds: _followedConferenceIds,
   registrations,
   attendance,
   submissions,
@@ -77,7 +75,7 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
     [catalogue]
   );
 
-  const resolveInteraction = (id: string): HubConference | null => {
+  const resolveSavedConference = (id: string): HubConference | null => {
     const native = conferenceById.get(id);
     if (native) return { kind: 'native', id, conference: native };
     const external = catalogueById.get(id);
@@ -85,21 +83,19 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
     return null;
   };
 
-  const saved = savedConferenceIds.map(resolveInteraction).filter(Boolean) as HubConference[];
-  const following = followedConferenceIds.map(resolveInteraction).filter(Boolean) as HubConference[];
+  const saved = savedConferenceIds.map(resolveSavedConference).filter(Boolean) as HubConference[];
   const unresolvedSavedCount = Math.max(0, savedConferenceIds.length - saved.length);
-  const unresolvedFollowingCount = Math.max(0, followedConferenceIds.length - following.length);
 
   const openHubConference = (item: HubConference) => {
     if (item.kind === 'native') onSelectConference(item.conference);
     else onOpenExternalResult(item.result);
   };
 
-  const renderConferenceCards = (items: HubConference[], empty: string, unresolvedCount = 0) => (
+  const renderSavedCards = () => (
     <div className="space-y-3">
-      {items.length ? (
+      {saved.length ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {items.map((item) => {
+          {saved.map((item) => {
             const title = item.kind === 'native' ? item.conference.title : item.result.title;
             const city = item.kind === 'native' ? item.conference.location?.city : item.result.location?.city;
             const country = item.kind === 'native' ? item.conference.location?.country : item.result.location?.country;
@@ -112,7 +108,12 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="font-extrabold text-sm text-slate-900 line-clamp-2">{title}</div>
-                  {item.kind === 'catalog' && <Globe2 className="w-4 h-4 text-indigo-500 shrink-0" />}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.kind === 'catalog' && <Globe2 className="w-4 h-4 text-indigo-500" />}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">
+                      <Bookmark className="w-3 h-3 fill-current" /> Saved
+                    </span>
+                  </div>
                 </div>
                 {(city || country) && <div className="mt-2 text-xs text-slate-500">{[city, country].filter(Boolean).join(', ')}</div>}
                 {organizer && <div className="mt-1 text-[11px] text-slate-400 line-clamp-1">{organizer}</div>}
@@ -123,12 +124,12 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
         </div>
       ) : (
         <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500">
-          {catalogueLoading ? 'Loading your worldwide conference list…' : empty}
+          {catalogueLoading ? 'Loading your saved conferences…' : 'No saved conferences yet. Open Discover and choose Save on any Conference Gate or worldwide conference.'}
         </div>
       )}
-      {!catalogueLoading && unresolvedCount > 0 && (
+      {!catalogueLoading && unresolvedSavedCount > 0 && (
         <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-          {unresolvedCount} saved conference record{unresolvedCount === 1 ? '' : 's'} could not be matched to the current catalogue. The saved reference is still preserved in your account.
+          {unresolvedSavedCount} saved conference record{unresolvedSavedCount === 1 ? '' : 's'} could not be matched to the current catalogue. The saved reference is still preserved in your account.
         </div>
       )}
     </div>
@@ -148,7 +149,7 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
     <div className="max-w-6xl mx-auto w-full space-y-5">
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900">My Conferences</h1>
-        <p className="text-sm text-slate-500 mt-1">Everything you save, follow, register for, attend, or earn from Conference Gate and the worldwide catalogue in one place.</p>
+        <p className="text-sm text-slate-500 mt-1">Your saved conferences, attended events, and certificates in one place.</p>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-1 flex flex-wrap gap-1">
@@ -166,32 +167,7 @@ export const MyConferencesHub: React.FC<MyConferencesHubProps> = ({
         })}
       </div>
 
-      {activeTab === 'saved' && renderConferenceCards(saved, 'No saved conferences yet. Save any Conference Gate or worldwide conference from Discover to keep it here.', unresolvedSavedCount)}
-      {activeTab === 'following' && renderConferenceCards(following, 'You are not following any conferences yet.', unresolvedFollowingCount)}
-
-      {activeTab === 'registered' && (
-        registrations.length ? (
-          <div className="space-y-3">
-            {registrations.map((registration) => {
-              const native = conferenceById.get(registration.conferenceId);
-              const external = catalogueById.get(registration.conferenceId);
-              const canOpen = Boolean(native || external);
-              return (
-                <button
-                  key={`${registration.conferenceId}-${registration.registeredAt}`}
-                  onClick={() => openRecordedConference(registration.conferenceId)}
-                  disabled={!canOpen}
-                  className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 disabled:cursor-default enabled:hover:border-blue-300 cursor-pointer"
-                >
-                  <div className="font-extrabold text-sm text-slate-900">{registration.conferenceTitle}</div>
-                  <div className="mt-1 text-xs text-slate-500">{registration.packageName || 'Registered attendee'} · Registered {new Date(registration.registeredAt).toLocaleDateString()}</div>
-                  {!canOpen && <div className="mt-2 text-[10px] text-slate-400">Registration is preserved even though the conference detail record is no longer in the active catalogue.</div>}
-                </button>
-              );
-            })}
-          </div>
-        ) : <div className="bg-white border border-dashed border-slate-300 rounded-xl p-8 text-center text-sm text-slate-500">No conference registrations yet.</div>
-      )}
+      {activeTab === 'saved' && renderSavedCards()}
 
       {activeTab === 'attended' && (
         attendance.length ? (

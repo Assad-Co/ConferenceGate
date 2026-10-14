@@ -21,6 +21,12 @@ import './scripts/patchProfessionalSignupOnboarding.mjs';
 import './scripts/patchProfessionalNavigation.mjs';
 // @ts-ignore -- side-effect-only Professional experience polish patch; scripts are excluded from app TS checks.
 import './scripts/patchProfessionalExperiencePolish.mjs';
+// @ts-ignore -- side-effect-only save-only conference UX patch; scripts are excluded from app TS checks.
+import './scripts/patchMyConferencesSaveOnly.mjs';
+// @ts-ignore -- side-effect-only LinkedIn deep Professional patch; scripts are excluded from app TS checks.
+import './scripts/patchLinkedInDeepProfessional.mjs';
+// @ts-ignore -- side-effect-only Professional action clarity patch; scripts are excluded from app TS checks.
+import './scripts/patchProfessionalControlsClarity.mjs';
 
 export default defineConfig(() => {
   return {
@@ -31,10 +37,7 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };
