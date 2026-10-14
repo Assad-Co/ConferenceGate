@@ -22,7 +22,6 @@ const availabilityBlock = `              <div className="flex flex-wrap gap-2 mt
 const cleanerAvailability = `              {(userProfile.reviewerInfo.available || userProfile.committeeAvailable || userProfile.sessionChairAvailable || userProfile.speakerAvailable) && (\n                <div className="flex flex-wrap gap-2 mt-3 text-[10px] font-bold">\n                  {userProfile.reviewerInfo.available && <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Reviewer</span>}\n                  {userProfile.committeeAvailable && <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Technical Committee</span>}\n                  {userProfile.sessionChairAvailable && <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Session Chair</span>}\n                  {userProfile.speakerAvailable && <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Speaker / Keynote</span>}\n                </div>\n              )}`;
 if (source.includes(availabilityBlock)) source = source.replace(availabilityBlock, cleanerAvailability);
 
-// Reviewer metrics are useful only when there is real reviewer history. Do not fill the page with zero-only cards.
 const reviewerGridOpen = `            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">\n              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">\n                <div className="text-[10px] font-bold text-slate-400 uppercase">Abstracts Reviewed</div>`;
 if (source.includes(reviewerGridOpen) && !source.includes('{hasReviewerHistory && (\n            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">')) {
   source = source.replace(reviewerGridOpen, `{hasReviewerHistory && (\n            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">\n              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">\n                <div className="text-[10px] font-bold text-slate-400 uppercase">Abstracts Reviewed</div>`);
@@ -40,6 +39,7 @@ const expertiseClean = `            {userProfile.reviewerInfo.expertiseKeywords.
 if (source.includes(expertiseBlock)) source = source.replace(expertiseBlock, expertiseClean);
 
 function wrapMetric(label, countExpr) {
+  if (source.includes(`{${countExpr} > 0 && (`)) return;
   const re = new RegExp(`(\\n\\s*)(<div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">\\n\\s*<div className="text-\\[10px\\] font-bold text-slate-400 uppercase">${label.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}<\\/div>[\\s\\S]*?<div className="text-lg[^>]*">\\{${countExpr.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\}<\\/div>\\n\\s*<\\/div>)`);
   if (re.test(source)) source = source.replace(re, `$1{${countExpr} > 0 && ($1$2$1)}`);
 }
@@ -52,10 +52,7 @@ source = source.replace(
   `              <p className="text-[11px] text-slate-400">\n                Committee or chair service has no public database to pull from either, so this is\n                self-reported by you — not verified by Conference Gate.\n              </p>`,
   `              <p className="text-[11px] text-slate-400">Use this only for a role that ConferenceGate could not verify from a public source.</p>`
 );
-source = source.replace(
-  `<p className="text-xs text-slate-400">No self-reported committee positions yet.</p>`,
-  `<></>`
-);
+source = source.replace(`<p className="text-xs text-slate-400">No self-reported committee positions yet.</p>`, `<></>`);
 source = source.replace(
   `              Plain attendance isn't in any public database anywhere, so this is self-reported by you —\n              not verified by Conference Gate.`,
   `              Add attendance manually only when ConferenceGate cannot find reliable public evidence. Self-reported attendance remains clearly labeled.`
