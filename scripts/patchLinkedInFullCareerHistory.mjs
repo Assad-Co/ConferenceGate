@@ -84,3 +84,14 @@ patchFile('server/linkedinProfileBootstrap.ts', (source) => {
   }
   return source;
 });
+
+// The older deep-Professional patch runs before this one. Make it aware of the canonical
+// full-career state so a second Vite/build pass does not try to recreate its old 50-item sections.
+patchFile('scripts/patchLinkedInDeepProfessional.mjs', (source) => {
+  const marker = 'full-career-state-idempotency';
+  if (source.includes(marker)) return source;
+  const before = `  for (const { before, after } of replacements) {\n    if (source.includes(after)) continue;`;
+  const after = `  for (const { before, after } of replacements) {\n    // full-career-state-idempotency: the later full-career patch intentionally replaces\n    // the two legacy capped Experience blocks created here. Treat that canonical state as applied.\n    if (\n      pathname === 'src/components/LinkedInProfilePanel.tsx' &&\n      source.includes('LinkedIn Experience — Full Career History') &&\n      (before.trim() === '<ProfessionalDeepResearchPanel />' || before.includes('Experience — Past 7 Years'))\n    ) continue;\n    if (source.includes(after)) continue;`;
+  if (!source.includes(before)) throw new Error('LinkedIn full career history patch failed: deep-profile idempotency anchor missing');
+  return source.replace(before, after);
+});
