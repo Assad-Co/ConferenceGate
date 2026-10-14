@@ -33,6 +33,8 @@ import './scripts/patchProfessionalProfileSimplify.mjs';
 import './scripts/patchProfessionalCommunicationReliability.mjs';
 // @ts-ignore -- side-effect-only final Professional navigation/profile polish.
 import './scripts/patchProfessionalFinalPolish.mjs';
+// @ts-ignore -- side-effect-only LinkedIn full career-history preservation patch.
+import './scripts/patchLinkedInFullCareerHistory.mjs';
 
 export default defineConfig(() => {
   return {
