@@ -6,6 +6,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const profileFile = path.join(root, 'src/components/UserProfileView.tsx');
 let profile = fs.readFileSync(profileFile, 'utf8');
 
+// Older build-time patches can re-insert the completeness action block after this branch
+// changes one action inside it. Collapse duplicates before applying the final direct actions.
+const completenessBlockPattern = /  const profileCompletenessActions = \[[\s\S]*?  const profileCompletenessGaps = profileCompletenessActions\.filter\(\(item\) => !item\.done\);\n/g;
+const completenessBlocks = [...profile.matchAll(completenessBlockPattern)];
+if (completenessBlocks.length > 1) {
+  const keep = completenessBlocks[0][0];
+  let seen = false;
+  profile = profile.replace(completenessBlockPattern, (block) => {
+    if (!seen) {
+      seen = true;
+      return keep;
+    }
+    return '';
+  });
+}
+
 const oldLinkedInAction = "{ key: 'linkedin', done: Boolean(userProfile.linkedinUrl), label: 'Import LinkedIn', action: () => setIsEditProfileOpen(true) },";
 const newLinkedInAction = "{ key: 'linkedin', done: Boolean(userProfile.linkedinUrl && linkedInProfilePhotoUrl), label: 'Import LinkedIn', action: () => setActiveTab('linkedin') },";
 if (!profile.includes(newLinkedInAction)) {
