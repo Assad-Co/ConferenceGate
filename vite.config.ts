@@ -25,6 +25,8 @@ import './scripts/patchProfessionalExperiencePolish.mjs';
 import './scripts/patchMyConferencesSaveOnly.mjs';
 // @ts-ignore -- side-effect-only LinkedIn deep Professional patch; scripts are excluded from app TS checks.
 import './scripts/patchLinkedInDeepProfessional.mjs';
+// @ts-ignore -- side-effect-only Professional action clarity patch; scripts are excluded from app TS checks.
+import './scripts/patchProfessionalControlsClarity.mjs';
 
 export default defineConfig(() => {
   return {
