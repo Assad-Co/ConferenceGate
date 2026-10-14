@@ -45,6 +45,8 @@ import './scripts/patchProfessionalFinalAcceptance.mjs';
 import './scripts/patchHeavyProfessionalConferenceEvidence.mjs';
 // @ts-ignore -- side-effect-only post-merge readStored compatibility patch.
 import './scripts/patchHeavyProfessionalConferenceReadStored.mjs';
+// @ts-ignore -- side-effect-only verified Professional role counter patch.
+import './scripts/patchProfessionalRoleEvidenceCounts.mjs';
 
 export default defineConfig(() => {
   return {
