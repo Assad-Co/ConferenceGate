@@ -55,6 +55,8 @@ import './scripts/patchOrganizerFinalUX.mjs';
 import './scripts/patchOrganizerMessagingDelivery.mjs';
 // @ts-ignore -- side-effect-only Organizer broadcast group delivery patch.
 import './scripts/patchOrganizerBroadcastDelivery.mjs';
+// @ts-ignore -- side-effect-only Organizer/Sponsor Edit Profile owner-preview fix.
+import './scripts/patchOrganizerEditProfilePreview.mjs';
 
 export default defineConfig(() => {
   return {
