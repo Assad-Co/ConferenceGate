@@ -1,0 +1,31 @@
+name: Organizer Messaging Delivery Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-organizer-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Apply Organizer patches
+        run: node scripts/patchOrganizerFinalUX.mjs && node scripts/patchOrganizerMessagingDelivery.mjs
+      - name: Organizer messaging and PDF audit
+        run: node scripts/checkOrganizerMessagingDelivery.mjs
+      - name: TypeScript
+        run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Production build
+        run: npm run build
