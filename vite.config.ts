@@ -83,6 +83,8 @@ import './scripts/patchSubmissionVisibilitySecurity.mjs';
 import './scripts/patchProfessionalEvaluationSecurity.mjs';
 // @ts-ignore -- side-effect-only upcoming discovery/historical catalogue separation.
 import './scripts/patchUpcomingDiscoveryFilter.mjs';
+// @ts-ignore -- side-effect-only catalogue CFP completeness alignment.
+import './scripts/patchCatalogueCfpQuality.mjs';
 
 export default defineConfig(() => {
   return {
