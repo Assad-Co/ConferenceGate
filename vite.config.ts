@@ -63,6 +63,8 @@ import './scripts/patchFinalUxAuditPass2.mjs';
 import './scripts/patchSponsorCompletedSponsorships.mjs';
 // @ts-ignore -- side-effect-only final mobile/responsive visual polish.
 import './scripts/patchFinalMobileVisualPolish.mjs';
+// @ts-ignore -- side-effect-only Google Sign-In popup compatibility patch.
+import './scripts/patchGoogleOauthCoop.mjs';
 
 export default defineConfig(() => {
   return {
