@@ -49,6 +49,8 @@ import './scripts/patchHeavyProfessionalConferenceReadStored.mjs';
 import './scripts/patchProfessionalRoleEvidenceCounts.mjs';
 // @ts-ignore -- side-effect-only final Professional declutter patch.
 import './scripts/patchProfessionalFinalDeclutter.mjs';
+// @ts-ignore -- side-effect-only final Organizer UX and committee communication patch.
+import './scripts/patchOrganizerFinalUX.mjs';
 
 export default defineConfig(() => {
   return {
