@@ -61,6 +61,8 @@ import './scripts/patchOrganizerEditProfilePreview.mjs';
 import './scripts/patchFinalUxAuditPass2.mjs';
 // @ts-ignore -- side-effect-only Sponsor Profile metric correction.
 import './scripts/patchSponsorCompletedSponsorships.mjs';
+// @ts-ignore -- side-effect-only final mobile/responsive visual polish.
+import './scripts/patchFinalMobileVisualPolish.mjs';
 
 export default defineConfig(() => {
   return {
