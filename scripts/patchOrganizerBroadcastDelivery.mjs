@@ -28,9 +28,9 @@ fs.writeFileSync(serverFile, server);
 let api = fs.readFileSync(apiFile, 'utf8');
 api = replace(
   api,
-  `  createdAt: string;\n}`,
-  `  createdAt: string;\n  recipientCount?: number;\n  notifiedCount?: number;\n}`,
-  'broadcast result type'
+  `export interface OrganizerBroadcast {\n  id: string;\n  recipientGroup: string;\n  subject: string;\n  body: string;\n  createdAt: string;\n}`,
+  `export interface OrganizerBroadcast {\n  id: string;\n  recipientGroup: string;\n  subject: string;\n  body: string;\n  createdAt: string;\n  recipientCount?: number;\n  notifiedCount?: number;\n}`,
+  'OrganizerBroadcast result type'
 );
 fs.writeFileSync(apiFile, api);
 
