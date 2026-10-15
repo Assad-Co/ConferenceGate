@@ -71,6 +71,8 @@ import './scripts/patchOwnerGoogleAlias.mjs';
 import './scripts/patchSupportCenterFooter.mjs';
 // @ts-ignore -- side-effect-only profile account settings patch.
 import './scripts/patchAccountSettings.mjs';
+// @ts-ignore -- side-effect-only secure OAuth-only email-change reauthentication UX.
+import './scripts/patchAccountEmailReauthUX.mjs';
 // @ts-ignore -- side-effect-only reviewer label cleanup and completed sponsorship feedback.
 import './scripts/patchReviewerAndSponsorFeedback.mjs';
 // @ts-ignore -- side-effect-only persisted in-app Ask Us support requests.
