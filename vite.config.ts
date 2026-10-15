@@ -72,6 +72,30 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+              return 'react-vendor';
+            }
+            if (id.includes('/motion/') || id.includes('/lucide-react/')) {
+              return 'ui-vendor';
+            }
+            if (
+              id.includes('/jspdf/') ||
+              id.includes('/html2canvas/') ||
+              id.includes('/dompurify/') ||
+              id.includes('/docx/')
+            ) {
+              return 'document-vendor';
+            }
+            return undefined;
+          },
+        },
+      },
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
