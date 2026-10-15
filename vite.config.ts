@@ -75,6 +75,8 @@ import './scripts/patchAccountSettings.mjs';
 import './scripts/patchReviewerAndSponsorFeedback.mjs';
 // @ts-ignore -- side-effect-only persisted in-app Ask Us support requests.
 import './scripts/patchSupportTickets.mjs';
+// @ts-ignore -- side-effect-only accidental duplicate notification guard.
+import './scripts/patchNotificationDedup.mjs';
 
 export default defineConfig(() => {
   return {
