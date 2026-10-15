@@ -79,6 +79,8 @@ import './scripts/patchSupportTickets.mjs';
 import './scripts/patchNotificationDedup.mjs';
 // @ts-ignore -- side-effect-only submission privacy and cross-account isolation patch.
 import './scripts/patchSubmissionVisibilitySecurity.mjs';
+// @ts-ignore -- side-effect-only organizer professional-evaluation ownership/role-completion guard.
+import './scripts/patchProfessionalEvaluationSecurity.mjs';
 
 export default defineConfig(() => {
   return {
