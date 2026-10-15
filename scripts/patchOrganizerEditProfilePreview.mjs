@@ -25,8 +25,8 @@ replace(
 );
 
 replace(
-  `if (updatedUser.role === 'organizer') {\n        setOrganizerNameOverride(updatedUser.organization || updatedUser.name);\n      } else if (updatedUser.role === 'sponsor') {\n        setSponsorNameOverride(updatedUser.organization || updatedUser.name);\n      }`,
-  `if (activeRole === 'Organizer' || updatedUser.role === 'organizer') {\n        setOrganizerNameOverride(updatedUser.organization || updatedUser.name);\n      } else if (activeRole === 'Sponsor' || updatedUser.role === 'sponsor') {\n        setSponsorNameOverride(updatedUser.organization || updatedUser.name);\n      }`,
+  `if (updatedUser.role === 'organizer') {\n      setOrganizerNameOverride(updatedUser.organization || updatedUser.name);\n    } else if (updatedUser.role === 'sponsor') {\n      setSponsorNameOverride(updatedUser.organization || updatedUser.name);\n    }`,
+  `if (activeRole === 'Organizer' || updatedUser.role === 'organizer') {\n      setOrganizerNameOverride(updatedUser.organization || updatedUser.name);\n    } else if (activeRole === 'Sponsor' || updatedUser.role === 'sponsor') {\n      setSponsorNameOverride(updatedUser.organization || updatedUser.name);\n    }`,
   'save updates active paid-role identity'
 );
 
