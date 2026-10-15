@@ -69,6 +69,8 @@ import './scripts/patchGoogleOauthCoop.mjs';
 import './scripts/patchOwnerGoogleAlias.mjs';
 // @ts-ignore -- side-effect-only launch support center/footer patch.
 import './scripts/patchSupportCenterFooter.mjs';
+// @ts-ignore -- side-effect-only profile account settings patch.
+import './scripts/patchAccountSettings.mjs';
 
 export default defineConfig(() => {
   return {
