@@ -81,6 +81,8 @@ import './scripts/patchNotificationDedup.mjs';
 import './scripts/patchSubmissionVisibilitySecurity.mjs';
 // @ts-ignore -- side-effect-only organizer professional-evaluation ownership/role-completion guard.
 import './scripts/patchProfessionalEvaluationSecurity.mjs';
+// @ts-ignore -- side-effect-only upcoming discovery/historical catalogue separation.
+import './scripts/patchUpcomingDiscoveryFilter.mjs';
 
 export default defineConfig(() => {
   return {
