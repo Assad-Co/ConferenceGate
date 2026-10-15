@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   validate-organizer-delivery:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +22,13 @@ jobs:
       - name: Install
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Apply Organizer patches
-        run: node scripts/patchOrganizerFinalUX.mjs && node scripts/patchOrganizerMessagingDelivery.mjs && node scripts/patchOrganizerBroadcastDelivery.mjs
+        run: node scripts/patchOrganizerFinalUX.mjs && node scripts/patchOrganizerMessagingDelivery.mjs && node scripts/patchOrganizerBroadcastDelivery.mjs && node scripts/patchOrganizerEditProfilePreview.mjs
       - name: Organizer messaging and PDF audit
         run: node scripts/checkOrganizerMessagingDelivery.mjs
       - name: Organizer marketplace, broadcast, and analytics audit
         run: node scripts/checkOrganizerMarketplaceBroadcast.mjs
+      - name: Organizer Edit Profile owner-preview audit
+        run: node scripts/checkOrganizerEditProfilePreview.mjs
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Production build
