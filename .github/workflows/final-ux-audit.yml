@@ -1,0 +1,35 @@
+name: Final UX Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  final-ux-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Patch syntax
+        run: node --check scripts/patchFinalUxAuditPass2.mjs && node --check scripts/checkFinalUxAuditPass2.mjs
+      - name: Apply final UX pass
+        run: node scripts/patchFinalUxAuditPass2.mjs
+      - name: Final UX regression audit
+        run: node scripts/checkFinalUxAuditPass2.mjs
+      - name: TypeScript
+        run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Production build
+        run: npm run build

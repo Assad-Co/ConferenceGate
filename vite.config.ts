@@ -57,6 +57,8 @@ import './scripts/patchOrganizerMessagingDelivery.mjs';
 import './scripts/patchOrganizerBroadcastDelivery.mjs';
 // @ts-ignore -- side-effect-only Organizer/Sponsor Edit Profile owner-preview fix.
 import './scripts/patchOrganizerEditProfilePreview.mjs';
+// @ts-ignore -- side-effect-only final click-through routing/search/persistence UX patch.
+import './scripts/patchFinalUxAuditPass2.mjs';
 
 export default defineConfig(() => {
   return {
