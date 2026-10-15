@@ -53,7 +53,7 @@ patchFile('src/components/UserProfileView.tsx', (source) => {
     source = source.replace(anchor, button + anchor);
   }
   if (!source.includes('<AccountSettingsModal')) {
-    const anchor = '      <EditProfileModal';
+    const anchor = '        <EditProfileModal';
     const modal = `      <AccountSettingsModal\n        isOpen={isAccountSettingsOpen}\n        onClose={() => setIsAccountSettingsOpen(false)}\n        currentEmail={currentUserEmail || ''}\n        ownerPreview={ownerPreview}\n      />\n\n`;
     if (!source.includes(anchor)) throw new Error('Account settings patch: modal anchor not found');
     source = source.replace(anchor, modal + anchor);
