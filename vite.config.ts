@@ -67,6 +67,8 @@ import './scripts/patchFinalMobileVisualPolish.mjs';
 import './scripts/patchGoogleOauthCoop.mjs';
 // @ts-ignore -- side-effect-only owner Google alias linkage patch.
 import './scripts/patchOwnerGoogleAlias.mjs';
+// @ts-ignore -- side-effect-only launch support center/footer patch.
+import './scripts/patchSupportCenterFooter.mjs';
 
 export default defineConfig(() => {
   return {
