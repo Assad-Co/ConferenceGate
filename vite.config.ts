@@ -65,6 +65,8 @@ import './scripts/patchSponsorCompletedSponsorships.mjs';
 import './scripts/patchFinalMobileVisualPolish.mjs';
 // @ts-ignore -- side-effect-only Google Sign-In popup compatibility patch.
 import './scripts/patchGoogleOauthCoop.mjs';
+// @ts-ignore -- side-effect-only owner Google alias linkage patch.
+import './scripts/patchOwnerGoogleAlias.mjs';
 
 export default defineConfig(() => {
   return {
