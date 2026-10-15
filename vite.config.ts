@@ -73,6 +73,8 @@ import './scripts/patchSupportCenterFooter.mjs';
 import './scripts/patchAccountSettings.mjs';
 // @ts-ignore -- side-effect-only secure OAuth-only email-change reauthentication UX.
 import './scripts/patchAccountEmailReauthUX.mjs';
+// @ts-ignore -- side-effect-only per-account session invalidation after password changes/resets.
+import './scripts/patchSessionRevocation.mjs';
 // @ts-ignore -- side-effect-only reviewer label cleanup and completed sponsorship feedback.
 import './scripts/patchReviewerAndSponsorFeedback.mjs';
 // @ts-ignore -- side-effect-only persisted in-app Ask Us support requests.
