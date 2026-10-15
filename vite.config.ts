@@ -59,6 +59,10 @@ import './scripts/patchOrganizerBroadcastDelivery.mjs';
 import './scripts/patchOrganizerEditProfilePreview.mjs';
 // @ts-ignore -- side-effect-only final click-through routing/search/persistence UX patch.
 import './scripts/patchFinalUxAuditPass2.mjs';
+// @ts-ignore -- side-effect-only Sponsor Profile metric correction.
+import './scripts/patchSponsorCompletedSponsorships.mjs';
+// @ts-ignore -- side-effect-only final mobile/responsive visual polish.
+import './scripts/patchFinalMobileVisualPolish.mjs';
 
 export default defineConfig(() => {
   return {
