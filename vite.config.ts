@@ -53,6 +53,8 @@ import './scripts/patchProfessionalFinalDeclutter.mjs';
 import './scripts/patchOrganizerFinalUX.mjs';
 // @ts-ignore -- side-effect-only Organizer group messaging and branded PDF delivery patch.
 import './scripts/patchOrganizerMessagingDelivery.mjs';
+// @ts-ignore -- side-effect-only Organizer broadcast group delivery patch.
+import './scripts/patchOrganizerBroadcastDelivery.mjs';
 
 export default defineConfig(() => {
   return {
