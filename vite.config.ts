@@ -77,6 +77,8 @@ import './scripts/patchReviewerAndSponsorFeedback.mjs';
 import './scripts/patchSupportTickets.mjs';
 // @ts-ignore -- side-effect-only accidental duplicate notification guard.
 import './scripts/patchNotificationDedup.mjs';
+// @ts-ignore -- side-effect-only submission privacy and cross-account isolation patch.
+import './scripts/patchSubmissionVisibilitySecurity.mjs';
 
 export default defineConfig(() => {
   return {
