@@ -51,6 +51,8 @@ import './scripts/patchProfessionalRoleEvidenceCounts.mjs';
 import './scripts/patchProfessionalFinalDeclutter.mjs';
 // @ts-ignore -- side-effect-only final Organizer UX and committee communication patch.
 import './scripts/patchOrganizerFinalUX.mjs';
+// @ts-ignore -- side-effect-only Organizer group messaging and branded PDF delivery patch.
+import './scripts/patchOrganizerMessagingDelivery.mjs';
 
 export default defineConfig(() => {
   return {
