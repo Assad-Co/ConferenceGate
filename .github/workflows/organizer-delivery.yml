@@ -22,9 +22,11 @@ jobs:
       - name: Install
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Apply Organizer patches
-        run: node scripts/patchOrganizerFinalUX.mjs && node scripts/patchOrganizerMessagingDelivery.mjs
+        run: node scripts/patchOrganizerFinalUX.mjs && node scripts/patchOrganizerMessagingDelivery.mjs && node scripts/patchOrganizerBroadcastDelivery.mjs
       - name: Organizer messaging and PDF audit
         run: node scripts/checkOrganizerMessagingDelivery.mjs
+      - name: Organizer marketplace, broadcast, and analytics audit
+        run: node scripts/checkOrganizerMarketplaceBroadcast.mjs
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Production build
