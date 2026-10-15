@@ -73,6 +73,8 @@ import './scripts/patchSupportCenterFooter.mjs';
 import './scripts/patchAccountSettings.mjs';
 // @ts-ignore -- side-effect-only reviewer label cleanup and completed sponsorship feedback.
 import './scripts/patchReviewerAndSponsorFeedback.mjs';
+// @ts-ignore -- side-effect-only persisted in-app Ask Us support requests.
+import './scripts/patchSupportTickets.mjs';
 
 export default defineConfig(() => {
   return {
