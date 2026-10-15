@@ -71,6 +71,8 @@ import './scripts/patchOwnerGoogleAlias.mjs';
 import './scripts/patchSupportCenterFooter.mjs';
 // @ts-ignore -- side-effect-only profile account settings patch.
 import './scripts/patchAccountSettings.mjs';
+// @ts-ignore -- side-effect-only reviewer label cleanup and completed sponsorship feedback.
+import './scripts/patchReviewerAndSponsorFeedback.mjs';
 
 export default defineConfig(() => {
   return {
