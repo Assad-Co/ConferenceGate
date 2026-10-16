@@ -193,6 +193,19 @@ export async function initDb(): Promise<void> {
   // Real tracked activity: submissions, peer reviews, reviewer volunteering, and
   // conference registrations — replaces the earlier client-only mock/placeholder data.
   await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS issued_certificates (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL CHECK(kind IN ('abstract', 'reviewer', 'committee')),
+      activity_id TEXT NOT NULL,
+      recipient_id TEXT NOT NULL REFERENCES users(id),
+      recipient_name TEXT NOT NULL,
+      conference_title TEXT NOT NULL,
+      paper_title TEXT NOT NULL,
+      issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+      revoked_at TEXT,
+      UNIQUE(kind, activity_id, recipient_id)
+    );
+
     CREATE TABLE IF NOT EXISTS submissions (
       id TEXT PRIMARY KEY,
       submitter_id TEXT NOT NULL REFERENCES users(id),
