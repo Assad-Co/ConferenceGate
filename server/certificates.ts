@@ -49,10 +49,74 @@ certificatesRouter.post('/issue/abstract/:submissionId', requireAuth, async (req
   }
 });
 
+/** Issue one certificate per completed, assigned review. */
+certificatesRouter.post('/issue/reviewer/:reviewId', requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const reviewId = String(req.params.reviewId || '');
+    if (!reviewId || reviewId.length > 200) return res.status(400).json({ error: 'Invalid review' });
+    const row = await dbGet<{ id: string; reviewer_id: string; reviewer_name: string; conference_title: string; title: string }>(
+      `SELECT r.id, r.reviewer_id, u.name AS reviewer_name, s.conference_title, s.title
+       FROM submission_reviews r
+       JOIN submissions s ON s.id = r.submission_id
+       JOIN submission_reviewer_assignments a ON a.submission_id = r.submission_id AND a.reviewer_id = r.reviewer_id
+       JOIN users u ON u.id = r.reviewer_id
+       WHERE r.id = ? AND r.reviewer_id = ? AND s.is_external = 0`,
+      [reviewId, req.userId!]);
+    if (!row) return res.status(404).json({ error: 'Eligible review not found' });
+    const existing = await dbGet<IssuedCertificate>(
+      "SELECT * FROM issued_certificates WHERE kind = 'reviewer' AND activity_id = ? AND recipient_id = ?",
+      [row.id, req.userId!]);
+    if (existing?.revoked_at) return res.status(409).json({ error: 'Certificate revoked; contact support' });
+    if (existing) return res.json({ certificate: existing });
+    await dbRun(`INSERT OR IGNORE INTO issued_certificates
+      (id, kind, activity_id, recipient_id, recipient_name, conference_title, paper_title)
+      VALUES (?, 'reviewer', ?, ?, ?, ?, ?)`,
+      ['CG-RV-' + crypto.randomBytes(16).toString('hex').toUpperCase(), row.id, req.userId!, row.reviewer_name, row.conference_title, row.title]);
+    const issued = await dbGet<IssuedCertificate>(
+      "SELECT * FROM issued_certificates WHERE kind = 'reviewer' AND activity_id = ? AND recipient_id = ?",
+      [row.id, req.userId!]);
+    return res.status(201).json({ certificate: issued });
+  } catch (err) {
+    console.error('Reviewer certificate issuance failed:', err);
+    return res.status(500).json({ error: 'Unable to issue certificate' });
+  }
+});
+
+/** Only organizer-completed committee service is eligible. */
+certificatesRouter.post('/issue/committee/:invitationId', requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const invitationId = String(req.params.invitationId || '');
+    if (!invitationId || invitationId.length > 200) return res.status(400).json({ error: 'Invalid invitation' });
+    const row = await dbGet<{ id: string; recipient_name: string; conference_title: string; title: string }>(
+      `SELECT i.id, u.name AS recipient_name, i.conference_title, i.title
+       FROM professional_invitations i JOIN users u ON u.id = i.professional_id
+       WHERE i.id = ? AND i.professional_id = ? AND i.role_type = 'committee'
+         AND i.status = 'completed' AND i.completed_at IS NOT NULL`,
+      [invitationId, req.userId!]);
+    if (!row) return res.status(404).json({ error: 'Completed committee assignment not found' });
+    const existing = await dbGet<IssuedCertificate>(
+      "SELECT * FROM issued_certificates WHERE kind = 'committee' AND activity_id = ? AND recipient_id = ?",
+      [row.id, req.userId!]);
+    if (existing?.revoked_at) return res.status(409).json({ error: 'Certificate revoked; contact support' });
+    if (existing) return res.json({ certificate: existing });
+    await dbRun(`INSERT OR IGNORE INTO issued_certificates
+      (id, kind, activity_id, recipient_id, recipient_name, conference_title, paper_title)
+      VALUES (?, 'committee', ?, ?, ?, ?, ?)`,
+      ['CG-TC-' + crypto.randomBytes(16).toString('hex').toUpperCase(), row.id, req.userId!, row.recipient_name, row.conference_title, row.title]);
+    const issued = await dbGet<IssuedCertificate>(
+      "SELECT * FROM issued_certificates WHERE kind = 'committee' AND activity_id = ? AND recipient_id = ?",
+      [row.id, req.userId!]);
+    return res.status(201).json({ certificate: issued });
+  } catch (err) {
+    console.error('Committee certificate issuance failed:', err);
+    return res.status(500).json({ error: 'Unable to issue certificate' });
+  }
+});
+
 certificatesRouter.get('/verify/:id', async (req, res) => {
   try {
     const id = String(req.params.id || '');
-    if (!/^CG-AA-[A-F0-9]{32}$/.test(id)) return res.status(400).json({ valid: false });
+    if (!/^CG-(?:AA|RV|TC)-[A-F0-9]{32}$/.test(id)) return res.status(400).json({ valid: false });
     const cert = await dbGet<IssuedCertificate>(
       'SELECT * FROM issued_certificates WHERE id = ?', [id]);
     if (!cert) return res.status(404).json({ valid: false });
