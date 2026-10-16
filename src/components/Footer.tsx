@@ -29,6 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
                 To become the global gateway for trusted conference engagement and professional recognition.
               </p>
             </div>
+            <a href="/about.html" className="inline-block text-sm font-bold text-blue-700 hover:underline">About Us →</a>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
               <span>Verified Conference Record · Source-labeled evidence</span>
