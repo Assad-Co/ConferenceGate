@@ -89,6 +89,8 @@ import './scripts/patchProfessionalEvaluationSecurity.mjs';
 import './scripts/patchUpcomingDiscoveryFilter.mjs';
 // @ts-ignore -- side-effect-only catalogue CFP completeness alignment.
 import './scripts/patchCatalogueCfpQuality.mjs';
+// @ts-ignore -- side-effect-only OAuth-free LinkedIn URL profile enrichment flow.
+import './scripts/patchLinkedInUrlProfileFlow.mjs';
 
 export default defineConfig(() => {
   return {
