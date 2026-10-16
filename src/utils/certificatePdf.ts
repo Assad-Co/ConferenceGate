@@ -178,12 +178,12 @@ export async function downloadCertificatePDF(cert: CertificateData) {
   doc.text('CONFERENCEGATE', pageWidth - 160, 472, { align: 'center', charSpace: 1.1 });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('VERIFICATION OFFICE', pageWidth - 160, 486, { align: 'center', charSpace: 1.0 });
+  doc.text(cert.issuedCertificateId ? 'CERTIFICATE REGISTRY' : 'ACTIVITY RECORD', pageWidth - 160, 486, { align: 'center', charSpace: 1.0 });
 
   doc.setTextColor(95, 102, 112);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text(cert.issuedCertificateId ? 'Verify at conferencegate.com/verify.html' : 'ConferenceGate activity record', centerX, 505, { align: 'center' });
+  doc.text(cert.issuedCertificateId ? 'Verify at conferencegate.com/verify.html?id=' + id : 'ConferenceGate activity record — not independently verified', centerX, 505, { align: 'center' });
   doc.setFontSize(7.5);
   doc.text(`CERTIFICATE ID: ${id}`, centerX, 519, { align: 'center', charSpace: 0.7 });
 
