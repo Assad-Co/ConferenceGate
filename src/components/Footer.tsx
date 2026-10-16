@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
   return (
     <footer className="bg-blue-50 text-slate-500 py-12 border-t border-blue-100 mt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
           <div className="space-y-4">
             <Logo className="h-10 w-auto" />
             <div className="space-y-2 text-xs text-slate-600 leading-relaxed max-w-2xl">
@@ -29,12 +29,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
                 To become the global gateway for trusted conference engagement and professional recognition.
               </p>
             </div>
-            <a href="/about.html" className="inline-block text-sm font-bold text-blue-700 hover:underline">About Us →</a>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
               <ShieldCheck className="w-4 h-4" />
               <span>Verified Conference Record · Source-labeled evidence</span>
             </div>
           </div>
+
+          <div><h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Company</h4><ul className="space-y-2 text-xs"><li><a href="/about.html" className="hover:text-blue-600 transition-colors">About Us</a></li><li><a href="/about.html#mission" className="hover:text-blue-600 transition-colors">Mission &amp; Vision</a></li><li><a href="/about.html#platform" className="hover:text-blue-600 transition-colors">What We Do</a></li></ul></div>
 
           {role === 'professional' && (
             <div>
