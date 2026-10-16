@@ -56,7 +56,8 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
   const certificates = useMemo<Certificate[]>(() => {
     const certs: Certificate[] = [];
-    const myEmail = currentUserEmail?.trim().toLowerCase();
+    // Co-author issuance requires a separately verified identity workflow.
+    void currentUserEmail;
 
     if (currentUserId) {
       // 1) Abstract Acceptance Certificate — only after a real ConferenceGate submission is accepted.
@@ -65,8 +66,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           (s) =>
             !s.isExternal &&
             ACCEPTED_STATUSES.includes(s.status) &&
-            (s.submitterId === currentUserId ||
-              (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail)))
+            s.submitterId === currentUserId
         )
         .forEach((s) => {
           const acceptedTimelineEntry = [...(s.visualTimeline || [])]
@@ -193,7 +193,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             Formal certificates are issued only for three recorded milestones: abstract acceptance, completed peer review,
             and organizer-confirmed Technical Committee service. Every PDF is personalized with your profile name,
-            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Certificates are issued against recorded activities and can be independently checked by their server-issued ID.
+            certificate issue date, ConferenceGate branding, stamp, signature, and reference ID. Certificates are issued against recorded activities and can be independently checked by their server-issued ID.
           </p>
         </div>
 
