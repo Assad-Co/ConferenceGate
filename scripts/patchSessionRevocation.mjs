@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import './patchLinkedInAuthUX.mjs';
 
 function patchFile(path, patcher) {
   const before = fs.readFileSync(path, 'utf8');
