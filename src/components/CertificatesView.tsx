@@ -51,6 +51,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   onBack,
 }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   void registrations;
 
   const certificates = useMemo<Certificate[]>(() => {
@@ -131,25 +132,44 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
     return certs;
   }, [submissions, professionalInvitations, currentUserId, currentUserEmail]);
 
-  const handleDownload = (certId: string) => {
+  const handleDownload = async (certId: string) => {
     const cert = certificates.find((c) => c.id === certId);
-    if (!cert) return;
+    if (!cert || downloadingId) return;
     setDownloadingId(certId);
-    setTimeout(async () => {
-      try {
-        await downloadCertificatePDF({
-          title: cert.title,
-          recipientName: userProfile.name,
-          event: cert.event,
-          paperTitle: cert.paperTitle,
-          issuer: cert.issuer,
-          date: cert.date || 'Date not recorded',
-          verificationHash: cert.verificationHash,
+    setDownloadError(null);
+    try {
+      let issuedCertificateId: string | undefined;
+      let recipientName = userProfile.name;
+      let date = cert.date || 'Date not recorded';
+      if (cert.id.startsWith('paper_')) {
+        const submissionId = cert.id.slice('paper_'.length);
+        const response = await fetch(`/api/certificates/issue/abstract/${encodeURIComponent(submissionId)}`, {
+          method: 'POST',
+          credentials: 'same-origin',
         });
-      } finally {
-        setDownloadingId(null);
+        const payload = await response.json();
+        if (!response.ok || !payload.certificate?.id) {
+          throw new Error(payload.error || 'Could not issue an authenticated certificate');
+        }
+        issuedCertificateId = payload.certificate.id;
+        recipientName = payload.certificate.recipient_name;
+        date = payload.certificate.issued_at;
       }
-    }, 300);
+      await downloadCertificatePDF({
+        title: cert.title,
+        recipientName,
+        event: cert.event,
+        paperTitle: cert.paperTitle,
+        issuer: cert.issuer,
+        date,
+        verificationHash: cert.verificationHash,
+        issuedCertificateId,
+      });
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : 'Certificate download failed');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -177,10 +197,11 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             Formal certificates are issued only for three recorded milestones: abstract acceptance, completed peer review,
             and organizer-confirmed Technical Committee service. Every PDF is personalized with your profile name,
-            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Independent online verification is not yet available.
+            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Abstract acceptance certificates now use server-issued IDs; reviewer and committee certificates remain activity-based until their verification workflows are implemented.
           </p>
         </div>
 
+        {downloadError && <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{downloadError}</p>}
         {certificates.length === 0 ? (
           <div className="text-center py-12 space-y-2">
             <Award className="w-10 h-10 text-slate-300 mx-auto" />
