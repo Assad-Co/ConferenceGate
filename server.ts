@@ -7,6 +7,7 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { authRouter, verifySessionToken, COOKIE_NAME, initAuthSecret } from "./server/auth";
 import { authRecoveryRouter } from "./server/authRecovery";
+import { certificatesRouter } from "./server/certificates";
 import {
   braveSearchRouter,
   searchConferences,
@@ -419,6 +420,7 @@ async function startServer() {
 
   // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations
   app.use("/api/activity", activityRouter);
+  app.use("/api/certificates", certificatesRouter);
 
   // Branded PDF meeting minutes, all-member email delivery, and Gmail handoff.
   app.use("/api/meeting-minutes", meetingMinutesPdfRouter);
