@@ -85,31 +85,22 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         });
 
       // 2) Reviewer Certificate — only after a submitted review exists in ConferenceGate.
-      const reviewsByConference = new Map<string, { count: number; latestDate: string; conferenceId: string }>();
       submissions.filter((s) => !s.isExternal).forEach((s) => {
         s.reviews
-          .filter((r) => r.reviewerId === currentUserId && !!r.id && !!r.date && (s.reviewerAssignments || []).some((a) => a.reviewerId === currentUserId))
+          .filter((r) => r.reviewerId === currentUserId && !!r.id && !!r.date &&
+            (s.reviewerAssignments || []).some((a) => a.reviewerId === currentUserId))
           .forEach((r) => {
-            const existing = reviewsByConference.get(s.conferenceTitle);
-            if (existing) {
-              existing.count += 1;
-              if (r.date > existing.latestDate) existing.latestDate = r.date;
-            } else {
-              reviewsByConference.set(s.conferenceTitle, { count: 1, latestDate: r.date, conferenceId: s.conferenceId });
-            }
+            certs.push({
+              id: `review_${r.id}`,
+              title: 'Certificate of Reviewer Recognition',
+              event: s.conferenceTitle,
+              conferenceId: s.conferenceId,
+              paperTitle: `Completed peer review: ${s.title}`,
+              date: r.date,
+              issuer: 'ConferenceGate recorded peer-review activity',
+              verificationHash: certHash(`review_${r.id}_${currentUserId}`),
+            });
           });
-      });
-      reviewsByConference.forEach((info, conferenceTitle) => {
-        certs.push({
-          id: `review_${conferenceTitle}`,
-          title: 'Certificate of Reviewer Recognition',
-          event: conferenceTitle,
-          conferenceId: info.conferenceId,
-          paperTitle: `Completed peer review of ${info.count} submission${info.count === 1 ? '' : 's'}`,
-          date: info.latestDate,
-          issuer: 'ConferenceGate verified reviewer activity record',
-          verificationHash: certHash(`review_${conferenceTitle}_${currentUserId}`),
-        });
       });
     }
 
@@ -141,20 +132,25 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
       let issuedCertificateId: string | undefined;
       let recipientName = userProfile.name;
       let date = cert.date || 'Date not recorded';
-      if (cert.id.startsWith('paper_')) {
-        const submissionId = cert.id.slice('paper_'.length);
-        const response = await fetch(`/api/certificates/issue/abstract/${encodeURIComponent(submissionId)}`, {
-          method: 'POST',
-          credentials: 'same-origin',
-        });
-        const payload = await response.json();
-        if (!response.ok || !payload.certificate?.id) {
-          throw new Error(payload.error || 'Could not issue an authenticated certificate');
-        }
-        issuedCertificateId = payload.certificate.id;
-        recipientName = payload.certificate.recipient_name;
-        date = payload.certificate.issued_at;
+      const issueRoute = cert.id.startsWith('paper_')
+        ? `abstract/${encodeURIComponent(cert.id.slice('paper_'.length))}`
+        : cert.id.startsWith('review_')
+          ? `reviewer/${encodeURIComponent(cert.id.slice('review_'.length))}`
+          : cert.id.startsWith('committee_')
+            ? `committee/${encodeURIComponent(cert.id.slice('committee_'.length))}`
+            : null;
+      if (!issueRoute) throw new Error('Unsupported certificate type');
+      const response = await fetch(`/api/certificates/issue/${issueRoute}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.certificate?.id) {
+        throw new Error(payload.error || 'Could not issue an authenticated certificate');
       }
+      issuedCertificateId = payload.certificate.id;
+      recipientName = payload.certificate.recipient_name;
+      date = payload.certificate.issued_at;
       await downloadCertificatePDF({
         title: cert.title,
         recipientName,
@@ -197,7 +193,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             Formal certificates are issued only for three recorded milestones: abstract acceptance, completed peer review,
             and organizer-confirmed Technical Committee service. Every PDF is personalized with your profile name,
-            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Abstract acceptance certificates now use server-issued IDs; reviewer and committee certificates remain activity-based until their verification workflows are implemented.
+            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Certificates are issued against recorded activities and can be independently checked by their server-issued ID.
           </p>
         </div>
 
