@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import './patchKudosProfile.mjs';
 
 function patchFile(path, patcher) {
   const before = fs.readFileSync(path, 'utf8');
