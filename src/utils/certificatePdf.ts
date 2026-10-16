@@ -8,6 +8,7 @@ export interface CertificateData {
   issuer: string;
   date: string;
   verificationHash: string;
+  issuedCertificateId?: string;
 }
 
 type CertificateKind = 'abstract' | 'reviewer' | 'committee' | 'generic';
@@ -75,7 +76,7 @@ export async function downloadCertificatePDF(cert: CertificateData) {
   const pageHeight = doc.internal.pageSize.getHeight();
   const centerX = pageWidth / 2;
   const issueDate = formatIssueDate(cert.date);
-  const id = certificateId(kind, cert.verificationHash);
+  const id = cert.issuedCertificateId || certificateId(kind, cert.verificationHash);
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
@@ -161,7 +162,7 @@ export async function downloadCertificatePDF(cert: CertificateData) {
   doc.setFontSize(15);
   doc.text('CG', centerX, 448, { align: 'center' });
   doc.setFontSize(8);
-  doc.text('VERIFIED', centerX, 463, { align: 'center', charSpace: 1.1 });
+  doc.text(cert.issuedCertificateId ? 'REGISTERED' : 'ACTIVITY', centerX, 463, { align: 'center', charSpace: 1.1 });
 
   // ConferenceGate signature.
   doc.setTextColor(14, 86, 180);
@@ -182,7 +183,7 @@ export async function downloadCertificatePDF(cert: CertificateData) {
   doc.setTextColor(95, 102, 112);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('Verified by ConferenceGate', centerX, 505, { align: 'center' });
+  doc.text(cert.issuedCertificateId ? 'Verify at conferencegate.com/verify.html' : 'ConferenceGate activity record', centerX, 505, { align: 'center' });
   doc.setFontSize(7.5);
   doc.text(`CERTIFICATE ID: ${id}`, centerX, 519, { align: 'center', charSpace: 0.7 });
 
