@@ -91,6 +91,8 @@ import './scripts/patchUpcomingDiscoveryFilter.mjs';
 import './scripts/patchCatalogueCfpQuality.mjs';
 // @ts-ignore -- side-effect-only OAuth-free LinkedIn URL profile enrichment flow.
 import './scripts/patchLinkedInUrlProfileFlow.mjs';
+// @ts-ignore -- side-effect-only signup account-role isolation.
+import './scripts/patchSignupRoleIsolation.mjs';
 
 export default defineConfig(() => {
   return {
