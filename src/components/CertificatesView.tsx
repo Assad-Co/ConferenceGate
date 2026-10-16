@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Award, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { AbstractSubmission, UserProfile, Conference, ProfessionalInvitation } from '../types';
 import { ConferenceRegistration } from '../api/activity';
 import { downloadCertificatePDF } from '../utils/certificatePdf';
 import { ConferenceLink } from './ConferenceLink';
-import { fetchMyProfessionalTrust, type ProfessionalTrustSummary } from '../api/professionalTrust';
 
 interface CertificatesViewProps {
   userProfile: UserProfile;
@@ -52,36 +51,39 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
   onBack,
 }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [professionalTrust, setProfessionalTrust] = useState<ProfessionalTrustSummary | null>(null);
-  useEffect(() => { fetchMyProfessionalTrust().then(setProfessionalTrust).catch(() => setProfessionalTrust(null)); }, [currentUserId]);
+  void registrations;
 
   const certificates = useMemo<Certificate[]>(() => {
     const certs: Certificate[] = [];
     const myEmail = currentUserEmail?.trim().toLowerCase();
 
     if (currentUserId) {
-      // Includes abstracts where this account is only a co-author (matched by email) — real
-      // prior engagement recorded by someone else's submission, surfaced automatically.
+      // 1) Abstract Acceptance Certificate — only after a real ConferenceGate submission is accepted.
       submissions
         .filter(
           (s) =>
+            !s.isExternal &&
             ACCEPTED_STATUSES.includes(s.status) &&
             (s.submitterId === currentUserId ||
               (myEmail && (s.coAuthors || []).some((ca) => ca.email?.trim().toLowerCase() === myEmail)))
         )
         .forEach((s) => {
+          const acceptedTimelineEntry = [...(s.visualTimeline || [])]
+            .reverse()
+            .find((entry) => /accept/i.test(entry.label) && entry.date);
           certs.push({
             id: `paper_${s.id}`,
-            title: 'Certificate of Accepted Abstract',
+            title: 'Certificate of Abstract Acceptance',
             event: s.conferenceTitle,
             conferenceId: s.conferenceId,
             paperTitle: s.title,
-            date: s.submissionDate,
-            issuer: `ConferenceGate submission record — ${s.conferenceTitle}`,
-            verificationHash: certHash(s.id),
+            date: acceptedTimelineEntry?.date || s.submissionDate,
+            issuer: `ConferenceGate verified abstract workflow — ${s.conferenceTitle}`,
+            verificationHash: certHash(`abstract_${s.id}_${currentUserId}`),
           });
         });
 
+      // 2) Reviewer Certificate — only after a submitted review exists in ConferenceGate.
       const reviewsByConference = new Map<string, { count: number; latestDate: string; conferenceId: string }>();
       submissions.forEach((s) => {
         s.reviews
@@ -99,87 +101,59 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
       reviewsByConference.forEach((info, conferenceTitle) => {
         certs.push({
           id: `review_${conferenceTitle}`,
-          title: 'Certificate of Peer Reviewer Service',
+          title: 'Certificate of Reviewer Recognition',
           event: conferenceTitle,
           conferenceId: info.conferenceId,
           paperTitle: `Completed peer review of ${info.count} submission${info.count === 1 ? '' : 's'}`,
           date: info.latestDate,
-          issuer: 'ConferenceGate reviewer activity record',
+          issuer: 'ConferenceGate verified reviewer activity record',
           verificationHash: certHash(`review_${conferenceTitle}_${currentUserId}`),
         });
       });
     }
 
-    registrations.forEach((r) => {
-      certs.push({
-        id: `attend_${r.conferenceId}`,
-        title: 'Conference Registration Record',
-        event: r.conferenceTitle,
-        conferenceId: r.conferenceId,
-        paperTitle: r.packageName ? `Registered Attendee — ${r.packageName}` : 'Registered Attendee',
-        date: r.registeredAt.split(' ')[0].split('T')[0],
-        issuer: 'ConferenceGate registration record',
-        verificationHash: certHash(`attend_${r.conferenceId}_${currentUserId || 'anon'}`),
-      });
-    });
-
+    // 3) Technical Committee Certificate — only after the organizer marks the assignment completed.
     professionalInvitations
-      .filter((invitation) => invitation.status === 'completed')
+      .filter((invitation) => invitation.status === 'completed' && invitation.roleType === 'committee')
       .forEach((invitation) => {
-        const roleLabel =
-          invitation.roleType === 'committee'
-            ? 'Technical Committee Service'
-            : invitation.roleType === 'chair'
-              ? 'Session Chair Service'
-              : 'Speaker / Keynote Service';
         certs.push({
-          id: `role_${invitation.id}`,
-          title: `Verified ${roleLabel} Record`,
+          id: `committee_${invitation.id}`,
+          title: 'Certificate of Technical Committee Service',
           event: invitation.conferenceTitle,
           conferenceId: invitation.conferenceId,
-          paperTitle: invitation.title,
+          paperTitle: invitation.title || 'Technical Committee Member',
           date: (invitation.completedAt || invitation.respondedAt || invitation.createdAt).split(' ')[0].split('T')[0],
-          issuer: `ConferenceGate organizer workflow — ${invitation.conferenceTitle}`,
-          verificationHash: certHash(`role_${invitation.id}_${currentUserId || 'anon'}`),
+          issuer: `ConferenceGate organizer-confirmed committee workflow — ${invitation.conferenceTitle}`,
+          verificationHash: certHash(`committee_${invitation.id}_${currentUserId || 'anon'}`),
         });
       });
 
-    if (professionalTrust && professionalTrust.evidence.organizerEvaluations > 0 && professionalTrust.evidence.evaluationAverage >= 3.5) {
-      certs.unshift({
-        id: `professional_credential_${currentUserId || 'me'}`,
-        title: `ConferenceGate ${professionalTrust.credentialLevel[0].toUpperCase() + professionalTrust.credentialLevel.slice(1)} Professional Credential`,
-        event: 'ConferenceGate Professional Network',
-        conferenceId: '',
-        paperTitle: `ConferenceGate Index ${professionalTrust.conferenceGateIndex}/100 · organizer evaluation ${professionalTrust.evidence.evaluationAverage.toFixed(2)}/5`,
-        date: new Date().toISOString().split('T')[0],
-        issuer: 'ConferenceGate verified professional evaluation system',
-        verificationHash: certHash(`professional_${currentUserId}_${professionalTrust.conferenceGateIndex}_${professionalTrust.evidence.organizerEvaluations}`),
-      });
-    }
     return certs;
-  }, [submissions, registrations, professionalInvitations, currentUserId, currentUserEmail, professionalTrust]);
+  }, [submissions, professionalInvitations, currentUserId, currentUserEmail]);
 
   const handleDownload = (certId: string) => {
     const cert = certificates.find((c) => c.id === certId);
     if (!cert) return;
     setDownloadingId(certId);
-    setTimeout(() => {
-      downloadCertificatePDF({
-        title: cert.title,
-        recipientName: userProfile.name,
-        event: cert.event,
-        paperTitle: cert.paperTitle,
-        issuer: cert.issuer,
-        date: cert.date,
-        verificationHash: cert.verificationHash,
-      });
-      setDownloadingId(null);
-    }, 600);
+    setTimeout(async () => {
+      try {
+        await downloadCertificatePDF({
+          title: cert.title,
+          recipientName: userProfile.name,
+          event: cert.event,
+          paperTitle: cert.paperTitle,
+          issuer: cert.issuer,
+          date: cert.date,
+          verificationHash: cert.verificationHash,
+        });
+      } finally {
+        setDownloadingId(null);
+      }
+    }, 300);
   };
 
   return (
     <div className="space-y-8">
-      {/* Top Bar */}
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
@@ -191,28 +165,29 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4" />
-          <span>Generated from ConferenceGate activity records</span>
+          <span>Verified ConferenceGate certificates</span>
         </span>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-xs">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Certificates & Verified Activity Records
+            My Certificates
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Download PDF records generated from activity ConferenceGate can verify directly — accepted abstracts,
-            completed peer reviews, completed organizer roles, conference registrations, and evaluation-based Professional credentials. A registration record does not claim attendance unless attendance is separately verified.
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+            Formal certificates are issued only for three verified milestones: abstract acceptance, completed peer review,
+            and organizer-confirmed Technical Committee service. Every PDF is personalized with your profile name,
+            date of issue, ConferenceGate branding, verification stamp, signature, and certificate ID.
           </p>
         </div>
 
         {certificates.length === 0 ? (
           <div className="text-center py-12 space-y-2">
             <Award className="w-10 h-10 text-slate-300 mx-auto" />
-            <p className="text-sm font-bold text-slate-500">No certificates yet</p>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Records appear automatically once ConferenceGate can verify an accepted abstract, completed peer review,
-              completed organizer-assigned role, or conference registration.
+            <p className="text-sm font-bold text-slate-500">No formal certificates yet</p>
+            <p className="text-xs text-slate-400 max-w-lg mx-auto">
+              A certificate will appear automatically when your abstract is accepted, an assigned review is completed,
+              or an organizer marks your Technical Committee assignment as completed.
             </p>
           </div>
         ) : (
@@ -220,9 +195,9 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
             {certificates.map((cert) => (
               <div key={cert.id} className="p-6 bg-white rounded-2xl border border-slate-200 space-y-4 flex flex-col justify-between shadow-xs">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-md">
-                      Verified Activity Record
+                      ConferenceGate Verified Certificate
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">{cert.verificationHash}</span>
                   </div>
@@ -238,7 +213,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                     {cert.paperTitle}
                   </p>
                   <div className="text-[11px] text-slate-500 pt-1">
-                    Issued by: <strong className="text-slate-800">{cert.issuer}</strong> on {cert.date}
+                    Date of issue: <strong className="text-slate-800">{cert.date}</strong>
                   </div>
                 </div>
 
@@ -247,7 +222,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                   className="w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{downloadingId === cert.id ? 'Generating PDF...' : 'Download Record (PDF)'}</span>
+                  <span>{downloadingId === cert.id ? 'Generating personalized PDF...' : 'Download Certificate (PDF)'}</span>
                 </button>
               </div>
             ))}
