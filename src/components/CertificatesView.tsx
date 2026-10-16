@@ -70,14 +70,14 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
         .forEach((s) => {
           const acceptedTimelineEntry = [...(s.visualTimeline || [])]
             .reverse()
-            .find((entry) => /accept/i.test(entry.label) && entry.date);
+            .find((entry) => /accept/i.test(entry.label) && entry.status === 'completed' && entry.date);
           certs.push({
             id: `paper_${s.id}`,
             title: 'Certificate of Abstract Acceptance',
             event: s.conferenceTitle,
             conferenceId: s.conferenceId,
             paperTitle: s.title,
-            date: acceptedTimelineEntry?.date || s.submissionDate,
+            date: acceptedTimelineEntry?.date || '',
             issuer: `ConferenceGate verified abstract workflow — ${s.conferenceTitle}`,
             verificationHash: certHash(`abstract_${s.id}_${currentUserId}`),
           });
@@ -85,9 +85,9 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
       // 2) Reviewer Certificate — only after a submitted review exists in ConferenceGate.
       const reviewsByConference = new Map<string, { count: number; latestDate: string; conferenceId: string }>();
-      submissions.forEach((s) => {
+      submissions.filter((s) => !s.isExternal).forEach((s) => {
         s.reviews
-          .filter((r) => r.reviewerId === currentUserId)
+          .filter((r) => r.reviewerId === currentUserId && !!r.id && !!r.date && (s.reviewerAssignments || []).some((a) => a.reviewerId === currentUserId))
           .forEach((r) => {
             const existing = reviewsByConference.get(s.conferenceTitle);
             if (existing) {
@@ -114,7 +114,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
     // 3) Technical Committee Certificate — only after the organizer marks the assignment completed.
     professionalInvitations
-      .filter((invitation) => invitation.status === 'completed' && invitation.roleType === 'committee')
+      .filter((invitation) => !!currentUserId && invitation.professionalId === currentUserId && invitation.status === 'completed' && invitation.roleType === 'committee' && !!invitation.completedAt)
       .forEach((invitation) => {
         certs.push({
           id: `committee_${invitation.id}`,
@@ -122,7 +122,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           event: invitation.conferenceTitle,
           conferenceId: invitation.conferenceId,
           paperTitle: invitation.title || 'Technical Committee Member',
-          date: (invitation.completedAt || invitation.respondedAt || invitation.createdAt).split(' ')[0].split('T')[0],
+          date: invitation.completedAt!.split(' ')[0].split('T')[0],
           issuer: `ConferenceGate organizer-confirmed committee workflow — ${invitation.conferenceTitle}`,
           verificationHash: certHash(`committee_${invitation.id}_${currentUserId || 'anon'}`),
         });
@@ -143,7 +143,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
           event: cert.event,
           paperTitle: cert.paperTitle,
           issuer: cert.issuer,
-          date: cert.date,
+          date: cert.date || 'Date not recorded',
           verificationHash: cert.verificationHash,
         });
       } finally {
@@ -165,7 +165,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
 
         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4" />
-          <span>Verified ConferenceGate certificates</span>
+          <span>ConferenceGate activity-based certificates</span>
         </span>
       </div>
 
@@ -175,9 +175,9 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
             My Certificates
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-            Formal certificates are issued only for three verified milestones: abstract acceptance, completed peer review,
+            Formal certificates are issued only for three recorded milestones: abstract acceptance, completed peer review,
             and organizer-confirmed Technical Committee service. Every PDF is personalized with your profile name,
-            date of issue, ConferenceGate branding, verification stamp, signature, and certificate ID.
+            recorded activity date, ConferenceGate branding, stamp, signature, and reference ID. Independent online verification is not yet available.
           </p>
         </div>
 
@@ -197,7 +197,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-md">
-                      ConferenceGate Verified Certificate
+                      ConferenceGate Activity Certificate
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">{cert.verificationHash}</span>
                   </div>
@@ -213,7 +213,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                     {cert.paperTitle}
                   </p>
                   <div className="text-[11px] text-slate-500 pt-1">
-                    Date of issue: <strong className="text-slate-800">{cert.date}</strong>
+                    Activity date: <strong className="text-slate-800">{cert.date}</strong>
                   </div>
                 </div>
 
