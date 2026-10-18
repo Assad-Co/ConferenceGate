@@ -541,6 +541,61 @@ authRouter.get("/me", requireAuth, asyncHandler(async (req: AuthedRequest, res) 
   res.json({ user: await toPublicUser(row) });
 }));
 
+// Account settings must only expose account details for the authenticated session.
+authRouter.get("/me/account-settings", requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({
+    email: user.email,
+    hasPassword: Boolean(user.password_hash),
+    googleConnected: Boolean(user.google_id),
+  });
+}));
+
+// Changing an email can alter account ownership and paid workspace access.
+// Require the current password and do not allow a Google-only session to silently change it.
+authRouter.patch("/me/account-email", authRateLimit, requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { newEmail, currentPassword } = req.body || {};
+  if (typeof newEmail !== "string" || !EMAIL_RE.test(newEmail.trim()) || newEmail.trim().length > 254) {
+    return res.status(400).json({ error: "Enter a valid new email address." });
+  }
+  const email = newEmail.trim().toLowerCase();
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  if (isOwnerPreviewEmail(user.email)) return res.status(403).json({ error: "Owner email changes require support." });
+  if (!user.password_hash) {
+    return res.status(403).json({ error: "Email changes for social sign-in accounts require a verified email-change process." });
+  }
+  if (typeof currentPassword !== "string" || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+    return res.status(403).json({ error: "Current password is incorrect." });
+  }
+  if (email === user.email) return res.json({ email: user.email });
+  // Until a verified email-change flow is implemented, do not switch login identity
+  // to an address the user has not proven they control.
+  return res.status(409).json({ error: "Email changes require verification of the new address. Please contact support." });
+}));
+
+authRouter.patch("/me/account-password", authRateLimit, requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 128) {
+    return res.status(400).json({ error: "New password must contain 8 to 128 characters." });
+  }
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  if (!user.password_hash) {
+    return res.status(403).json({ error: "Setting a password for social sign-in accounts requires identity re-verification." });
+  }
+  if (typeof currentPassword !== "string" || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+    return res.status(403).json({ error: "Current password is incorrect." });
+  }
+  if (bcrypt.compareSync(newPassword, user.password_hash)) {
+    return res.status(400).json({ error: "New password must differ from the current password." });
+  }
+  await dbRun("UPDATE users SET password_hash = ? WHERE id = ?", [bcrypt.hashSync(newPassword, 12), user.id]);
+  return res.json({ ok: true });
+}));
+
 const EDITABLE_PROFILE_FIELDS = ["name", "title", "organization", "department", "city", "country", "bio"] as const;
 const MAX_BIO_LENGTH = 600;
 
