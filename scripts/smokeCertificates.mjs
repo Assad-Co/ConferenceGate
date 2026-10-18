@@ -18,7 +18,11 @@ await check('Database health', '/api/health', [200], (body) => {
   const data = JSON.parse(body); return data.status === 'ok' && data.database === 'ready';
 });
 await check('Certificate verification page', '/verify.html', [200], (body) => body.includes('Certificate verification') && body.includes('/api/certificates/verify/'));
-await check('Unknown certificate rejected', '/api/certificates/verify/CG-AA-00000000000000000000000000000000', [404], (body) => JSON.parse(body).valid === false);
+for (const prefix of ['AA', 'RV', 'TC']) {
+  await check('Unknown ' + prefix + ' certificate rejected',
+    '/api/certificates/verify/CG-' + prefix + '-00000000000000000000000000000000',
+    [404], (body) => JSON.parse(body).valid === false);
+}
 await check('Malformed certificate rejected', '/api/certificates/verify/not-a-certificate', [400], (body) => JSON.parse(body).valid === false);
 if (failures.length) {
   console.error('FAILED: ' + failures.join(', '));
