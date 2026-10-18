@@ -59,13 +59,15 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   const hasPassword = Boolean(info?.hasPassword);
   const googleConnected = Boolean(info?.googleConnected);
   const effectiveEmail = info?.email || currentEmail;
+  const canChangeEmail = !ownerPreview && hasPassword;
+  const canChangePassword = hasPassword;
 
   const handleEmailSave = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     setEmailMessage(null);
-    if (ownerPreview) {
-      setError('Owner account email changes are disabled here to protect owner access.');
+    if (!canChangeEmail) {
+      setError('Email changes require a verified email-change process. Contact support.');
       return;
     }
     if (!newEmail.trim() || newEmail.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
@@ -82,7 +84,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
       setNewEmail('');
       setConfirmEmail('');
       setEmailPassword('');
-      setEmailMessage('Email updated. Email verification can be enabled once outbound mail is fully configured.');
+      setEmailMessage('Email updated.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update email.');
     } finally {
@@ -94,6 +96,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
     event.preventDefault();
     setError(null);
     setPasswordMessage(null);
+    if (!canChangePassword) {
+      setError('Password setup for social sign-in accounts requires identity re-verification. Contact support.');
+      return;
+    }
     if (newPassword.length < 8) {
       setError('New password must be at least 8 characters.');
       return;
@@ -149,9 +155,9 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 <p className="text-xs text-slate-500">Current email: <span className="font-semibold text-slate-700">{effectiveEmail}</span></p>
               </div>
             </div>
-            {ownerPreview ? (
+            {!canChangeEmail ? (
               <div className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-                Owner account email changes are protected to prevent accidental loss of owner access. We can enable a verified owner-email migration workflow later.
+                Email changes are unavailable until new-address verification is enabled. Please contact support to request a change.
               </div>
             ) : (
               <form className="space-y-3" onSubmit={handleEmailSave}>
@@ -175,11 +181,12 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 <p className="text-xs text-slate-500">{hasPassword ? 'Update your direct ConferenceGate login password.' : 'Add a password so you can sign in directly as well as with Google.'}</p>
               </div>
             </div>
+            {!canChangePassword && <p className="mb-3 text-xs text-amber-800">Password setup for social sign-in accounts requires identity re-verification and is not yet available.</p>}
             <form className="space-y-3" onSubmit={handlePasswordSave}>
               {hasPassword && <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Current password" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" required />}
               <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" minLength={8} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" required />
               <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" minLength={8} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500" required />
-              <button disabled={savingPassword} className="rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60">
+              <button disabled={savingPassword || !canChangePassword} className="rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60">
                 {savingPassword ? 'Saving…' : hasPassword ? 'Change Password' : 'Set Password'}
               </button>
               {passwordMessage && <p className="text-xs font-semibold text-emerald-700">{passwordMessage}</p>}
