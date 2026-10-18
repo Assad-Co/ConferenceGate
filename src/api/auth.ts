@@ -290,3 +290,34 @@ export async function completeLinkedInSignup(role: AuthRole): Promise<AuthUser> 
   await recordPaidAcquisition(data.user);
   return data.user;
 }
+
+export interface AccountSettingsInfo {
+  email: string;
+  hasPassword: boolean;
+  googleConnected: boolean;
+}
+
+export async function fetchAccountSettings(): Promise<AccountSettingsInfo> {
+  const res = await fetch('/api/auth/me/account-settings', { credentials: 'include' });
+  return parseResponse(res);
+}
+
+export async function updateAccountEmail(payload: { newEmail: string; currentPassword?: string }): Promise<{ email: string }> {
+  const res = await fetch('/api/auth/me/account-email', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(res);
+}
+
+export async function updateAccountPassword(payload: { currentPassword?: string; newPassword: string }): Promise<{ ok: boolean }> {
+  const res = await fetch('/api/auth/me/account-password', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(res);
+}
