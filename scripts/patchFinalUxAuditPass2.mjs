@@ -7,6 +7,12 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const write = (p, content) => fs.writeFileSync(path.join(root, p), content);
 const replace = (source, from, to, label) => {
   if (source.includes(to)) return source;
+  // Support the already-migrated notification implementation, including
+  // variants subsequently modified by the deduplication patch.
+  if (label === 'createNotification destination' &&
+      source.includes('export async function createNotification') &&
+      source.includes('INSERT INTO notifications') &&
+      source.includes('action_url')) return source;
   if (!source.includes(from)) throw new Error(`Final UX pass 2 patch: ${label} anchor missing`);
   return source.replace(from, to);
 };
