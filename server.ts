@@ -3711,7 +3711,7 @@ Return JSON with exactly this shape:
   });
 
   // Vite middleware for dev or static server for production
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV === "development") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
