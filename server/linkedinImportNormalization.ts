@@ -166,6 +166,7 @@ function roleLabels(text: string): string[] {
   for (const [pattern, label] of ROLE_PATTERNS) if (pattern.test(text) && !found.includes(label)) found.push(label);
   const has = (pattern: RegExp) => found.some(label => pattern.test(label));
   return found.filter(label => !(label === "Chair" && has(/^(?!Chair$).*Chair$/)) &&
+    !(label === "Committee Co-Chair" && has(/^(?!Committee Co-Chair$).*Committee Co-Chair$/)) &&
     !(label === "Co-Chair" && has(/^(?!Co-Chair$).*Co-Chair$/)) && !(label === "Speaker" && has(/^(Keynote|Plenary|Invited) Speaker$/)) &&
     !(label === "Presenter" && has(/^(Core|Oral|Poster) Presenter$/)) &&
     !(label === "Committee Member" && has(/Committee (?:Co-)?Chair$/)));
