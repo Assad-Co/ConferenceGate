@@ -58,7 +58,8 @@ export async function sendMessage(partnerId: string, text: string): Promise<Mess
 }
 
 export async function markConversationRead(partnerId: string): Promise<void> {
-  await fetch(`/api/messages/conversations/${partnerId}/read`, { method: 'POST', credentials: 'include' });
+  const res = await fetch(`/api/messages/conversations/${partnerId}/read`, { method: 'POST', credentials: 'include' });
+  await parseResponse(res);
 }
 
 export async function searchUsers(query: string): Promise<PublicUser[]> {

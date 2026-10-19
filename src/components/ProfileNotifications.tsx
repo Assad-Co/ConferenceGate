@@ -61,7 +61,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
       if (filter === 'unread' && notification.read) return false;
       if (filter !== 'all' && filter !== 'unread' && notification.type !== filter) return false;
       if (!term) return true;
-      return [notification.title, notification.message, notification.timestamp, TYPE_META[notification.type].label]
+      return [notification.title, notification.message, notification.timestamp, (TYPE_META[notification.type] || TYPE_META.followup).label]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -81,7 +81,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -111,7 +111,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
       {notifications.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
-            <label className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <label className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
               <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input
                 value={query}
@@ -133,7 +133,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
             </button>
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <div className="flex min-w-0 max-w-full gap-1.5 overflow-x-auto pb-1">
             {filterOptions.map((option) => (
               <button
                 key={option.value}
@@ -167,7 +167,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
       ) : (
         <div className="space-y-2.5">
           {visibleNotifications.map((notification) => {
-            const meta = TYPE_META[notification.type];
+            const meta = TYPE_META[notification.type] || TYPE_META.followup;
             const Icon = meta.icon;
             return (
               <button
@@ -198,7 +198,7 @@ export const ProfileNotifications: React.FC<ProfileNotificationsProps> = ({
                       {notification.read ? 'Read' : 'Unread'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed mt-1">{notification.message}</p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mt-1 break-words [overflow-wrap:anywhere]">{notification.message}</p>
                   <span className="text-[10px] text-slate-400 font-medium mt-1.5 block">{notification.timestamp}</span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-2" aria-hidden="true" />

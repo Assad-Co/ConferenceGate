@@ -75,6 +75,7 @@ import {
   fetchOrganizerActivityFeed,
   OrganizerActivityItem,
   fetchMyNotifications,
+  fetchMyNotificationState,
   markNotificationRead,
   markAllNotificationsRead,
 } from './api/activity';
@@ -323,15 +324,25 @@ export function App() {
     }
   };
 
-  const handleMarkNotificationRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    markNotificationRead(id).catch(() => {});
+  const persistNotificationRead = async (ids: string[], all = false) => {
+    try {
+      if (all) await markAllNotificationsRead(ids);
+      else await markNotificationRead(ids[0]);
+      setNotifications((prev) => prev.map((n) => all || ids.includes(n.id) ? { ...n, read: true } : n));
+      setReadOrganizerNotificationIds((prev) => new Set([...prev, ...ids]));
+      setReadSponsorNotificationIds((prev) => new Set([...prev, ...ids]));
+    } catch (error: any) {
+      showToast({ type: 'info', title: 'Read status was not saved', message: error?.message || 'Please try again.' });
+    }
   };
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    markAllNotificationsRead().catch(() => {});
-  };
+  const handleMarkNotificationRead = (id: string) => { void persistNotificationRead([id]); };
+  const handleMarkAllNotificationsRead = () => { void persistNotificationRead(notifications.map((n) => n.id), true); };
   const handleOpenNotification = (notification: NotificationItem) => {
+    const conversation = conversations.find((c) => notification.id.startsWith(`msg_${c.partnerId}_`));
+    if (conversation) {
+      openConversationWith(conversation.partnerId, conversation.partner);
+      return;
+    }
     switch (notification.type) {
       case 'abstract':
         setActiveTab(activeRole === 'Organizer' ? 'organizer' : 'abstracts');
@@ -621,7 +632,7 @@ export function App() {
     const messageItems: Array<NotificationItem & { sortKey: string }> = conversations
       .filter((c) => c.unreadCount > 0)
       .map((c) => {
-        const id = `msg_${c.partnerId}`;
+        const id = `msg_${c.partnerId}_${c.lastMessageAt}_${c.unreadCount}`;
         return {
           id,
           title: `New message from ${c.partner.name}`,
@@ -666,10 +677,8 @@ export function App() {
       .map(({ sortKey, ...rest }) => rest);
   }, [conversations, organizerActivityFeed, readOrganizerNotificationIds]);
 
-  const handleMarkOrganizerNotificationRead = (id: string) =>
-    setReadOrganizerNotificationIds((prev) => new Set(prev).add(id));
-  const handleMarkAllOrganizerNotificationsRead = () =>
-    setReadOrganizerNotificationIds(new Set(organizerNotifications.map((n) => n.id)));
+  const handleMarkOrganizerNotificationRead = (id: string) => { void persistNotificationRead([id]); };
+  const handleMarkAllOrganizerNotificationsRead = () => { void persistNotificationRead(organizerNotifications.map((n) => n.id), true); };
 
   // Real, sponsor-specific notifications: unread messages plus this sponsor's own real
   // application decisions and reviews received from organizers.
@@ -677,7 +686,7 @@ export function App() {
     const messageItems: Array<NotificationItem & { sortKey: string }> = conversations
       .filter((c) => c.unreadCount > 0)
       .map((c) => {
-        const id = `msg_${c.partnerId}`;
+        const id = `msg_${c.partnerId}_${c.lastMessageAt}_${c.unreadCount}`;
         return {
           id,
           title: `New message from ${c.partner.name}`,
@@ -732,10 +741,8 @@ export function App() {
       .map(({ sortKey, ...rest }) => rest);
   }, [conversations, myApplications, mySponsorProfileStats.reviews, notifications, readSponsorNotificationIds]);
 
-  const handleMarkSponsorNotificationRead = (id: string) =>
-    setReadSponsorNotificationIds((prev) => new Set(prev).add(id));
-  const handleMarkAllSponsorNotificationsRead = () =>
-    setReadSponsorNotificationIds(new Set(sponsorNotifications.map((n) => n.id)));
+  const handleMarkSponsorNotificationRead = (id: string) => { void persistNotificationRead([id]); };
+  const handleMarkAllSponsorNotificationsRead = () => { void persistNotificationRead(sponsorNotifications.map((n) => n.id), true); };
 
   // Real, role-specific notifications wherever they're displayed (Navbar bell + Profile page).
   // Owner preview follows the currently selected Organizer/Sponsor context without changing the
@@ -796,7 +803,7 @@ export function App() {
       });
 
       if (evt.partnerId === activePartnerIdRef.current && isMessagesOpenRef.current) {
-        setActiveMessages((prev) => [...prev, evt.message]);
+        setActiveMessages((prev) => prev.some((item) => item.id === evt.message.id) ? prev : [...prev, evt.message]);
         markConversationRead(evt.partnerId).catch(() => {});
       }
     };
@@ -825,6 +832,36 @@ export function App() {
     };
   }, [authUser?.id]);
 
+  // Refresh notification state while signed in, including changes made on another device.
+  useEffect(() => {
+    if (!authUser?.id || authUser.workspaceAccessRestricted) return;
+    let stopped = false;
+    const refresh = async () => {
+      try {
+        const state = await fetchMyNotificationState();
+        if (stopped) return;
+        setNotifications(state.notifications);
+        setReadOrganizerNotificationIds(new Set(state.readIds));
+        setReadSponsorNotificationIds(new Set(state.readIds));
+        if (authUser.ownerPreview || authUser.role === 'organizer') {
+          const feed = await fetchOrganizerActivityFeed();
+          if (!stopped) setOrganizerActivityFeed(feed);
+        }
+      } catch { /* Keep the last confirmed state during a temporary connection failure. */ }
+    };
+    const visibleRefresh = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    const timer = setInterval(() => { void refresh(); }, 15000);
+    window.addEventListener('focus', visibleRefresh);
+    document.addEventListener('visibilitychange', visibleRefresh);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      window.removeEventListener('focus', visibleRefresh);
+      document.removeEventListener('visibilitychange', visibleRefresh);
+    };
+  }, [authUser?.id]);
+
   // Backstop for the WebSocket push: a dropped/missed connection shouldn't mean a
   // message never shows up. Poll the conversation list, and the open thread, at a
   // low frequency so delivery is eventually guaranteed even if the live push fails.
@@ -839,6 +876,7 @@ export function App() {
     const interval = setInterval(() => {
       fetchConversation(activePartnerId)
         .then(({ messages }) => {
+          if (activePartnerIdRef.current !== activePartnerId) return;
           setActiveMessages((prev) => {
             if (prev.length === messages.length) return prev;
             markConversationRead(activePartnerId).catch(() => {});
@@ -854,15 +892,19 @@ export function App() {
   const handleCloseProfile = () => setViewedAuthor(null);
 
   const openConversationWith = (partnerId: string, fallback?: PublicUser) => {
+    activePartnerIdRef.current = partnerId;
     setActivePartnerId(partnerId);
     setPendingPartner(fallback || null);
     setIsMessagesOpen(true);
     setActiveMessages([]);
     fetchConversation(partnerId)
-      .then(({ messages }) => setActiveMessages(messages))
-      .catch(() => {});
-    markConversationRead(partnerId).catch(() => {});
-    setConversations((prev) => prev.map((c) => (c.partnerId === partnerId ? { ...c, unreadCount: 0 } : c)));
+      .then(async ({ messages }) => {
+        if (activePartnerIdRef.current !== partnerId) return;
+        setActiveMessages(messages);
+        await markConversationRead(partnerId);
+        setConversations((prev) => prev.map((c) => c.partnerId === partnerId ? { ...c, unreadCount: 0 } : c));
+      })
+      .catch((error: any) => showToast({ type: 'info', title: 'Conversation could not be loaded', message: error?.message || 'Please try again.' }));
   };
 
   const handleStartConversation = (author: PostAuthor) => {
@@ -885,7 +927,7 @@ export function App() {
   const handleSendMessage = async (partnerId: string, text: string) => {
     try {
       const message = await sendMessageApi(partnerId, text);
-      setActiveMessages((prev) => [...prev, message]);
+      if (activePartnerIdRef.current === partnerId) setActiveMessages((prev) => prev.some((item) => item.id === message.id) ? prev : [...prev, message]);
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.partnerId === partnerId);
         const partner = idx !== -1 ? prev[idx].partner : pendingPartner;
@@ -1158,6 +1200,14 @@ export function App() {
 
   const handleLogout = async () => {
     await apiLogout();
+    setIsMessagesOpen(false);
+    setActivePartnerId(null);
+    activePartnerIdRef.current = null;
+    setActiveMessages([]);
+    setConversations([]);
+    setNotifications([]);
+    setReadOrganizerNotificationIds(new Set());
+    setReadSponsorNotificationIds(new Set());
     setAuthUser(null);
     setOrganizerNameOverride(null);
     setSponsorNameOverride(null);

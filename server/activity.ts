@@ -237,6 +237,7 @@ activityRouter.get("/notifications/mine", asyncHandler(async (req: AuthedRequest
     [req.userId!]
   );
   res.json({
+    readIds: (await dbAll<{ notification_id: string }>("SELECT notification_id FROM notification_read_receipts WHERE user_id = ?", [req.userId!])).map((row) => row.notification_id),
     notifications: rows.map((r) => ({
       id: r.id,
       type: r.type,
@@ -251,7 +252,9 @@ activityRouter.get("/notifications/mine", asyncHandler(async (req: AuthedRequest
 activityRouter.post(
   "/notifications/:id/read",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
+    if (req.params.id.length > 250) return res.status(400).json({ error: "Invalid notification ID" });
     await dbRun("UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?", [req.params.id, req.userId!]);
+    await dbRun("INSERT OR IGNORE INTO notification_read_receipts(user_id,notification_id) VALUES(?,?)", [req.userId!, req.params.id]);
     res.json({ ok: true });
   })
 );
@@ -260,6 +263,8 @@ activityRouter.post(
   "/notifications/read-all",
   asyncHandler(async (req: AuthedRequest, res: Response) => {
     await dbRun("UPDATE notifications SET read = 1 WHERE user_id = ?", [req.userId!]);
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id: unknown): id is string => typeof id === "string" && id.length <= 250).slice(0, 1000) : [];
+    for (const id of ids) await dbRun("INSERT OR IGNORE INTO notification_read_receipts(user_id,notification_id) VALUES(?,?)", [req.userId!, id]);
     res.json({ ok: true });
   })
 );

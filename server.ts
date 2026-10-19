@@ -46,7 +46,7 @@ import {
 } from "./server/db";
 import { isSafeExternalUrl } from "./server/urlSafety";
 import { requireInternalCrawlAuthorization } from "./server/internalCrawlAccess";
-import { isOwnerPreviewEmail } from "./server/ownerPreview";
+import { isOwnerPreviewEmail, privateWorkspacesOnly } from "./server/ownerPreview";
 import { fetchExactPublicLinkedInPortrait } from "./server/linkedinProfileBootstrap";
 import { geocodePlace, haversineMeters, formatEstimatedDistance } from "./server/geocode";
 import { fetchRenderedHtml, isBrowserRenderingUnavailable, closeBrowser } from "./server/browserFetch";
@@ -3794,7 +3794,25 @@ Return JSON with exactly this shape:
       socket.close(4401, "Not authenticated");
       return;
     }
-    registerSocket(userId, socket);
+    const origin = request.headers.origin;
+    if (origin) {
+      try {
+        const host = new URL(origin).host.toLowerCase();
+        const configured = process.env.PUBLIC_BASE_URL || process.env.APP_BASE_URL;
+        const allowed = configured ? new URL(configured).host.toLowerCase() : '';
+        if (host !== request.headers.host?.toLowerCase() && host !== allowed) {
+          socket.close(4403, "Invalid origin");
+          return;
+        }
+      } catch { socket.close(4403, "Invalid origin"); return; }
+    }
+    dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]).then((user) => {
+      if (!user || (privateWorkspacesOnly() && user.role !== "professional" && !isOwnerPreviewEmail(user.email))) {
+        socket.close(4403, "Access restricted");
+        return;
+      }
+      if (socket.readyState === socket.OPEN) registerSocket(userId, socket);
+    }).catch(() => socket.close(1011, "Authentication unavailable"));
   });
 }
 

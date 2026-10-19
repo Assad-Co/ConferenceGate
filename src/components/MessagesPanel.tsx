@@ -60,7 +60,12 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
   onSendMessage,
   onStartNewConversation,
 }) => {
-  const [draft, setDraft] = useState('');
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const draftKey = activePartnerId || '';
+  const draft = drafts[draftKey] || '';
+  const setDraft = (value: string) => setDrafts((prev) => ({ ...prev, [draftKey]: value }));
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PublicUser[]>([]);
   const [searching, setSearching] = useState(false);
@@ -102,6 +107,26 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
     });
   }, [conversations, conversationFilter, conversationQuery]);
 
+  useEffect(() => {
+    if (isOpen) threadEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [isOpen, activePartnerId, activeMessages.length]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]') || []).filter((element) => element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', handleKey); previous?.focus(); };
+  }, [isOpen]);
   if (!isOpen) return null;
 
   const handleSend = async (event: React.FormEvent) => {
@@ -171,10 +196,10 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[min(720px,92vh)] flex overflow-hidden">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Direct messages" tabIndex={-1} className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[min(720px,92dvh)] min-h-0 flex overflow-hidden outline-none">
         {/* Conversation list */}
         <div
-          className={`${mobileThreadOpen ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 shrink-0 border-r border-slate-100 flex-col`}
+          className={`${mobileThreadOpen ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 shrink-0 min-h-0 border-r border-slate-100 flex-col`}
         >
           <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -342,7 +367,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
         </div>
 
         {/* Active conversation */}
-        <div className={`${mobileThreadOpen ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0`}>
+        <div className={`${mobileThreadOpen ? 'flex' : 'hidden sm:flex'} flex-1 flex-col min-w-0 min-h-0`}>
           <div className="px-3 sm:px-4 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -381,7 +406,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             {activePartner ? (
               activeMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-3 max-w-md mx-auto">
@@ -429,6 +454,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
                 <span>Choose a conversation from the inbox or find a registered member to start one.</span>
               </div>
             )}
+            <div ref={threadEndRef} />
           </div>
 
           {activePartner && activePartnerId && (
@@ -445,7 +471,8 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
                 onChange={(event) => { setDraft(event.target.value); if (sendError) setSendError(null); }}
                 disabled={sending}
                 placeholder={`Message ${activePartner.name}...`}
-                className="flex-1 rounded-full border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-shadow"
+                maxLength={4000}
+                className="flex-1 min-w-0 rounded-full border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-shadow"
               />
               <button
                 type="submit"

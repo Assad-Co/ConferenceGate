@@ -819,11 +819,13 @@ export async function assignReviewerToSubmission(
   return data.submission;
 }
 
+export async function fetchMyNotificationState(): Promise<{ notifications: NotificationItem[]; readIds: string[] }> {
+  const res = await fetch('/api/activity/notifications/mine', { credentials: 'include', cache: 'no-store' });
+  const data = await parseResponse(res);
+  return { notifications: data.notifications || [], readIds: data.readIds || [] };
+}
 export async function fetchMyNotifications(): Promise<NotificationItem[]> {
-  const res = await fetch('/api/activity/notifications/mine', { credentials: 'include' });
-  if (!res.ok) return [];
-  const data = await res.json().catch(() => ({ notifications: [] }));
-  return data.notifications || [];
+  return (await fetchMyNotificationState()).notifications;
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
@@ -831,7 +833,7 @@ export async function markNotificationRead(id: string): Promise<void> {
   await parseResponse(res);
 }
 
-export async function markAllNotificationsRead(): Promise<void> {
-  const res = await fetch('/api/activity/notifications/read-all', { method: 'POST', credentials: 'include' });
+export async function markAllNotificationsRead(ids: string[] = []): Promise<void> {
+  const res = await fetch('/api/activity/notifications/read-all', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
   await parseResponse(res);
 }

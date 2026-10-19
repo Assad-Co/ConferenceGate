@@ -262,6 +262,13 @@ export async function initDb(): Promise<void> {
       UNIQUE(submission_id, reviewer_id)
     );
 
+    CREATE TABLE IF NOT EXISTS notification_read_receipts (
+      user_id TEXT NOT NULL,
+      notification_id TEXT NOT NULL,
+      read_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, notification_id)
+    );
+
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
