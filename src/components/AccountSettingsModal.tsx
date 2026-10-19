@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyRound, Loader2, Mail, ShieldCheck, X } from 'lucide-react';
 import {
   fetchAccountSettings,
+  updateAccountEmail,
   updateAccountPassword,
   type AccountSettingsInfo,
 } from '../api/auth';
