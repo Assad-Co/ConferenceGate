@@ -113,6 +113,11 @@ export function normalizeLinkedInProfilePayload(payload: unknown, previous?: unk
   return {
     ...(sameProfile ? old : {}),
     ...record, ...sections,
+    // Canonical aliases keep legacy career mergers from re-adding grouped provider shells.
+    positions: sections.experience,
+    currentPosition: sections.experience.filter((item: any) => !str(item.endDate) || /present|current/i.test(str(item.endDate))),
+    currentPositions: sections.experience.filter((item: any) => !str(item.endDate) || /present|current/i.test(str(item.endDate))),
+    pastPositions: sections.experience.filter((item: any) => str(item.endDate) && !/present|current/i.test(str(item.endDate))),
     linkedinUrl,
     publicIdentifier: str(record.publicIdentifier) || linkedinUrl?.split("/in/")[1] || null,
     fullName: fullName || (sameProfile ? old.fullName : null),

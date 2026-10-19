@@ -75,3 +75,11 @@ test("same profile role across sections is deduplicated and summary includes it 
   assert.equal(summary.sessionChair, 1);
   assert.deepEqual(summary.debug, { posts: 0 });
 });
+
+test("legacy aliases expose flattened records rather than duplicate company-group shells", () => {
+  const value = normalize({ fullName: "Researcher", positions: [{ companyName: "Institute", roles: [{ title: "Researcher", startDate: "2001", endDate: "2010" }, { title: "Lead Scientist", isCurrent: true }] }] });
+  assert.equal(value.experience.length, 2);
+  assert.deepEqual(value.positions, value.experience);
+  assert.equal(value.currentPositions.length, 1);
+  assert.equal(value.pastPositions.length, 1);
+});
