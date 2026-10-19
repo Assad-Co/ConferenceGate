@@ -135,6 +135,9 @@ const ROLE_PATTERNS: Array<[RegExp, string]> = [
   [/\btechnical program(?:me)? committee co[- ]?chair\b/i, "Technical Program Committee Co-Chair"],
   [/\btechnical program(?:me)? committee chair\b/i, "Technical Program Committee Chair"],
   [/\b(?:scientific|program(?:me)?|organi[sz]ing) committee co[- ]?chair\b/i, "Committee Co-Chair"],
+  [/\bscientific committee chair\b/i, "Scientific Committee Chair"],
+  [/\bprogram(?:me)? committee chair\b/i, "Program Committee Chair"],
+  [/\btrack chair\b/i, "Track Chair"],
   [/\bsession co[- ]?chair\b/i, "Session Co-Chair"],
   [/\bsession chair(?:person)?\b/i, "Session Chair"],
   [/\bconference co[- ]?chair\b/i, "Conference Co-Chair"],
@@ -152,13 +155,18 @@ const ROLE_PATTERNS: Array<[RegExp, string]> = [
   [/\bmoderator\b/i, "Moderator"],
   [/\bpanell?ist\b/i, "Panelist"],
   [/\b(?:abstract|paper|conference) reviewer\b/i, "Reviewer"],
+  [/\breviewer\b/i, "Reviewer"],
+  [/\bco[- ]?chair\b/i, "Co-Chair"],
+  [/\bchair(?:person)?\b/i, "Chair"],
+  [/\borgani[sz]er\b/i, "Organizer"],
   [/\b(?:workshop|short course|tutorial) (?:instructor|facilitator|trainer)\b/i, "Workshop Instructor"],
 ];
 function roleLabels(text: string): string[] {
   const found: string[] = [];
-  for (const [pattern, label] of ROLE_PATTERNS) if (pattern.test(text)) found.push(label);
+  for (const [pattern, label] of ROLE_PATTERNS) if (pattern.test(text) && !found.includes(label)) found.push(label);
   const has = (pattern: RegExp) => found.some(label => pattern.test(label));
-  return found.filter(label => !(label === "Speaker" && has(/^(Keynote|Plenary|Invited) Speaker$/)) &&
+  return found.filter(label => !(label === "Chair" && has(/^(?!Chair$).*Chair$/)) &&
+    !(label === "Co-Chair" && has(/^(?!Co-Chair$).*Co-Chair$/)) && !(label === "Speaker" && has(/^(Keynote|Plenary|Invited) Speaker$/)) &&
     !(label === "Presenter" && has(/^(Core|Oral|Poster) Presenter$/)) &&
     !(label === "Committee Member" && has(/Committee (?:Co-)?Chair$/)));
 }

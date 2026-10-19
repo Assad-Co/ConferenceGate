@@ -83,3 +83,8 @@ test("legacy aliases expose flattened records rather than duplicate company-grou
   assert.equal(value.currentPositions.length, 1);
   assert.equal(value.pastPositions.length, 1);
 });
+
+test("short role titles use explicit conference organization context", () => {
+  const found = signals({ name: "Researcher", volunteering: [{ title: "Co-Chair", organization: "Energy Conference 2025" }, { title: "Reviewer", organization: "Geoscience Symposium 2010" }] }, url);
+  assert.deepEqual(found.map(item => item.role).sort(), ["Co-Chair", "Reviewer"]);
+});
