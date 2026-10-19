@@ -61,6 +61,7 @@ export async function resolvePaidAccountContext(
     workspaceRole: membership?.member_role || "owner",
     paid:
       ownerPreview ||
+      (effectiveRole === "organizer" && process.env.FREE_LAUNCH_ORGANIZER_ACCESS === "true") ||
       accountOwner.subscription_status === "active" ||
       accountOwner.subscription_status === "trialing",
     ownerPreview,
