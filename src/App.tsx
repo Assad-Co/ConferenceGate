@@ -327,7 +327,7 @@ export function App() {
   const persistNotificationRead = async (ids: string[], all = false) => {
     try {
       if (all) await markAllNotificationsRead(ids);
-      else await markNotificationRead(ids[0]);
+      else { const id = ids[0]; await markNotificationRead(id); }
       setNotifications((prev) => prev.map((n) => all || ids.includes(n.id) ? { ...n, read: true } : n));
       setReadOrganizerNotificationIds((prev) => new Set([...prev, ...ids]));
       setReadSponsorNotificationIds((prev) => new Set([...prev, ...ids]));

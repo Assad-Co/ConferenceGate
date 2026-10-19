@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build and typecheck
-        run: npm run build && npx tsc -p tsconfig.check.json --noEmit
+        run: npx tsc -p tsconfig.check.json --noEmit && npm run build
       - name: Install Chromium
         run: npx playwright-core install --with-deps chromium
       - name: Isolated notifications, messages, privacy and device journeys
