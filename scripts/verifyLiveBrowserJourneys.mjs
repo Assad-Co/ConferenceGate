@@ -34,6 +34,12 @@ try {
       const response = await signupResponse;
       const data = await response.json();
       check(response.status() === 201 && data.user?.role === spec.role && data.user?.hasPaidAccess === true, 'browser signup grants immediate free role access');
+      if (spec.role === 'professional') {
+        await page.getByRole('button', { name: 'Go to Conference Gate', exact: true }).waitFor({ state: 'visible' });
+        await page.screenshot({ path: out + '/professional-onboarding.png', fullPage: true });
+        await page.getByRole('button', { name: 'Go to Conference Gate', exact: true }).click();
+        result.checks.push('professional welcome onboarding completes');
+      }
       await page.getByText(spec.marker, { exact: true }).first().waitFor({ state: 'visible', timeout: 45000 });
       check(await page.getByRole('button', { name: /^Subscribe to/ }).count() === 0, 'dashboard accessible without subscription prompt');
       await page.screenshot({ path: out + '/' + spec.role + '-desktop.png', fullPage: true });
@@ -46,7 +52,7 @@ try {
       }
       if (spec.role === 'sponsor') {
         await page.getByRole('button', { name: /Sponsorship Marketplace/ }).click();
-        await page.getByRole('heading', { name: 'Published Sponsorship Packages', exact: true }).waitFor({ state: 'visible' });
+        await page.getByRole('heading', { name: 'Find organizers actively seeking sponsors', exact: true }).waitFor({ state: 'visible' });
         await page.screenshot({ path: out + '/sponsor-marketplace.png', fullPage: true });
         result.checks.push('sponsorship marketplace opens');
       }
