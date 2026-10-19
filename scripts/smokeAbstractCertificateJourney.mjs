@@ -19,7 +19,7 @@ async function req(path, { method = 'GET', cookie, body, expected } = {}) {
 }
 async function signup(role) {
   const email = role + '-' + crypto.randomUUID() + '@example.invalid';
-  const { data, response } = await req('/api/auth/signup', { method: 'POST', body: { role, email, name: role + ' acceptance', password: 'Acceptance123!', organization: 'Integration Test' }, expected: 201 });
+  const { data, response } = await req('/api/auth/signup', { method: 'POST', body: { role, email, name: role + ' acceptance', password: 'Acceptance123!', organization: 'Integration Test', title: role === 'professional' ? 'Senior Geologist' : undefined }, expected: 201 });
   if (!data.user?.id) throw Error('Signup missing user');
   return { ...data.user, cookie: response.headers.get('set-cookie')?.split(';')[0], email };
 }
