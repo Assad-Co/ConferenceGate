@@ -43,7 +43,7 @@ try {
   assert(settings.response.ok, 'Account settings failed');
   const prefs = await request('/api/auth/me/professional-preferences', {
     method: 'PATCH', headers,
-    body: JSON.stringify({ professionalExpertise: ['Geochemistry'], technicalSpecialization: ['GC-MS'], researchInterests: ['Source rocks'], preferredRegions: ['Middle East'], committeeAvailable: true, reviewerMaxLoad: 3 }),
+    body: JSON.stringify({ professionalExpertise: ['Geochemistry'], technicalSpecialization: ['GC-MS'], researchInterests: ['Source rocks'], preferredRegions: ['Middle East'], committeeAvailable: true, sessionChairAvailable: true, speakerAvailable: true, reviewerMaxLoad: 3 }),
   });
   assert(prefs.response.ok && prefs.data.user?.committeeAvailable === true, 'Professional preferences failed: ' + JSON.stringify(prefs.data));
   const cert = await request('/api/certificates/issue/abstract/nonexistent-submission', { method: 'POST', headers });
