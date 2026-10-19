@@ -94,3 +94,5 @@ jobs:
         run: node scripts/smokeEnterpriseGovernance.mjs
       - name: Built server smoke test
         run: node scripts/smokeBuiltServer.mjs
+      - name: Free-launch signup and certificate authorization acceptance
+        run: node scripts/smokeFreeLaunchAcceptance.mjs
