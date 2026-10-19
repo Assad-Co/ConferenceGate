@@ -338,11 +338,6 @@ export function App() {
   const handleMarkNotificationRead = (id: string) => { void persistNotificationRead([id]); };
   const handleMarkAllNotificationsRead = () => { void persistNotificationRead(notifications.map((n) => n.id), true); };
   const handleOpenNotification = (notification: NotificationItem) => {
-    const conversation = conversations.find((c) => notification.id.startsWith(`msg_${c.partnerId}_`));
-    if (conversation) {
-      openConversationWith(conversation.partnerId, conversation.partner);
-      return;
-    }
     switch (notification.type) {
       case 'abstract':
         setActiveTab(activeRole === 'Organizer' ? 'organizer' : 'abstracts');
