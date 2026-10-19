@@ -76,8 +76,8 @@ jobs:
       # Keep the existing billing test scripts for a future dedicated validation workflow.
       # The three-account journey activates paid organizer/sponsor plans.
       # Defer it until the paid-access phase; preserve the script for that phase.
-      - name: Professional notifications and messages smoke test
-        run: node scripts/smokeProfessionalCommunications.mjs
+      # The existing communications smoke test requires activating a paid Organizer.
+      # Retain it for the paid launch phase; add a free-only communications test separately.
       - name: Growth and revenue operations smoke test
         run: node scripts/smokeGrowthReport.mjs
       - name: Private growth dashboard smoke test
