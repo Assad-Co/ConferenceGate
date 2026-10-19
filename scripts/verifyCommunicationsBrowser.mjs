@@ -20,7 +20,8 @@ async function until(fn, message, timeout = 25000) {
   throw Error(message);
 }
 async function api(context, path, { method = 'GET', body, status = 200 } = {}) {
-  const response = await context.request.fetch(base + path, { method, data: body });
+  const cookies = !live ? (await context.cookies()).map(cookie => cookie.name + '=' + cookie.value).join('; ') : '';
+  const response = await context.request.fetch(base + path, { method, data: body, headers: cookies ? { cookie: cookies } : undefined });
   const data = await response.json();
   if (response.status() !== status) throw Error(method + ' ' + path + ': ' + response.status() + ' ' + JSON.stringify(data));
   return data;
