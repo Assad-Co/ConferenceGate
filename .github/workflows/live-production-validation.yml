@@ -40,3 +40,8 @@ jobs:
         env:
           CONFERENCEGATE_BASE_URL: https://conferencegate.onrender.com
         run: node scripts/smokeOrganizerImportApi.mjs
+
+      - name: Live free-launch role access and conference certificate journey
+        env:
+          PHASE11_BASE_URL: https://conferencegate.onrender.com
+        run: node scripts/verifyLiveFreeLaunchJourney.mjs
