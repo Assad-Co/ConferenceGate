@@ -72,10 +72,8 @@ jobs:
         run: node scripts/smokeSqliteBackend.mjs
       - name: Temporary SQLite startup smoke test
         run: node scripts/smokeEphemeralSqliteBackend.mjs
-      - name: Billing webhook smoke test
-        run: node scripts/smokeBillingWebhooks.mjs
-      - name: Commercial lifecycle smoke test
-        run: node scripts/smokeCommercialLifecycle.mjs
+      # Billing/subscription features are deferred until the paid launch phase.
+      # Keep the existing billing test scripts for a future dedicated validation workflow.
       - name: Three-account real user journey
         run: node scripts/smokeThreeAccountJourney.mjs
       - name: Professional notifications and messages smoke test
