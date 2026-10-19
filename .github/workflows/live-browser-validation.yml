@@ -7,6 +7,12 @@ on:
     paths:
       - scripts/verifyLiveBrowserJourneys.mjs
       - src/components/HomeLanding.tsx
+      - src/components/auth/AuthScreen.tsx
+      - src/App.tsx
+      - server/auth.ts
+      - server/ownerPreview.ts
+      - server/workspaceAccess.ts
+      - server/authRecovery.ts
       - .github/workflows/live-browser-validation.yml
 
 permissions:

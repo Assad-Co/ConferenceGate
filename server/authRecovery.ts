@@ -4,6 +4,8 @@ import crypto from "crypto";
 import { dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
 
+import { privateWorkspacesOnly } from "./ownerPreview";
+
 const RESET_TTL_MS = 30 * 60 * 1000;
 const RESET_WINDOW_MS = 15 * 60 * 1000;
 const RESET_MAX_ATTEMPTS = 5;
@@ -143,6 +145,7 @@ authRecoveryRouter.get("/capabilities", (_req, res) => {
   const clientId = googleClientId();
   res.setHeader("Cache-Control", "no-store");
   res.json({
+    privateWorkspacesOnly: privateWorkspacesOnly(),
     googleClientId: clientId,
     linkedin: linkedInConfigured(),
     passwordReset: passwordResetConfigured(),

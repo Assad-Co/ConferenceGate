@@ -7,7 +7,7 @@ import { dbAll, dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
 import { copyLinkedInAvatarToDataUrl } from "./linkedinAvatar";
 import { resolvePaidAccountContext } from "./workspaceAccess";
-import { isOwnerPreviewEmail } from "./ownerPreview";
+import { isOwnerPreviewEmail, privateWorkspacesOnly } from "./ownerPreview";
 import { queueProfessionalEvidenceResearch } from "./professionalEvidenceResearchBootstrap";
 
 // If JWT_SECRET isn't set in the environment, generate one on first boot and persist it in
@@ -239,6 +239,7 @@ async function toPublicUser(row: UserRow) {
     identityVerified: Boolean(row.linkedin_id || row.google_id),
     identityVerificationMethod: row.linkedin_id ? "LinkedIn" : row.google_id ? "Google" : null,
     ownerPreview,
+    workspaceAccessRestricted: privateWorkspacesOnly() && !ownerPreview && row.role !== "professional",
     subscriptionStatus: ownerPreview
       ? "owner_preview"
       : row.role === "professional"
@@ -315,7 +316,15 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     return res.status(401).json({ error: "Not authenticated" });
   }
   req.userId = userId;
-  next();
+  if (!privateWorkspacesOnly()) return next();
+  dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [userId])
+    .then((user) => {
+      if (user && user.role !== "professional" && !isOwnerPreviewEmail(user.email)) {
+        return res.status(403).json({ error: "Organizer and Sponsor workspaces are currently private.", code: "WORKSPACE_PRIVATE" });
+      }
+      next();
+    })
+    .catch(next);
 }
 
 export function publicUserSummary(row: UserRow) {
@@ -355,6 +364,9 @@ authRouter.post("/signup", authRateLimit, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const passwordHash = bcrypt.hashSync(password, 10);
   const normalizedRole = role.toLowerCase() as AuthRole;
+  if (privateWorkspacesOnly() && normalizedRole !== "professional") {
+    return res.status(403).json({ error: "Only Professional registration is currently open.", code: "WORKSPACE_PRIVATE" });
+  }
 
   await dbRun(
     `INSERT INTO users (id, email, password_hash, role, name, organization, title, linkedin_url)
@@ -804,6 +816,9 @@ authRouter.post("/google", authRateLimit, asyncHandler(async (req, res) => {
 
     const id = crypto.randomUUID();
     const normalizedRole = role.toLowerCase() as AuthRole;
+  if (privateWorkspacesOnly() && normalizedRole !== "professional") {
+    return res.status(403).json({ error: "Only Professional registration is currently open.", code: "WORKSPACE_PRIVATE" });
+  }
     await dbRun(
       `INSERT INTO users (id, email, password_hash, google_id, role, name, avatar)
        VALUES (?, ?, NULL, ?, ?, ?, ?)`,
@@ -1079,6 +1094,9 @@ authRouter.post("/linkedin/complete-signup", asyncHandler(async (req, res) => {
   }
 
   const normalizedRole = role.toLowerCase() as AuthRole;
+  if (privateWorkspacesOnly() && normalizedRole !== "professional") {
+    return res.status(403).json({ error: "Only Professional registration is currently open.", code: "WORKSPACE_PRIVATE" });
+  }
   const normalizedEmail = pending.email.toLowerCase();
 
   // Someone may already have an account under this email (e.g. signed up with a password) —

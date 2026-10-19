@@ -40,6 +40,7 @@ interface AuthScreenProps {
 type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
 
 const EMPTY_CAPABILITIES: AuthCapabilities = {
+  privateWorkspacesOnly: true,
   googleClientId: null,
   linkedin: false,
   passwordReset: false,
@@ -136,6 +137,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [pendingLinkedIn, setPendingLinkedIn] = useState<PendingLinkedInProfile | null>(null);
   const [oauthRole, setOauthRole] = useState<AuthRole>('professional');
 
+  const availableRoles = capabilities.privateWorkspacesOnly !== false ? ROLE_OPTIONS.filter((option) => option.value === 'professional') : ROLE_OPTIONS;
   const activeRoleConfig = ROLE_OPTIONS.find((r) => r.value === selectedRole)!;
   const oauthAvailable = Boolean(capabilities.googleClientId || capabilities.linkedin);
 
@@ -441,8 +443,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </div>
             <h1 className="text-xl font-extrabold text-slate-900 mb-1">One last step</h1>
             <p className="text-sm text-slate-500 mb-5">Choose the account type that fits you best.</p>
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              {ROLE_OPTIONS.map((opt) => {
+            <div className={`grid ${availableRoles.length === 1 ? 'grid-cols-1' : 'grid-cols-3'} gap-2 mb-6`}>
+              {availableRoles.map((opt) => {
                 const Icon = opt.icon;
                 const active = oauthRole === opt.value;
                 return (
@@ -508,8 +510,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <>
                   <h1 className="text-xl font-extrabold text-slate-900 mb-1">Join ConferenceGate</h1>
                   <p className="text-sm text-slate-500 mb-5">Choose the account type that fits you best.</p>
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    {ROLE_OPTIONS.map((opt) => {
+                  <div className={`grid ${availableRoles.length === 1 ? 'grid-cols-1' : 'grid-cols-3'} gap-2 mb-5`}>
+                    {availableRoles.map((opt) => {
                       const Icon = opt.icon;
                       const active = selectedRole === opt.value;
                       return (

@@ -1,5 +1,5 @@
 import { dbGet, UserRow } from "./db";
-import { isOwnerPreviewEmail } from "./ownerPreview";
+import { isOwnerPreviewEmail, privateWorkspacesOnly } from "./ownerPreview";
 
 export type PaidAccountRole = "organizer" | "sponsor";
 export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
@@ -23,6 +23,7 @@ export async function resolvePaidAccountContext(
   if (!actor) return null;
 
   const ownerPreview = isOwnerPreviewEmail(actor.email);
+  if (privateWorkspacesOnly() && !ownerPreview) return null;
   const actorPaidRole =
     actor.role === "organizer" || actor.role === "sponsor"
       ? (actor.role as PaidAccountRole)

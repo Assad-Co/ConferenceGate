@@ -59,6 +59,8 @@ jobs:
         run: node --check scripts/growthReport.mjs && node --check scripts/growthCohortReport.mjs && node --check scripts/executiveGrowthSnapshot.mjs && node --check scripts/ensureGrowthSchema.mjs && node --check scripts/smokeGrowthReport.mjs && node --check scripts/smokeGrowthDashboard.mjs && node --check scripts/smokeGrowthAutomation.mjs && node --check scripts/smokeOwnerPreview.mjs && node --check scripts/smokeMarketplaceIntelligence.mjs && node --check scripts/smokeEnterpriseGovernance.mjs
       - name: Production build
         run: npm run build
+      - name: Private Organizer and Sponsor owner-access isolation
+        run: node scripts/smokePrivateWorkspaces.mjs
       - name: Turso runtime database selection smoke test
         env:
           TURSO_DATABASE_URL: libsql://conferencegate-smoke.example

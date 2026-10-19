@@ -28,6 +28,7 @@ export interface AuthUser {
   identityVerified: boolean;
   identityVerificationMethod: 'LinkedIn' | 'Google' | null;
   ownerPreview: boolean;
+  workspaceAccessRestricted?: boolean;
   subscriptionStatus: 'free' | 'required' | 'trialing' | 'active' | 'past_due' | 'canceled' | string;
   subscriptionPlan: string | null;
   subscriptionProvider: string | null;

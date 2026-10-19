@@ -17,6 +17,19 @@ async function signup(role) {
 }
 function check(value, message) { if (!value) throw Error(message); }
 try {
+  const capabilities = await req('/api/auth/capabilities');
+  if (capabilities.data.privateWorkspacesOnly) {
+    const professional = await signup('professional');
+    check(professional.hasPaidAccess && !professional.ownerPreview, 'Public Professional access must remain available without owner privileges');
+    for (const role of ['organizer', 'sponsor']) {
+      await req('/api/auth/signup', { method: 'POST', body: { role, email: role + '-' + crypto.randomUUID() + '@example.invalid', name: 'Closed workspace acceptance', password: crypto.randomBytes(24).toString('base64url') + '!9a' }, expected: 403 });
+    }
+    await req('/api/activity/conferences', { method: 'POST', cookie: professional.cookie, body: { id: 'must-not-create', title: 'Blocked', dates: {}, location: {} }, expected: 403 });
+    await req('/api/sponsors/preferences/mine', { method: 'PUT', cookie: professional.cookie, body: { sectors: [] }, expected: 403 });
+    const me = await req('/api/auth/me', { cookie: professional.cookie });
+    check(me.data.user?.hasPaidAccess === true && me.data.user?.ownerPreview === false, 'Professional session must not gain admin access');
+    console.log('PASS: Professional public signup; Organizer/Sponsor registration and role APIs closed to public accounts');
+  } else {
   const author = await signup('professional');
   const reviewer = await signup('professional');
   const organizer = await signup('organizer');
@@ -54,4 +67,5 @@ try {
   const repeat = await req('/api/certificates/issue/abstract/' + id, { method: 'POST', cookie: author.cookie });
   check(repeat.data.certificate?.id === certificate.id, 'Certificate issuance not idempotent');
   console.log('PASS: conference, abstract, reviewer assignment, acceptance, authorized issuance, public verification, idempotency and cross-user isolation');
+  }
 } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }

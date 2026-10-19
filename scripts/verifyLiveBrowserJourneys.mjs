@@ -12,7 +12,11 @@ const roles = [
   { role: 'sponsor', label: 'Corporate Sponsor', marker: 'Sponsor Marketplace & ROI Dashboard' },
 ];
 try {
-  for (const spec of roles) {
+  const capabilitiesResponse = await fetch(base + '/api/auth/capabilities');
+  if (!capabilitiesResponse.ok) throw Error('Cannot determine public registration policy');
+  const capabilities = await capabilitiesResponse.json();
+  report.privateWorkspacesOnly = capabilities.privateWorkspacesOnly === true;
+  for (const spec of roles.filter(item => !report.privateWorkspacesOnly || item.role === 'professional')) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
     const errors = [];
@@ -23,6 +27,10 @@ try {
     try {
       await page.goto(base, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: 'Join Now', exact: true }).click();
+      if (report.privateWorkspacesOnly) {
+        check(await page.getByRole('button', { name: 'Conference Organizer', exact: true }).count() === 0, 'Organizer signup hidden');
+        check(await page.getByRole('button', { name: 'Corporate Sponsor', exact: true }).count() === 0, 'Sponsor signup hidden');
+      }
       await page.getByRole('button', { name: spec.label, exact: true }).click();
       await page.getByPlaceholder('Your full name', { exact: true }).fill('UI Acceptance ' + spec.role);
       await page.getByPlaceholder('you@example.com', { exact: true }).fill('ui-' + spec.role + '-' + crypto.randomUUID() + '@example.invalid');
@@ -44,6 +52,9 @@ try {
       check(await page.getByRole('button', { name: /^Subscribe to/ }).count() === 0, 'dashboard accessible without subscription prompt');
       await page.screenshot({ path: out + '/' + spec.role + '-desktop.png', fullPage: true });
       result.checks.push('desktop dashboard rendered');
+      if (report.privateWorkspacesOnly) {
+        check(await page.getByRole('heading', { name: /Organizer Operations|Sponsor Marketplace/ }).count() === 0, 'Private dashboards absent from public Professional view');
+      }
       if (spec.role === 'organizer') {
         await page.getByRole('button', { name: /Create New Conference Wizard/ }).click();
         await page.getByRole('heading', { name: 'Create Conference Wizard', exact: true }).waitFor({ state: 'visible' });

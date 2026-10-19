@@ -30,3 +30,8 @@ export function isOwnerPreviewEmail(email: string | null | undefined): boolean {
     return false;
   }
 }
+
+/** Keep Organizer and Sponsor workspaces private to the authenticated owner. */
+export function privateWorkspacesOnly(): boolean {
+  return process.env.PRIVATE_WORKSPACES_ONLY === "true";
+}

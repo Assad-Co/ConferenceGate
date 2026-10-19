@@ -1541,6 +1541,15 @@ export function App() {
   if (!authUser) {
     return <AuthScreen onAuthenticated={applyAuthUser} />;
   }
+  if (authUser.workspaceAccessRestricted && !authUser.ownerPreview) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="text-xl font-bold">Workspace access is currently closed</h1>
+        <p>Organizer and Sponsor workspaces are currently private.</p>
+        <button onClick={handleLogout} className="px-5 py-2 rounded-full bg-blue-900 text-white">Sign out</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">

@@ -1,4 +1,5 @@
 export interface AuthCapabilities {
+  privateWorkspacesOnly?: boolean;
   googleClientId: string | null;
   linkedin: boolean;
   passwordReset: boolean;
