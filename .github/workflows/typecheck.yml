@@ -74,8 +74,8 @@ jobs:
         run: node scripts/smokeEphemeralSqliteBackend.mjs
       # Billing/subscription features are deferred until the paid launch phase.
       # Keep the existing billing test scripts for a future dedicated validation workflow.
-      - name: Three-account real user journey
-        run: node scripts/smokeThreeAccountJourney.mjs
+      # The three-account journey activates paid organizer/sponsor plans.
+      # Defer it until the paid-access phase; preserve the script for that phase.
       - name: Professional notifications and messages smoke test
         run: node scripts/smokeProfessionalCommunications.mjs
       - name: Growth and revenue operations smoke test
