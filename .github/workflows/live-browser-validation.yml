@@ -1,0 +1,38 @@
+name: Live Browser Launch Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/verifyLiveBrowserJourneys.mjs
+      - .github/workflows/live-browser-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  browser-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies without maintenance scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright-core install --with-deps chromium
+      - name: Validate live signup and desktop and mobile dashboards
+        env:
+          PHASE11_BASE_URL: https://conferencegate.onrender.com
+        run: node scripts/verifyLiveBrowserJourneys.mjs
+      - name: Save screenshots and validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conferencegate-browser-validation
+          path: browser-validation/
+          retention-days: 14
