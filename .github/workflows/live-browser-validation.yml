@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - scripts/verifyLiveBrowserJourneys.mjs
+      - src/components/HomeLanding.tsx
       - .github/workflows/live-browser-validation.yml
 
 permissions:
@@ -25,6 +26,18 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright-core install --with-deps chromium
+      - name: Wait for the tested release on Render
+        env:
+          PHASE11_BASE_URL: https://conferencegate.onrender.com
+          EXPECTED_RELEASE: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 36); do
+            if node scripts/verifyLiveLaunch.mjs; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
       - name: Validate live signup and desktop and mobile dashboards
         env:
           PHASE11_BASE_URL: https://conferencegate.onrender.com

@@ -193,7 +193,11 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
 
   const safeConferences = conferences || [];
   const upcomingDeadlines = [...safeConferences]
-    .filter((c) => c.cfpStatus === 'Open')
+    .filter((c) =>
+      c.cfpStatus === 'Open' &&
+      typeof c.abstractDeadline === 'string' &&
+      Number.isFinite(Date.parse(c.abstractDeadline))
+    )
     .sort((a, b) => new Date(a.abstractDeadline).getTime() - new Date(b.abstractDeadline).getTime())
     .slice(0, 4);
   const upcomingConferences = [...safeConferences]
