@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { KeyRound, Loader2, Mail, ShieldCheck, X } from 'lucide-react';
 import {
   fetchAccountSettings,
-  updateAccountEmail,
   updateAccountPassword,
   type AccountSettingsInfo,
 } from '../api/auth';
@@ -59,7 +58,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   const hasPassword = Boolean(info?.hasPassword);
   const googleConnected = Boolean(info?.googleConnected);
   const effectiveEmail = info?.email || currentEmail;
-  const canChangeEmail = !ownerPreview && hasPassword;
+  // Email ownership verification is not implemented; backend correctly rejects changes.
+  const canChangeEmail = false;
   const canChangePassword = hasPassword;
 
   const handleEmailSave = async (event: React.FormEvent) => {
