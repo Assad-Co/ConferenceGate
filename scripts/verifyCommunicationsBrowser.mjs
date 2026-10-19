@@ -170,6 +170,7 @@ try {
   }
   await receiver.reload({ waitUntil: 'domcontentloaded' });
   await receiver.getByTitle('Direct Messages', { exact: true }).click();
+  await receiver.getByRole('button').filter({ hasText: a.name }).last().click();
   await receiver.locator('.whitespace-pre-wrap').filter({ hasText: text }).waitFor({ state: 'visible' });
   check(true, 'Message history survives reload');
   check(report.browserErrors.length === 0, 'No uncaught browser errors during communication journeys');
