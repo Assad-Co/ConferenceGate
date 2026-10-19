@@ -1,6 +1,13 @@
 name: Production certificate smoke test
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/production-certificates.yml
+      - scripts/smokeCertificates.mjs
+      - server/certificates.ts
+      - public/verify.html
 jobs:
   verify-production:
     runs-on: ubuntu-latest
