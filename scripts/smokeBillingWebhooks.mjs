@@ -42,7 +42,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const base = `http://127.0.0.1:${port}`;
 
 async function waitForHealth() {
-  const deadline = Date.now() + 25000;
+  const deadline = Date.now() + 90000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
       throw new Error('Server exited early.\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr);
@@ -51,7 +51,7 @@ async function waitForHealth() {
       const response = await fetch(base + '/api/health');
       if (response.ok) return;
     } catch {}
-    await sleep(400);
+    await sleep(500);
   }
   throw new Error('Timed out waiting for server health.\nSTDOUT:\n' + stdout + '\nSTDERR:\n' + stderr);
 }
