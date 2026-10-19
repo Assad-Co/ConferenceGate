@@ -43,7 +43,7 @@ try {
   await req('/api/sponsors/preferences/mine', { cookie: normal.cookie, expected: 403 });
   await req('/api/activity/conferences', { method: 'POST', cookie: normal.cookie, body: { id: 'forbidden', title: 'Must stay blocked', dates: {}, location: {} }, expected: 403 });
   await req('/api/sponsors/preferences/mine', { cookie: owner.cookie });
-  await req('/api/activity/conferences', { method: 'POST', cookie: owner.cookie, body: { id: 'private-owner-conference', title: 'Owner private conference', industry: 'Energy', dates: { start: '2027-05-10', end: '2027-05-11' }, location: { city: 'Manama', country: 'Bahrain' }, topics: [], tracks: [], format: 'Physical', cfpStatus: 'Closed' } });
+  await req('/api/activity/conferences', { method: 'POST', cookie: owner.cookie, body: { id: 'private-owner-conference', title: 'Owner private conference', industry: 'Energy', dates: { start: '2027-05-10', end: '2027-05-11' }, location: { city: 'Manama', country: 'Bahrain' }, topics: [], tracks: [], format: 'Physical', cfpStatus: 'Closed' }, expected: 201 });
   const fixture = createClient({ url: 'file:' + dbPath });
   try {
     for (const role of ['organizer', 'sponsor']) {
