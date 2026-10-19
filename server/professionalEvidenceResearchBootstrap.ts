@@ -1,3 +1,4 @@
+import { mergeLinkedInProfileConferenceEvidence } from "./linkedinProfileConferenceEvidence";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 import { searchCrossRefConferencePapers } from "./crossref";
 import { searchOpenAlexConferencePapers } from "./openalex";
@@ -395,9 +396,10 @@ async function linkedInClaimEvidence(identity: any): Promise<EvidenceDraft[]> {
       [identity.userId],
     );
   } catch {
-    return [];
+    row = null;
   }
-  const signals = safeJson(row?.conference_activity, []);
+  const enriched = await mergeLinkedInProfileConferenceEvidence(identity.userId, { conferenceActivity: safeJson(row?.conference_activity, []) });
+  const signals = enriched?.conferenceActivity || [];
   if (!Array.isArray(signals)) return [];
   return signals
     .filter((item: any) => item && clean(item.label))

@@ -1,3 +1,5 @@
+import { mergeProfileRoleSummary } from "./linkedinImportNormalization";
+import { mergeLinkedInProfileConferenceEvidence } from "./linkedinProfileConferenceEvidence";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 
 /**
@@ -455,7 +457,7 @@ async function readStored(userId: string) {
 
 router.get("/me", requireMember, safe(async (req, res) => {
   const userId = req.linkedinConferenceUserId!;
-  const activity = await readStored(userId);
+  const activity = await mergeLinkedInProfileConferenceEvidence(userId, await readStored(userId));
   res.json({
     activity,
     apifyConfigured: Boolean(process.env.APIFY_TOKEN?.trim()),
@@ -603,7 +605,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     ],
   );
 
-  const stored = await readStored(userId);
+  const stored = await mergeLinkedInProfileConferenceEvidence(userId, await readStored(userId));
   res.json({
     activity: stored,
     imported: true,

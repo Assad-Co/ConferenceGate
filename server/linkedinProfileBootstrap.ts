@@ -1,3 +1,4 @@
+import { normalizeLinkedInProfilePayload } from "./linkedinImportNormalization";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 
 /**
@@ -523,6 +524,7 @@ function toClient(row: StoredRow | undefined) {
     currentTitle: career.title,
     currentOrganization: career.organization,
     experience,
+    volunteering: normalizeLinkedInProfilePayload((() => { try { return JSON.parse((row as any).raw_profile || "{}"); } catch { return {}; } })()).volunteering || [],
     education: parseArray(row.education),
     publications: parseArray(row.publications),
     patents: parseArray(row.patents),
@@ -1136,7 +1138,10 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     const returnedSlug = profileSlug(returnedUrl);
     return !returnedSlug || !requestedSlug || returnedSlug === requestedSlug;
   });
-  const profile = objectValue(usableProfile);
+  const previousRawRow = await dbGet<{ raw_profile: string }>("SELECT raw_profile FROM linkedin_profile_enrichment WHERE user_id = ?", [userId]).catch(() => undefined);
+  let previousRawProfile: unknown = undefined;
+  try { previousRawProfile = JSON.parse(previousRawRow?.raw_profile || "null"); } catch {}
+  const profile = normalizeLinkedInProfilePayload(usableProfile, previousRawProfile, requestedUrl);
   if (!Object.keys(profile).length) {
     return res.status(404).json({ error: "No usable public LinkedIn profile data was returned for this URL. Existing ConferenceGate profile data was not changed." });
   }

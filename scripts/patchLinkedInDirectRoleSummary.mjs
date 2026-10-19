@@ -143,7 +143,7 @@ function deriveDirectRoleSummary(posts: any[]) {
   if (!currentRoute.includes('roleSummary')) {
     const replacement = `router.get("/me", requireMember, safe(async (req, res) => {
   const userId = req.linkedinConferenceUserId!;
-  const activity = await readStored(userId);
+  const activity = await mergeLinkedInProfileConferenceEvidence(userId, await readStored(userId));
   const { dbGet } = await import("./db");
   const rawRow = await dbGet<{ raw_posts: string }>(
     "SELECT raw_posts FROM linkedin_conference_activity WHERE user_id = ?",
@@ -151,6 +151,7 @@ function deriveDirectRoleSummary(posts: any[]) {
   );
   const rawPosts = parseArray(rawRow?.raw_posts);
   const roleSummary = deriveDirectRoleSummary(rawPosts);
+  mergeProfileRoleSummary(roleSummary, activity?.conferenceActivity || []);
   console.log(\`[linkedin-role-direct] raw_posts=\${rawPosts.length} text_posts=\${roleSummary.debug.textPosts} first_person_posts=\${roleSummary.debug.firstPersonPosts} role_phrase_posts=\${roleSummary.debug.rolePhrasePosts} roles=\${roleSummary.total} presenter=\${roleSummary.presenter} committee=\${roleSummary.committee} session_chair=\${roleSummary.sessionChair}\`);
   res.json({
     activity,

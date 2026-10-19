@@ -1,0 +1,41 @@
+name: LinkedIn Profile Import Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - server/linkedinImportNormalization.ts
+      - server/linkedinProfileConferenceEvidence.ts
+      - server/linkedinProfileBootstrap.ts
+      - server/linkedinConferenceActivityBootstrap.ts
+      - server/professionalEvidenceResearchBootstrap.ts
+      - server/tests/linkedinImportNormalization.test.ts
+      - scripts/smokeLinkedInProfileImport.mjs
+      - scripts/patchLinkedInDirectRoleSummary.mjs
+      - src/components/LinkedInProfilePanel.tsx
+      - .github/workflows/linkedin-import-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  import-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Source typecheck
+        run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Profile normalization and evidence fixtures
+        run: npx tsx --test server/tests/linkedinImportNormalization.test.ts
+      - name: Production build
+        run: npm run build
+      - name: Real import endpoints against isolated provider fixtures
+        run: node scripts/smokeLinkedInProfileImport.mjs

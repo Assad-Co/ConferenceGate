@@ -13,6 +13,7 @@ export interface LinkedInProfileEnrichment {
   currentTitle: string | null;
   currentOrganization: string | null;
   experience: any[];
+  volunteering?: any[];
   education: any[];
   publications: any[];
   patents: any[];

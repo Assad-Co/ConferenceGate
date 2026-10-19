@@ -566,6 +566,20 @@ export const LinkedInProfilePanel: React.FC<Props> = ({ currentUserId, linkedinU
         </section>
       )}
 
+      {(profile?.volunteering?.length || 0) > 0 && (
+        <section>
+          <h3 className="text-sm font-extrabold text-slate-900 mb-3">Volunteer & Professional Service</h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            {profile!.volunteering!.map((item, index) => (
+              <div key={index} className="rounded-xl border border-slate-200 p-3 min-w-0">
+                <div className="text-sm font-semibold text-slate-800 break-words">{itemLabel(item, 'Professional service')}</div>
+                {itemDetail(item) && <div className="text-[11px] text-slate-500 mt-1 break-words">{itemDetail(item)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {(profile?.skills.length || 0) > 0 && (
         <section>
           <h3 className="text-sm font-extrabold text-slate-900 mb-3">Skills</h3>
