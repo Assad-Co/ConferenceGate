@@ -62,6 +62,7 @@ export async function resolvePaidAccountContext(
     paid:
       ownerPreview ||
       (effectiveRole === "organizer" && process.env.FREE_LAUNCH_ORGANIZER_ACCESS === "true") ||
+      (effectiveRole === "sponsor" && process.env.FREE_LAUNCH_SPONSOR_ACCESS === "true") ||
       accountOwner.subscription_status === "active" ||
       accountOwner.subscription_status === "trialing",
     ownerPreview,
