@@ -193,6 +193,12 @@ export function App() {
   const [sponsorNameOverride, setSponsorNameOverride] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Carry About-page discovery intent across sign-in without bypassing authentication.
+  useEffect(() => {
+    if (!authUser || new URLSearchParams(window.location.search).get('discover') !== '1') return;
+    setActiveTab('discover');
+    window.history.replaceState(null, '', '/');
+  }, [authUser]);
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
   const [selectedExternalResult, setSelectedExternalResult] = useState<LiveSearchResult | null>(null);
   const [selectedExternalTab, setSelectedExternalTab] = useState<ExternalDetailTab>('overview');
@@ -1591,7 +1597,7 @@ export function App() {
         {authUser && (
           <button
             type="button"
-            onClick={() => window.location.replace('/')}
+            onClick={() => window.location.replace('/?discover=1')}
             className="fixed top-4 right-4 z-50 rounded-full bg-blue-900 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-800"
           >
             Continue to my account →
@@ -1599,7 +1605,7 @@ export function App() {
         )}
         <AuthScreen onAuthenticated={(user) => {
           applyAuthUser(user);
-          window.location.replace('/');
+          window.location.replace('/?discover=1');
         }} />
       </div>
     );
