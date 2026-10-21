@@ -294,6 +294,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   }, [facets.organizers, conferences]);
 
   const localFiltered = useMemo(() => (conferences || []).filter((conf) => {
+    // Automated launch-acceptance fixtures must never appear in public discovery.
+    const title = String(conf.title ?? '').toLowerCase();
+    const description = String(conf.description ?? '').toLowerCase();
+    if (title.includes('synthetic launch acceptance') ||
+        (title.includes('test only') && description.includes('automated acceptance'))) return false;
     const term = String(searchTerm ?? '').trim().toLowerCase();
     const searchable = [conf.title, conf.description, conf.organizerName, ...(conf.topics || [])]
       .filter(Boolean).join(' ').toLowerCase();
