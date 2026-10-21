@@ -185,7 +185,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleFollow,
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearchQuery);
-  const [submittedSearchTerm, setSubmittedSearchTerm] = useState(initialSearchQuery.trim());
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState(String(initialSearchQuery ?? '').trim());
   const [searchSubmitCount, setSearchSubmitCount] = useState(0);
   const [manualRetryCount, setManualRetryCount] = useState(0);
 
@@ -231,7 +231,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   }, []);
 
   useEffect(() => {
-    const query = submittedSearchTerm.trim();
+    const query = String(submittedSearchTerm ?? '').trim();
     const key = `${query}|${manualRetryCount}|${searchSubmitCount}`;
     if (lastRequestKey.current === key) return;
     lastRequestKey.current = key;
@@ -289,12 +289,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     : [];
   const organizerOptions = useMemo(() => {
     const values = new Set(facets.organizers);
-    for (const conf of conferences || []) if (conf.organizerName?.trim()) values.add(conf.organizerName.trim());
+    for (const conf of conferences || []) if (String(conf.organizerName ?? '').trim()) values.add(conf.organizerName.trim());
     return [...values].sort((a, b) => a.localeCompare(b));
   }, [facets.organizers, conferences]);
 
   const localFiltered = useMemo(() => (conferences || []).filter((conf) => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = String(searchTerm ?? '').trim().toLowerCase();
     const searchable = [conf.title, conf.description, conf.organizerName, ...(conf.topics || [])]
       .filter(Boolean).join(' ').toLowerCase();
     if (term && !searchable.includes(term)) return false;
