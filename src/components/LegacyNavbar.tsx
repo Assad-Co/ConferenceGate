@@ -209,7 +209,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleTabChange(item.id)}
+                  onClick={() => {
+                    handleTabChange(item.id);
+                    // Keep navigation visibly responsive even after scrolling deep into another view.
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                  }}
+                  type="button"
+                  aria-label={`Open ${item.label}`}
+                  aria-current={isActive ? 'page' : undefined}
                   title={item.label}
                   className={`flex flex-col items-center justify-center gap-0.5 px-0.5 sm:px-1 md:px-1.5 lg:px-2 xl:px-2.5 h-14 min-w-[28px] sm:min-w-[34px] md:min-w-[40px] lg:min-w-[48px] xl:min-w-[58px] border-b-2 transition-colors cursor-pointer shrink-0 ${
                     isActive
