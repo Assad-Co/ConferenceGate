@@ -145,6 +145,21 @@ export function organizerMatchesFilter(
   return false;
 }
 
+// Match closely related disciplines without inventing conference records.
+// A selected category still needs evidence in the actual stored conference text.
+const RELATED_CATEGORY_TERMS: Record<string, string[]> = {
+  'architecture & construction': ['architecture', 'construction', 'built environment', 'building technology', 'civil engineering', 'urban planning', 'building information modeling', 'bim'],
+  'petroleum & geoscience': ['petroleum', 'geoscience', 'geology', 'geophysics', 'geochemistry', 'upstream', 'reservoir engineering'],
+  'artificial intelligence': ['artificial intelligence', 'machine learning', 'deep learning', 'generative ai', 'neural network'],
+  'renewable energy': ['renewable energy', 'solar energy', 'wind energy', 'clean energy', 'photovoltaic'],
+  'healthcare': ['healthcare', 'medical', 'clinical', 'public health', 'health informatics'],
+};
+
+function categoryMatchesConference(text: string, selected: string): boolean {
+  const terms = RELATED_CATEGORY_TERMS[selected] || [selected];
+  return terms.some((term) => text.includes(term));
+}
+
 export function filterStoredDiscoveryResults(
   results: LiveSearchResult[],
   filters: DiscoveryResultFilters
@@ -179,7 +194,7 @@ export function filterStoredDiscoveryResults(
         result.description,
         result.snippet,
       ].filter(Boolean).join(' ').toLowerCase();
-      if (!categoryText.includes(category)) return false;
+      if (!categoryMatchesConference(categoryText, category)) return false;
     }
 
     if (organizer && !organizerMatchesFilter(result.organization, organizer)) return false;
