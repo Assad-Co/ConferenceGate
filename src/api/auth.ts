@@ -163,6 +163,8 @@ export async function signup(payload: SignupPayload): Promise<AuthUser> {
   });
   const data = await parseResponse(res);
   await recordPaidAcquisition(data.user);
+  // GA4 records an anonymous completion event only when analytics consent is granted.
+  try { (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'sign_up', { method: 'email' }); } catch { /* Analytics must never interrupt signup. */ }
   return data.user;
 }
 
@@ -179,6 +181,7 @@ export async function login(email: string, password: string): Promise<AuthUser> 
     throw new Error('Cannot reach the Conference Gate login service. Check the deployment and try again.');
   }
   const data = await parseResponse(res);
+  try { (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'login', { method: 'email' }); } catch { /* Analytics must never interrupt login. */ }
   return data.user;
 }
 
