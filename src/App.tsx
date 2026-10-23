@@ -1589,6 +1589,16 @@ export function App() {
     );
   }
 
+  // Anonymous engagement analytics: no conference names, emails, or user IDs leave the app.
+  useEffect(() => {
+    if (!authUser) return;
+    try {
+      const gtag = (window as typeof window & { gtag?: (...args: unknown[]) => void }).gtag;
+      if (typeof gtag !== 'function') return;
+      gtag('event', 'conferencegate_section_view', { section: activeTab });
+    } catch { /* Analytics must never affect navigation. */ }
+  }, [activeTab, Boolean(authUser)]);
+
   // About-page Explore links deliberately open the same Login / Sign Up choice for
   // everyone. A member with an active session may continue without signing in again.
   if (new URLSearchParams(window.location.search).get('auth') === 'choose') {
