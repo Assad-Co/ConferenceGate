@@ -39,6 +39,40 @@ if (/^G-[A-Z0-9]+$/.test(ga4MeasurementId) && analyticsConsent) {
   document.head.appendChild(script);
 }
 
+
+// Offer a clear choice before loading third-party analytics. Visitors can decline.
+if (/^G-[A-Z0-9]+$/.test(ga4MeasurementId) && !analyticsConsent) {
+  let priorChoice: string | null = null;
+  try { priorChoice = window.localStorage.getItem('conferencegate_analytics_consent'); }
+  catch { /* Browser storage may be disabled. */ }
+  if (priorChoice === null) {
+    const banner = document.createElement('div');
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-label', 'Analytics preferences');
+    banner.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:99999;max-width:650px;margin:auto;padding:16px;background:#fff;color:#12284a;border:1px solid #d9e4f3;border-radius:12px;box-shadow:0 8px 28px #0002;font:14px system-ui,sans-serif';
+    const message = document.createElement('p');
+    message.textContent = 'May ConferenceGate use optional Google Analytics cookies to understand website visits and improve the experience?';
+    message.style.cssText = 'margin:0 0 12px';
+    const choices = document.createElement('div');
+    choices.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap';
+    for (const [label, choice] of [['Accept analytics', 'granted'], ['Decline', 'denied']] as const) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.style.cssText = 'padding:9px 16px;border-radius:8px;border:1px solid #aac1df;cursor:pointer;background:' + (choice === 'granted' ? '#1759c7;color:white' : '#fff;color:#12284a');
+      button.addEventListener('click', () => {
+        try { window.localStorage.setItem('conferencegate_analytics_consent', choice); }
+        catch { /* No tracking if consent cannot be stored. */ }
+        banner.remove();
+        if (choice === 'granted') window.location.reload();
+      });
+      choices.appendChild(button);
+    }
+    banner.append(message, choices);
+    document.body.appendChild(banner);
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ToastProvider>
