@@ -103,6 +103,9 @@ export default defineConfig(() => {
       },
     },
     build: {
+      // Generate an external source map for diagnosing production render crashes.
+      // `hidden` keeps sourceMappingURL out of the shipped JavaScript bundle.
+      sourcemap: 'hidden',
       rollupOptions: {
         output: {
           manualChunks(id) {
