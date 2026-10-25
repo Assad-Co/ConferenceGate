@@ -37,6 +37,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
 
           <div><h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Company</h4><ul className="space-y-2 text-xs"><li><a href="/about.html" className="hover:text-blue-600 transition-colors">About Us</a></li><li><a href="/about.html#mission" className="hover:text-blue-600 transition-colors">Mission &amp; Vision</a></li><li><a href="/about.html#platform" className="hover:text-blue-600 transition-colors">What We Do</a></li></ul></div>
 
+          <div>
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Support &amp; Legal</h4>
+            <ul className="space-y-2 text-xs">
+              <li><button onClick={() => onNavigateTab('faq')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">FAQ</button></li>
+              <li><button onClick={() => onNavigateTab('contact')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Ask Us</button></li>
+              <li><button onClick={() => onNavigateTab('privacy')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Privacy Policy</button></li>
+              <li><button onClick={() => onNavigateTab('terms')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Terms of Use</button></li>
+            </ul>
+          </div>
+
           {role === 'professional' && (
             <div>
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">
