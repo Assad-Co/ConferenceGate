@@ -24,6 +24,7 @@ import {
   refreshLinkedInConferenceActivity,
 } from './api/linkedinConferenceActivity';
 import { Footer } from './components/Footer';
+import { SupportCenter } from './components/SupportCenter';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
 import { ConferenceDetail } from './components/ConferenceDetail';
@@ -1941,6 +1942,14 @@ export function App() {
             hasCustomAvatar={!!authUser.avatar}
             onEditProfile={handleEditProfile}
           onEditProfessionalPreferences={authUser?.role === 'professional' ? handleEditProfessionalPreferences : undefined}
+          />
+        )}
+
+        {(['faq', 'contact', 'privacy', 'terms'] as const).includes(activeTab as 'faq' | 'contact' | 'privacy' | 'terms') && (
+          <SupportCenter
+            page={activeTab as 'faq' | 'contact' | 'privacy' | 'terms'}
+            accountEmail={authUser.email}
+            onBack={() => setActiveTab('home')}
           />
         )}
 
