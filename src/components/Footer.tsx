@@ -78,7 +78,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
         </div>
 
         <div className="pt-8 border-t border-slate-200 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Conference Gate. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} ConferenceGate OÜ. All rights reserved.</p>
+          <p className="mt-2">Registered address: Sepapaja tn 6, 15551 Tallinn, Harju Maakond, Estonia</p>
         </div>
       </div>
     </footer>
