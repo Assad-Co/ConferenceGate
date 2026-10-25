@@ -41,7 +41,7 @@ jobs:
           CONFERENCEGATE_BASE_URL: https://conferencegate.onrender.com
         run: node scripts/smokeOrganizerImportApi.mjs
 
-      - name: Live three-account role and paid-access gate smoke test
+      - name: Live private-workspace role access smoke test
         env:
           PHASE11_BASE_URL: https://conferencegate.onrender.com
-        run: node scripts/verifyLiveThreeAccountAccess.mjs
+        run: node scripts/verifyLiveFreeLaunchJourney.mjs

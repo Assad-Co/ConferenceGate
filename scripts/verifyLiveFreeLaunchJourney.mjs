@@ -30,6 +30,9 @@ try {
     check(me.data.user?.hasPaidAccess === true && me.data.user?.ownerPreview === false, 'Professional session must not gain admin access');
     console.log('PASS: Professional public signup; Organizer/Sponsor registration and role APIs closed to public accounts');
   } else {
+  if (process.env.ALLOW_SYNTHETIC_CONFERENCE_WRITES !== 'true') {
+    throw new Error('Full synthetic conference acceptance must run in isolated staging; production conference writes are disabled.');
+  }
   const author = await signup('professional');
   const reviewer = await signup('professional');
   const organizer = await signup('organizer');
