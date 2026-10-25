@@ -8,6 +8,16 @@ import { ensurePayoutObligation } from "./payouts";
 
 export const billingRouter = Router();
 
+// Compare adapter credentials without leaking matching-prefix timing information.
+function validBillingSyncSecret(supplied: string): boolean {
+  const expected = process.env.BILLING_SYNC_SECRET?.trim();
+  if (!expected || !supplied) return false;
+  const expectedDigest = crypto.createHash("sha256").update(expected).digest();
+  const suppliedDigest = crypto.createHash("sha256").update(supplied).digest();
+  return crypto.timingSafeEqual(expectedDigest, suppliedDigest);
+}
+
+
 function paddleApiBase(): string {
   return process.env.PADDLE_ENV?.trim().toLowerCase() === "sandbox"
     ? "https://sandbox-api.paddle.com"
@@ -80,9 +90,9 @@ function hasPaidAccess(row: UserRow): boolean {
 billingRouter.post(
   "/provider-sync",
   asyncHandler(async (req, res: Response) => {
-    const expected = process.env.BILLING_SYNC_SECRET?.trim();
-    const supplied = String(req.header("x-billing-sync-secret") || "");
-    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+    if (!validBillingSyncSecret(String(req.header("x-billing-sync-secret") || ""))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const body = req.body || {};
     const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
@@ -135,9 +145,9 @@ billingRouter.post(
 billingRouter.post(
   "/deal-payment-sync",
   asyncHandler(async (req, res: Response) => {
-    const expected = process.env.BILLING_SYNC_SECRET?.trim();
-    const supplied = String(req.header("x-billing-sync-secret") || "");
-    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+    if (!validBillingSyncSecret(String(req.header("x-billing-sync-secret") || ""))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const body = req.body || {};
     const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
@@ -226,9 +236,9 @@ billingRouter.post(
 billingRouter.post(
   "/deal-refund-sync",
   asyncHandler(async (req, res: Response) => {
-    const expected = process.env.BILLING_SYNC_SECRET?.trim();
-    const supplied = String(req.header("x-billing-sync-secret") || "");
-    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+    if (!validBillingSyncSecret(String(req.header("x-billing-sync-secret") || ""))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const body = req.body || {};
     const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
@@ -301,9 +311,9 @@ billingRouter.post(
 billingRouter.post(
   "/payout-sync",
   asyncHandler(async (req, res: Response) => {
-    const expected = process.env.BILLING_SYNC_SECRET?.trim();
-    const supplied = String(req.header("x-billing-sync-secret") || "");
-    if (!expected || supplied !== expected) return res.status(403).json({ error: "Forbidden" });
+    if (!validBillingSyncSecret(String(req.header("x-billing-sync-secret") || ""))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const body = req.body || {};
     const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "";
