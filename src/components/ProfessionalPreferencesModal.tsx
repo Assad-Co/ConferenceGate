@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Loader2, Briefcase, Users, Presentation, Mic2, MapPin } from 'lucide-react';
 import type { ProfessionalPreferencesPayload } from '../api/auth';
 
@@ -34,8 +34,13 @@ export const ProfessionalPreferencesModal: React.FC<ProfessionalPreferencesModal
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!isOpen) return;
+    const opening = isOpen && !wasOpen.current;
+    wasOpen.current = isOpen;
+    // The parent passes a new initial object on background refreshes. Preserve an
+    // in-progress draft until the next open instead of silently erasing user input.
+    if (!opening) return;
     setExpertise(initial.professionalExpertise.join(', '));
     setSpecialization(initial.technicalSpecialization.join(', '));
     setInterests(initial.researchInterests.join(', '));

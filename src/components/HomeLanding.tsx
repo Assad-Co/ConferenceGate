@@ -191,7 +191,13 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
     setPostText('');
   };
 
-  const safeConferences = conferences || [];
+  // Match discovery's existing exclusion of explicitly labeled acceptance fixtures.
+  const safeConferences = (conferences || []).filter((conference) => {
+    const title = String(conference.title ?? '').toLowerCase();
+    const description = String(conference.description ?? '').toLowerCase();
+    return !title.includes('synthetic launch acceptance') &&
+      !(title.includes('test only') && description.includes('automated acceptance'));
+  });
   const upcomingDeadlines = [...safeConferences]
     .filter((c) =>
       c.cfpStatus === 'Open' &&
