@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
+import { captureTestEmail } from "./testEmail";
 
 import { privateWorkspacesOnly } from "./ownerPreview";
 
@@ -95,6 +96,13 @@ async function sendResetEmail(email: string, token: string): Promise<void> {
   const resetUrl = `${canonicalBaseUrl()}/#password-reset=${encodeURIComponent(token)}`;
   const safeUrl = escapeHtml(resetUrl);
 
+  if (await captureTestEmail({
+    to: email,
+    subject: "Reset your ConferenceGate password",
+    text: `Reset your ConferenceGate password: ${resetUrl}\nThis link expires in 30 minutes and can be used only once.`,
+    html: `<p>A password reset was requested for your ConferenceGate account.</p><p><a href="${safeUrl}">Reset password</a></p><p>This link expires in 30 minutes and can be used only once.</p>`,
+  })) return;
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -126,8 +134,7 @@ async function sendResetEmail(email: string, token: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Resend returned HTTP ${response.status}${body ? `: ${body.slice(0, 180)}` : ""}`);
+    throw new Error(`Password reset delivery returned HTTP ${response.status}`);
   }
 }
 
@@ -181,9 +188,10 @@ authRecoveryRouter.post("/password-reset/request", resetRateLimit, asyncHandler(
 
   try {
     await sendResetEmail(user.email, token);
-  } catch (error) {
+  } catch {
     await removeResetRecord(user.id, tokenHash).catch(() => {});
-    console.warn("[auth-recovery] Password reset email delivery failed", error instanceof Error ? error.message : error);
+    // Provider errors may contain credentials, recipients, or reset links.
+    console.warn("[auth-recovery] Password reset email delivery failed");
   }
 
   return res.status(202).json(generic);

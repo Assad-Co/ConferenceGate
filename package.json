@@ -76,7 +76,8 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "nodemailer": "10.2.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
