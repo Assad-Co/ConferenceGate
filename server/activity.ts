@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import crypto from "crypto";
+import { isPublicConference } from "./publicConferenceVisibility";
 import {
   dbGet,
   dbAll,
@@ -2106,7 +2107,7 @@ activityRouter.post("/conferences", asyncHandler(async (req: AuthedRequest, res:
 
 activityRouter.get("/conferences", asyncHandler(async (_req: AuthedRequest, res: Response) => {
   const rows = await dbAll<CreatedConferenceRow>("SELECT * FROM created_conferences ORDER BY created_at DESC");
-  res.json({ conferences: rows.map((row) => JSON.parse(row.data)) });
+  res.json({ conferences: rows.map((row) => JSON.parse(row.data)).filter(isPublicConference) });
 }));
 
 // Only the conferences this specific organizer created — used to scope the Organizer Dashboard

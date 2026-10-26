@@ -5,6 +5,7 @@ function patchFile(fileUrl, replacements, label) {
   let changed = false;
   for (const [before, after, description] of replacements) {
     if (text.includes(after)) continue;
+    if (description === 'evaluation target props' && text.includes('initialSponsorId?: string;') && text.includes('initialConferenceTitle?: string;')) continue;
     if (!text.includes(before)) {
       throw new Error(`${label} patch could not find expected source for: ${description}`);
     }

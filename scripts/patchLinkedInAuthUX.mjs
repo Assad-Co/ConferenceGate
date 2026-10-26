@@ -21,7 +21,7 @@ patchFile('src/components/auth/LinkedInSignInButton.tsx', (source) => {
 patchFile('src/components/auth/AuthScreen.tsx', (source) => {
   const oldBlock = `          {capabilities.linkedin && <LinkedInSignInButton text={text} />}`;
   const newBlock = `          {capabilities.linkedin && (\n            <div className=\"rounded-2xl border border-[#0A66C2]/20 bg-[#0A66C2]/5 p-3\">\n              <div className=\"mb-2\">\n                <div className=\"text-xs font-extrabold text-slate-800\">\n                  {text === 'signup_with' ? 'New to ConferenceGate?' : 'Already have a ConferenceGate profile?'}\n                </div>\n                <div className=\"mt-1 text-[11px] leading-relaxed text-slate-600\">\n                  {text === 'signup_with'\n                    ? 'Create your account with LinkedIn. After LinkedIn authenticates your account, choose your role and ConferenceGate will build and enrich your professional profile from permitted LinkedIn profile fields and public professional evidence.'\n                    : 'Continue with LinkedIn to sign in to your existing ConferenceGate profile. We will also refresh your photo and public professional evidence so your profile stays current.'}\n                </div>\n              </div>\n              <LinkedInSignInButton text={text} />\n            </div>\n          )}`;
-  if (!source.includes(newBlock)) {
+  if (!source.includes(newBlock) && !source.includes('Build my profile from my LinkedIn URL')) {
     if (!source.includes(oldBlock)) throw new Error('[linkedin-auth-ux] LinkedIn render anchor not found');
     source = source.replace(oldBlock, newBlock);
   }

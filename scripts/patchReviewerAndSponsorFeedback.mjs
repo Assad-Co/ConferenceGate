@@ -24,9 +24,15 @@ patchFile('src/components/SponsorEvaluationPanel.tsx', (source) => {
   }
   if (!source.includes('completedDeals?: SponsorshipDeal[];')) {
     source = source.replace(
-      '  sponsorsLoading?: boolean;\n}> = ({ sponsors, conferences, onSubmit, sponsorsLoading = false }) => {',
-      '  sponsorsLoading?: boolean;\n  completedDeals?: SponsorshipDeal[];\n}> = ({ sponsors, conferences, onSubmit, sponsorsLoading = false, completedDeals = [] }) => {'
+      '  sponsorsLoading?: boolean;',
+      '  sponsorsLoading?: boolean;\n  completedDeals?: SponsorshipDeal[];'
     );
+  }
+  if (!source.includes('completedDeals = []')) {
+    source = source.replace('sponsorsLoading = false', 'sponsorsLoading = false, completedDeals = []');
+  }
+  if (!source.includes('completedDeals?: SponsorshipDeal[];') || !source.includes('completedDeals = []')) {
+    throw new Error('Sponsor feedback patch: completed-deal props missing');
   }
   source = source.replace(
     /  const eligibleConferenceTitles = useMemo\(\(\) => \{[\s\S]*?\}, \[approvedLinks, sponsorId\]\);/,

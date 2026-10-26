@@ -26,8 +26,8 @@ patchFile('src/components/LegacyNavbar.tsx', (source) => {
   }
 
   source = source.replace(
-    '                onClick={toggleRoleMenu}',
-    '                onClick={ownerPreview ? toggleRoleMenu : undefined}'
+    '                onClick={ownerPreview ? toggleRoleMenu : undefined}',
+    '                onClick={toggleRoleMenu}'
   );
   source = source.replace(
     '                <span className="hidden md:inline capitalize text-blue-700 font-bold">{role}</span>',
@@ -38,12 +38,24 @@ patchFile('src/components/LegacyNavbar.tsx', (source) => {
     '                <span className="md:hidden uppercase text-blue-700 font-bold">{accountRoleLabel.charAt(0)}</span>'
   );
   source = source.replace(
-    '                <ChevronDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />',
-    '                {ownerPreview && <ChevronDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />}'
+    '                {ownerPreview && <ChevronDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />}',
+    '                <ChevronDown className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-400" />'
   );
   source = source.replace(
-    '              {roleMenuOpen && roleMenuPos && (',
-    '              {ownerPreview && roleMenuOpen && roleMenuPos && ('
+    '              {ownerPreview && roleMenuOpen && roleMenuPos && (',
+    '              {roleMenuOpen && roleMenuPos && ('
+  );
+  // Keep account actions (especially Log Out) reachable for every signed-in user.
+  // Role switching remains restricted to owner preview independently of the menu.
+  for (const role of ['professional', 'reviewer', 'organizer', 'sponsor']) {
+    source = source.replace(
+      `{switchableRoles.includes('${role}') && (`,
+      `{ownerPreview && switchableRoles.includes('${role}') && (`
+    );
+  }
+  source = source.replace(
+    "{ownerPreview ? 'Owner Preview Context' : 'Switch Active Context'}",
+    "{ownerPreview ? 'Owner Preview Context' : 'Account'}"
   );
   return source;
 });

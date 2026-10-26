@@ -30,7 +30,7 @@ type EvidenceKind =
   | "patent"
   | "public_bio";
 
-type ResearchTrigger = "linkedin_oauth" | "manual_refresh";
+type ResearchTrigger = "linkedin_oauth" | "manual_refresh" | "linkedin_url_signup" | "returning_login";
 
 type AuthedRequest = Request & { professionalEvidenceUserId?: string };
 

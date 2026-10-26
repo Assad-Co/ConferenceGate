@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { conferenceResultLocation, populatedDetailSections } from '../utils/conferencePresentation';
 import { conferenceInitials, markSizeClass } from '../utils/conferenceMark';
 import { conferenceBanner } from '../utils/conferenceBanner';
 import {
@@ -28,7 +29,6 @@ import {
 } from '../api/search';
 import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
-import { downloadAbstractDraftDocx } from '../utils/abstractDraftDocx';
 import { createExternalSubmission, type MarkConferenceAttendancePayload } from '../api/activity';
 import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
 import { AbstractSubmission } from '../types';
@@ -284,6 +284,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const handleDownloadDraft = async () => {
     setDownloadingDraft(true);
     try {
+      const { downloadAbstractDraftDocx } = await import('../utils/abstractDraftDocx');
       await downloadAbstractDraftDocx({
         conferenceTitle: result.title,
         title: draftTitle,
@@ -422,8 +423,9 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   const sectionState = (section: string): 'stated' | 'not_announced' | 'unread' => {
     if (!data) return 'unread';
     const stated = data.sectionAvailability?.[section];
-    if (stated) return stated;
-    return data.fetchFailed || data.sectionsNotRead ? 'unread' : 'stated';
+    if (stated && stated !== 'stated') return stated;
+    const tab = Object.keys(SECTION_OF).find((key) => SECTION_OF[key] === section);
+    return tab && populatedDetailSections(data).includes(tab) ? 'stated' : 'unread';
   };
   /** What to tell the reader about a section holding nothing, given why it holds nothing. */
   const emptySectionMessage = (section: string, subject: string, crawled: string): string => {
@@ -567,7 +569,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     tab === 'overview' ? 'stated' : sectionState(SECTION_OF[tab]);
 
   const availableDetailCount = data
-    ? detailTabs.filter((tab) => detailTabState(tab.id) === 'stated').length
+    ? populatedDetailSections(data).length
     : 0;
 
   const detailTabStateLabel = (tab: ExternalDetailTab): string => {
@@ -592,7 +594,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
   // Drawn, not fetched, and only where nothing was published — see conferenceBanner. Every hero
   // now has a ground, so none of them reads as a page whose image failed to load.
   const banner = conferenceBanner(displayTitle, data?.overview?.category ?? result.category ?? null);
-  const displayLocation = data?.locationText || parseLocationFromSnippet(result.snippet);
+  const displayLocation = conferenceResultLocation(result, data?.locationText || parseLocationFromSnippet(result.snippet));
   // Anchor "near the venue" to the venue itself when the site named one, falling back to the
   // city line only when it didn't — searching hotels near a named convention centre is a much
   // better answer than searching hotels near a whole city.

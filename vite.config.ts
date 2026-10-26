@@ -93,6 +93,8 @@ import './scripts/patchCatalogueCfpQuality.mjs';
 import './scripts/patchLinkedInUrlProfileFlow.mjs';
 // @ts-ignore -- side-effect-only signup account-role isolation.
 import './scripts/patchSignupRoleIsolation.mjs';
+// @ts-ignore -- associate final generated form labels and contain modal keyboard focus.
+import './scripts/patchLaunchAccessibility.mjs';
 
 export default defineConfig(() => {
   return {
