@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Conference } from '../types';
+import { deduplicateConferenceResults, formatConferenceLocation } from '../utils/conferencePresentation';
 import { conferenceDurationDays, formatDateRange } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
 import { withinDateWindow } from '../utils/conferenceFilter';
@@ -206,6 +207,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [minimumDetailSections, setMinimumDetailSections] = useState(0);
   const [richDetailsOnly, setRichDetailsOnly] = useState(false);
   const [resultSort, setResultSort] = useState<DiscoveryResultSort>('recommended');
+  const [visibleResultCount, setVisibleResultCount] = useState(24);
 
   // A full browse response is the facet source. It is a server-side stored-catalogue read, not a
   // provider search, so country/city/organizer/category choices represent the worldwide catalogue
@@ -364,10 +366,13 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     richDetailsOnly,
   ]);
 
-  const displayedStored = useMemo(
-    () => sortStoredDiscoveryResults(filteredStored, resultSort),
+  const allStored = useMemo(
+    () => sortStoredDiscoveryResults(deduplicateConferenceResults(filteredStored), resultSort),
     [filteredStored, resultSort]
   );
+
+  useEffect(() => { setVisibleResultCount(24); }, [allStored]);
+  const displayedStored = allStored.slice(0, visibleResultCount);
 
   const activeFilterCount = [
     countryFilter,
@@ -818,7 +823,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           <div className="space-y-4">
             {displayedStored.map((result) => {
               const date = dateLine(result.startDate, result.endDate);
-              const place = [result.location?.city, result.location?.country].filter(Boolean).join(', ');
+              const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
               const categories = Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[])).slice(0, 4);
               return (
                 <article
@@ -887,6 +892,13 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                 </article>
               );
             })}
+          </div>
+        )}
+
+        {visibleResultCount < allStored.length && (
+          <div className="text-center space-y-2">
+            <p className="text-xs text-slate-500" aria-live="polite">Showing {displayedStored.length} of {allStored.length} conferences</p>
+            <button type="button" onClick={() => setVisibleResultCount((count) => count + 24)} className="min-h-11 px-5 py-2.5 rounded-xl bg-blue-900 text-white text-sm font-bold">Show more conferences</button>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import { deduplicateConferenceResults } from './src/utils/conferencePresentation';
 import "./server/env";
 import express from "express";
 import path from "path";
@@ -336,6 +337,7 @@ async function startServer() {
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Content-Security-Policy", "base-uri 'self'; object-src 'none'; frame-ancestors 'none'");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
@@ -416,6 +418,16 @@ async function startServer() {
   app.use("/api/auth", authRecoveryRouter);
 
   // Live conference search (Brave Search API)
+  // Apply verified display guards to response copies; never rewrite stored catalogue records.
+  app.use("/api/search", (_req, res, next) => {
+    const sendJson = res.json.bind(res);
+    res.json = ((body: any) => sendJson(
+      Array.isArray(body?.results) && body.results.every((item: any) => typeof item?.title === 'string' && typeof item?.link === 'string')
+        ? { ...body, results: deduplicateConferenceResults(body.results) }
+        : body
+    )) as typeof res.json;
+    next();
+  });
   app.use("/api/search", braveSearchRouter);
 
   // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations

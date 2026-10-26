@@ -14,6 +14,8 @@ declare global {
 }
 
 let scriptLoadPromise: Promise<void> | null = null;
+let initializedClientId: string | null = null;
+let activeCredentialHandler: ((credential: string) => void) | null = null;
 
 function loadGoogleScript(): Promise<void> {
   if (window.google?.accounts?.id) return Promise.resolve();
@@ -25,7 +27,11 @@ function loadGoogleScript(): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Could not load Google Sign-In'));
+    script.onerror = () => {
+      scriptLoadPromise = null;
+      script.remove();
+      reject(new Error('Could not load Google Sign-In'));
+    };
     document.head.appendChild(script);
   });
   return scriptLoadPromise;
@@ -45,20 +51,25 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ clientId
   useEffect(() => {
     if (!clientId) return;
     let cancelled = false;
+    const handleCredential = (credential: string) => onCredentialRef.current(credential);
 
     loadGoogleScript()
       .then(() => {
         if (cancelled || !window.google || !buttonRef.current) return;
         buttonRef.current.innerHTML = '';
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => onCredentialRef.current(response.credential),
-        });
+        activeCredentialHandler = handleCredential;
+        if (initializedClientId !== clientId) {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => activeCredentialHandler?.(response.credential),
+          });
+          initializedClientId = clientId;
+        }
         window.google.accounts.id.renderButton(buttonRef.current, {
           type: 'standard',
           theme: 'outline',
           size: 'large',
-          width: 360,
+          width: Math.min(360, buttonRef.current.clientWidth || 360),
           text,
           shape: 'pill',
         });
@@ -67,6 +78,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ clientId
 
     return () => {
       cancelled = true;
+      if (activeCredentialHandler === handleCredential) activeCredentialHandler = null;
     };
   }, [clientId, text]);
 

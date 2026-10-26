@@ -2,6 +2,7 @@ import fs from 'fs';
 
 function replaceOnce(path, from, to, label) {
   const source = fs.readFileSync(path, 'utf8');
+  if (label === 'support footer column' && source.includes('Support &amp; Legal')) return false;
   if (source.includes(to)) return false;
   if (!source.includes(from)) throw new Error(`[support-center] could not find ${label} in ${path}`);
   fs.writeFileSync(path, source.replace(from, to));

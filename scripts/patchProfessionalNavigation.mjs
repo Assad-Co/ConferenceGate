@@ -9,6 +9,7 @@ function patch(pathname, replacements) {
   let source = fs.readFileSync(file, 'utf8');
   for (const [before, after] of replacements) {
     if (source.includes(after)) continue;
+    if (pathname === 'src/App.tsx' && before.includes("activeTab === 'discover'") && source.includes("activeTab === 'my-conferences'")) continue;
     if (!source.includes(before)) throw new Error(`Professional navigation patch target missing in ${pathname}: ${before.slice(0, 100)}`);
     source = source.replace(before, after);
   }

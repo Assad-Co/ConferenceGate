@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { Award, Download, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { AbstractSubmission, UserProfile, Conference, ProfessionalInvitation } from '../types';
 import { ConferenceRegistration } from '../api/activity';
-import { downloadCertificatePDF } from '../utils/certificatePdf';
 import { ConferenceLink } from './ConferenceLink';
 
 interface CertificatesViewProps {
@@ -151,6 +150,7 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
       issuedCertificateId = payload.certificate.id;
       recipientName = payload.certificate.recipient_name;
       date = payload.certificate.issued_at;
+      const { downloadCertificatePDF } = await import('../utils/certificatePdf');
       await downloadCertificatePDF({
         title: cert.title,
         recipientName,
