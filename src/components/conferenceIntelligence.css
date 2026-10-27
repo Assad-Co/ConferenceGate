@@ -1,0 +1,53 @@
+.cg-intelligence .cg-intel-button {
+  min-height: 44px;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+.cg-intelligence .cg-intel-button[aria-pressed="true"] {
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #60a5fa;
+}
+.cg-intelligence button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cg-intelligence label {
+  font-size: 0.8rem;
+  color: #334155;
+  font-weight: 600;
+  min-width: 0;
+}
+.cg-intelligence input:not([type="checkbox"]),
+.cg-intelligence select,
+.cg-intelligence textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  margin-top: 0.3rem;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 400;
+}
+.cg-intelligence :focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+.cg-intelligence svg [role="button"] {
+  cursor: pointer;
+}
+.cg-intelligence p,
+.cg-intelligence a,
+.cg-intelligence h3,
+.cg-intelligence h4 {
+  overflow-wrap: anywhere;
+}

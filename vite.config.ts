@@ -134,3 +134,7 @@ export default defineConfig(() => {
     },
   };
 });
+
+// Apply new intelligence workspace after all legacy source generators.
+// @ts-ignore -- side-effect-only build integration.
+import './scripts/patchConferenceIntelligence.mjs';
