@@ -44,10 +44,36 @@ export function auditCatalogue(records, today = new Date().toISOString().slice(0
   return { auditedAt: today, source: 'local snapshot only; not production database', counters, examples };
 }
 
+/** Parse RFC4180-style CSV, including quoted commas, quotes and multiline fields. */
+export function parseCatalogueCsv(input) {
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    if (quoted) {
+      if (ch === '"' && input[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && input[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += ch;
+  }
+  if (quoted) throw new Error('Unterminated CSV quoted field');
+  if (row.length || cell) { row.push(cell); rows.push(row); }
+  const [headers, ...data] = rows;
+  if (!headers?.includes('title') || !headers.includes('startDate')) throw new Error('Invalid catalogue CSV headers');
+  return data.filter(row => row.some(value => value.trim())).map(row =>
+    Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ''])));
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const filename = process.argv[2] ?? 'data/conferencegate-worldwide-2026-2028.json';
-  const raw = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  const filename = process.argv[2] ?? 'data/conferencegate-worldwide-2026-2028.csv';
+  const content = fs.readFileSync(filename, 'utf8');
+  const raw = filename.toLowerCase().endsWith('.csv') ? parseCatalogueCsv(content) : JSON.parse(content);
   const records = Array.isArray(raw) ? raw : raw.records;
   if (!Array.isArray(records)) throw new Error('Expected an array or { records: [...] }');
-  process.stdout.write(JSON.stringify(auditCatalogue(records), null, 2) + '\n');
+  process.stdout.write(JSON.stringify({ ...auditCatalogue(records), source: 'repository snapshot: ' + filename + '; not production database' }, null, 2) + '\n');
 }

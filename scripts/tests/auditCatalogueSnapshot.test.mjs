@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditCatalogue } from '../auditCatalogueSnapshot.mjs';
+import { auditCatalogue, parseCatalogueCsv } from '../auditCatalogueSnapshot.mjs';
 
 test('audit counts expired events, invalid dates, and missing sources without modifying data', () => {
  const records = [
@@ -23,4 +23,13 @@ test('valid calendar dates are classified as upcoming rather than unknown', () =
  assert.equal(report.counters.upcoming, 1);
  assert.equal(report.counters.unknownDate, 0);
  assert.equal(report.counters.invalidEventDate, 0);
+});
+
+test('CSV parser handles quoted commas, embedded newlines and escaped quotes', () => {
+ const csv = 'title,startDate,organization\n"Event, A",2027-06-01,"Society ""A"""\n"Event\nB",2027-07-01,Institute\n';
+ const rows = parseCatalogueCsv(csv);
+ assert.equal(rows.length, 2);
+ assert.equal(rows[0].title, 'Event, A');
+ assert.equal(rows[0].organization, 'Society "A"');
+ assert.equal(rows[1].title, 'Event\nB');
 });

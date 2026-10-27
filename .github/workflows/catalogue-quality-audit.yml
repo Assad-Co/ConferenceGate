@@ -1,0 +1,33 @@
+name: Conference catalogue quality audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 4 * * 1'
+  push:
+    paths:
+      - 'data/conferencegate-worldwide-2026-2028.csv'
+      - 'scripts/auditCatalogueSnapshot.mjs'
+      - 'scripts/tests/auditCatalogueSnapshot.test.mjs'
+      - '.github/workflows/catalogue-quality-audit.yml'
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate audit implementation
+        run: node --test scripts/tests/auditCatalogueSnapshot.test.mjs
+      - name: Audit snapshot
+        run: node scripts/auditCatalogueSnapshot.mjs data/conferencegate-worldwide-2026-2028.csv > catalogue-audit-report.json
+      - name: Show audit summary
+        run: cat catalogue-audit-report.json
+      - name: Save audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalogue-quality-report
+          path: catalogue-audit-report.json
+          retention-days: 30
