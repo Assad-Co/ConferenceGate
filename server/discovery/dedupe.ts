@@ -93,6 +93,19 @@ function normalizedText(value: string | null): string | null {
  * strong enough to decide on their own. Everything else has to accumulate.
  */
 export function scoreDuplicate(incoming: NormalizedEvent, existing: DuplicateCandidate): DuplicateVerdict {
+  // A recurring conference may reuse its official homepage across years. Distinct
+  // known edition years must never merge, even when the canonical URL matches.
+  const incomingYear = incoming.startYear ?? (incoming.startDate ? Number(incoming.startDate.slice(0, 4)) : null);
+  const existingYear = existing.start_year ?? (existing.start_date ? Number(existing.start_date.slice(0, 4)) : null);
+  if (incomingYear && existingYear && incomingYear !== existingYear) {
+    return {
+      score: 0,
+      reason: "different conference edition years",
+      decision: "separate",
+      matchedSignals: ["different conference edition years"],
+    };
+  }
+
   const signals: string[] = [];
   let score = 0;
 
