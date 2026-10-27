@@ -25,6 +25,7 @@ export function titleCorroborated(claimed: string, observed: string): boolean {
  return claimedWords.length >= 2 && claimedWords.filter(word => found.has(word)).length / claimedWords.length >= 0.75;
 }
 conferenceVerificationRouter.get('/evidence', async (req, res) => {
+ await initConferenceVerificationSchema();
  const conferenceUrl = String(req.query.url || '').slice(0, 800);
  if (!publicUrl(conferenceUrl)) { res.status(400).json({ error: 'Valid HTTPS conference URL required' }); return; }
  try {
@@ -40,6 +41,7 @@ conferenceVerificationRouter.get('/evidence', async (req, res) => {
 export async function recordConferenceVerification(input: {
  conferenceUrl:string; officialSourceUrl:string; claimedTitle:string; observedTitle:string; sourceExcerpt:string;
 }) {
+ await initConferenceVerificationSchema();
  const event = publicUrl(input.conferenceUrl), source = publicUrl(input.officialSourceUrl);
  if (!event || !source || input.claimedTitle.length > 300 || input.observedTitle.length > 300 ||
      !input.sourceExcerpt.trim() || input.sourceExcerpt.length > 2000) throw new Error('Invalid verification evidence');
