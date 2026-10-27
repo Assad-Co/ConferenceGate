@@ -191,6 +191,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     try { return window.localStorage.getItem('conferencegate-discovery-interests') || ''; } catch { return ''; }
   });
   const [personalized, setPersonalized] = useState(false);
+  const [semanticScores, setSemanticScores] = useState<Record<string, number>>({});
+  const [semanticStatus, setSemanticStatus] = useState<'idle' | 'loading' | 'ready' | 'fallback'>('idle');
   useEffect(() => { try { window.localStorage.setItem('conferencegate-discovery-interests', interests); } catch {} }, [interests]);
   const [submittedSearchTerm, setSubmittedSearchTerm] = useState(String(initialSearchQuery ?? '').trim());
   const [searchSubmitCount, setSearchSubmitCount] = useState(0);
@@ -380,9 +382,45 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
       conferenceMatchReasons(right, interests).length - conferenceMatchReasons(left, interests).length);
   }, [filteredStored, resultSort, personalized, interests]);
 
+
+  useEffect(() => {
+    if (!personalized || !interests.trim() || !allStored.length) {
+      setSemanticScores({}); setSemanticStatus('idle'); return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSemanticStatus('loading');
+      const candidates = allStored.slice(0, 30).map(item => ({
+        key: item.link + '|' + item.title,
+        text: [item.title, item.category, ...(item.categories || []), item.description].filter(Boolean).join(' ').slice(0, 650),
+      }));
+      try {
+        const response = await fetch('/api/search/semantic-rank', {
+          method: 'POST', credentials: 'include', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interests, candidates }),
+        });
+        if (!response.ok) throw new Error('Semantic matching unavailable');
+        const payload = await response.json();
+        if (!Array.isArray(payload.scores)) throw new Error('Missing semantic scores');
+        setSemanticScores(Object.fromEntries(payload.scores.map((item: { key: string; score: number }) => [item.key, item.score])));
+        setSemanticStatus('ready');
+      } catch {
+        if (!controller.signal.aborted) { setSemanticScores({}); setSemanticStatus('fallback'); }
+      }
+    }, 450);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [personalized, interests, allStored]);
+
+  const rankedStored = useMemo(() => {
+    if (semanticStatus !== 'ready') return allStored;
+    return [...allStored].sort((left, right) =>
+      (semanticScores[right.link + '|' + right.title] ?? -2) - (semanticScores[left.link + '|' + left.title] ?? -2));
+  }, [allStored, semanticScores, semanticStatus]);
+
   useEffect(() => { setVisibleResultCount(24); }, [allStored]);
-  const displayedStored = allStored.slice(0, visibleResultCount);
-  const comparisonItems = allStored.filter(item => comparisonKeys.includes(item.link + '|' + item.title)).slice(0, 3);
+  const displayedStored = rankedStored.slice(0, visibleResultCount);
+  const comparisonItems = rankedStored.filter(item => comparisonKeys.includes(item.link + '|' + item.title)).slice(0, 3);
   const toggleComparison = (key: string) => setComparisonKeys(previous =>
     previous.includes(key) ? previous.filter(value => value !== key) : previous.length < 3 ? [...previous, key] : previous
   );
@@ -469,7 +507,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">
             {personalized ? 'Personalized ranking on' : 'Rank for my interests'}
           </button>
-          <p className="w-full text-[11px] text-slate-500">Preferences stay in this browser. Matching uses transparent subject keywords, not AI inference.</p>
+          <p className="w-full text-[11px] text-slate-500">Preferences are saved in this browser; when model ranking is enabled, interests and conference text are sent to the configured embedding provider. {semanticStatus === 'ready' ? 'Trained embedding model ranking active (top 30 results).' : semanticStatus === 'loading' ? 'Calculating semantic relevance…' : 'Keyword matching is used when the trained model is unavailable.'}</p>
         </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form
