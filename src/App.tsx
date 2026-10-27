@@ -1717,8 +1717,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'discover' && authUser && (
-          <ConferenceDiscoveryWorkspace accountId={authUser.id} profile={userProfile} onOpen={handleOpenExternalResult} onOpportunities={() => setActiveTab('reviewer')}>
+        {activeTab === 'discover' && (
           <DiscoveryEngine
             conferences={discoverConferences}
             onSelectConference={handleSelectConference}
@@ -1730,7 +1729,6 @@ export function App() {
             onToggleSave={handleToggleSaveConference}
             onToggleFollow={handleToggleFollowConference}
           />
-          </ConferenceDiscoveryWorkspace>
         )}
 
         {activeTab === 'external-detail' && selectedExternalResult && (
