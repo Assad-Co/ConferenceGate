@@ -1,3 +1,4 @@
+import { intelligenceEmailRouter, initIntelligenceEmailSchema } from "./server/intelligenceEmail";
 import { startProfessionalIntelligenceAlertScheduler } from "./server/intelligenceAlertScheduler";
 import { intelligenceSyncRouter, initIntelligenceSyncSchema } from "./server/intelligenceSync";
 import { deduplicateConferenceResults } from './src/utils/conferencePresentation';
@@ -80,6 +81,7 @@ async function startServer() {
   await initGrowthAutomationSchema();
   await initConferenceVerificationSchema();
   await initIntelligenceSyncSchema();
+  await initIntelligenceEmailSchema();
   startProfessionalIntelligenceAlertScheduler();
   await initProfessionalTrustSchema();
 
@@ -435,6 +437,7 @@ async function startServer() {
     )) as typeof res.json;
     next();
   });
+  app.use("/api/intelligence", intelligenceEmailRouter);
   app.use("/api/intelligence", intelligenceSyncRouter);
   app.use("/api/conference-verification", conferenceVerificationRouter);
   app.use("/api/search", semanticMatchingRouter);
