@@ -243,7 +243,7 @@ export function scoreStoredConferenceRecord(
   fields: StoredConferenceSearchFields
 ): number | null {
   const tokens = queryTokens(query);
-  const normalizedQuery = normalize(queryTokens(query).join(" "));
+  const normalizedQuery = normalize(tokens.join(" "));
   const title = flattenStoredConferenceText(fields.title);
   const acronym = flattenStoredConferenceText(fields.acronym);
   const groups = [
@@ -263,7 +263,11 @@ export function scoreStoredConferenceRecord(
       fields.officialUrl,
     ]) },
   ];
+  // A year is an exact edition constraint, not a prefix: 2027 must not match 20270.
+  // Keep other subject terms prefix-searchable for existing discovery behavior.
   const allText = groups.map((group) => group.text).filter(Boolean).join(" ");
+  const yearTokens = tokens.filter((token) => /^20[0-9]{2}$/.test(token));
+  if (yearTokens.some((year) => !new RegExp(`(?:^|[^0-9])${year}(?:[^0-9]|$)`).test(allText))) return null;
   const categoryPattern = CATEGORY_PATTERNS[normalize(query)];
   if (categoryPattern) {
     // Classify from the conference subject, not incidental mentions in sponsor rosters or URLs.
