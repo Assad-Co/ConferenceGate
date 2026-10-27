@@ -284,3 +284,12 @@ test("impossible abstract deadlines are flagged for review", () => {
   });
   assert.ok(result.qualityFlags.includes("abstract_deadline_invalid_date"));
 });
+
+test("invalid CFP deadline blocks automatic publication even when the event is otherwise trusted", () => {
+  const result = validateEvent(makeEvent({ deadlines: { ...EMPTY_DEADLINES, abstractDeadline: "2027-02-30" } }), {
+    targetYears: [2027], sourceTrust: 0.95, now: NOW, allowAutoPublish: true,
+  });
+  assert.equal(result.valid, true);
+  assert.notEqual(result.status, "published");
+  assert.ok(result.qualityFlags.includes("abstract_deadline_invalid_date"));
+});
