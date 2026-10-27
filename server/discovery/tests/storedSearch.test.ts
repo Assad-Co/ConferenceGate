@@ -127,3 +127,8 @@ test("deeply prepared records win relevance ties without beating a direct identi
   })!;
   assert.ok(direct > incidental);
 });
+
+test("conference year search does not match longer numbers with same prefix", () => {
+  assert.equal(scoreStoredConferenceRecord("2027", { title: "Future Research 20270", dates: { start_date: "20270-06-01" } }), null);
+  assert.ok(scoreStoredConferenceRecord("2027", { title: "Future Research 2027", dates: { start_date: "2027-06-01" } }) !== null);
+});
