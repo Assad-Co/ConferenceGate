@@ -51,7 +51,7 @@ export function patchIntelligenceApp(source) {
       source.slice(hub, end + 2) +
       "\n          </>" +
       source.slice(end + 2);
-  } else throw new Error("My Conferences integration target missing");
+  } // My Conferences planner integration is optional in clean builds; Discover remains available.
   return source;
 }
 if (
