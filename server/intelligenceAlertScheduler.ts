@@ -20,17 +20,18 @@ export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: n
         scanned++;
         const after = evaluateAlerts(before, results);
         const next = JSON.stringify(after);
-        if (next === JSON.stringify(before)) continue;
+        if (next === JSON.stringify(before)) {
+          for (const alert of after.alerts.slice(0, 20)) await deliverIntelligenceEmail(account.user_id, alert);
+          continue;
+        }
         // Optimistic update prevents overwriting a user's concurrent browser changes.
         await dbRun(
           "UPDATE professional_intelligence_state SET state_json=?, updated_at=? WHERE user_id=? AND state_json=?",
           [next, new Date().toISOString(), account.user_id, account.state_json]
         );
         changed++;
-        const previous = new Set(before.alerts.map(a => a.id));
-        for (const alert of after.alerts.filter(a => !previous.has(a.id)).slice(0, 20)) {
-          await deliverIntelligenceEmail(account.user_id, alert);
-        }
+        for (const alert of after.alerts.slice(0, 20)) await deliverIntelligenceEmail(account.user_id, alert);
+
       } catch (error) {
         console.warn("[intelligence-alerts] account scan failed", error instanceof Error ? error.message : "unknown error");
       }
