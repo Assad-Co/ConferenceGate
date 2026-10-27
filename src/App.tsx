@@ -27,7 +27,6 @@ import { Footer } from './components/Footer';
 import { SupportCenter } from './components/SupportCenter';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
-import { ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';
 import { ConferenceDetail } from './components/ConferenceDetail';
 import { ConferenceFeedbackModal } from './components/ConferenceFeedbackModal';
 import { ExternalConferenceDetail, ExternalDetailTab } from './components/ExternalConferenceDetail';
