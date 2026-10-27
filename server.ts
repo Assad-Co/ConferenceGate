@@ -1,6 +1,7 @@
 import { deduplicateConferenceResults } from './src/utils/conferencePresentation';
 import "./server/env";
 import express from "express";
+import { conferenceVerificationRouter, initConferenceVerificationSchema } from "./server/conferenceVerification";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
@@ -428,6 +429,7 @@ async function startServer() {
     )) as typeof res.json;
     next();
   });
+  app.use("/api/conference-verification", conferenceVerificationRouter);
   app.use("/api/search", braveSearchRouter);
 
   // Real tracked activity: submissions, reviews, reviewer volunteering, conference registrations
