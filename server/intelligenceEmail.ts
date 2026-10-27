@@ -42,6 +42,13 @@ intelligenceEmailRouter.put("/email-preferences", async (req,res) => {
     return res.json({enabled:enabled===1});
   } catch { return res.status(500).json({error:"Unable to update preferences"}); }
 });
+// GET shows a confirmation page; POST performs the unsubscribe (including RFC 8058 one-click).
+intelligenceEmailRouter.get("/unsubscribe/:userId/:token", async (req,res) => {
+  try {
+    if (!safeToken(req.params.userId,req.params.token)) return res.status(403).send("Invalid unsubscribe link");
+    res.type("html").send('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribe</title></head><body><main><h1>ConferenceGate alerts</h1><p>Stop conference alert emails?</p><form method="POST"><button type="submit">Unsubscribe</button></form></main></body></html>');
+  } catch { res.status(503).send("Unsubscribe unavailable"); }
+});
 // One-click unsubscribe; the signed token cannot be guessed or used to subscribe.
 intelligenceEmailRouter.post("/unsubscribe/:userId/:token", async (req,res) => {
   try {
