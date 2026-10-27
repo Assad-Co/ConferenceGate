@@ -56,8 +56,8 @@ export function parseCatalogueCsv(input) {
       else cell += ch;
     } else if (ch === '"') quoted = true;
     else if (ch === ',') { row.push(cell); cell = ''; }
-    else if (ch === '\\n' || ch === '\\r') {
-      if (ch === '\\r' && input[i + 1] === '\\n') i++;
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && input[i + 1] === '\n') i++;
       row.push(cell); rows.push(row); row = []; cell = '';
     } else cell += ch;
   }
