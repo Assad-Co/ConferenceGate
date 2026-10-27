@@ -85,6 +85,6 @@ conferenceVerificationRouter.post('/approve', async (req, res) => {
  if (!evidence || evidence.status !== 'corroborated' || evidence.submitted_by === verifySessionToken(req.cookies?.[COOKIE_NAME]) || Date.parse(evidence.expires_at) <= Date.now()) {
   res.status(409).json({error:'Evidence cannot be approved'}); return;
  }
- await dbRun("UPDATE conference_verification_evidence SET status='approved' WHERE id=?",[id]);
+ await dbRun("UPDATE conference_verification_evidence SET status='approved',approved_by=? WHERE id=?",[verifySessionToken(req.cookies?.[COOKIE_NAME]),id]);
  res.json({approved:true,id});
 });
