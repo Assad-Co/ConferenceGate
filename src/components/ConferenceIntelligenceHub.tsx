@@ -906,10 +906,9 @@ function IntelligenceWorkspace({
         <section className="space-y-3">
           <h3 className="font-bold">Saved alerts</h3>
           <p className="text-sm">
-            New matching events and changes to dates, location, CFP status or
-            available sections appear here. A first rule includes current
-            matches. Paused rules resume checking when enabled. Background checks
-            continue when the service is running; email requires opt-in.
+            Manage which conference updates you receive by email. Enabled rules are checked
+            periodically in the background when the service is running. Turn on email
+            notifications above to receive matching conferences in your inbox.
           </p>
           {!state.rules.length && (
             <p>
@@ -962,46 +961,10 @@ function IntelligenceWorkspace({
               </button>
             </div>
           ))}
-          {state.alerts.length > 0 && (
-            <button
-              type="button"
-              className="cg-intel-button"
-              onClick={() =>
-                persist({
-                  ...state,
-                  alerts: state.alerts.map((a) => ({ ...a, read: true })),
-                })
-              }
-            >
-              Mark all read
-            </button>
-          )}
-          {state.alerts.map((a) => (
-            <article key={a.id} className="border rounded-xl p-3">
-              <p className="font-bold">
-                {a.read ? "" : "Unread · "}
-                {a.title}
-              </p>
-              <button
-                type="button"
-                className="text-blue-700 underline"
-                onClick={() => {
-                  persist({
-                    ...state,
-                    alerts: state.alerts.map((x) =>
-                      x.id === a.id ? { ...x, read: true } : x,
-                    ),
-                  });
-                  openEvidence(a.result);
-                }}
-              >
-                {a.result.title}
-              </button>
-              <p className="text-xs">
-                {new Date(a.createdAt).toLocaleString()}
-              </p>
-            </article>
-          ))}
+          <p className="text-sm text-slate-600" role="status">
+            Conference matches are delivered by email when notifications are enabled and the mail service is configured.
+            Manage your alert rules above; individual notifications are not shown on this page.
+          </p>
         </section>
       )}
       {view === "planner" && (
