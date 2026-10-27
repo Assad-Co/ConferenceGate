@@ -46,6 +46,23 @@ export function validateEvent(event: NormalizedEvent, options: ValidationOptions
   if (title.length < MIN_TITLE_LENGTH) errors.push("title_missing_or_too_short");
   if (title.length > MAX_TITLE_LENGTH) errors.push("title_implausibly_long");
 
+  // Reject malformed calendar dates instead of trusting lexicographic comparisons.
+  // This also catches impossible days such as 2027-02-30.
+  for (const [field, value] of [["start_date", event.startDate], ["end_date", event.endDate]] as const) {
+    if (value && !isValidIsoDay(value)) errors.push(`invalid_${field}`);
+  }
+  if (event.startDate && isValidIsoDay(event.startDate) && event.startYear &&
+      Number(event.startDate.slice(0, 4)) !== event.startYear) {
+    errors.push("start_year_conflicts_with_date");
+  }
+  if (event.startDate && isValidIsoDay(event.startDate) && event.startMonth &&
+      Number(event.startDate.slice(5, 7)) !== event.startMonth) {
+    errors.push("start_month_conflicts_with_date");
+  }
+  for (const [field, value] of Object.entries(event.deadlines)) {
+    if (value && !isValidIsoDay(value)) flags.push(`${toSnake(field)}_invalid_date`);
+  }
+
   if (event.startDate && event.endDate && event.endDate < event.startDate) {
     errors.push("end_date_before_start_date");
   }
@@ -141,6 +158,15 @@ const SERIOUS_FLAGS = new Set([
   "broken_official_url",
   "duplicate_content",
 ]);
+
+/** Exact YYYY-MM-DD with real Gregorian calendar days; no rollover or guessing. */
+function isValidIsoDay(value: string): boolean {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
 
 function toSnake(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
