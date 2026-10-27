@@ -61,6 +61,8 @@ jobs:
         run: npm run build
       - name: Validate final build-patched TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
+      - name: Conference intelligence matching, alerts and access regressions
+        run: npx tsx --test src/intelligence/engine.test.ts && node --test scripts/conferenceIntelligenceIntegration.test.mjs
       - name: Launch readiness regressions
         run: npx tsx --test server/publicConferenceVisibility.test.ts src/utils/__tests__/conferencePresentation.test.ts server/testEmail.test.ts
       - name: Organizer and Sponsor form accessibility regressions
