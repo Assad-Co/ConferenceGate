@@ -10,7 +10,7 @@ export function auditCatalogue(records, today = new Date().toISOString().slice(0
   const examples = { past: [], missingOfficialUrl: [], duplicateKeys: [] };
   const seen = new Set();
   const validDay = (s) => {
-    if (typeof s !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return false;
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
     const [y, m, d] = s.split('-').map(Number);
     const date = new Date(Date.UTC(y, m - 1, d));
     return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
