@@ -104,6 +104,21 @@ test("two editions of one series are not duplicates of each other", () => {
   assert.match(verdict.reason, /different dates/);
 });
 
+test("recurring editions sharing one official homepage remain separate", () => {
+  const next = makeEvent({
+    title: "34th International Meeting on Organic Geochemistry",
+    startDate: "2029-09-10",
+    endDate: "2029-09-15",
+    startYear: 2029,
+    startMonth: 9,
+    officialUrl: "https://imog2027.example.org/",
+    sourceUrl: "https://imog2027.example.org/",
+  });
+  const verdict = scoreDuplicate(next, makeCandidate());
+  assert.equal(verdict.decision, "separate");
+  assert.match(verdict.reason, /different conference edition years/);
+});
+
 test("same-name conferences in different countries stay separate", () => {
   const other = makeEvent({
     title: "International Meeting on Organic Geochemistry",
