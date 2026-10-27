@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Conference } from '../types';
+import { conferenceTrustSignals, conferenceMatchReasons } from '../utils/conferenceTrust';
 import { deduplicateConferenceResults, formatConferenceLocation } from '../utils/conferencePresentation';
 import { conferenceDurationDays, formatDateRange } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
@@ -825,6 +826,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               const date = dateLine(result.startDate, result.endDate);
               const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
               const categories = Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[])).slice(0, 4);
+              const trust = conferenceTrustSignals(result);
+              const reasons = conferenceMatchReasons(result, submittedSearchTerm);
               return (
                 <article
                   key={`${result.link}|${result.title}|${result.startDate || ''}`}
@@ -840,6 +843,10 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       <div className="min-w-0">
                         <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors leading-snug">{result.title}</h3>
                         {result.organization && <p className="text-[11px] font-semibold text-slate-500 mt-0.5">{result.organization}</p>}
+                        <p className="text-[11px] text-slate-500 mt-1" title={trust.missing.length ? `Missing: ${trust.missing.join(', ')}. Not independently verified.` : 'Information completeness only; not independently verified.'}>
+                          Information: {trust.score}/{trust.total} · Verification not confirmed
+                        </p>
+                        {reasons.length > 0 && <p className="text-[11px] text-indigo-700 mt-1">Topic matches: {reasons.join(', ')}</p>}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {result.cfpOpen && <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">Open CFP</span>}
