@@ -308,3 +308,15 @@ test("calendar export uses inclusive event range, escaped fields and no injected
     null,
   );
 });
+test("saved alerts include and exclude organizer-name matches exactly like search", () => {
+  const records = [{ ...result, organization: "dmg events" }, result];
+  for (const query of ["dmg", "AI -dmg"]) {
+    const rule = { id: "organizer-rule", name: query, query, country: "", cfpOnly: false, enabled: true, seen: {} };
+    const expected = smartSearch(records, query, "", "", "", false);
+    assert.equal(expected.length, 1);
+    assert.deepEqual(
+      evaluateAlerts({ ...emptyState(), rules: [rule] }, records).alerts.map(a => a.result.organization),
+      expected.map(r => r.organization),
+    );
+  }
+});
