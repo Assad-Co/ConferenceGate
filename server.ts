@@ -2,6 +2,7 @@ import { deduplicateConferenceResults } from './src/utils/conferencePresentation
 import "./server/env";
 import express from "express";
 import { semanticMatchingRouter } from "./server/semanticMatching";
+import { conferenceVerificationRouter, initConferenceVerificationSchema } from "./server/conferenceVerification";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
@@ -75,6 +76,7 @@ async function startServer() {
   // be ready before any request can be handled.
   await initDb();
   await initGrowthAutomationSchema();
+  await initConferenceVerificationSchema();
   await initProfessionalTrustSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
@@ -429,6 +431,7 @@ async function startServer() {
     )) as typeof res.json;
     next();
   });
+  app.use("/api/conference-verification", conferenceVerificationRouter);
   app.use("/api/search", semanticMatchingRouter);
   app.use("/api/search", braveSearchRouter);
 
