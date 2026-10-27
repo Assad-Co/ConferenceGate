@@ -5,7 +5,7 @@ on:
     - cron: '15 4 * * 1'
   push:
     paths:
-      - 'data/conferencegate-worldwide-2026-2028.json'
+      - 'data/conferencegate-worldwide-2026-2028.csv'
       - 'scripts/auditCatalogueSnapshot.mjs'
       - 'scripts/tests/auditCatalogueSnapshot.test.mjs'
       - '.github/workflows/catalogue-quality-audit.yml'
@@ -22,7 +22,7 @@ jobs:
       - name: Validate audit implementation
         run: node --test scripts/tests/auditCatalogueSnapshot.test.mjs
       - name: Audit snapshot
-        run: node scripts/auditCatalogueSnapshot.mjs > catalogue-audit-report.json
+        run: node scripts/auditCatalogueSnapshot.mjs data/conferencegate-worldwide-2026-2028.csv > catalogue-audit-report.json
       - name: Show audit summary
         run: cat catalogue-audit-report.json
       - name: Save audit report
