@@ -900,6 +900,9 @@ function IntelligenceWorkspace({
         </section>
       )}
       {view === "alerts" && (
+        <EmailAlertPreferences />
+      )}
+      {view === "alerts" && (
         <section className="space-y-3">
           <h3 className="font-bold">Saved alerts</h3>
           <p className="text-sm">
@@ -1164,4 +1167,33 @@ function IntelligenceWorkspace({
       )}
     </div>
   );
+}
+
+function EmailAlertPreferences() {
+  const [enabled,setEnabled] = useState(false);
+  const [configured,setConfigured] = useState(false);
+  const [message,setMessage] = useState("");
+  useEffect(() => {
+    fetch("/api/intelligence/email-preferences",{credentials:"include"})
+      .then(r=>r.ok?r.json():Promise.reject(new Error("Preferences unavailable")))
+      .then(data=>{setEnabled(data.enabled===true);setConfigured(data.deliveryConfigured===true);})
+      .catch(()=>setMessage("Email preferences could not be loaded."));
+  },[]);
+  async function toggle(next:boolean) {
+    try {
+      const r=await fetch("/api/intelligence/email-preferences",{method:"PUT",credentials:"include",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:next})});
+      if(!r.ok)throw new Error("Unable to save preference");
+      setEnabled(next);
+      setMessage(next?"Email alerts enabled. You can unsubscribe at any time.":"Email alerts disabled.");
+    }catch{setMessage("Unable to update email preferences.");}
+  }
+  return <div className="rounded-xl border p-4 space-y-2">
+    <label className="flex items-center gap-2">
+      <input type="checkbox" checked={enabled} onChange={e=>void toggle(e.target.checked)} />
+      <span>Send me email when my saved conference alerts find new matches</span>
+    </label>
+    <p className="text-xs">Optional. You can turn this off here or use the unsubscribe link in an email. Emails are sent only after delivery is configured.</p>
+    {!configured&&<p className="text-xs">Email delivery is not yet activated by the administrator.</p>}
+    {message&&<p className="text-xs" role="status">{message}</p>}
+  </div>;
 }

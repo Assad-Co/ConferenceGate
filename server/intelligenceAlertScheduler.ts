@@ -1,3 +1,4 @@
+import { deliverIntelligenceEmail } from "./intelligenceEmail";
 import { dbAll, dbRun } from "./db";
 import { browseStoredConferences } from "./braveSearch";
 import { evaluateAlerts, parseState } from "../src/intelligence/engine";
@@ -26,6 +27,10 @@ export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: n
           [next, new Date().toISOString(), account.user_id, account.state_json]
         );
         changed++;
+        const previous = new Set(before.alerts.map(a => a.id));
+        for (const alert of after.alerts.filter(a => !previous.has(a.id)).slice(0, 20)) {
+          await deliverIntelligenceEmail(account.user_id, alert);
+        }
       } catch (error) {
         console.warn("[intelligence-alerts] account scan failed", error instanceof Error ? error.message : "unknown error");
       }
