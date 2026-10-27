@@ -284,3 +284,12 @@ test("impossible abstract deadlines are flagged for review", () => {
   });
   assert.ok(result.qualityFlags.includes("abstract_deadline_invalid_date"));
 });
+
+test("valid Gregorian conference dates remain accepted", () => {
+  const result = validateEvent(makeEvent({ startDate: "2027-09-14", endDate: "2027-09-16", startYear: 2027, startMonth: 9 }), {
+    targetYears: [2027], sourceTrust: 0.9, now: NOW,
+  });
+  assert.equal(result.valid, true, result.errors.join(", "));
+  assert.ok(!result.errors.includes("invalid_start_date"));
+  assert.ok(!result.errors.includes("invalid_end_date"));
+});
