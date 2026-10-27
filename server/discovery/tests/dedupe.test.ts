@@ -261,3 +261,26 @@ test("thin records are flagged neutrally and held for review, never accused of a
     "flags describe missing data, never make accusations"
   );
 });
+
+test("impossible event dates are rejected instead of silently normalized", () => {
+  const result = validateEvent(makeEvent({ startDate: "2027-02-30", startMonth: 2 }), {
+    targetYears: [2027], sourceTrust: 0.9, now: NOW,
+  });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes("invalid_start_date"));
+});
+
+test("conflicting date metadata is rejected", () => {
+  const result = validateEvent(makeEvent({ startYear: 2028 }), {
+    targetYears: [2027, 2028], sourceTrust: 0.9, now: NOW,
+  });
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes("start_year_conflicts_with_date"));
+});
+
+test("impossible abstract deadlines are flagged for review", () => {
+  const result = validateEvent(makeEvent({ deadlines: { ...EMPTY_DEADLINES, abstractDeadline: "2027-02-30" } }), {
+    targetYears: [2027], sourceTrust: 0.9, now: NOW,
+  });
+  assert.ok(result.qualityFlags.includes("abstract_deadline_invalid_date"));
+});
