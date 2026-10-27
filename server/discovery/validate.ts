@@ -136,10 +136,10 @@ export function validateEvent(event: NormalizedEvent, options: ValidationOptions
     !!event.startDate &&
     !!event.country &&
     !!event.officialUrl &&
-    flags.filter((flag) => SERIOUS_FLAGS.has(flag)).length === 0
+    flags.filter((flag) => SERIOUS_FLAGS.has(flag) || flag.endsWith("_invalid_date")).length === 0
   ) {
     status = "published";
-  } else if (event.confidenceScore < 0.45 || flags.filter((flag) => SERIOUS_FLAGS.has(flag)).length >= 2) {
+  } else if (event.confidenceScore < 0.45 || flags.filter((flag) => SERIOUS_FLAGS.has(flag) || flag.endsWith("_invalid_date")).length >= 2) {
     status = "needs_review";
   } else {
     status = "validated";
