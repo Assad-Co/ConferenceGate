@@ -1,3 +1,4 @@
+import { startProfessionalIntelligenceAlertScheduler } from "./server/intelligenceAlertScheduler";
 import { intelligenceSyncRouter, initIntelligenceSyncSchema } from "./server/intelligenceSync";
 import { deduplicateConferenceResults } from './src/utils/conferencePresentation';
 import "./server/env";
@@ -79,6 +80,7 @@ async function startServer() {
   await initGrowthAutomationSchema();
   await initConferenceVerificationSchema();
   await initIntelligenceSyncSchema();
+  startProfessionalIntelligenceAlertScheduler();
   await initProfessionalTrustSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
