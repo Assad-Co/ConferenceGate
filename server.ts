@@ -1,3 +1,4 @@
+import { intelligenceSyncRouter, initIntelligenceSyncSchema } from "./server/intelligenceSync";
 import { deduplicateConferenceResults } from './src/utils/conferencePresentation';
 import "./server/env";
 import express from "express";
@@ -77,6 +78,7 @@ async function startServer() {
   await initDb();
   await initGrowthAutomationSchema();
   await initConferenceVerificationSchema();
+  await initIntelligenceSyncSchema();
   await initProfessionalTrustSchema();
 
   if (process.env.OWNER_LINKEDIN_PORTRAIT_REPAIR === "1") {
@@ -431,6 +433,7 @@ async function startServer() {
     )) as typeof res.json;
     next();
   });
+  app.use("/api/intelligence", intelligenceSyncRouter);
   app.use("/api/conference-verification", conferenceVerificationRouter);
   app.use("/api/search", semanticMatchingRouter);
   app.use("/api/search", braveSearchRouter);
