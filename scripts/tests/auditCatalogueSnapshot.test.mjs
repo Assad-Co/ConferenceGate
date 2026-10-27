@@ -17,3 +17,10 @@ test('audit counts expired events, invalid dates, and missing sources without mo
  assert.equal(report.counters.missingOfficialUrl, 1);
  assert.equal(JSON.stringify(records), original);
 });
+
+test('valid calendar dates are classified as upcoming rather than unknown', () => {
+ const report = auditCatalogue([{ title: 'Future Conference', startDate: '2027-06-01', endDate: '2027-06-03', officialUrl: 'https://example.org', organization: 'Society', country: 'UK' }], '2026-10-27');
+ assert.equal(report.counters.upcoming, 1);
+ assert.equal(report.counters.unknownDate, 0);
+ assert.equal(report.counters.invalidEventDate, 0);
+});
