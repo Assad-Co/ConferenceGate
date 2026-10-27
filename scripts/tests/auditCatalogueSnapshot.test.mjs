@@ -26,10 +26,10 @@ test('valid calendar dates are classified as upcoming rather than unknown', () =
 });
 
 test('CSV parser handles quoted commas, embedded newlines and escaped quotes', () => {
- const csv = 'title,startDate,organization\\n"Event, A",2027-06-01,"Society ""A"""\\n"Event\\nB",2027-07-01,Institute\\n';
+ const csv = 'title,startDate,organization\n"Event, A",2027-06-01,"Society ""A"""\n"Event\nB",2027-07-01,Institute\n';
  const rows = parseCatalogueCsv(csv);
  assert.equal(rows.length, 2);
  assert.equal(rows[0].title, 'Event, A');
  assert.equal(rows[0].organization, 'Society "A"');
- assert.equal(rows[1].title, 'Event\\nB');
+ assert.equal(rows[1].title, 'Event\nB');
 });
