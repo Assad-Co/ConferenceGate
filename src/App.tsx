@@ -27,6 +27,7 @@ import { Footer } from './components/Footer';
 import { SupportCenter } from './components/SupportCenter';
 import { HomeLanding } from './components/HomeLanding';
 import { DiscoveryEngine } from './components/DiscoveryEngine';
+import { ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';
 import { ConferenceDetail } from './components/ConferenceDetail';
 import { ConferenceFeedbackModal } from './components/ConferenceFeedbackModal';
 import { ExternalConferenceDetail, ExternalDetailTab } from './components/ExternalConferenceDetail';
@@ -1716,7 +1717,8 @@ export function App() {
           />
         )}
 
-        {activeTab === 'discover' && (
+        {activeTab === 'discover' && authUser && (
+          <ConferenceDiscoveryWorkspace accountId={authUser.id} profile={userProfile} onOpen={handleOpenExternalResult} onOpportunities={() => setActiveTab('reviewer')}>
           <DiscoveryEngine
             conferences={discoverConferences}
             onSelectConference={handleSelectConference}
@@ -1728,6 +1730,7 @@ export function App() {
             onToggleSave={handleToggleSaveConference}
             onToggleFollow={handleToggleFollowConference}
           />
+          </ConferenceDiscoveryWorkspace>
         )}
 
         {activeTab === 'external-detail' && selectedExternalResult && (
