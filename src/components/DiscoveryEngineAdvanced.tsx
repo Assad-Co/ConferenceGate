@@ -507,7 +507,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
             className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">
             {personalized ? 'Personalized ranking on' : 'Rank for my interests'}
           </button>
-          <p className="w-full text-[11px] text-slate-500">Preferences stay in this browser. {semanticStatus === 'ready' ? 'Trained embedding model ranking active (top 30 results).' : semanticStatus === 'loading' ? 'Calculating semantic relevance…' : 'Keyword matching is used when the trained model is unavailable.'}</p>
+          <p className="w-full text-[11px] text-slate-500">Preferences are saved in this browser; when model ranking is enabled, interests and conference text are sent to the configured embedding provider. {semanticStatus === 'ready' ? 'Trained embedding model ranking active (top 30 results).' : semanticStatus === 'loading' ? 'Calculating semantic relevance…' : 'Keyword matching is used when the trained model is unavailable.'}</p>
         </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form
