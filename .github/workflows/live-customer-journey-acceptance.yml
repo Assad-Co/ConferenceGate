@@ -2,6 +2,10 @@ name: Live Three-Account Customer Journey Acceptance
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/live-customer-journey-acceptance.yml
   pull_request:
     branches: [main]
     paths:
