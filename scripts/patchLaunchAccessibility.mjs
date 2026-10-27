@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { associateRoleFormLabels } from './roleFormAccessibility.mjs';
 
 // Run after legacy patches so labels are associated with the final generated form controls.
 for (const [file, prefix] of [
@@ -38,6 +39,13 @@ nav = nav.replaceAll('className="p-1 sm:p-1.5 md:p-2 text-slate-600', 'className
 nav = nav.replace('className="flex items-center gap-2 cursor-pointer"', 'className="min-h-11 min-w-11 flex items-center justify-center gap-2 cursor-pointer"');
 fs.writeFileSync(file, nav);
 console.log('[launch-accessibility] final form labels, modal focus and mobile navigation applied');
+
+for (const [roleFile, prefix] of [
+  ['src/components/OrganizerDashboard.tsx', 'organizer'],
+  ['src/components/SponsorWizardPanel.tsx', 'sponsor'],
+]) {
+  fs.writeFileSync(roleFile, associateRoleFormLabels(fs.readFileSync(roleFile, 'utf8'), prefix));
+}
 
 const discoveryFile = 'src/components/DiscoveryEngineAdvanced.tsx';
 let discovery = fs.readFileSync(discoveryFile, 'utf8');

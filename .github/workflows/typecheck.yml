@@ -63,6 +63,8 @@ jobs:
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Launch readiness regressions
         run: npx tsx --test server/publicConferenceVisibility.test.ts src/utils/__tests__/conferencePresentation.test.ts server/testEmail.test.ts
+      - name: Organizer and Sponsor form accessibility regressions
+        run: node --test scripts/roleFormAccessibility.test.mjs
       - name: Private Organizer and Sponsor owner-access isolation
         run: node scripts/smokePrivateWorkspaces.mjs
       - name: Turso runtime database selection smoke test
