@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { Image as ImageIcon, Loader2, UploadCloud, X } from 'lucide-react';
 import { resizeImageFile } from '../utils/image';
 
@@ -22,6 +22,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
   className = '',
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +59,10 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      {label && <label className="block font-bold uppercase text-[10px] text-slate-500">{label}</label>}
+      {label && <label htmlFor={inputId} className="block font-bold uppercase text-[10px] text-slate-500">{label}</label>}
       <div
         role="button"
+        aria-label={`Upload ${label}`}
         tabIndex={0}
         onClick={() => !loading && inputRef.current?.click()}
         onKeyDown={(event) => {
@@ -79,6 +81,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
         }`}
       >
         <input
+          id={inputId}
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
