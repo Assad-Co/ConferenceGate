@@ -255,6 +255,33 @@ function IntelligenceWorkspace({
       active = false;
     };
   }, [view]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/intelligence/state", { credentials: "include" })
+      .then((response) => { if (!response.ok) throw new Error("sync unavailable"); return response.json(); })
+      .then((payload) => {
+        if (!active) return;
+        if (payload.state) {
+          setState(payload.state as IntelligenceState);
+          saveIntelligence(accountId, payload.state as IntelligenceState);
+        } else if (storage.data.rules.length || storage.data.plans.length || storage.data.alerts.length) {
+          fetch("/api/intelligence/state", { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ state: storage.data }) }).catch(() => {});
+        }
+      }).catch(() => { if (active) setStorageError("Cloud sync unavailable; changes remain on this device."); });
+    return () => { active = false; };
+  }, [accountId]);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/intelligence/state", { credentials: "include" }).then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.state) setState(data.state as IntelligenceState); }).catch(() => {});
+    }, 60000);
+    return () => window.clearInterval(id);
+  }, [accountId]);
+  const syncToServer = (next: IntelligenceState) => {
+    fetch("/api/intelligence/state", { method: "PUT", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ state: next }) })
+      .catch(() => setStorageError("Cloud sync failed; your changes remain on this device."));
+  };
   const persist = (next: IntelligenceState) => {
     if (storage.error) {
       setStorageError(storage.error);
@@ -262,6 +289,7 @@ function IntelligenceWorkspace({
     }
     try {
       saveIntelligence(accountId, next);
+      syncToServer(next);
       setState(next);
       setStorageError("");
       return true;
@@ -279,6 +307,7 @@ function IntelligenceWorkspace({
       if (JSON.stringify(previous) === JSON.stringify(next)) return previous;
       try {
         saveIntelligence(accountId, next);
+        syncToServer(next);
         return next;
       } catch {
         setStorageError("Alerts could not be saved in this browser.");
