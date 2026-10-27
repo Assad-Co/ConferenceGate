@@ -98,6 +98,7 @@ export function ConferenceIntelligenceHub({
   onOpportunities?: () => void;
 }) {
   const [expanded, setExpanded] = useState(defaultView === "planner");
+  const [emailShortcut, setEmailShortcut] = useState(false);
   return (
     <section className="cg-intelligence bg-white border border-slate-200 rounded-2xl mb-5 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -112,6 +113,7 @@ export function ConferenceIntelligenceHub({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="cg-intel-button" onClick={() => {
+            setEmailShortcut(true);
             setExpanded(true);
             onExpandedChange?.(true);
           }}>Email alerts</button>
@@ -136,7 +138,7 @@ export function ConferenceIntelligenceHub({
           accountId={accountId}
           profile={profile}
           onOpen={onOpen}
-          defaultView={defaultView}
+          defaultView={emailShortcut ? "alerts" : defaultView}
           onOpportunities={onOpportunities}
         />
       )}
