@@ -49,5 +49,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const raw = JSON.parse(fs.readFileSync(filename, 'utf8'));
   const records = Array.isArray(raw) ? raw : raw.records;
   if (!Array.isArray(records)) throw new Error('Expected an array or { records: [...] }');
-  process.stdout.write(JSON.stringify(auditCatalogue(records), null, 2) + '\\n');
+  process.stdout.write(JSON.stringify(auditCatalogue(records), null, 2) + '\n');
 }
