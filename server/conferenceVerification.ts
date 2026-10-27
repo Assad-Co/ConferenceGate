@@ -1,10 +1,19 @@
 import { Router } from 'express';
 import { dbAll, dbRun } from './db';
 import crypto from 'node:crypto';
+import { verifySessionToken, COOKIE_NAME } from './auth';
+import { dbGet } from './db';
 
 export const conferenceVerificationRouter = Router();
+async function authorizedCurator(req: import('express').Request): Promise<boolean> {
+ const userId = verifySessionToken(req.cookies?.[COOKIE_NAME]);
+ if (!userId) return false;
+ const user = await dbGet<{email:string}>('SELECT email FROM users WHERE id=?',[userId]);
+ const allowed = (process.env.CONFERENCE_VERIFICATION_REVIEWERS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+ return !!user && allowed.includes(user.email.toLowerCase());
+}
 export async function initConferenceVerificationSchema() {
- await dbRun("CREATE TABLE IF NOT EXISTS conference_verification_evidence (id TEXT PRIMARY KEY, conference_url TEXT NOT NULL, official_source_url TEXT NOT NULL, claimed_title TEXT NOT NULL, observed_title TEXT NOT NULL, source_excerpt TEXT NOT NULL, checked_at TEXT NOT NULL, expires_at TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('corroborated','needs_review')), evidence_hash TEXT NOT NULL)");
+ await dbRun("CREATE TABLE IF NOT EXISTS conference_verification_evidence (id TEXT PRIMARY KEY, conference_url TEXT NOT NULL, official_source_url TEXT NOT NULL, claimed_title TEXT NOT NULL, observed_title TEXT NOT NULL, source_excerpt TEXT NOT NULL, checked_at TEXT NOT NULL, expires_at TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('corroborated','needs_review','approved')), evidence_hash TEXT NOT NULL)");
  await dbRun('CREATE INDEX IF NOT EXISTS idx_conf_verification_url ON conference_verification_evidence(conference_url,checked_at)');
 }
 const publicUrl = (raw: string): URL | null => {
@@ -33,7 +42,7 @@ conferenceVerificationRouter.get('/evidence', async (req, res) => {
    'SELECT official_source_url,claimed_title,observed_title,source_excerpt,checked_at,expires_at,status FROM conference_verification_evidence WHERE conference_url=? ORDER BY checked_at DESC LIMIT 5',
    [conferenceUrl]
   );
-  const fresh = rows.filter(row => row.status === 'corroborated' && Date.parse(row.expires_at) > Date.now());
+  const fresh = rows.filter(row => row.status === 'approved' && Date.parse(row.expires_at) > Date.now());
   res.setHeader('Cache-Control', 'no-store');
   res.json({ verified: fresh.length > 0, evidence: rows, meaning: 'Source corroboration only; not an endorsement of event quality or organizer legitimacy.' });
  } catch { res.status(503).json({ error: 'Verification evidence temporarily unavailable' }); }
@@ -53,3 +62,27 @@ export async function recordConferenceVerification(input: {
   [crypto.randomUUID(),input.conferenceUrl,input.officialSourceUrl,input.claimedTitle,input.observedTitle,input.sourceExcerpt,checked.toISOString(),expires.toISOString(),status,hash]);
  return { status, expiresAt: expires.toISOString() };
 }
+
+conferenceVerificationRouter.post('/submit-evidence', async (req, res) => {
+ if (!(await authorizedCurator(req))) { res.status(403).json({ error: 'Reviewer authorization required' }); return; }
+ const input = req.body || {};
+ if (['conferenceUrl','officialSourceUrl','claimedTitle','observedTitle','sourceExcerpt'].some(key => typeof input[key] !== 'string')) {
+  res.status(400).json({error:'Evidence fields required'}); return;
+ }
+ try {
+  const result = await recordConferenceVerification(input);
+  res.status(201).json({ ...result, approval: 'pending_review' });
+ } catch { res.status(400).json({error:'Invalid evidence submission'}); }
+});
+conferenceVerificationRouter.post('/approve', async (req, res) => {
+ if (!(await authorizedCurator(req))) { res.status(403).json({error:'Reviewer authorization required'}); return; }
+ await initConferenceVerificationSchema();
+ const id = req.body?.id;
+ if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) { res.status(400).json({error:'Valid evidence ID required'}); return; }
+ const evidence = await dbGet<{status:string;expires_at:string}>('SELECT status,expires_at FROM conference_verification_evidence WHERE id=?',[id]);
+ if (!evidence || evidence.status !== 'corroborated' || Date.parse(evidence.expires_at) <= Date.now()) {
+  res.status(409).json({error:'Evidence cannot be approved'}); return;
+ }
+ await dbRun("UPDATE conference_verification_evidence SET status='approved' WHERE id=?",[id]);
+ res.json({approved:true,id});
+});
