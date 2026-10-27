@@ -424,7 +424,7 @@ function IntelligenceWorkspace({
     );
     setView("alerts");
     setNotice(
-      "Alert saved. Current matches appear now; future checks run while this workspace is open.",
+      "Alert saved. Current matches appear now. Alerts are also checked periodically in the background when enabled; email requires your opt-in and working delivery configuration.",
     );
   };
   const openEvidence = (r: LiveSearchResult) => {
@@ -453,9 +453,9 @@ function IntelligenceWorkspace({
       <p className="text-xs text-slate-500">
         Free professional tools. Matches use explainable topic synonyms and your
         profile; scores are not endorsements. Plans and alert rules are saved
-        per account in this browser only. They do not sync across devices.
-        Alerts run here every five minutes while open; no email or background
-        delivery.
+        to your signed-in account and synchronized across devices when online.
+        Alerts refresh while this workspace is open and are checked periodically
+        in the background when the service is enabled. Email notifications are optional.
       </p>
       {storageError && (
         <p role="alert" className="text-sm text-red-700">
@@ -908,8 +908,8 @@ function IntelligenceWorkspace({
           <p className="text-sm">
             New matching events and changes to dates, location, CFP status or
             available sections appear here. A first rule includes current
-            matches. Paused rules resume checking when enabled. Checks require
-            this workspace to be open.
+            matches. Paused rules resume checking when enabled. Background checks
+            continue when the service is running; email requires opt-in.
           </p>
           {!state.rules.length && (
             <p>
