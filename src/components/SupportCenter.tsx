@@ -108,22 +108,32 @@ export const SupportCenter: React.FC<SupportCenterProps> = ({ page, accountEmail
 
       {page === 'privacy' && (
         <Card><div className="space-y-5 text-sm leading-6 text-slate-600">
+          <p><strong className="text-slate-900">Data controller.</strong> ConferenceGate OÜ, registered address: Sepapaja tn 6, 15551 Tallinn, Harju Maakond, Estonia, operates the ConferenceGate platform. Privacy requests may be submitted using the Ask Us feature. Please do not include passwords or sensitive credentials.</p>
           <p><strong className="text-slate-900">Privacy at ConferenceGate.</strong> ConferenceGate uses account and profile information to provide conference discovery, participation, messaging, professional-profile, organizer, and sponsor features.</p>
           <p><strong className="text-slate-900">Information you provide.</strong> This may include your name, email, role, organization, professional profile details, conference activity, messages, submissions, reviews, and information you choose to import or publish.</p>
           <p><strong className="text-slate-900">Public professional information.</strong> When you request a professional-profile import, ConferenceGate may process publicly available professional information and source-labeled evidence to enrich your profile.</p>
+          <p><strong className="text-slate-900">Purposes and lawful bases.</strong> Account and platform information is processed to provide requested services, administer accounts, maintain security, and meet applicable legal obligations. Other processing, including optional analytics or marketing, must have an appropriate legal basis and, where required, consent.</p>
+          <p><strong className="text-slate-900">Your rights.</strong> Subject to applicable law, you may request access, correction, deletion, restriction, portability, or object to certain processing, and withdraw consent where processing relies on it. You may also lodge a complaint with a competent data protection authority.</p>
+          <p><strong className="text-slate-900">Service providers and international transfers.</strong> Hosting, authentication, communications, analytics, and payment providers may process information to support the platform. Any international transfer must use a valid legal transfer mechanism where required.</p>
+          <p><strong className="text-slate-900">Retention.</strong> Information is retained only as long as needed for its stated purposes, contractual commitments, legitimate operational needs, and applicable legal requirements. Specific retention periods should be documented before launch.</p>
           <p><strong className="text-slate-900">Security.</strong> ConferenceGate uses authentication and access controls designed to keep private workspaces and account activity separated. Users should protect their own credentials and report suspected unauthorized access promptly.</p>
-          <p><strong className="text-slate-900">Contact.</strong> Privacy questions or requests can be sent through Ask Us or to support@conferencegate.com.</p>
+          <p><strong className="text-slate-900">Contact.</strong> Privacy questions or requests can be submitted through Ask Us.</p>
           <p className="text-xs text-slate-400">Launch version · Last updated October 2026. This page should be reviewed by qualified legal counsel before material commercial expansion.</p>
         </div></Card>
       )}
 
       {page === 'terms' && (
         <Card><div className="space-y-5 text-sm leading-6 text-slate-600">
+          <p><strong className="text-slate-900">Platform operator.</strong> ConferenceGate is operated by ConferenceGate OÜ, registered address: Sepapaja tn 6, 15551 Tallinn, Harju Maakond, Estonia.</p>
           <p><strong className="text-slate-900">Using ConferenceGate.</strong> Users must provide lawful information, respect other members, and use ConferenceGate only for legitimate conference, professional, organizer, and sponsor activity.</p>
           <p><strong className="text-slate-900">Conference information.</strong> ConferenceGate may aggregate information from official and public sources. Dates, fees, deadlines, speakers, venues, and other details can change. Users should confirm important decisions with the linked official conference source.</p>
           <p><strong className="text-slate-900">User content.</strong> You remain responsible for abstracts, profile information, messages, reviews, conference listings, sponsorship content, and other material you submit.</p>
           <p><strong className="text-slate-900">Accounts and access.</strong> Do not share credentials or attempt to access another user's private workspace or data. ConferenceGate may restrict accounts used for abuse, fraud, impersonation, or unauthorized access.</p>
-          <p><strong className="text-slate-900">Commercial features.</strong> Paid organizer, sponsor, and transaction features may be governed by additional terms when activated.</p>
+          <p><strong className="text-slate-900">Organizer and sponsor responsibilities.</strong> Organizers and sponsors must ensure their published claims, event details, intellectual property, and offers are accurate and lawful. ConferenceGate does not independently guarantee every third-party conference listing.</p>
+          <p><strong className="text-slate-900">Changes and disputes.</strong> Material changes to these terms should be communicated appropriately. Applicable consumer rights and mandatory legal protections remain unaffected; dispute and governing-law details require review before commercial launch.</p>
+          <p><strong className="text-slate-900">Free professional access.</strong> Core accounts for professionals, attendees, and reviewers are available without a subscription charge. Any optional paid feature must be clearly identified before purchase.</p>
+          <p><strong className="text-slate-900">Paid organizer and sponsor services.</strong> Organizer and sponsor accounts may purchase paid plans or services. The applicable price, billing period, included features, taxes, and any renewal terms must be disclosed at checkout before payment is authorized. No paid plan is created merely by registering a free professional account.</p>
+          <p><strong className="text-slate-900">Cancellation and refunds.</strong> Any applicable cancellation procedure, effective date, refund eligibility, and statutory withdrawal rights must be disclosed before purchase. Mandatory consumer rights are not excluded by these terms. Specific refund and renewal policies require confirmation before paid checkout is enabled.</p>
           <p className="text-xs text-slate-400">Launch version · Last updated October 2026. This page should be reviewed by qualified legal counsel before material commercial expansion.</p>
         </div></Card>
       )}
