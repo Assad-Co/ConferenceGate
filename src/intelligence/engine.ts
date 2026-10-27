@@ -339,6 +339,7 @@ export function ruleMatches(rule: AlertRule, r: LiveSearchResult) {
   const subject = [
     r.title,
     r.description,
+    r.organization,
     r.category,
     ...(r.categories || []),
   ].join(" ");
