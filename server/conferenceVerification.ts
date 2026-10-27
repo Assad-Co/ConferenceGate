@@ -1,0 +1,53 @@
+import { Router } from 'express';
+import { dbAll, dbRun } from './db';
+import crypto from 'node:crypto';
+
+export const conferenceVerificationRouter = Router();
+export async function initConferenceVerificationSchema() {
+ await dbRun("CREATE TABLE IF NOT EXISTS conference_verification_evidence (id TEXT PRIMARY KEY, conference_url TEXT NOT NULL, official_source_url TEXT NOT NULL, claimed_title TEXT NOT NULL, observed_title TEXT NOT NULL, source_excerpt TEXT NOT NULL, checked_at TEXT NOT NULL, expires_at TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('corroborated','needs_review')), evidence_hash TEXT NOT NULL)");
+ await dbRun('CREATE INDEX IF NOT EXISTS idx_conf_verification_url ON conference_verification_evidence(conference_url,checked_at)');
+}
+const publicUrl = (raw: string): URL | null => {
+ try {
+  const url = new URL(raw);
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || url.hostname.length > 253) return null;
+  const host = url.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal') ||
+      /^\d+(\.\d+){3}$/.test(host) || host.includes(':')) return null;
+  return url;
+ } catch { return null; }
+};
+export function titleCorroborated(claimed: string, observed: string): boolean {
+ const words = (value: string) => [...new Set(value.toLowerCase().match(/[a-z0-9]{4,}/g) || [])]
+  .filter(word => !['conference','international','annual','meeting','2026','2027','2028','2029'].includes(word));
+ const claimedWords = words(claimed);
+ const found = new Set(words(observed));
+ return claimedWords.length >= 2 && claimedWords.filter(word => found.has(word)).length / claimedWords.length >= 0.75;
+}
+conferenceVerificationRouter.get('/evidence', async (req, res) => {
+ const conferenceUrl = String(req.query.url || '').slice(0, 800);
+ if (!publicUrl(conferenceUrl)) { res.status(400).json({ error: 'Valid HTTPS conference URL required' }); return; }
+ try {
+  const rows = await dbAll<{official_source_url:string;claimed_title:string;observed_title:string;source_excerpt:string;checked_at:string;expires_at:string;status:string}>(
+   'SELECT official_source_url,claimed_title,observed_title,source_excerpt,checked_at,expires_at,status FROM conference_verification_evidence WHERE conference_url=? ORDER BY checked_at DESC LIMIT 5',
+   [conferenceUrl]
+  );
+  const fresh = rows.filter(row => row.status === 'corroborated' && Date.parse(row.expires_at) > Date.now());
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ verified: fresh.length > 0, evidence: rows, meaning: 'Source corroboration only; not an endorsement of event quality or organizer legitimacy.' });
+ } catch { res.status(503).json({ error: 'Verification evidence temporarily unavailable' }); }
+});
+export async function recordConferenceVerification(input: {
+ conferenceUrl:string; officialSourceUrl:string; claimedTitle:string; observedTitle:string; sourceExcerpt:string;
+}) {
+ const event = publicUrl(input.conferenceUrl), source = publicUrl(input.officialSourceUrl);
+ if (!event || !source || input.claimedTitle.length > 300 || input.observedTitle.length > 300 ||
+     !input.sourceExcerpt.trim() || input.sourceExcerpt.length > 2000) throw new Error('Invalid verification evidence');
+ const status = titleCorroborated(input.claimedTitle, input.observedTitle) ? 'corroborated' : 'needs_review';
+ const checked = new Date();
+ const expires = new Date(checked.getTime() + 30 * 86400000);
+ const hash = crypto.createHash('sha256').update([input.conferenceUrl,input.officialSourceUrl,input.observedTitle,input.sourceExcerpt].join('|')).digest('hex');
+ await dbRun('INSERT INTO conference_verification_evidence (id,conference_url,official_source_url,claimed_title,observed_title,source_excerpt,checked_at,expires_at,status,evidence_hash) VALUES (?,?,?,?,?,?,?,?,?,?)',
+  [crypto.randomUUID(),input.conferenceUrl,input.officialSourceUrl,input.claimedTitle,input.observedTitle,input.sourceExcerpt,checked.toISOString(),expires.toISOString(),status,hash]);
+ return { status, expiresAt: expires.toISOString() };
+}
