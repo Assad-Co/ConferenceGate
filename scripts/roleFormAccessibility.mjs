@@ -80,7 +80,7 @@ export function associateRoleFormLabels(source, prefix) {
     'committeeDraft.name': 'Committee member full name',
     'committeeDraft.title': 'Committee member title',
     'committeeDraft.org': 'Committee member organization',
-    'committeeDraft.role': 'Committee member role',
+    'committeeDraft.committeeRole': 'Committee member role',
     'programItemDraft.type': 'Program item type',
     'programItemDraft.title': 'Program item title',
     'programItemDraft.date': 'Program item date',

@@ -26,6 +26,10 @@ test('implicit checkbox labels are preserved', () => {
   assert.equal(associateRoleFormLabels(input, 'role'), input);
 });
 
+test('committee role selector has a stable accessible name', () => {
+  assert.match(associateRoleFormLabels('<select value={committeeDraft.committeeRole}/>', 'organizer'), /aria-label="Committee member role"/);
+});
+
 for (const [path, prefix] of [['src/components/OrganizerDashboard.tsx', 'organizer'], ['src/components/SponsorWizardPanel.tsx', 'sponsor']]) {
   test(`${prefix} final source has no dangling labels and patch replay is stable`, () => {
     const source = associateRoleFormLabels(fs.readFileSync(path, 'utf8'), prefix);
