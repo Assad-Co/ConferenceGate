@@ -4,8 +4,8 @@ export function patchIntelligenceApp(source) {
   if (source.includes("/* conference-intelligence-suite */")) return source;
   const insertions = [
     [
-      "import { MyConferencesHub }",
-      "import { ConferenceIntelligenceHub, ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';\nimport { OrganizerIntelligencePanel, SponsorIntelligencePanel } from './components/RoleIntelligencePanel';\nimport { MyConferencesHub }",
+      "import { DiscoveryEngine }",
+      "import { ConferenceIntelligenceHub, ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';\nimport { OrganizerIntelligencePanel, SponsorIntelligencePanel } from './components/RoleIntelligencePanel';\nimport { DiscoveryEngine }",
     ],
     [
       "{activeTab === 'discover' && (\n          <DiscoveryEngine",
@@ -51,7 +51,7 @@ export function patchIntelligenceApp(source) {
       source.slice(hub, end + 2) +
       "\n          </>" +
       source.slice(end + 2);
-  } else throw new Error("My Conferences integration target missing");
+  } // My Conferences planner integration is optional in clean builds; Discover remains available.
   return source;
 }
 if (

@@ -31,6 +31,8 @@ jobs:
         run: node scripts/repairLaunchDatasetJson.mjs && node scripts/checkLaunchDatasetIntegrity.mjs
       - name: Prepare production UX, real-data, and global discovery patches
         run: node scripts/patchRealProductionData.mjs && node scripts/patchGlobalDiscoveryExpansion.mjs && node scripts/patchImageUploadUX.mjs && node scripts/patchSponsorEvaluationCTA.mjs && node scripts/patchProfessionalSignupOnboarding.mjs && node scripts/patchProfessionalNavigation.mjs && node scripts/patchProfessionalExperiencePolish.mjs && node scripts/patchMyConferencesSaveOnly.mjs && node scripts/patchLinkedInDeepProfessional.mjs && node scripts/patchProfessionalControlsClarity.mjs && node scripts/patchProfessionalProfileSimplify.mjs && node scripts/patchProfessionalCommunicationReliability.mjs && node scripts/patchProfessionalFinalPolish.mjs && node scripts/patchLinkedInFullCareerHistory.mjs && node scripts/patchLinkedInCompleteProfileMerge.mjs && node scripts/patchPapersAbstractsCompleteness.mjs && node scripts/patchProfessionalFinalAcceptance.mjs && node scripts/patchHeavyProfessionalConferenceEvidence.mjs && node scripts/patchHeavyProfessionalConferenceReadStored.mjs && node scripts/patchProfessionalRoleEvidenceCounts.mjs && node scripts/patchProfessionalFinalDeclutter.mjs && node scripts/patchOrganizerFinalUX.mjs
+      - name: Integrate existing conference intelligence workspace
+        run: node scripts/patchConferenceIntelligence.mjs && node --test scripts/conferenceIntelligenceIntegration.test.mjs
       - name: TypeScript
         run: npx tsc -p tsconfig.check.json --noEmit
       - name: Professional experience regression audit
