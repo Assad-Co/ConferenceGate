@@ -209,6 +209,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [richDetailsOnly, setRichDetailsOnly] = useState(false);
   const [resultSort, setResultSort] = useState<DiscoveryResultSort>('recommended');
   const [visibleResultCount, setVisibleResultCount] = useState(24);
+  const [comparisonKeys, setComparisonKeys] = useState<string[]>([]);
 
   // A full browse response is the facet source. It is a server-side stored-catalogue read, not a
   // provider search, so country/city/organizer/category choices represent the worldwide catalogue
@@ -374,6 +375,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
   useEffect(() => { setVisibleResultCount(24); }, [allStored]);
   const displayedStored = allStored.slice(0, visibleResultCount);
+  const comparisonItems = allStored.filter(item => comparisonKeys.includes(item.link + '|' + item.title)).slice(0, 3);
+  const toggleComparison = (key: string) => setComparisonKeys(previous =>
+    previous.includes(key) ? previous.filter(value => value !== key) : previous.length < 3 ? [...previous, key] : previous
+  );
+
 
   const activeFilterCount = [
     countryFilter,
@@ -822,6 +828,27 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
 
         {!webSearchError && displayedStored.length > 0 && (
           <div className="space-y-4">
+            {comparisonItems.length > 0 && (
+              <section className="bg-indigo-50 rounded-xl p-4 border border-indigo-200 space-y-3" aria-label="Compare selected conferences">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-bold text-indigo-900">Compare conferences ({comparisonItems.length}/3)</h3>
+                  <button type="button" onClick={() => setComparisonKeys([])} className="text-sm underline text-indigo-700">Clear comparison</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[550px]">
+                    <thead><tr><th className="p-2">Conference</th><th className="p-2">Date</th><th className="p-2">Location</th><th className="p-2">Organizer</th><th className="p-2">Information</th></tr></thead>
+                    <tbody>{comparisonItems.map(item => <tr key={item.link + '|' + item.title} className="border-t border-indigo-200">
+                      <td className="p-2 font-semibold">{item.title}</td>
+                      <td className="p-2">{dateLine(item.startDate, item.endDate) || 'Not supplied'}</td>
+                      <td className="p-2">{[item.location?.city, item.location?.country].filter(Boolean).join(', ') || 'Not supplied'}</td>
+                      <td className="p-2">{item.organization || 'Not supplied'}</td>
+                      <td className="p-2">{conferenceTrustSignals(item).score}/5 fields</td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-indigo-800">Information completeness is not independent event verification.</p>
+              </section>
+            )}
             {displayedStored.map((result) => {
               const date = dateLine(result.startDate, result.endDate);
               const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
@@ -884,7 +911,13 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                     </div>
                   </div>
 
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex flex-col gap-2">
+                    <button type="button" aria-pressed={comparisonKeys.includes(result.link + '|' + result.title)}
+                      onClick={event => { event.stopPropagation(); toggleComparison(result.link + '|' + result.title); }}
+                      disabled={!comparisonKeys.includes(result.link + '|' + result.title) && comparisonKeys.length >= 3}
+                      className="px-3 py-2 border rounded-lg text-xs font-semibold text-indigo-700 bg-white disabled:opacity-50">
+                      {comparisonKeys.includes(result.link + '|' + result.title) ? 'Remove comparison' : 'Add to comparison'}
+                    </button>
                     <button
                       type="button"
                       onClick={(event) => {
