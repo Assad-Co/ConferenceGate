@@ -187,6 +187,11 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleFollow,
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialSearchQuery);
+  const [interests, setInterests] = useState(() => {
+    try { return window.localStorage.getItem('conferencegate-discovery-interests') || ''; } catch { return ''; }
+  });
+  const [personalized, setPersonalized] = useState(false);
+  useEffect(() => { try { window.localStorage.setItem('conferencegate-discovery-interests', interests); } catch {} }, [interests]);
   const [submittedSearchTerm, setSubmittedSearchTerm] = useState(String(initialSearchQuery ?? '').trim());
   const [searchSubmitCount, setSearchSubmitCount] = useState(0);
   const [manualRetryCount, setManualRetryCount] = useState(0);
@@ -368,10 +373,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     richDetailsOnly,
   ]);
 
-  const allStored = useMemo(
-    () => sortStoredDiscoveryResults(deduplicateConferenceResults(filteredStored), resultSort),
-    [filteredStored, resultSort]
-  );
+  const allStored = useMemo(() => {
+    const sorted = sortStoredDiscoveryResults(deduplicateConferenceResults(filteredStored), resultSort);
+    if (!personalized || !interests.trim()) return sorted;
+    return [...sorted].sort((left, right) =>
+      conferenceMatchReasons(right, interests).length - conferenceMatchReasons(left, interests).length);
+  }, [filteredStored, resultSort, personalized, interests]);
 
   useEffect(() => { setVisibleResultCount(24); }, [allStored]);
   const displayedStored = allStored.slice(0, visibleResultCount);
@@ -454,6 +461,16 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </p>
         </div>
 
+        <div className="mt-4 rounded-xl border border-blue-200 bg-white p-3 flex flex-wrap items-center gap-3">
+          <label htmlFor="discovery-interests" className="text-xs font-bold text-slate-700">Your research interests</label>
+          <input id="discovery-interests" type="text" value={interests} onChange={event => setInterests(event.target.value)}
+            placeholder="e.g. geochemistry, energy, robotics" className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          <button type="button" aria-pressed={personalized} onClick={() => setPersonalized(value => !value)}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">
+            {personalized ? 'Personalized ranking on' : 'Rank for my interests'}
+          </button>
+          <p className="w-full text-[11px] text-slate-500">Preferences stay in this browser. Matching uses transparent subject keywords, not AI inference.</p>
+        </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form
             onSubmit={(event) => {
@@ -854,7 +871,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
               const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
               const categories = Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[])).slice(0, 4);
               const trust = conferenceTrustSignals(result);
-              const reasons = conferenceMatchReasons(result, submittedSearchTerm);
+              const reasons = conferenceMatchReasons(result, personalized && interests.trim() ? interests : submittedSearchTerm);
               return (
                 <article
                   key={`${result.link}|${result.title}|${result.startDate || ''}`}
