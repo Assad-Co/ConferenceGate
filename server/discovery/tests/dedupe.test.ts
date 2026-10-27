@@ -293,3 +293,10 @@ test("invalid CFP deadline blocks automatic publication even when the event is o
   assert.notEqual(result.status, "published");
   assert.ok(result.qualityFlags.includes("abstract_deadline_invalid_date"));
 });
+
+test("valid ISO dates pass Gregorian validation", () => {
+  const result = validateEvent(makeEvent({ startDate: "2027-09-14", endDate: "2027-09-16", startYear: 2027, startMonth: 9 }), {
+    targetYears: [2027], sourceTrust: 0.9, now: NOW,
+  });
+  assert.equal(result.valid, true, result.errors.join(", "));
+});
