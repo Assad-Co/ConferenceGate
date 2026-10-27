@@ -110,6 +110,11 @@ export function ConferenceIntelligenceHub({
             steps.
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="cg-intel-button" onClick={() => {
+            setExpanded(true);
+            onExpandedChange?.(true);
+          }}>Email alerts</button>
         <button
           type="button"
           className="cg-intel-button"
@@ -123,6 +128,7 @@ export function ConferenceIntelligenceHub({
             ? "Close intelligence workspace"
             : "Open intelligence workspace"}
         </button>
+        </div>
       </div>
       {expanded && (
         <IntelligenceWorkspace
@@ -402,6 +408,11 @@ function IntelligenceWorkspace({
       plans: state.plans.map((p) => (p.id === id ? { ...p, ...patch } : p)),
     });
   const saveRule = () => {
+    if (state.rules.some((r) => r.query.trim().toLowerCase() === query.trim().toLowerCase() && r.country === country && r.from === from && r.to === to && r.cfpOnly === cfpOnly)) {
+      setView("alerts");
+      setNotice("This alert subscription already exists. No duplicate was created.");
+      return;
+    }
     if (state.rules.length >= 20) {
       setNotice(
         "Up to 20 alert rules are supported. Remove an existing rule first.",
@@ -444,9 +455,7 @@ function IntelligenceWorkspace({
             onClick={() => setView(id)}
           >
             {label}
-            {id === "alerts" && state.alerts.some((a) => !a.read)
-              ? ` (${state.alerts.filter((a) => !a.read).length})`
-              : ""}
+
           </button>
         ))}
       </div>
