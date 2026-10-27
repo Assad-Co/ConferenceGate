@@ -2,14 +2,10 @@ import fs from "node:fs";
 // Run after the legacy source generators. Keep the integration narrow and replay-safe.
 export function patchIntelligenceApp(source) {
   if (source.includes("/* conference-intelligence-suite */")) return source;
-  if (!source.includes("import { MyConferencesHub }")) {
-    source = source.replace("import { DiscoveryEngine }", "import { MyConferencesHub } from './components/MyConferencesHub';\nimport { DiscoveryEngine }");
-  }
-
   const insertions = [
     [
-      "import { MyConferencesHub }",
-      "import { ConferenceIntelligenceHub, ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';\nimport { OrganizerIntelligencePanel, SponsorIntelligencePanel } from './components/RoleIntelligencePanel';\nimport { MyConferencesHub }",
+      "import { DiscoveryEngine }",
+      "import { ConferenceIntelligenceHub, ConferenceDiscoveryWorkspace } from './components/ConferenceIntelligenceHub';\nimport { OrganizerIntelligencePanel, SponsorIntelligencePanel } from './components/RoleIntelligencePanel';\nimport { DiscoveryEngine }",
     ],
     [
       "{activeTab === 'discover' && (\n          <DiscoveryEngine",
