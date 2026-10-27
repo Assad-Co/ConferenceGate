@@ -292,11 +292,11 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
           {[
             { id: 'overview', label: 'Overview' },
             { id: 'cfp', label: `Call for Papers (${conference.cfpStatus})` },
-            { id: 'fees', label: `Fees & Pricing (${conference.registrationPackages.length})` },
+            { id: 'fees', label: `Fees & Pricing (${(conference.registrationPackages || []).length})` },
             { id: 'agenda', label: 'Program & Agenda' },
-            { id: 'speakers', label: `Keynote Speakers (${conference.speakers.length})` },
+            { id: 'speakers', label: `Keynote Speakers (${(conference.speakers || []).length})` },
             { id: 'committee', label: 'Technical Committee' },
-            { id: 'sponsors', label: `Sponsors & Exhibitors (${conference.sponsors.length})` },
+            { id: 'sponsors', label: `Sponsors & Exhibitors (${(conference.sponsors || []).length})` },
             { id: 'venue', label: 'Venue & Accommodation' },
             { id: 'community', label: `Community (${conference.communityPosts})` },
           ].map((tab) => (
@@ -515,7 +515,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
         {activeTab === 'agenda' && (
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900">Interactive Program & Agenda</h3>
-            {conference.agendaDays.length === 0 ? (
+            {(conference.agendaDays || []).length === 0 ? (
               <EmptyDetailState
                 message="A detailed session-by-session program hasn't been published on Conference Gate yet."
                 officialWebsite={conference.officialWebsite}
@@ -563,7 +563,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
         {activeTab === 'speakers' && (
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-slate-900">Keynote & Invited Speakers</h3>
-            {conference.speakers.length === 0 ? (
+            {(conference.speakers || []).length === 0 ? (
               <EmptyDetailState
                 message="The keynote and invited speaker lineup hasn't been published on Conference Gate yet."
                 officialWebsite={conference.officialWebsite}
@@ -599,7 +599,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                 + Express Committee Interest
               </button>
             </div>
-            {conference.committee.length === 0 ? (
+            {(conference.committee || []).length === 0 ? (
               <EmptyDetailState
                 message="The technical committee roster hasn't been published on Conference Gate yet."
                 officialWebsite={conference.officialWebsite}
@@ -634,7 +634,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                 Explore Sponsorship Packages
               </button>
             </div>
-            {conference.sponsors.length === 0 ? (
+            {(conference.sponsors || []).length === 0 ? (
               <EmptyDetailState
                 message="No sponsors or exhibitors have been confirmed for this conference on Conference Gate yet."
                 officialWebsite={conference.officialWebsite}
