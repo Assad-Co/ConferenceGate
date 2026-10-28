@@ -1100,14 +1100,14 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
     .filter((c) => c.count > 0);
   const maxRegistrationsByConference = Math.max(1, ...registrationsByConference.map((c) => c.count));
 
-  const sponsorRevenueByTier = sponsorshipPackages.map((pkg) => ({
+  const packageAllocationByTier = sponsorshipPackages.map((pkg) => ({
     tier: pkg.tier,
     revenue: pkg.price * (pkg.totalSlots - pkg.availableSlots),
     sold: pkg.totalSlots - pkg.availableSlots,
     total: pkg.totalSlots,
   }));
-  const maxSponsorRevenue = Math.max(1, ...sponsorRevenueByTier.map((s) => s.revenue));
-  const totalSponsorRevenueRealized = sponsorRevenueByTier.reduce((sum, s) => sum + s.revenue, 0);
+  const maxPackageAllocationValue = Math.max(1, ...packageAllocationByTier.map((s) => s.revenue));
+  const totalPackageAllocationValue = packageAllocationByTier.reduce((sum, s) => sum + s.revenue, 0);
 
   // Communications Broadcast State
   const [recipientGroup, setRecipientGroup] = useState('All Attendees');
@@ -3866,26 +3866,27 @@ export const OrganizerDashboard: React.FC<OrganizerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900">Sponsor Package Performance</h3>
+                <h3 className="font-bold text-sm text-slate-900">Sponsor Package Allocation</h3>
               </div>
               <span className="text-xs font-extrabold text-emerald-700">
-                ${totalSponsorRevenueRealized.toLocaleString()} Realized
+                ${totalPackageAllocationValue.toLocaleString()} Estimated list value
               </span>
             </div>
-            {sponsorRevenueByTier.length === 0 ? (
+            <p className="text-xs text-slate-500">Published package prices × allocated slots. Payment receipts are shown in provider-confirmed revenue.</p>
+            {packageAllocationByTier.length === 0 ? (
               <div className="text-xs text-slate-400 font-medium py-4 text-center">
                 No sponsorship packages published yet.
               </div>
             ) : (
               <div className="space-y-3">
-                {sponsorRevenueByTier.map((s) => (
+                {packageAllocationByTier.map((s) => (
                   <AnalyticsBarRow
                     key={s.tier}
                     label={`${s.tier} Tier`}
                     value={s.revenue}
-                    max={maxSponsorRevenue}
+                    max={maxPackageAllocationValue}
                     color={CHART_HEX.emerald}
-                    valueLabel={`$${s.revenue.toLocaleString()} · ${s.sold}/${s.total} sold`}
+                    valueLabel={`$${s.revenue.toLocaleString()} · ${s.sold}/${s.total} slots allocated`}
                   />
                 ))}
               </div>
