@@ -194,6 +194,23 @@ export function App() {
   const [sponsorNameOverride, setSponsorNameOverride] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Remove the redundant collapsible organizer intelligence portal introduced by
+  // optional workspace decorations. Keep the core OrganizerDashboard intact.
+  useEffect(() => {
+    if (activeTab !== 'organizer') return;
+    const removeRedundantPanel = () => {
+      document.querySelectorAll('details > summary').forEach((summary) => {
+        if (summary.textContent?.trim().toLowerCase() === 'organizer intelligence portal') {
+          summary.parentElement?.remove();
+        }
+      });
+    };
+    removeRedundantPanel();
+    const observer = new MutationObserver(removeRedundantPanel);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [activeTab]);
+
   // Anonymous engagement analytics: no conference names, emails, or user IDs leave the app.
   useEffect(() => {
     if (!authUser) return;
@@ -1630,6 +1647,7 @@ export function App() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
         <h1 className="text-xl font-bold">Workspace access is currently closed</h1>
         <p>Organizer and Sponsor workspaces are currently private.</p>
+        <a href={`mailto:support@conferencegate.com?subject=${encodeURIComponent("ConferenceGate workspace access request")}&body=${encodeURIComponent("Hello ConferenceGate Support,\n\nI would like to request access to the Organizer or Sponsor workspace.\n\nThank you.")}`} className="px-5 py-2 rounded-full bg-blue-700 text-white font-semibold">Request access via email</a>
         <button onClick={handleLogout} className="px-5 py-2 rounded-full bg-blue-900 text-white">Sign out</button>
       </div>
     );
