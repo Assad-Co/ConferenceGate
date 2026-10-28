@@ -104,7 +104,7 @@ export function ConferenceIntelligenceHub({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900">
-            Conference Intelligence
+            Conference Insights
           </h2>
           <p className="text-sm text-slate-600">
             Find relevant events, inspect the evidence, and organize your next
