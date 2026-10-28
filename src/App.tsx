@@ -759,7 +759,7 @@ export function App() {
   // Real, role-specific notifications wherever they're displayed (Navbar bell + Profile page).
   // Owner preview follows the currently selected Organizer/Sponsor context without changing the
   // stored account role.
-  const displayedRole = authUser?.ownerPreview ? activeRole : AUTH_ROLE_TO_USER_ROLE[authUser?.role || 'professional'];
+  const displayedRole = authUser?.ownerPreview || authUser?.role === 'professional' ? activeRole : AUTH_ROLE_TO_USER_ROLE[authUser?.role || 'professional'];
   const displayedNotifications =
     displayedRole === 'Organizer'
       ? organizerNotifications
