@@ -49,7 +49,7 @@ intelligenceEmailRouter.post("/test-email", async (req,res) => {
     const user = await authUser(req);
     if (!user) return res.status(401).json({error:"Authentication required"});
     const origin = req.get("origin");
-    const expected = (process.env.PUBLIC_BASE_URL || "https://conferencegate.com").replace(/\\/$/, "");
+    const expected = (process.env.PUBLIC_BASE_URL || "https://conferencegate.com").replace(/[/]$/, "");
     if (!origin || origin !== expected) return res.status(403).json({error:"Invalid request origin"});
     if (!deliveryConfigured()) return res.status(503).json({error:"Email delivery is not configured"});
     const now = Date.now();
