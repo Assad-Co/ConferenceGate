@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import { createClient } from '@libsql/client';
 const port = 3147;
-const dbPath = '/tmp/cg-private-workspaces-' + process.pid + '.db';
+const dbPath = path.join(os.tmpdir(), 'cg-private-workspaces-' + process.pid + '.db');
 const ownerEmail = 'private-owner@example.invalid';
 const child = spawn(process.execPath, ['dist/server.cjs'], {
   env: { ...process.env, NODE_ENV: 'test', PORT: String(port), TEST_DATABASE_PATH: dbPath, TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', PRIVATE_WORKSPACES_ONLY: 'true', FREE_LAUNCH_ORGANIZER_ACCESS: 'true', FREE_LAUNCH_SPONSOR_ACCESS: 'true', OWNER_PREVIEW_EMAIL_SHA256: crypto.createHash('sha256').update(ownerEmail).digest('hex') },

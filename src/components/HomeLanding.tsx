@@ -327,7 +327,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
       </aside>
 
       {/* Center Feed */}
-      <main className="flex flex-col gap-4 min-w-0">
+      <section aria-label="Conference feed" className="flex flex-col gap-4 min-w-0">
         {/* Post Composer — visually distinct from the navbar Search bar (rounded-xl "compose" box + label vs. the pill-shaped search input) */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
           <div className="flex items-center gap-1.5 px-4 pt-3 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
@@ -537,7 +537,7 @@ export const HomeLanding: React.FC<HomeLandingProps> = ({
             </button>
           </>
         )}
-      </main>
+      </section>
 
       {/* Right Sidebar: Deadlines + Recommendations */}
       <aside className="hidden xl:flex flex-col gap-4 sticky top-[72px]">

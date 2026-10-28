@@ -3763,7 +3763,7 @@ Return JSON with exactly this shape:
     res.status(500).json({ error: "Something went wrong. Please try again." });
   });
 
-  const httpServer = app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, process.env.HOST?.trim() || "0.0.0.0", () => {
     console.log(`Conference Gate server running at http://localhost:${PORT}`);
     // Which optional capabilities are actually active on this host. Every one of these degrades
     // silently when its key or binary is missing, which is the right behaviour but leaves an

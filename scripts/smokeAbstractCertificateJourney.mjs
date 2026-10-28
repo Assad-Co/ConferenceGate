@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import crypto from 'node:crypto';
 
 const port = 3141;
-const db = '/tmp/cg-abstract-certificate-' + process.pid + '.db';
+const db = path.join(os.tmpdir(), 'cg-abstract-certificate-' + process.pid + '.db');
 const secret = crypto.randomUUID();
 const child = spawn(process.execPath, ['dist/server.cjs'], { env: { ...process.env, NODE_ENV: 'test', PORT: String(port), TEST_DATABASE_PATH: db, TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', BILLING_SYNC_SECRET: secret }, stdio: ['ignore','pipe','pipe'] });
 let log = '';
