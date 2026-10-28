@@ -54,7 +54,7 @@ export function deduplicateConferenceResults(results: LiveSearchResult[]): LiveS
     const edition = result.startDate || result.title.toLowerCase();
     let sharedHomepage = false;
     try { const url = new URL(result.link); sharedHomepage = /^\/?$/.test(url.pathname) && !url.search; } catch {}
-    const titleIdentity = sharedHomepage ? '|' + result.title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim() : '';
+    const titleIdentity = sharedHomepage || result.linkIsConferencePage === false ? '|' + result.title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim() : '';
     const key = knownEdition || source + '|' + edition + titleIdentity;
     const current = records.get(key);
     if (!current || (result.sections?.length || 0) > (current.sections?.length || 0)) records.set(key, result);

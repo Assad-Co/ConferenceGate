@@ -1063,7 +1063,7 @@ function toResult(record: LaunchConferenceRecord): LaunchSearchResult {
     location: record.city || record.country
       ? { city: record.city ?? null, country: record.country ?? null }
       : null,
-    linkIsConferencePage: Boolean(record.officialUrl),
+    linkIsConferencePage: Boolean(record.officialUrl) && urlIdentifiesOneLaunchRecord(record.sourceUrl),
   };
 }
 
