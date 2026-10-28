@@ -8,6 +8,8 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "conferencegate-catalogue-
 process.env.NODE_ENV = "test";
 process.env.TEST_DATABASE_PATH = path.join(tempDir, "empty.db");
 process.env.DATABASE_PATH = process.env.TEST_DATABASE_PATH;
+// This test explicitly exercises committed fallback data, unlike stored-row tests.
+process.env.LAUNCH_DATASET_DIR = path.join(process.cwd(), "data");
 
 test("empty SQLite still returns the committed ConferenceGate catalogue", async () => {
   const { initDb } = await import("../../db");

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { db, dbGet, dbRun, initDb } from '../db';
 import { claimEmailTest, emailTestOriginAllowed, initIntelligenceEmailSchema } from '../intelligenceEmail';
 import { drainEmailOutbox, enqueueAlert, emailQueueDiagnostics } from '../intelligenceOutbox';
-import { brandedEmail, emailConfiguration, emailFailure, retryDelay } from '../emailTransport';
+import { brandedEmail, emailConfiguration, emailFailure, retryDelay, emailRouting } from '../emailTransport';
 
 test('durable alert delivery, privacy and retry semantics', async t => {
   Object.assign(process.env, {INTELLIGENCE_EMAIL_NOTIFICATIONS:'enabled', SMTP_HOST:'smtp.example.invalid', SMTP_PORT:'587', SMTP_USER:'test', SMTP_PASSWORD:'secret-not-for-diagnostics', INTELLIGENCE_EMAIL_FROM:'test@example.invalid', INTELLIGENCE_UNSUBSCRIBE_SECRET:'s'.repeat(32)});
@@ -77,6 +77,14 @@ test('durable alert delivery, privacy and retry semantics', async t => {
       assert.equal(await claimEmailTest('outbox-test',now+60001),undefined);
     }
     assert.ok(await claimEmailTest('outbox-test',now+630002));
+  });
+  await t.test('routing diagnostics expose only allowlisted operational fields', () => {
+    const route = emailRouting({...process.env, SMTP_USER:'private-user', SMTP_PASSWORD:'private-password', RESEND_API_KEY:'private-key'});
+    assert.equal(route.host, 'smtp.example.invalid');
+    assert.equal(route.port, 587);
+    assert.equal(route.senderDomain, 'example.invalid');
+    assert.doesNotMatch(JSON.stringify(route), /private-user|private-password|private-key/);
+    assert.equal(emailRouting({...process.env, SMTP_HOST:'smtp://user:password@host'}).host, null);
   });
   await t.test('origin matching permits canonical www but rejects unrelated or missing origins', () => {
     assert.equal(emailTestOriginAllowed('https://www.conferencegate.com','https://conferencegate.com'),true);

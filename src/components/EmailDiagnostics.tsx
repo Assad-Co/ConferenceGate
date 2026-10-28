@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 type Diagnostics = {
   configuration: { ready: boolean; checks: Record<string, boolean> };
+  routing?: {host: string | null; port: number | null; encryption: string; senderDomain: string | null; passwordRecoveryProvider: string};
   backgroundDiscoveryEnabled: boolean;
   queue: { alert: boolean; counts: {status: string; count: number}[] };
   tests: {id: string; status: string; error_code?: string; created_at: number}[];
@@ -25,6 +26,7 @@ export function EmailDiagnostics() {
     <div className="space-y-3 pt-3">
       <p role="status">{data.configuration.ready ? 'SMTP configuration is complete.' : 'Email configuration needs attention.'} {data.queue.alert ? 'Delivery queue requires attention.' : ''}</p>
       <ul>{Object.entries(data.configuration.checks).map(([key, ok]) => <li key={key}>{key}: {ok ? 'Configured' : 'Missing or invalid'}</li>)}</ul>
+      {data.routing && <p>Mail route: {data.routing.host || "Invalid host"}:{data.routing.port || "Invalid port"} · {data.routing.encryption} · Sender domain: {data.routing.senderDomain || "Unknown"} · Password recovery: {data.routing.passwordRecoveryProvider}</p>}
       <p>Background conference matching: {data.backgroundDiscoveryEnabled ? 'Enabled' : 'Disabled'}</p>
       <p>Queue: {data.queue.counts.map(row => `${row.status}: ${row.count}`).join(', ') || 'Empty'}</p>
       <p>{data.evidence}</p>

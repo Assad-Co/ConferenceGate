@@ -133,7 +133,7 @@ test("sponsors carry their tier and kind, and the organiser is never one of them
     <h2>Gold Sponsors</h2>
     <div><a href="https://acme.example"><img src="/logos/acme.png" alt="Acme Instruments logo"></a></div>
     <h2>Exhibitors</h2>
-    <ul><li>Baltic Photonics</li><li>Read more</li></ul>
+    <ul><li><a href="https://baltic-photonics.example">Baltic Photonics</a></li><li>Read more</li></ul>
     </body></html>`, "https://icmla27.example/sponsors");
 
   const names = sponsors.map((sponsor) => sponsor.name);
@@ -256,7 +256,7 @@ const CONFERENCE_PAGES: Record<string, string> = {
   "/sponsors": `<html><body><h1>Sponsors</h1>
     <h2>Platinum Sponsors</h2>
     <div><a href="https://northlight.example"><img src="/logos/nl.png" alt="Northlight Optics logo"></a></div>
-    <h2>Exhibitors</h2><ul><li>Gulf Coast Lasers</li></ul></body></html>`,
+    <h2>Exhibitors</h2><ul><li><a href="https://gulf-coast-lasers.example">Gulf Coast Lasers</a></li></ul></body></html>`,
 };
 
 /** These fixtures live for one test. Left behind, they become other files' sample rows. */

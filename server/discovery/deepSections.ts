@@ -241,7 +241,7 @@ const ORG_MARKER = new RegExp(
   "department|dept\\.?|laborator(?:y|ies)|labs?|centre|center|academy|academia|society|association|assoc\\.|" +
   "federation|foundation|council|ministry|agency|authority|hospital|clinic|museum|observatory|consortium|" +
   "network|alliance|company|corporation|corp\\.?|incorporated|inc\\.?|ltd\\.?|limited|llc|l\\.l\\.c\\.|plc|gmbh|" +
-  "ag|s\\.?a\\.?s?|b\\.?v\\.?|pty|group|holdings?|technologies|technology|solutions|systems|research|sciences?|" +
+  "ag|s\\.?a\\.?s?|s\\.l\\.?|b\\.?v\\.?|pty|group|holdings?|technologies|technology|solutions|systems|research|sciences?|" +
   "cnrs|cern|nasa|inria|max planck|fraunhofer|csic|csiro|kaust|mit|eth|epfl)\\b",
   "i"
 );

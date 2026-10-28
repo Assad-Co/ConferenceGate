@@ -24,6 +24,20 @@ export function createEmailTransport() {
   });
 }
 
+// Owner-only operational details. Never return auth usernames, passwords, keys or raw env.
+export function emailRouting(env = process.env) {
+  const host = env.SMTP_HOST?.trim() || "";
+  const port = Number(env.SMTP_PORT || 587);
+  const sender = env.INTELLIGENCE_EMAIL_FROM?.match(/@([a-z0-9.-]+)>?\s*$/i)?.[1]?.toLowerCase() || null;
+  return {
+    host: /^[a-z0-9.-]+$/i.test(host) ? host : null,
+    port: Number.isInteger(port) && port > 0 && port <= 65535 ? port : null,
+    encryption: port === 465 ? "Implicit TLS" : "Required STARTTLS",
+    senderDomain: sender,
+    passwordRecoveryProvider: env.RESEND_API_KEY?.trim() ? "Resend configured" : "Not configured",
+  };
+}
+
 // Store only an allowlisted code, never SMTP response text, credentials or message contents.
 export function emailFailure(error: unknown) {
   const e = error as { code?: string; command?: string; responseCode?: number };
