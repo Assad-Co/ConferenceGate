@@ -1655,6 +1655,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-blue-900 focus:px-4 focus:py-3 focus:text-white focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-blue-700">Skip to main content</a>
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -1705,7 +1706,7 @@ export function App() {
       />
 
       {/* Main Container View Router */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <AnimatePresence mode="wait">
       <motion.div
         key={activeTab}
