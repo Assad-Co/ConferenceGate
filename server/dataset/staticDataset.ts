@@ -25,6 +25,16 @@ export const LAUNCH_INDEX_FILE = "conferencegate-search-index.json";
 const LAUNCH_CSV_FILE = "conferencegate-worldwide-2026-2028.csv";
 const LAUNCH_OVERRIDE_FILE = "sources/launch-record-overrides.json";
 
+// A shared organizer homepage is not an event-specific identifier. Distinct workshops
+// on the same day must retain their titles instead of overwriting one another.
+function launchIdentity(record: Pick<LaunchConferenceRecord, 'title'|'officialUrl'|'sourceUrl'|'startDate'>) {
+  const source = record.officialUrl || record.sourceUrl;
+  let sharedHomepage = false;
+  try { const url = new URL(source); sharedHomepage = /^\/?$/.test(url.pathname) && !url.search; } catch {}
+  const title = sharedHomepage ? '|' + record.title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim() : '';
+  return `${source.replace(/\/$/,'').toLowerCase()}|${record.startDate}${title}`;
+}
+
 /**
  * Last-resort launch catalogue recovery.
  *
@@ -255,9 +265,16 @@ let cached: LoadedDataset | null = null;
  */
 function readVerifiedMajorManifestRecords(): LaunchConferenceRecord[] {
   const files = [
+    // Every file below is an evidence-backed ConferenceGate manifest that already ships with
+    // production. Keeping all of them in the static fallback makes Discover resilient when Turso
+    // bootstrap is delayed, and prevents valid regional/famous conferences from disappearing.
+    'phase12-regional-expansion.json',
+    'phase12-verified-expansion.json',
+    'phase13-global-depth-expansion.json',
     'phase52-major-conference-expansion.json',
     'phase56-global-major-conferences.json',
   ];
+  files.push('global-expansion-20261028.json');
   const records: LaunchConferenceRecord[] = [];
   const seen = new Set<string>();
 
@@ -456,11 +473,16 @@ export function loadLaunchDataset(): LoadedDataset {
   const index = readJsonFile<LaunchSearchIndex>(LAUNCH_INDEX_FILE);
   const imported = readJsonFile<{ records: LaunchConferenceRecord[] }>("energy-verified-2026-09-14.json");
   const jsonRecords = Array.isArray(dataset?.records) ? dataset!.records : [];
-  const baseRecords = jsonRecords.length > 0 ? jsonRecords : readLaunchCsvFallback();
+  // The rich JSON can lag the canonical CSV after an import or recovery build.
+  // Preserve its detail while recovering CSV-only records instead of hiding them.
+  const richIds = new Set(jsonRecords.map(record => record.id));
+  const richIdentities = new Set(jsonRecords.map(launchIdentity));
+  const baseRecords = [...jsonRecords, ...readLaunchCsvFallback().filter(record =>
+    !richIds.has(record.id) && !richIdentities.has(launchIdentity(record))
+  )];
   const importedRecords = Array.isArray(imported?.records) ? imported.records : [];
   const verifiedMajorRecords = readVerifiedMajorManifestRecords();
-  const identity = (record: LaunchConferenceRecord) =>
-    `${(record.officialUrl || record.sourceUrl).replace(/\/$/, "").toLowerCase()}|${record.startDate}`;
+  const identity = launchIdentity;
   const recordsByIdentity = new Map(baseRecords.map((record) => [identity(record), record]));
   for (const record of [...importedRecords, ...verifiedMajorRecords]) {
     const key = identity(record);

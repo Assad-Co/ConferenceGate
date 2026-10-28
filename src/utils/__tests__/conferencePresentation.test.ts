@@ -35,6 +35,11 @@ test('known IROS official-source aliases collapse and conflicting AACSB attribut
 test('distinct query-selected conferences are never merged',()=>{
  assert.equal(deduplicateConferenceResults([result({link:'https://events.example.org/?id=first'}),result({link:'https://events.example.org/?id=second'})]).length,2);
 });
+test('distinct same-day workshops sharing an organizer homepage remain visible',()=>{
+ const first=result({title:'Workshop on Robotics — NeurIPS 2026',link:'https://neurips.cc/',startDate:'2026-12-11'});
+ const second=result({title:'Workshop on Climate — NeurIPS 2026',link:'https://neurips.cc/',startDate:'2026-12-11'});
+ assert.equal(deduplicateConferenceResults([first,second,{...first,sections:['agenda']}]).length,2);
+});
 
 test('IROS workshop paths remain distinct from the main edition',()=>{
  assert.equal(deduplicateConferenceResults([result({link:'https://2027.ieee-iros.org/'}),result({link:'https://2027.ieee-iros.org/workshops'})]).length,2);

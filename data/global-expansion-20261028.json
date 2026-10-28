@@ -1,0 +1,74 @@
+[
+  {
+    "title": "ACS Spring 2027", "url": "https://www.acs.org/events/spring.html",
+    "start": "2027-03-21", "end": "2027-03-25", "city": "New Orleans", "country": "United States", "worldRegion": "North America",
+    "organizer": "American Chemical Society", "categories": ["Chemistry", "Materials Science"],
+    "description": "ACS scientific meeting covering chemistry research, industry sessions and professional development in New Orleans.",
+    "program": {"overview": "The official meeting page lists scientific, industry, career and student events. Registration opens December 2026."},
+    "sourceUrls": ["https://www.acs.org/events/acs-meetings.html"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official identity, dates and city reviewed. No speaker, fee or abstract deadline inferred."
+  },
+  {
+    "title": "88th EAGE Annual Conference & Exhibition 2027", "url": "https://eageannual.org/",
+    "start": "2027-05-31", "end": "2027-06-04", "city": "Amsterdam", "country": "Netherlands", "worldRegion": "Europe",
+    "organizer": "European Association of Geoscientists and Engineers", "categories": ["Geoscience", "Engineering", "Energy"],
+    "description": "EAGE annual multidisciplinary geoscience and engineering conference and exhibition in Amsterdam.",
+    "sourceUrls": ["https://eage.org/events/calendar-of-events/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official society calendar confirms identity, dates and city; other details remain unannounced."
+  },
+  {
+    "title": "Second EAGE/AAPG Geothermal Energy in the Middle East Workshop 2027", "url": "https://eage.eventsair.com/second-eageaapg-geothermal-energy-in-the-middle-east-workshop/",
+    "start": "2027-01-26", "end": "2027-01-28", "city": "Jeddah", "country": "Saudi Arabia", "worldRegion": "Middle East",
+    "organizer": "EAGE / AAPG", "categories": ["Geothermal", "Renewable Energy", "Geoscience", "Engineering"],
+    "description": "Technical workshop on geothermal applications, subsurface exploration and development, and efficient project design in the Middle East.",
+    "program": {"themes": ["Geothermal applications", "Discovery and management", "CAPEX optimization"], "overview": "The official page states that the technical programme is live and registration is open."},
+    "cfp": {"status": "Closed"},
+    "sourceUrls": ["https://eage.org/events/calendar-of-events/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official event page confirms identity, dates, city, themes and closed CFP. No deadline inferred."
+  },
+  {
+    "title": "IJCAI 2027", "url": "https://2027.ijcai.org/",
+    "start": "2027-08-07", "end": "2027-08-13", "city": "Kyoto", "country": "Japan", "worldRegion": "Asia",
+    "organizer": "International Joint Conferences on Artificial Intelligence Organization", "categories": ["Artificial Intelligence", "Data Science"],
+    "description": "36th International Joint Conference on Artificial Intelligence. This record covers the main Kyoto meeting; the separate Hengqin satellite runs 15–17 August 2027.",
+    "cfp": {"status": "Announced", "abstract_submission_deadline": "2027-01-04", "submission_guidelines": "Abstract deadline: 4 January 2027; full paper deadline: 11 January 2027. All deadlines are 23:59 Anywhere on Earth (AoE).", "url": "https://2027.ijcai.org/"},
+    "sourceUrls": ["https://ijcai.org/future_conferences/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official event and society pages confirm main meeting, satellite distinction and deadline dates."
+  },
+  {
+    "title": "EAGE Symposium on Agentic AI and Data Exploitation for Vietnam's Upstream Sector 2027", "url": "https://eage.eventsair.com/eage-symposium-from-data-to-decisions/",
+    "start": "2027-04-20", "end": "2027-04-21", "city": "Ho Chi Minh City", "country": "Vietnam", "worldRegion": "Asia",
+    "organizer": "European Association of Geoscientists and Engineers", "categories": ["Artificial Intelligence", "Petroleum & Geoscience", "Data Science"],
+    "description": "Symposium connecting subsurface data, geoscience, engineering and AI with upstream exploration, development and asset decisions in Vietnam.",
+    "cfp": {"status": "Open", "abstract_submission_deadline": "2026-11-30", "submission_guidelines": "Official event page lists call for abstracts until 30 November 2026. Consult the organizer for submission requirements and deadline timezone.", "url": "https://eage.eventsair.com/eage-symposium-from-data-to-decisions/"},
+    "program": {"themes": ["Integrated geoscience and engineering", "AI and advanced analytics", "Mature basin evaluation", "CCS readiness"]},
+    "sourceUrls": ["https://eage.eventsair.com/eage-symposium-from-data-to-decisions/city"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official event page confirms dates, topics and CFP; location page confirms city."
+  },
+  {
+    "title": "Egypt Energy Show 2027", "url": "https://www.egypes.com/",
+    "start": "2027-03-30", "end": "2027-04-01", "city": "Cairo", "country": "Egypt", "worldRegion": "Africa",
+    "venue": "Egypt International Exhibition Center", "organizer": "dmg events", "categories": ["Energy", "Petroleum & Geoscience", "Engineering"],
+    "description": "Energy exhibition with strategic and technical conferences connecting policy, investment, engineering and applied energy technology in Cairo.",
+    "program": {"themes": ["Energy strategy", "Technical innovation", "Energy investment"], "overview": "The organizer lists strategic and technical conference tracks and a separate innovation and AI hub."},
+    "sourceUrls": ["https://eage.org/events/calendar-of-events/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official event page and EAGE calendar confirm dates, city and conference tracks. No historic testimonial treated as a confirmed 2027 speaker."
+  },
+  {
+    "title": "First EAGE–EEMa LATAM Offshore Wind Forum 2027", "url": "https://eage.eventsair.com/first-eageeema-latam-offshore-wind-forum",
+    "start": "2027-03-03", "end": "2027-03-05", "city": "Cartagena", "country": "Colombia", "worldRegion": "Latin America",
+    "organizer": "EAGE / EEMa", "categories": ["Renewable Energy", "Engineering", "Geoscience"],
+    "description": "Technical offshore wind forum for Latin America. A short course runs on 3 March; the technical programme runs on 4–5 March 2027.",
+    "program": {"overview": "Short course: 3 March 2027. Technical programme: 4–5 March 2027. Abstract and registration deadlines are coming soon on the official page."},
+    "sourceUrls": ["https://eage.org/events/calendar-of-events/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official event and society pages confirm dates, city and programme split; no CFP deadline inferred."
+  },
+  {
+    "title": "Underground Operators Conference 2027", "url": "https://conference.ausimm.com/form-conference/?conference=underground-operators-2027",
+    "start": "2027-04-05", "end": "2027-04-07", "city": "Perth", "country": "Australia", "worldRegion": "Oceania",
+    "organizer": "AusIMM", "categories": ["Mining & Minerals", "Engineering"],
+    "description": "AusIMM technical mining conference addressing underground operations and mining technology in Perth.",
+    "sourceUrls": ["https://conference.ausimm.com/conferences/"], "verifiedAt": "2026-10-28T13:30:00.000Z",
+    "verificationScope": "Official organizer calendar confirms identity, dates and city. Event-specific link is currently an interest form; no registration fees or CFP deadline inferred."
+  }
+]
