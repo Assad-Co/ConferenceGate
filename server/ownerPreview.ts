@@ -22,10 +22,11 @@ export function isOwnerPreviewEmail(email: string | null | undefined): boolean {
   const expected =
     process.env.OWNER_PREVIEW_EMAIL_SHA256?.trim().toLowerCase() ||
     DEFAULT_OWNER_PREVIEW_EMAIL_SHA256;
-  if (!/^[a-f0-9]{64}$/.test(expected)) return false;
+  const additional = (process.env.ADDITIONAL_OWNER_PREVIEW_EMAIL_SHA256 || "").trim().toLowerCase();
+  const accepted = [expected, DEFAULT_OWNER_PREVIEW_EMAIL_SHA256, additional].filter(digest => /^[a-f0-9]{64}$/.test(digest));
   const actual = normalizedEmailHash(email);
   try {
-    return crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expected, "hex"));
+    return accepted.some(digest => crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(digest, "hex")));
   } catch {
     return false;
   }
