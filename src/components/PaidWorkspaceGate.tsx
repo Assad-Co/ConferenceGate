@@ -52,7 +52,8 @@ export const PaidWorkspaceGate: React.FC<PaidWorkspaceGateProps> = ({
             <ShieldCheck className="w-3.5 h-3.5" />
             Paid Workspace
           </span>
-          <h1 className="text-2xl font-extrabold text-slate-900 mt-3">{label}</h1>\n          <p className="text-lg font-bold text-blue-800 mt-2">${proposedMonthlyPrice} USD / month <span className="text-xs font-normal text-slate-600">· planned price, subject to checkout activation and applicable tax</span></p>
+          <h1 className="text-2xl font-extrabold text-slate-900 mt-3">{label}</h1>
+          <p className="text-lg font-bold text-blue-800 mt-2">${proposedMonthlyPrice} USD / month <span className="text-xs font-normal text-slate-600">· planned price, subject to checkout activation and applicable tax</span></p>
           <p className="text-sm text-slate-600 mt-2 max-w-xl">
             {isTeamSeat
               ? `This ${label} team seat inherits access from the workspace owner's subscription. The owner needs to reactivate the workspace before this seat can continue.`
