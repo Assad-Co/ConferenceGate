@@ -54,8 +54,8 @@ intelligenceEmailRouter.post("/test-email", async (req,res) => {
     if (!deliveryConfigured()) return res.status(503).json({error:"Email delivery is not configured"});
     const now = Date.now();
     // Atomic per-account ten-minute cooldown across processes and devices, including failures.
-    const claim = await dbRun("INSERT INTO intelligence_email_tests (user_id,last_attempt_at,status) VALUES (?,?,'sending') ON CONFLICT(user_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='sending' WHERE intelligence_email_tests.last_attempt_at < ?", [user.id,now,now-600000]);
-    if (!claim.changes) return res.status(429).json({error:"A test email was requested recently. Try again in ten minutes."});
+    const claim = await dbGet<{last_attempt_at:number}>("INSERT INTO intelligence_email_tests (user_id,last_attempt_at,status) VALUES (?,?,'sending') ON CONFLICT(user_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='sending' WHERE intelligence_email_tests.last_attempt_at < ? RETURNING last_attempt_at", [user.id,now,now-600000]);
+    if (!claim) return res.status(429).json({error:"A test email was requested recently. Try again in ten minutes."});
     const port = Number(process.env.SMTP_PORT || 587);
     const transport = nodemailer.createTransport({host:process.env.SMTP_HOST!,port,secure:port===465,requireTLS:port!==465,auth:{user:process.env.SMTP_USER!,pass:process.env.SMTP_PASSWORD!}});
     try {
