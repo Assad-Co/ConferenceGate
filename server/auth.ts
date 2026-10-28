@@ -17,6 +17,38 @@ import { queueProfessionalEvidenceResearch } from "./professionalEvidenceResearc
 // module-load time, since resolving it now requires an async database round-trip.
 let JWT_SECRET: string | null = null;
 
+// Per-account session generation. Password changes increment this value so every JWT minted
+// before the change becomes invalid without rotating the global signing secret or affecting
+// other ConferenceGate users. Values are persisted in app_secrets and reloaded on boot.
+const sessionVersions = new Map<string, number>();
+
+function sessionVersionKey(userId: string): string {
+  return `session_version:${userId}`;
+}
+
+function currentSessionVersion(userId: string): number {
+  return sessionVersions.get(userId) || 0;
+}
+
+export async function initSessionVersions(): Promise<void> {
+  const rows = await dbAll<{ key: string; value: string }>(
+    "SELECT key, value FROM app_secrets WHERE key LIKE 'session_version:%'"
+  );
+  sessionVersions.clear();
+  for (const row of rows) {
+    const userId = row.key.slice('session_version:'.length);
+    const version = Number(row.value);
+    if (userId && Number.isSafeInteger(version) && version >= 0) sessionVersions.set(userId, version);
+  }
+}
+
+export async function revokeUserSessions(userId: string): Promise<number> {
+  const next = currentSessionVersion(userId) + 1;
+  sessionVersions.set(userId, next);
+  await dbRun("INSERT OR REPLACE INTO app_secrets (key, value) VALUES (?, ?)", [sessionVersionKey(userId), String(next)]);
+  return next;
+}
+
 export async function initAuthSecret(): Promise<void> {
   if (process.env.JWT_SECRET) {
     JWT_SECRET = process.env.JWT_SECRET;
@@ -282,7 +314,7 @@ function normalizeLinkedInUrl(raw: unknown): string | null {
 }
 
 function signToken(userId: string) {
-  return jwt.sign({ sub: userId }, getJwtSecret(), { expiresIn: "7d" });
+  return jwt.sign({ sub: userId, sv: currentSessionVersion(userId) }, getJwtSecret(), { expiresIn: "7d" });
 }
 
 function setSessionCookie(res: Response, token: string) {
@@ -303,7 +335,8 @@ export interface AuthedRequest extends Request {
 export function verifySessionToken(token: string | undefined | null): string | null {
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as { sub: string };
+    const payload = jwt.verify(token, getJwtSecret()) as { sub: string; sv?: number };
+    if (!payload.sub || Number(payload.sv || 0) !== currentSessionVersion(payload.sub)) return null;
     return payload.sub;
   } catch {
     return null;
