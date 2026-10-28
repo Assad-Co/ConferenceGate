@@ -40,6 +40,8 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
           <div>
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Support &amp; Legal</h4>
             <ul className="space-y-2 text-xs">
+              <li><a href="/pricing.html" className="hover:text-blue-600">Pricing &amp; Features</a></li>
+              <li><a href="/refunds.html" className="hover:text-blue-600">Cancellation &amp; Refunds</a></li>
               <li><button onClick={() => onNavigateTab('faq')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">FAQ</button></li>
               <li><button onClick={() => onNavigateTab('contact')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Ask Us</button></li>
               <li><button onClick={() => onNavigateTab('privacy')} className="hover:text-blue-600 transition-colors cursor-pointer text-left">Privacy Policy</button></li>
