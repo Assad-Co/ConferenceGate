@@ -194,6 +194,23 @@ export function App() {
   const [sponsorNameOverride, setSponsorNameOverride] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Remove the redundant collapsible organizer intelligence portal introduced by
+  // optional workspace decorations. Keep the core OrganizerDashboard intact.
+  useEffect(() => {
+    if (activeTab !== 'organizer') return;
+    const removeRedundantPanel = () => {
+      document.querySelectorAll('details > summary').forEach((summary) => {
+        if (summary.textContent?.trim().toLowerCase() === 'organizer intelligence portal') {
+          summary.parentElement?.remove();
+        }
+      });
+    };
+    removeRedundantPanel();
+    const observer = new MutationObserver(removeRedundantPanel);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [activeTab]);
+
   // Anonymous engagement analytics: no conference names, emails, or user IDs leave the app.
   useEffect(() => {
     if (!authUser) return;
