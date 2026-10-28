@@ -186,6 +186,18 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleSave,
   onToggleFollow,
 }) => {
+  const [testEmailStatus, setTestEmailStatus] = useState('');
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const sendTestEmail = async () => {
+    setTestEmailSending(true);
+    setTestEmailStatus('');
+    try {
+      const response = await fetch('/api/intelligence/test-email', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'{}'});
+      const result: {message?:string;error?:string} = await response.json();
+      setTestEmailStatus(response.ok ? (result.message || 'Test email submitted.') : (result.error || 'Test email failed.'));
+    } catch { setTestEmailStatus('Could not connect to email test service.'); }
+    finally { setTestEmailSending(false); }
+  };
   const [searchTerm, setSearchTerm] = useState(initialSearchQuery);
   const [interests, setInterests] = useState(() => {
     try { return window.localStorage.getItem('conferencegate-discovery-interests') || ''; } catch { return ''; }
@@ -492,6 +504,14 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </p>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-white p-3">
+          <div className="flex-1 min-w-[180px]">
+            <p className="text-xs font-bold text-slate-800">Smart Alerts email delivery test</p>
+            <p className="text-xs text-slate-500">Sends one test to your signed-in account email. Limited to once every ten minutes.</p>
+          </div>
+          <button type="button" onClick={sendTestEmail} disabled={testEmailSending} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">{testEmailSending ? 'Sending…' : 'Send test email'}</button>
+          {testEmailStatus && <p role="status" className="w-full text-xs text-slate-700">{testEmailStatus}</p>}
+        </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form
             onSubmit={(event) => {
