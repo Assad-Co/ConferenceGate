@@ -3,7 +3,7 @@ import { Router } from "express";
 import { dbAll, dbGet, dbRun } from "./db";
 import { COOKIE_NAME, verifySessionToken } from "./auth";
 import { isOwnerPreviewEmail } from "./ownerPreview";
-import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure } from "./emailTransport";
+import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure, emailRouting } from "./emailTransport";
 import { emailQueueDiagnostics, enqueueAlert, initEmailOutbox } from "./intelligenceOutbox";
 
 export const intelligenceEmailRouter = Router();
@@ -134,7 +134,7 @@ intelligenceEmailRouter.get("/email-diagnostics", async (req,res) => {
     if (!user) return res.status(401).json({error:"Authentication required"});
     if (!isOwnerPreviewEmail(user.email)) return res.status(403).json({error:"Administrator access required"});
     const tests = await dbAll("SELECT id,status,created_at,updated_at,provider_message_id,error_code FROM intelligence_email_test_records ORDER BY created_at DESC LIMIT 30");
-    return res.json({configuration:emailConfiguration(), backgroundDiscoveryEnabled:process.env.INTELLIGENCE_BACKGROUND_ALERTS === "enabled",queue:await emailQueueDiagnostics(), tests,
+    return res.json({configuration:emailConfiguration(), routing:emailRouting(), backgroundDiscoveryEnabled:process.env.INTELLIGENCE_BACKGROUND_ALERTS === "enabled",queue:await emailQueueDiagnostics(), tests,
       evidence:"Accepted means SMTP handoff only. Provider delivery events and inbox receipt are not verified by this dashboard."});
   } catch { return res.status(500).json({error:"Unable to load email diagnostics"}); }
 });

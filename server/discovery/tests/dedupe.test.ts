@@ -101,7 +101,8 @@ test("two editions of one series are not duplicates of each other", () => {
   });
   const verdict = scoreDuplicate(next, makeCandidate());
   assert.notEqual(verdict.decision, "merge");
-  assert.match(verdict.reason, /different dates/);
+  assert.equal(verdict.decision, "separate");
+  assert.match(verdict.reason, /different conference edition years/);
 });
 
 test("recurring editions sharing one official homepage remain separate", () => {

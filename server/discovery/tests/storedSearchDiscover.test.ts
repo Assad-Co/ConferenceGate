@@ -28,7 +28,7 @@ interface SeedRecord {
 /** The two sections every published record carries, so search is tested on publishable rows. */
 const READ_SECTIONS: Record<string, unknown> = {
   venue_accommodation: { venue_name: "Congress Centre", venue_address: "City centre" },
-  program_agenda: { overview: "Plenary and parallel technical sessions across the programme." },
+  program_agenda: { sessions: [{ title: "Plenary and parallel technical sessions", time: "09:00" }] },
 };
 
 const SEEDS: SeedRecord[] = [

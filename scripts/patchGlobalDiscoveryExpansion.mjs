@@ -119,7 +119,10 @@ let discoveryChanged = false;
 {
   const before = `                {displayedStored.length} match{displayedStored.length === 1 ? '' : 'es'} from the stored global catalogue · facets from {facetSource.length} server records.`;
   const after = `                {displayedStored.length} match{displayedStored.length === 1 ? '' : 'es'} from the stored global catalogue · {countryOptions.length}+ countries/territories available · {organizerOptions.length} organizers indexed.`;
-  const result = replaceOnce(discovery, before, after, 'catalogue scale summary');
+  // Later compatibility patches rename displayedStored to allStored. Accept either final form.
+  const currentSummary = after.replaceAll('displayedStored', 'allStored');
+  const result = discovery.includes(currentSummary) ? { source: discovery, changed: false }
+    : replaceOnce(discovery, before, after, 'catalogue scale summary');
   discovery = result.source;
   discoveryChanged ||= result.changed;
 }

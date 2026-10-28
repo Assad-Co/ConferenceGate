@@ -375,11 +375,10 @@ test("a conference nobody could read is not listed, but one with nothing to anno
   };
   assert.equal(hasSomethingToShow(unannounced, "2026-09-12"), true);
 
-  // A second answer is enough on its own, whichever two they are.
-  assert.equal(hasSomethingToShow({ ...base, venue: "Osaka International House" }, "2026-09-12"), true);
+  // Two answered panels remain below the five-answer public-detail threshold.
+  assert.equal(hasSomethingToShow({ ...base, venue: "Osaka International House" }, "2026-09-12"), false);
 
-  // And one answer carries the record when what is behind it is a thing rather than a sentence: a
-  // dated call for papers is what a reader came for. A closed one is handled by its own rule below.
+  // A single deadline or roster does not bypass the five-answer public-detail requirement.
   const call = {
     ...base,
     details: {
@@ -388,8 +387,8 @@ test("a conference nobody could read is not listed, but one with nothing to anno
       callForPapers: { status: "Open", abstractDeadline: "2026-12-31", submissionEmail: null, lengthLimit: null, text: null },
     },
   };
-  assert.equal(hasSomethingToShow(call, "2026-09-12"), true);
-  // A roster is the same: one tab, but one holding people.
+  assert.equal(hasSomethingToShow(call, "2026-09-12"), false);
+  // The same applies to a single roster.
   const roster = {
     ...base,
     details: {
@@ -398,7 +397,10 @@ test("a conference nobody could read is not listed, but one with nothing to anno
       keynotes: { availability: "stated", items: [{ name: "A Speaker" }] },
     },
   };
-  assert.equal(hasSomethingToShow(roster, "2026-09-12"), true);
+  assert.equal(hasSomethingToShow(roster, "2026-09-12"), false);
+  const fourAnswers = { ...base, details: { ...base.details, keynotes: { availability: "not_announced", items: [] }, committee: { availability: "not_announced", items: [] }, fees: { availability: "not_announced", items: [] } } };
+  assert.equal(hasSomethingToShow(fourAnswers, "2026-09-12"), false);
+  assert.equal(hasSomethingToShow({ ...fourAnswers, venue: "Osaka International House" }, "2026-09-12"), true);
 });
 
 // Two records cited https://www.iconf.com/ and nothing else: the directory's own front door, which
@@ -476,9 +478,9 @@ test("a record whose only content is a call for papers is held back once that ca
     format: null, organization: null, topics: [], categories: [], keywords: [],
     officialUrl: "https://iccs.org/", sourceUrl: "https://iccs.org/",
     details: {
-      program: { availability: "unread", items: [] }, schedule: { sessions: [], themes: [] },
-      keynotes: { availability: "unread", items: [] }, committee: { availability: "unread", items: [] },
-      fees: { availability: "unread", items: [] }, sponsors: { availability: "unread", items: [] },
+      program: { availability: "not_announced", items: [] }, schedule: { sessions: [], themes: [] },
+      keynotes: { availability: "not_announced", items: [] }, committee: { availability: "not_announced", items: [] },
+      fees: { availability: "not_announced", items: [] }, sponsors: { availability: "not_announced", items: [] },
       callForPapers: { status: "Open", abstractDeadline: "2026-05-20", submissionEmail: null, lengthLimit: null, text: null },
     },
   };
