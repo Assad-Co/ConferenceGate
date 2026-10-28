@@ -8,6 +8,7 @@ export const intelligenceEmailRouter = Router();
 export async function initIntelligenceEmailSchema() {
   await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_preferences (user_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)");
   await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_deliveries (user_id TEXT NOT NULL, alert_id TEXT NOT NULL, delivered_at TEXT, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(user_id,alert_id))");
+  await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_tests (user_id TEXT PRIMARY KEY, last_attempt_at INTEGER NOT NULL, status TEXT NOT NULL)");
 }
 function tokenFor(userId: string) {
   const key = process.env.INTELLIGENCE_UNSUBSCRIBE_SECRET;
@@ -41,6 +42,35 @@ intelligenceEmailRouter.put("/email-preferences", async (req,res) => {
     await dbRun("INSERT INTO intelligence_email_preferences (user_id,enabled,updated_at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,updated_at=excluded.updated_at", [user.id,enabled,new Date().toISOString()]);
     return res.json({enabled:enabled===1});
   } catch { return res.status(500).json({error:"Unable to update preferences"}); }
+});
+// Authenticated same-origin SMTP smoke test. Sends only to the signed-in account email.
+intelligenceEmailRouter.post("/test-email", async (req,res) => {
+  try {
+    const user = await authUser(req);
+    if (!user) return res.status(401).json({error:"Authentication required"});
+    const origin = req.get("origin");
+    const expected = (process.env.PUBLIC_BASE_URL || "https://conferencegate.com").replace(/\\/$/, "");
+    if (!origin || origin !== expected) return res.status(403).json({error:"Invalid request origin"});
+    if (!deliveryConfigured()) return res.status(503).json({error:"Email delivery is not configured"});
+    const now = Date.now();
+    // Atomic per-account ten-minute cooldown across processes and devices, including failures.
+    const claim = await dbRun("INSERT INTO intelligence_email_tests (user_id,last_attempt_at,status) VALUES (?,?,'sending') ON CONFLICT(user_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='sending' WHERE intelligence_email_tests.last_attempt_at < ?", [user.id,now,now-600000]);
+    if (!claim.changes) return res.status(429).json({error:"A test email was requested recently. Try again in ten minutes."});
+    const port = Number(process.env.SMTP_PORT || 587);
+    const transport = nodemailer.createTransport({host:process.env.SMTP_HOST!,port,secure:port===465,requireTLS:port!==465,auth:{user:process.env.SMTP_USER!,pass:process.env.SMTP_PASSWORD!}});
+    try {
+      await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: test email",text:"This is a test of ConferenceGate Smart Alerts email delivery. No conference alert rule was changed."});
+      await dbRun("UPDATE intelligence_email_tests SET status='sent' WHERE user_id=? AND last_attempt_at=?", [user.id,now]);
+      return res.json({sent:true,message:"Test email accepted by SMTP. Check your inbox and Spam folder."});
+    } catch (error) {
+      await dbRun("UPDATE intelligence_email_tests SET status='failed' WHERE user_id=? AND last_attempt_at=?", [user.id,now]);
+      console.warn("[intelligence-email] test delivery failed", error instanceof Error ? error.message : "unknown");
+      return res.status(502).json({error:"Test email could not be sent"});
+    } finally { transport.close(); }
+  } catch (error) {
+    console.warn("[intelligence-email] test request failed",error instanceof Error ? error.message : "unknown");
+    return res.status(500).json({error:"Unable to process test email"});
+  }
 });
 // GET shows a confirmation page; POST performs the unsubscribe (including RFC 8058 one-click).
 intelligenceEmailRouter.get("/unsubscribe/:userId/:token", async (req,res) => {
