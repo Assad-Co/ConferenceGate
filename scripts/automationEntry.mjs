@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { withAutomationLease } from './automationLease.mjs';
 
 if (String(process.env.AUTOMATION_DISABLED || '').trim() === '1') {
   console.log('[automation] disabled for this Render service; authoritative automation runs elsewhere.');
@@ -76,22 +77,39 @@ const steps = [
   ['node', ['scripts/megaConferenceCoverageReport.mjs'], phase31Env, true],
 ];
 
-function run(command, args, extraEnv = {}, allowFailure = false) {
+function run(command, args, extraEnv = {}, allowFailure = false, signal) {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new Error('Automation lease is no longer held.'));
     const child = spawn(command, args, {
       stdio: 'inherit',
       env: { ...process.env, ...extraEnv },
       shell: false,
+      detached: process.platform !== 'win32',
+      windowsHide: true,
     });
-    child.on('error', (error) => allowFailure ? resolve() : reject(error));
+    let killTimer;
+    const terminate = (kind) => {
+      try {
+        if (process.platform !== 'win32' && child.pid) process.kill(-child.pid,kind);
+        else child.kill(kind);
+      } catch { /* Already exited. */ }
+    };
+    const abort = () => { terminate('SIGTERM'); killTimer = setTimeout(()=>terminate('SIGKILL'),10000); };
+    const cleanup = () => { clearTimeout(killTimer); signal?.removeEventListener('abort',abort); };
+    signal?.addEventListener('abort',abort,{once:true});
+    if (signal?.aborted) abort();
+    child.on('error', (error) => { cleanup(); return signal?.aborted || !allowFailure ? reject(error) : resolve(); });
     child.on('exit', (code, signal) => {
+      cleanup();
       if (code === 0 || allowFailure) return resolve();
       reject(new Error(`${command} exited with code=${code ?? 'null'}${signal ? ` signal=${signal}` : ''}`));
     });
   });
 }
 
-console.log(`[automation] rolling conference horizon ${rollingYears}; global organizer rotation enabled.`);
-for (const [command, args, extraEnv = {}, allowFailure = false] of steps) {
-  await run(command, args, extraEnv, allowFailure);
-}
+await withAutomationLease(async signal => {
+  console.log(`[automation] rolling conference horizon ${rollingYears}; global organizer rotation enabled.`);
+  for (const [command, args, extraEnv = {}, allowFailure = false] of steps) {
+    await run(command, args, extraEnv, allowFailure, signal);
+  }
+});
