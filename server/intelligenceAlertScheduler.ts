@@ -42,7 +42,7 @@ export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: n
           [next, new Date().toISOString(), account.user_id, account.state_json]
         );
         changed++;
-        for (const alert of after.alerts.slice(0, 20)) await deliverIntelligenceEmail(account.user_id, alert);
+        for (const alert of emailCandidates(after.alerts)) await deliverIntelligenceEmail(account.user_id, alert);
 
       } catch (error) {
         console.warn("[intelligence-alerts] account scan failed", error instanceof Error ? error.message : "unknown error");
