@@ -189,15 +189,26 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   const [testEmailStatus, setTestEmailStatus] = useState('');
   const [testEmailSending, setTestEmailSending] = useState(false);
   const sendTestEmail = async () => {
+    if (testEmailSending) return;
     setTestEmailSending(true);
-    setTestEmailStatus('');
+    setTestEmailStatus('Sending test email to your account address…');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch('/api/intelligence/test-email', {method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'{}'});
-      const result: {message?:string;error?:string} = await response.json();
-      setTestEmailStatus(response.ok ? (result.message || 'Test email submitted.') : (result.error || 'Test email failed.'));
-    } catch { setTestEmailStatus('Could not connect to email test service.'); }
-    finally { setTestEmailSending(false); }
+      const response = await fetch('/api/intelligence/test-email', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'}, body: '{}', signal: controller.signal,
+      });
+      const result = await response.json().catch(() => null) as {message?:string;error?:string} | null;
+      if (response.ok) setTestEmailStatus(result?.message || 'SMTP accepted the email. Check your inbox and Spam.');
+      else setTestEmailStatus(result?.error || `Test failed (HTTP ${response.status}). Sign in and retry after ten minutes if needed.`);
+    } catch (error) {
+      setTestEmailStatus(error instanceof Error && error.name === 'AbortError'
+        ? 'The request took too long. Delivery is not confirmed. Check Render logs before retrying.'
+        : 'Could not reach the test-email service. Refresh and sign in again.');
+    } finally { window.clearTimeout(timeout); setTestEmailSending(false); }
   };
+
   const [searchTerm, setSearchTerm] = useState(initialSearchQuery);
   const [interests, setInterests] = useState(() => {
     try { return window.localStorage.getItem('conferencegate-discovery-interests') || ''; } catch { return ''; }
