@@ -1,7 +1,7 @@
 import express, { Router, Request, Response } from "express";
 import crypto from "crypto";
-import { dbGet, dbRun, UserRow } from "./db";
-import { ensurePayoutObligation } from "./payouts";
+import { db, dbGet, dbRun, UserRow } from "./db";
+import { asyncHandler } from "./asyncHandler";
 
 export const paddleWebhookRouter = Router();
 
@@ -129,7 +129,7 @@ async function recordProviderEvent(
   status: "processed" | "ignored" | "failed"
 ) {
   await dbRun(
-    "INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,'paddle',?,?,?,?,?)",
+    "INSERT OR IGNORE INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,'paddle',?,?,?,?,?)",
     [`bpe_${crypto.randomUUID()}`, eventId, eventType, subjectId, payloadHash, status]
   );
 }
@@ -137,7 +137,7 @@ async function recordProviderEvent(
 paddleWebhookRouter.post(
   "/",
   express.raw({ type: "application/json", limit: "2mb" }),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const secret = process.env.PADDLE_WEBHOOK_SECRET?.trim();
     if (!secret) return res.status(503).send("Paddle webhook is not configured");
 
@@ -168,6 +168,12 @@ paddleWebhookRouter.post(
     const data = event?.data || {};
 
     if (eventType.startsWith("subscription.")) {
+      const subscriptionId = typeof data?.id === 'string' ? data.id : '';
+      const timestamp = typeof event.occurred_at === 'string' ? Date.parse(event.occurred_at) : NaN;
+      if (!subscriptionId || !Number.isFinite(timestamp)) return res.status(400).send('Missing subscription identity or event time');
+      // Keep Paddle's microsecond precision when several changes occur in one millisecond.
+      const fraction = String(event.occurred_at).match(/\.(\d+)Z$/)?.[1] || '';
+      const occurredAt = timestamp * 1000 + Number(fraction.slice(3,6).padEnd(3,'0'));
       const status = paddleSubscriptionStatus(data?.status);
       const match = await findPaddleUser(data);
       const user = match?.user;
@@ -185,7 +191,16 @@ paddleWebhookRouter.post(
             ? data.next_billed_at
             : null;
 
-      await dbRun(
+      const transaction = await db.transaction('write');
+      try {
+        const priority = ({active:1,trialing:1,past_due:2,paused:3,canceled:4} as Record<string,number>)[status];
+        const claim = await transaction.execute({sql:`INSERT INTO paddle_subscription_versions (user_id,subscription_id,occurred_at,state_priority) VALUES (?,?,?,?)
+          ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,occurred_at=excluded.occurred_at,state_priority=excluded.state_priority
+          WHERE (paddle_subscription_versions.subscription_id=excluded.subscription_id OR ?='subscription.created')
+          AND (excluded.occurred_at>paddle_subscription_versions.occurred_at OR
+            (excluded.occurred_at=paddle_subscription_versions.occurred_at AND excluded.state_priority>paddle_subscription_versions.state_priority))
+          RETURNING user_id`,args:[user.id,subscriptionId,occurredAt,priority,eventType]});
+        if (claim.rows.length) await transaction.execute({sql:
         `UPDATE users
             SET subscription_status=?,
                 subscription_plan=COALESCE(NULLIF(?,''),subscription_plan),
@@ -193,79 +208,18 @@ paddleWebhookRouter.post(
                 billing_customer_ref=COALESCE(NULLIF(?,''),billing_customer_ref),
                 subscription_period_end=?
           WHERE id=?`,
-        [status, priceId, customerId, periodEnd, user.id]
-      );
-
-      await recordProviderEvent(eventId, eventType, user.id, payloadHash, "processed");
+        args:[status, priceId, customerId, periodEnd, user.id]});
+        await transaction.execute({sql:"INSERT OR IGNORE INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,'paddle',?,?,?,?,?)",
+          args:[`bpe_${crypto.randomUUID()}`,eventId,eventType,user.id,payloadHash,claim.rows.length ? 'processed' : 'ignored']});
+        await transaction.commit();
+      } catch (error) { await transaction.rollback(); throw error; }
+      finally { transaction.close(); }
       return res.status(200).send("ok");
     }
 
-    if (eventType === "transaction.completed") {
-      const dealId =
-        typeof data?.custom_data?.conferencegate_deal_id === "string"
-          ? data.custom_data.conferencegate_deal_id
-          : "";
-      if (!dealId) {
-        await recordProviderEvent(eventId, eventType, null, payloadHash, "ignored");
-        return res.status(200).send("ok");
-      }
-
-      const deal = await dbGet<any>("SELECT * FROM sponsorship_deals WHERE id=?", [dealId]);
-      if (!deal) {
-        await recordProviderEvent(eventId, eventType, dealId, payloadHash, "ignored");
-        return res.status(200).send("ok");
-      }
-
-      const paymentReference = typeof data?.id === "string" ? data.id : eventId;
-      const existingPayment = await dbGet<any>(
-        "SELECT * FROM sponsorship_payments WHERE payment_reference=?",
-        [paymentReference]
-      );
-      if (!existingPayment) {
-        await dbRun(
-          "INSERT INTO sponsorship_payments(id,deal_id,provider,payment_reference,amount,currency,status) VALUES(?,?,?,?,?,?,'settled')",
-          [
-            `spay_${crypto.randomUUID()}`,
-            dealId,
-            "paddle",
-            paymentReference,
-            deal.agreed_amount ?? null,
-            String(deal.currency || "USD").toUpperCase(),
-          ]
-        );
-      }
-
-      await dbRun(
-        "UPDATE sponsorship_deals SET status='paid',payment_reference=?,updated_at=datetime('now') WHERE id=?",
-        [paymentReference, dealId]
-      );
-      await ensurePayoutObligation(
-        deal,
-        "paddle",
-        paymentReference,
-        deal.agreed_amount ?? null,
-        String(deal.currency || "USD").toUpperCase()
-      );
-      await dbRun(
-        "INSERT OR IGNORE INTO sponsorship_engagement_events(id,need_id,sponsor_id,event_type) VALUES(?,?,?,'payment')",
-        [`sev_${crypto.randomUUID()}`, deal.need_id, deal.sponsor_id]
-      ).catch(() => {});
-      await dbRun(
-        "INSERT INTO sponsorship_deal_updates(id,deal_id,author_id,kind,text) VALUES(?,?,?,?,?)",
-        [
-          `sdu_${crypto.randomUUID()}`,
-          dealId,
-          deal.organizer_id,
-          "payment",
-          `Payment confirmed by Paddle. Reference: ${paymentReference}`,
-        ]
-      ).catch(() => {});
-
-      await recordProviderEvent(eventId, eventType, dealId, payloadHash, "processed");
-      return res.status(200).send("ok");
-    }
-
+    // This endpoint is exclusively for software subscriptions. A signed one-off transaction
+    // with deal metadata cannot settle marketplace money or create a payout obligation.
     await recordProviderEvent(eventId, eventType, null, payloadHash, "ignored");
     return res.status(200).send("ok");
-  }
+  })
 );

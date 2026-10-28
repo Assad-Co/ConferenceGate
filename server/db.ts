@@ -839,6 +839,13 @@ export async function initDb(): Promise<void> {
       UNIQUE(provider, event_id)
     );
 
+    CREATE TABLE IF NOT EXISTS paddle_subscription_versions (
+      user_id TEXT PRIMARY KEY REFERENCES users(id),
+      subscription_id TEXT NOT NULL,
+      occurred_at INTEGER NOT NULL,
+      state_priority INTEGER NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS sponsorship_payments (
       id TEXT PRIMARY KEY,
       deal_id TEXT NOT NULL REFERENCES sponsorship_deals(id),

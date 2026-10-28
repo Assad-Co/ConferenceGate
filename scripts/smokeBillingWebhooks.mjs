@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { createClient } from '@libsql/client';
+import assert from 'node:assert/strict';
 
 const port = Number(process.env.BILLING_SMOKE_PORT || 3111);
 const dbPath = process.env.BILLING_SMOKE_DB || '/tmp/conferencegate-billing-smoke.db';
@@ -101,11 +103,11 @@ async function sendFastSpring(event) {
   if (!response.ok) throw new Error(`FastSpring webhook failed: ${response.status} ${text}`);
 }
 
-async function sendPaddle(event) {
+async function sendPaddle(event, expectedStatus=200, options={}) {
   const raw = Buffer.from(JSON.stringify(event));
-  const ts = String(Math.floor(Date.now() / 1000));
+  const ts = String(options.timestamp ?? Math.floor(Date.now() / 1000));
   const signedPayload = Buffer.from(ts + ':' + raw.toString('utf8'));
-  const signature = crypto.createHmac('sha256', paddleSecret).update(signedPayload).digest('hex');
+  const signature = options.invalidSignature ? '00' : crypto.createHmac('sha256', paddleSecret).update(signedPayload).digest('hex');
   const response = await fetch(base + '/api/billing/webhooks/paddle', {
     method: 'POST',
     headers: {
@@ -115,7 +117,7 @@ async function sendPaddle(event) {
     body: raw,
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`Paddle webhook failed: ${response.status} ${text}`);
+  if (response.status !== expectedStatus) throw new Error(`Paddle webhook expected ${expectedStatus}: ${response.status} ${text}`);
 }
 
 try {
@@ -235,6 +237,42 @@ try {
     throw new Error('Paddle webhook did not activate Organizer Pro: ' + JSON.stringify(organizerAfter));
   }
 
+  const fixture = createClient({url:'file:'+dbPath});
+  try {
+    await sendPaddle({...paddleEvent,event_id:'evt_bad_signature'},400,{invalidSignature:true});
+    await sendPaddle({...paddleEvent,event_id:'evt_expired_signature'},400,{timestamp:Math.floor(Date.now()/1000)-3600});
+    await sendPaddle({...paddleEvent,event_id:'evt_missing_clock',occurred_at:null},400);
+    const time = Date.parse(paddleEvent.occurred_at);
+    const lifecycle = (id,status,offset,subscriptionId=paddleEvent.data.id,type='subscription.updated') => ({
+      ...paddleEvent,event_id:id,event_type:type,occurred_at:new Date(time+offset).toISOString(),data:{...paddleEvent.data,id:subscriptionId,status}});
+    await sendPaddle(lifecycle('evt_past_due','past_due',1000));
+    assert.equal((await billingStatus(organizer.cookie)).hasPaidAccess,false);
+    await sendPaddle(lifecycle('evt_canceled','canceled',2000));
+    await sendPaddle(lifecycle('evt_equal_timestamp_active','active',2000));
+    assert.equal((await billingStatus(organizer.cookie)).status,'canceled');
+    await sendPaddle(lifecycle('evt_stale_active','active',1500));
+    assert.equal((await billingStatus(organizer.cookie)).status,'canceled');
+    await sendPaddle(lifecycle('evt_newer_active','active',3000));
+    assert.equal((await billingStatus(organizer.cookie)).hasPaidAccess,true);
+    await Promise.all([sendPaddle(lifecycle('evt_concurrent_cancel','canceled',5000)),sendPaddle(lifecycle('evt_concurrent_stale','active',4000))]);
+    assert.equal((await billingStatus(organizer.cookie)).status,'canceled');
+    // An unrelated/old subscription cannot override this account, even with a later delivery.
+    await sendPaddle(lifecycle('evt_foreign_subscription','active',6000,'sub_other'));
+    assert.equal((await billingStatus(organizer.cookie)).status,'canceled');
+    await sendPaddle(lifecycle('evt_replacement_subscription','active',7000,'sub_replacement','subscription.created'));
+    assert.equal((await billingStatus(organizer.cookie)).hasPaidAccess,true);
+    await sendPaddle(lifecycle('evt_old_subscription_cancel','canceled',8000));
+    assert.equal((await billingStatus(organizer.cookie)).hasPaidAccess,true);
+
+    await fixture.execute({sql:"INSERT INTO sponsorship_needs(id,conference_id,conference_title,organizer_id,title) VALUES('billing-need','isolated-conference','Isolated fixture',?,'Fixture need')",args:[organizer.user.id]});
+    await fixture.execute({sql:"INSERT INTO sponsorship_need_inquiries(id,need_id,sponsor_id) VALUES('billing-inquiry','billing-need',?)",args:[sponsor.user.id]});
+    await fixture.execute({sql:"INSERT INTO sponsorship_deals(id,inquiry_id,need_id,organizer_id,sponsor_id,conference_id,conference_title,opportunity_title,agreed_amount,status) VALUES('billing-deal','billing-inquiry','billing-need',?,?,'isolated-conference','Isolated fixture','Fixture opportunity',10000,'payment_pending')",args:[organizer.user.id,sponsor.user.id]});
+    await sendPaddle({event_id:'evt_unrelated_one_off',event_type:'transaction.completed',occurred_at:new Date().toISOString(),data:{id:'txn_unrelated',custom_data:{conferencegate_deal_id:'billing-deal'},details:{totals:{total:'100'}},currency_code:'USD'}});
+    assert.equal((await fixture.execute("SELECT status FROM sponsorship_deals WHERE id='billing-deal'")).rows[0].status,'payment_pending');
+    assert.equal(Number((await fixture.execute("SELECT count(*) AS n FROM sponsorship_payments WHERE deal_id='billing-deal'")).rows[0].n),0);
+    assert.equal(Number((await fixture.execute("SELECT count(*) AS n FROM sponsorship_payout_obligations WHERE deal_id='billing-deal'")).rows[0].n),0);
+  } finally {fixture.close();}
+
   console.log(JSON.stringify({
     billingWebhookSmoke: 'passed',
     fastspring: {
@@ -250,6 +288,11 @@ try {
       roleAndProductBindingRejectedMismatch: !mismatchAfter.hasPaidAccess,
     },
     idempotency: 'duplicate provider events accepted without duplicate processing',
+    outOfOrderAndConcurrentEvents:true,
+    pastDueRevokesAccess:true,
+    subscriptionIdentityBound:true,
+    marketplaceSettlementIsolated:true,
+    invalidAndExpiredSignaturesRejected:true,
   }));
 } finally {
   child.kill('SIGTERM');
