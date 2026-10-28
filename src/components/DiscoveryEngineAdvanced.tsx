@@ -1,3 +1,4 @@
+import { EmailDiagnostics } from './EmailDiagnostics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -193,7 +194,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
     setTestEmailSending(true);
     setTestEmailStatus('Sending test email to your account address…');
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20000);
+    const timeout = window.setTimeout(() => controller.abort(), 45000);
     try {
       const response = await fetch('/api/intelligence/test-email', {
         method: 'POST', credentials: 'include',
@@ -522,6 +523,7 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </div>
           <button type="button" onClick={sendTestEmail} disabled={testEmailSending} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">{testEmailSending ? 'Sending…' : 'Send test email'}</button>
           {testEmailStatus && <p role="status" className="w-full text-xs text-slate-700">{testEmailStatus}</p>}
+          <EmailDiagnostics />
         </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form

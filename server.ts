@@ -1,3 +1,4 @@
+import { startEmailOutboxWorker } from "./server/intelligenceOutbox";
 import { intelligenceEmailRouter, initIntelligenceEmailSchema } from "./server/intelligenceEmail";
 import { startProfessionalIntelligenceAlertScheduler } from "./server/intelligenceAlertScheduler";
 import { intelligenceSyncRouter, initIntelligenceSyncSchema } from "./server/intelligenceSync";
@@ -82,6 +83,7 @@ async function startServer() {
   await initConferenceVerificationSchema();
   await initIntelligenceSyncSchema();
   await initIntelligenceEmailSchema();
+  startEmailOutboxWorker();
   startProfessionalIntelligenceAlertScheduler();
   await initProfessionalTrustSchema();
 
