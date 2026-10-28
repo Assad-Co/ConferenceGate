@@ -363,6 +363,8 @@ async function startServer() {
   app.use("/api/billing/webhooks/fastspring", fastSpringWebhookRouter);
   app.use("/api/billing/webhooks/paddle", paddleWebhookRouter);
 
+  // Preserve Paddle's raw bytes for HMAC verification before JSON parsing.
+  app.use("/api/billing/paddle-webhook", express.raw({ type: "application/json", limit: "1mb" }));
   app.use(express.json({ limit: "8mb" }));
   app.use(cookieParser());
 
