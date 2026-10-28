@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { dbGet, dbRun, UserRow } from "./db";
 import { asyncHandler } from "./asyncHandler";
+import { revokeUserSessions } from "./auth";
 import { captureTestEmail } from "./testEmail";
 
 import { privateWorkspacesOnly } from "./ownerPreview";
@@ -105,6 +106,7 @@ async function sendResetEmail(email: string, token: string): Promise<void> {
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(15000),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -239,8 +241,17 @@ authRecoveryRouter.post("/password-reset/confirm", resetRateLimit, asyncHandler(
     return res.status(400).json({ error: "This password reset link is invalid or expired." });
   }
 
+  // Atomically consume only the current token; concurrent confirmations cannot both succeed.
+  const claimed = await dbGet<{ value: string }>(
+    `DELETE FROM app_secrets WHERE key = ? AND EXISTS (
+      SELECT 1 FROM app_secrets latest WHERE latest.key = ? AND latest.value = ?
+    ) RETURNING value`, [resetRecordKey(tokenHash), latestResetKey(record.userId), tokenHash]
+  );
+  if (!claimed) return res.status(400).json({ error: "This password reset link is invalid or expired." });
+
   const passwordHash = bcrypt.hashSync(newPassword, 10);
   await dbRun("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, user.id]);
+  await revokeUserSessions(user.id);
   await removeResetRecord(user.id, tokenHash);
 
   res.setHeader("Cache-Control", "no-store");
