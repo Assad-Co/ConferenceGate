@@ -13,15 +13,27 @@ export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: n
     const accounts = await dbAll<{user_id: string; state_json: string}>(
       "SELECT user_id, state_json FROM professional_intelligence_state"
     );
+    const recentThreshold = Date.now() - 2 * 60 * 60 * 1000;
     for (const account of accounts) {
       try {
         const before = parseState(account.state_json);
+        const emailCandidates = (alerts: typeof before.alerts) => {
+          const seen = new Set<string>();
+          return alerts.filter(alert => {
+            const created = Date.parse(alert.createdAt);
+            if (!Number.isFinite(created) || created < recentThreshold) return false;
+            const key = alert.result.link.trim().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }).slice(0, 3);
+        };
         if (!before.rules.some(rule => rule.enabled)) continue;
         scanned++;
         const after = evaluateAlerts(before, results);
         const next = JSON.stringify(after);
         if (next === JSON.stringify(before)) {
-          for (const alert of after.alerts.slice(0, 20)) await deliverIntelligenceEmail(account.user_id, alert);
+          for (const alert of emailCandidates(after.alerts)) await deliverIntelligenceEmail(account.user_id, alert);
           continue;
         }
         // Optimistic update prevents overwriting a user's concurrent browser changes.
