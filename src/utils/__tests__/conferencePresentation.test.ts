@@ -44,3 +44,9 @@ test('distinct same-day workshops sharing an organizer homepage remain visible',
 test('IROS workshop paths remain distinct from the main edition',()=>{
  assert.equal(deduplicateConferenceResults([result({link:'https://2027.ieee-iros.org/'}),result({link:'https://2027.ieee-iros.org/workshops'})]).length,2);
 });
+
+test('different conferences on a shared calendar path remain separate even on the same day',()=>{
+ const first=result({title:'First conference',link:'https://society.example/events/upcoming',startDate:'2027-03-01',linkIsConferencePage:false});
+ const second={...first,title:'Second conference'};
+ assert.equal(deduplicateConferenceResults([first,second,{...first,sections:['agenda']}]).length,2);
+});

@@ -42,6 +42,8 @@ export interface LiveSearchResult {
   cfpOpen?: boolean;
   /** Additional subject labels attached to the stored conference. */
   categories?: string[];
+  /** False when an organizer calendar names several distinct conferences. */
+  linkIsConferencePage?: boolean;
 }
 
 export async function searchConferencesOnTheWeb(
