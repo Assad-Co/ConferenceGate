@@ -1,14 +1,18 @@
 import crypto from "node:crypto";
-import nodemailer from "nodemailer";
 import { Router } from "express";
-import { dbGet, dbRun } from "./db";
+import { dbAll, dbGet, dbRun } from "./db";
 import { COOKIE_NAME, verifySessionToken } from "./auth";
+import { isOwnerPreviewEmail } from "./ownerPreview";
+import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure } from "./emailTransport";
+import { emailQueueDiagnostics, enqueueAlert, initEmailOutbox } from "./intelligenceOutbox";
 
 export const intelligenceEmailRouter = Router();
 export async function initIntelligenceEmailSchema() {
   await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_preferences (user_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)");
   await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_deliveries (user_id TEXT NOT NULL, alert_id TEXT NOT NULL, delivered_at TEXT, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(user_id,alert_id))");
   await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_tests (user_id TEXT PRIMARY KEY, last_attempt_at INTEGER NOT NULL, status TEXT NOT NULL)");
+  await dbRun("CREATE TABLE IF NOT EXISTS intelligence_email_test_records (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,provider_message_id TEXT,error_code TEXT)");
+  await initEmailOutbox();
 }
 function tokenFor(userId: string) {
   const key = process.env.INTELLIGENCE_UNSUBSCRIBE_SECRET;
@@ -33,6 +37,14 @@ intelligenceEmailRouter.get("/email-preferences", async (req,res) => {
     return res.json({enabled:row?.enabled===1, deliveryConfigured: deliveryConfigured()});
   } catch { return res.status(500).json({error:"Unable to load preferences"}); }
 });
+intelligenceEmailRouter.get("/email-tests", async (req,res) => {
+  try {
+    const user = await authUser(req);
+    if (!user) return res.status(401).json({error:"Authentication required"});
+    const records = await dbAll("SELECT id,status,created_at,updated_at,error_code FROM intelligence_email_test_records WHERE user_id=? ORDER BY created_at DESC LIMIT 10",[user.id]);
+    return res.json({recipient:user.email,records});
+  } catch { return res.status(500).json({error:"Unable to load email tests"}); }
+});
 intelligenceEmailRouter.put("/email-preferences", async (req,res) => {
   try {
     const user = await authUser(req);
@@ -43,32 +55,48 @@ intelligenceEmailRouter.put("/email-preferences", async (req,res) => {
     return res.json({enabled:enabled===1});
   } catch { return res.status(500).json({error:"Unable to update preferences"}); }
 });
+export function emailTestOriginAllowed(origin: string | undefined, expected = process.env.PUBLIC_BASE_URL || "https://conferencegate.com") {
+  const normalized = expected.replace(/[/]$/, "");
+  const allowed = new Set([normalized]);
+  if (["https://conferencegate.com", "https://www.conferencegate.com"].includes(normalized)) {
+    allowed.add("https://conferencegate.com"); allowed.add("https://www.conferencegate.com");
+  }
+  return Boolean(origin && allowed.has(origin));
+}
+export async function claimEmailTest(userId: string, now = Date.now()) {
+  return dbGet<{last_attempt_at:number}>("INSERT INTO intelligence_email_tests (user_id,last_attempt_at,status) VALUES (?,?,'sending') ON CONFLICT(user_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='sending' WHERE intelligence_email_tests.last_attempt_at < ? OR (intelligence_email_tests.status='failed' AND intelligence_email_tests.last_attempt_at < ?) RETURNING last_attempt_at", [userId,now,now-600000,now-30000]);
+}
 // Authenticated same-origin SMTP smoke test. Sends only to the signed-in account email.
 intelligenceEmailRouter.post("/test-email", async (req,res) => {
   try {
     const user = await authUser(req);
     if (!user) return res.status(401).json({error:"Authentication required"});
-    const origin = req.get("origin");
-    const expected = (process.env.PUBLIC_BASE_URL || "https://conferencegate.com").replace(/[/]$/, "");
-    if (!origin || origin !== expected) return res.status(403).json({error:"Invalid request origin"});
+    if (!emailTestOriginAllowed(req.get("origin"))) return res.status(403).json({error:"Invalid request origin"});
     if (!deliveryConfigured()) return res.status(503).json({error:"Email delivery is not configured"});
     const now = Date.now();
-    // Atomic per-account ten-minute cooldown across processes and devices, including failures.
-    const claim = await dbGet<{last_attempt_at:number}>("INSERT INTO intelligence_email_tests (user_id,last_attempt_at,status) VALUES (?,?,'sending') ON CONFLICT(user_id) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='sending' WHERE intelligence_email_tests.last_attempt_at < ? RETURNING last_attempt_at", [user.id,now,now-600000]);
+    // Confirmed rejection gets a short anti-abuse delay; accepted/ambiguous attempts keep ten minutes.
+    const claim = await claimEmailTest(user.id,now);
     if (!claim) return res.status(429).json({error:"A test email was requested recently. Try again in ten minutes."});
-    const port = Number(process.env.SMTP_PORT || 587);
-    const transport = nodemailer.createTransport({host:process.env.SMTP_HOST!,port,secure:port===465,requireTLS:port!==465,auth:{user:process.env.SMTP_USER!,pass:process.env.SMTP_PASSWORD!}});
+    const requestId = crypto.randomUUID();
+    await dbRun("INSERT INTO intelligence_email_test_records (id,user_id,status,created_at,updated_at) VALUES (?,?,'submitted',?,?)", [requestId,user.id,now,now]);
+    const transport = createEmailTransport();
     try {
-      await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: test email",text:"This is a test of ConferenceGate Smart Alerts email delivery. No conference alert rule was changed."});
+      const text = "This is a test of ConferenceGate Smart Alerts email delivery. No conference alert rule was changed.\n\nRequest ID: " + requestId;
+      const info = await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: test email",text,html:brandedEmail("Email delivery test",text),messageId:`<${requestId}@conferencegate.com>`});
+      if (!info.accepted?.some((address: string) => address.toLowerCase() === user.email.toLowerCase())) throw Object.assign(new Error("Recipient rejected"), {code:"EENVELOPE",responseCode:550});
       await dbRun("UPDATE intelligence_email_tests SET status='sent' WHERE user_id=? AND last_attempt_at=?", [user.id,now]);
-      return res.json({sent:true,message:"Test email accepted by SMTP. Check your inbox and Spam folder."});
+      await dbRun("UPDATE intelligence_email_test_records SET status='accepted',provider_message_id=?,updated_at=? WHERE id=?", [info.messageId || null,Date.now(),requestId]);
+      return res.json({sent:true,status:"accepted",requestId,recipient:user.email,message:"SMTP accepted the test for " + user.email + ". Inbox receipt is not confirmed. Check Inbox and Spam. Request: " + requestId});
     } catch (error) {
-      await dbRun("UPDATE intelligence_email_tests SET status='failed' WHERE user_id=? AND last_attempt_at=?", [user.id,now]);
-      console.warn("[intelligence-email] test delivery failed", error instanceof Error ? error.message : "unknown");
-      return res.status(502).json({error:"Test email could not be sent"});
+      const failure = emailFailure(error);
+      const status = failure.uncertain ? "uncertain" : "failed";
+      await dbRun("UPDATE intelligence_email_tests SET status=? WHERE user_id=? AND last_attempt_at=?", [status,user.id,now]);
+      await dbRun("UPDATE intelligence_email_test_records SET status=?,error_code=?,updated_at=? WHERE id=?", [status,failure.code,Date.now(),requestId]);
+      console.warn("[intelligence-email] test",JSON.stringify({requestId,status,code:failure.code}));
+      return res.status(502).json({status,requestId,error: status === "uncertain" ? "SMTP outcome is uncertain. Check your inbox before retrying. Request: " + requestId : "SMTP rejected the test. Retry after 30 seconds. Request: " + requestId});
     } finally { transport.close(); }
   } catch (error) {
-    console.warn("[intelligence-email] test request failed",error instanceof Error ? error.message : "unknown");
+    console.warn("[intelligence-email] test request failed");
     return res.status(500).json({error:"Unable to process test email"});
   }
 });
@@ -88,32 +116,25 @@ intelligenceEmailRouter.post("/unsubscribe/:userId/:token", async (req,res) => {
   } catch { return res.status(503).json({error:"Unsubscribe unavailable"}); }
 });
 export function deliveryConfigured() {
-  return process.env.INTELLIGENCE_EMAIL_NOTIFICATIONS === "enabled" &&
-    Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD &&
-      process.env.INTELLIGENCE_EMAIL_FROM && process.env.INTELLIGENCE_UNSUBSCRIBE_SECRET &&
-      process.env.INTELLIGENCE_UNSUBSCRIBE_SECRET.length >= 32);
+  return emailConfiguration().ready;
 }
 export async function deliverIntelligenceEmail(userId: string, alert: {id:string;title:string;result:{title:string;link:string}}) {
   if (!deliveryConfigured()) return false;
   const user = await dbGet<{email:string;enabled:number}>("SELECT u.email,p.enabled FROM users u JOIN intelligence_email_preferences p ON p.user_id=u.id WHERE u.id=?", [userId]);
   if (!user || user.enabled!==1) return false;
-  const claimed = await dbRun("INSERT OR IGNORE INTO intelligence_email_deliveries (user_id,alert_id,status,attempts) VALUES (?,?,'pending',0)", [userId,alert.id]);
-  const row = await dbGet<{status:string;attempts:number}>("SELECT status,attempts FROM intelligence_email_deliveries WHERE user_id=? AND alert_id=?", [userId,alert.id]);
-  if (!row || row.status==="sent" || row.attempts>=3) return false;
-  const claimedAttempt = await dbRun("UPDATE intelligence_email_deliveries SET status='sending',attempts=attempts+1 WHERE user_id=? AND alert_id=? AND status IN ('pending','failed')", [userId,alert.id]);
-  const sending = await dbGet<{status:string}>("SELECT status FROM intelligence_email_deliveries WHERE user_id=? AND alert_id=?", [userId,alert.id]);
-  if (sending?.status!=="sending") return false;
-  const host=process.env.SMTP_HOST!, port=Number(process.env.SMTP_PORT||587);
-  const transport=nodemailer.createTransport({host,port,secure:port===465,requireTLS:port!==465,auth:{user:process.env.SMTP_USER!,pass:process.env.SMTP_PASSWORD!}});
   const base=(process.env.PUBLIC_BASE_URL||"https://conferencegate.com").replace(/\/$/,"");
   const unsub=base+"/api/intelligence/unsubscribe/"+encodeURIComponent(userId)+"/"+tokenFor(userId);
-  try {
-    await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: new conference alert",text:alert.title+"\n"+alert.result.title+"\n"+alert.result.link+"\n\nUnsubscribe (POST): "+unsub,headers:{"List-Unsubscribe":"<"+unsub+">","List-Unsubscribe-Post":"List-Unsubscribe=One-Click"}});
-    await dbRun("UPDATE intelligence_email_deliveries SET status='sent',delivered_at=? WHERE user_id=? AND alert_id=?", [new Date().toISOString(),userId,alert.id]);
-    return true;
-  } catch (error) {
-    await dbRun("UPDATE intelligence_email_deliveries SET status='failed' WHERE user_id=? AND alert_id=?", [userId,alert.id]);
-    console.warn("[intelligence-email] delivery failed",error instanceof Error?error.message:"unknown");
-    return false;
-  } finally { transport.close(); }
+  await enqueueAlert(userId, alert.id, alert.title, alert.title+"\n"+alert.result.title+"\n"+alert.result.link, unsub);
+  return true;
 }
+
+intelligenceEmailRouter.get("/email-diagnostics", async (req,res) => {
+  try {
+    const user = await authUser(req);
+    if (!user) return res.status(401).json({error:"Authentication required"});
+    if (!isOwnerPreviewEmail(user.email)) return res.status(403).json({error:"Administrator access required"});
+    const tests = await dbAll("SELECT id,status,created_at,updated_at,provider_message_id,error_code FROM intelligence_email_test_records ORDER BY created_at DESC LIMIT 30");
+    return res.json({configuration:emailConfiguration(), backgroundDiscoveryEnabled:process.env.INTELLIGENCE_BACKGROUND_ALERTS === "enabled",queue:await emailQueueDiagnostics(), tests,
+      evidence:"Accepted means SMTP handoff only. Provider delivery events and inbox receipt are not verified by this dashboard."});
+  } catch { return res.status(500).json({error:"Unable to load email diagnostics"}); }
+});
