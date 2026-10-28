@@ -89,6 +89,306 @@
         "registrationUrl": null,
         "accommodation": "The meeting venue is Hilton Garden Inn Pittsburgh/Southpointe."
       }
+    },
+    {
+      "id": "bangkok-13th-international-conference-on-education-humanities-social-s",
+      "officialUrl": "https://www.earhm.org/conference/360",
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://www.earhm.org/conference/360",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://www.earhm.org/conference/360",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://www.earhm.org/conference/360",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://www.earhm.org/conference/360",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://www.earhm.org/conference/360",
+      "sourceHost": "earhm.org",
+      "corroboratingSourceUrls": [
+        "https://www.iconf.com/conference/BEHS2-27_9722"
+      ]
+    },
+    {
+      "id": "international-conference-on-robotics-and-artificial-intelligence-2027-",
+      "officialUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+      "organization": "InovSciTech",
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://inovscitechconferences.com/2027/paris/robartInt/",
+      "sourceHost": "inovscitechconferences.com",
+      "corroboratingSourceUrls": [
+        "https://www.iconf.com/conference/10thInternationalConferenceonRoboticsandArtificialIntelligence_9587"
+      ]
+    },
+    {
+      "id": "melbourne-international-conference-on-teaching-education-learning-2027",
+      "officialUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+      "organization": "The Teacher Forum",
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "organization": {
+          "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://teacherforum.org/melbourne-ictel-24-25-mar-2027",
+      "sourceHost": "teacherforum.org",
+      "corroboratingSourceUrls": [
+        "https://www.iconf.com/conference/MelbourneInternationalConferenceonTeaching%2CEducation%26Learning_9559"
+      ]
+    },
+    {
+      "id": "un-climate-change-conference-cop31-2026-antalya",
+      "officialUrl": "https://unfccc.int/cop31",
+      "startDate": "2026-11-09",
+      "endDate": "2026-11-20",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": "9–20 November 2026",
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startDate": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "endDate": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datePrecision": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startMonth": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datesText": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://unfccc.int/cop31",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://unfccc.int/cop31",
+      "sourceHost": "unfccc.int"
+    },
+    {
+      "id": "prince-mahidol-award-conference-2027-bangkok",
+      "officialUrl": "https://pmac2027.com/",
+      "startDate": "2027-01-26",
+      "endDate": "2027-01-30",
+      "datePrecision": "day",
+      "startMonth": 1,
+      "datesText": "26–30 January 2027",
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startDate": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "endDate": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datePrecision": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startMonth": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datesText": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://pmac2027.com/",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://pmac2027.com/",
+      "sourceHost": "pmac2027.com"
+    },
+    {
+      "id": "un-climate-change-conference-cop32-2027-addis-ababa",
+      "officialUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+      "startDate": "2027-11-08",
+      "endDate": "2027-11-19",
+      "datePrecision": "day",
+      "startMonth": 11,
+      "datesText": "8–19 November 2027",
+      "corroboratingSourceUrls": [
+        "https://unfccc.int/sites/default/files/resource/COP30_2g_dates_venues_auv.pdf"
+      ],
+      "sourceType": "official_site",
+      "provenance": {
+        "officialUrl": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startDate": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "endDate": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datePrecision": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "startMonth": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "datesText": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceType": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceUrl": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        },
+        "sourceHost": {
+          "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+          "sourcePageTitle": "Official event source reviewed 28 October 2026",
+          "confidence": "High"
+        }
+      },
+      "verifiedAt": "2026-10-28",
+      "verificationScope": "Only the explicit fields in this correction were reviewed; no new verification of fees, people or sponsorship claims.",
+      "sourceUrl": "https://unfccc.int/conference/second-sessional-period-2027",
+      "sourceHost": "unfccc.int"
     }
   ]
 }
