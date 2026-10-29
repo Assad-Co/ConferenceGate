@@ -8,45 +8,6 @@ import { ensurePayoutObligation } from "./payouts";
 
 export const billingRouter = Router();
 
-// Receive Paddle Billing webhooks directly. No browser session, no internal sync secret.
-// Never grant access from an unsigned payload or from a transaction alone.
-billingRouter.post("/paddle-webhook", asyncHandler(async (req, res: Response) => {
-  const secret = process.env.PADDLE_WEBHOOK_SECRET?.trim();
-  const signature = String(req.header("Paddle-Signature") || "");
-  if (!secret || !Buffer.isBuffer(req.body)) return res.status(503).json({ error: "Webhook not configured" });
-  const ts = /(?:^|;)\\s*ts=(\\d+)/.exec(signature)?.[1];
-  const h1s = [...signature.matchAll(/(?:^|;)\\s*h1=([a-fA-F0-9]{64})(?=;|$)/g)].map(m => m[1]);
-  if (!ts || !h1s.length || Math.abs(Date.now() / 1000 - Number(ts)) > 300) return res.status(401).json({ error: "Invalid signature" });
-  const calculated = crypto.createHmac("sha256", secret).update(ts + ":" + req.body.toString("utf8")).digest();
-  if (!h1s.some(h => crypto.timingSafeEqual(calculated, Buffer.from(h, "hex")))) return res.status(401).json({ error: "Invalid signature" });
-  let event: any;
-  try { event = JSON.parse(req.body.toString("utf8")); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
-  const eventId = typeof event?.event_id === "string" ? event.event_id : "";
-  const type = typeof event?.event_type === "string" ? event.event_type : "";
-  if (!eventId || !type) return res.status(400).json({ error: "Missing event identifiers" });
-  if (!type.startsWith("subscription.")) return res.json({ ok: true, ignored: true });
-  const sub = event.data || {};
-  const userId = String(sub?.custom_data?.conferencegate_user_id || "");
-  const role = String(sub?.custom_data?.conferencegate_role || "");
-  const priceIds = (sub?.items || []).map((x: any) => x?.price?.id || x?.price_id).filter(Boolean);
-  const expected = role === "organizer" ? process.env.PADDLE_ORGANIZER_PRICE_ID : role === "sponsor" ? process.env.PADDLE_SPONSOR_PRICE_ID : null;
-  if (!userId || !expected || !priceIds.includes(expected)) return res.status(400).json({ error: "Subscription mapping missing or mismatched" });
-  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id=?", [userId]);
-  if (!user || user.role !== role) return res.status(400).json({ error: "Account role mismatch" });
-  const existing = await dbGet<{id: string}>("SELECT id FROM billing_provider_events WHERE provider=? AND event_id=?", ["paddle", eventId]);
-  if (existing) return res.json({ ok: true, duplicate: true });
-  const state = String(sub.status || "");
-  const map: Record<string,string> = {active:"active",trialing:"trialing",past_due:"past_due",paused:"required",canceled:"canceled"};
-  const status = map[state];
-  if (!status) return res.json({ok:true,ignored:true});
-  const periodEnd = typeof sub?.current_billing_period?.ends_at === "string" ? sub.current_billing_period.ends_at : null;
-  await dbRun("UPDATE users SET subscription_status=?,subscription_plan=?,subscription_provider=?,subscription_period_end=?,billing_customer_ref=? WHERE id=? AND role=?",
-    [status, role, "paddle", periodEnd, typeof sub.customer_id === "string" ? sub.customer_id : null, userId, role]);
-  await dbRun("INSERT INTO billing_provider_events(id,provider,event_id,event_type,subject_id,payload_hash,status) VALUES(?,?,?,?,?,?,'processed')",
-    [`bpe_${crypto.randomUUID()}`,"paddle",eventId,type,userId,crypto.createHash("sha256").update(req.body).digest("hex")]);
-  return res.json({ok:true});
-}));
-
 // Compare adapter credentials without leaking matching-prefix timing information.
 function validBillingSyncSecret(supplied: string): boolean {
   const expected = process.env.BILLING_SYNC_SECRET?.trim();

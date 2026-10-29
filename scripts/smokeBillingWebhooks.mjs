@@ -108,7 +108,7 @@ async function sendPaddle(event, expectedStatus=200, options={}) {
   const ts = String(options.timestamp ?? Math.floor(Date.now() / 1000));
   const signedPayload = Buffer.from(ts + ':' + raw.toString('utf8'));
   const signature = options.invalidSignature ? '00' : crypto.createHmac('sha256', paddleSecret).update(signedPayload).digest('hex');
-  const response = await fetch(base + '/api/billing/webhooks/paddle', {
+  const response = await fetch(base + (options.path || '/api/billing/paddle-webhook'), {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -230,7 +230,7 @@ try {
     },
   };
   await sendPaddle(paddleEvent);
-  await sendPaddle(paddleEvent);
+  await sendPaddle(paddleEvent, 200, {path: '/api/billing/webhooks/paddle'});
 
   const organizerAfter = await billingStatus(organizer.cookie);
   if (!organizerAfter.hasPaidAccess || organizerAfter.status !== 'active' || organizerAfter.provider !== 'paddle') {
@@ -239,6 +239,19 @@ try {
 
   const fixture = createClient({url:'file:'+dbPath});
   try {
+    const sponsorPaddleEvent = {
+      ...paddleEvent,
+      event_id: 'evt_paddle_sponsor_activation',
+      data: {...paddleEvent.data, id: 'sub_paddle_sponsor_smoke', customer_id: 'ctm_paddle_sponsor_smoke',
+        custom_data: {conferencegate_user_id: sponsor.user.id, conferencegate_role: 'sponsor'},
+        items: [{price: {id: sponsorPriceId}}]},
+    };
+    await sendPaddle(sponsorPaddleEvent);
+    const sponsorPaddleStatus = await billingStatus(sponsor.cookie);
+    assert.equal(sponsorPaddleStatus.hasPaidAccess, true);
+    assert.equal(sponsorPaddleStatus.provider, 'paddle');
+    assert.equal((await fixture.execute({sql: 'SELECT subscription_plan FROM users WHERE id=?', args: [sponsor.user.id]})).rows[0].subscription_plan, sponsorPriceId);
+    assert.equal((await fixture.execute({sql: 'SELECT subscription_plan FROM users WHERE id=?', args: [organizer.user.id]})).rows[0].subscription_plan, organizerPriceId);
     await sendPaddle({...paddleEvent,event_id:'evt_bad_signature'},400,{invalidSignature:true});
     await sendPaddle({...paddleEvent,event_id:'evt_expired_signature'},400,{timestamp:Math.floor(Date.now()/1000)-3600});
     await sendPaddle({...paddleEvent,event_id:'evt_missing_clock',occurred_at:null},400);
@@ -305,3 +318,4 @@ try {
     try { fs.rmSync(dbPath + suffix, { force: true }); } catch {}
   }
 }
+
