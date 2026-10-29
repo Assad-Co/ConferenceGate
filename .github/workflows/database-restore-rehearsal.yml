@@ -1,0 +1,52 @@
+name: Isolated Database Restore Rehearsal
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/restoreSqlBackup.py
+      - scripts/recoveryRestoreRehearsal.mjs
+      - .github/workflows/database-restore-rehearsal.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-restore-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  synthetic-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - name: Restore synthetic data and reject incomplete exports
+        run: node scripts/recoveryRestoreRehearsal.mjs --fixture
+
+  backup-rehearsal:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: synthetic-fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - name: Restore backup on this isolated worker and verify the application
+        env:
+          RECOVERY_DATABASE_URL: ${{ secrets.RECOVERY_DATABASE_URL }}
+          RECOVERY_READ_TOKEN: ${{ secrets.RECOVERY_READ_TOKEN }}
+        run: node scripts/recoveryRestoreRehearsal.mjs
+      # No database, SQL dump, runtime log, or customer record artifacts are uploaded.
