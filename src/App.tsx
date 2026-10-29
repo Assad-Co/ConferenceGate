@@ -194,6 +194,30 @@ export function App() {
   const [sponsorNameOverride, setSponsorNameOverride] = useState<string | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('Professional');
   const [activeTab, setActiveTab] = useState<string>('home');
+  // Hide the redundant, standalone Sponsor opportunity intelligence box
+  // without altering the Sponsor marketplace or dashboard features.
+  useEffect(() => {
+    if (activeTab !== 'sponsor') return;
+    const removeRedundantSponsorBox = () => {
+      const label = 'Sponsor opportunity intelligence';
+      document.querySelectorAll('button, summary').forEach((element) => {
+        if (element.textContent?.trim() !== label) return;
+        let node = element.parentElement;
+        while (node && node !== document.body && node.textContent?.trim() === label) {
+          if (node instanceof HTMLElement && getComputedStyle(node).borderTopStyle !== 'none') {
+            node.remove();
+            break;
+          }
+          node = node.parentElement;
+        }
+      });
+    };
+    removeRedundantSponsorBox();
+    const observer = new MutationObserver(removeRedundantSponsorBox);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [activeTab]);
+
   // Remove the redundant collapsible organizer intelligence portal introduced by
   // optional workspace decorations. Keep the core OrganizerDashboard intact.
   useEffect(() => {
