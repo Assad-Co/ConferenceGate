@@ -1166,7 +1166,7 @@ function EmailAlertPreferences() {
       <input type="checkbox" checked={enabled} onChange={e=>void toggle(e.target.checked)} />
       <span>Send me email when my saved conference alerts find new matches</span>
     </label>
-    <p className="text-xs">Optional. You can turn this off here or use the unsubscribe link in an email. Emails are sent only after delivery is configured.</p>
+    <p className="text-xs">Turn this on to receive automatic email updates when your saved conference alerts find new matches. You can turn it off here or unsubscribe from any alert email. Delivery depends on the mail service being available.</p>
     {!configured&&<p className="text-xs">Email delivery is not yet activated by the administrator.</p>}
     {message&&<p className="text-xs" role="status">{message}</p>}
   </div>;
