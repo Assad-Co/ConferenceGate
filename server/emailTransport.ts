@@ -40,10 +40,14 @@ export function emailRouting(env = process.env) {
 
 // Store only an allowlisted code, never SMTP response text, credentials or message contents.
 export function emailFailure(error: unknown) {
-  const e = error as { code?: string; command?: string; responseCode?: number };
+  const e = error as { code?: string; command?: string; responseCode?: number; syscall?: string; errno?: string };
   const code = ["EAUTH", "ECONNECTION", "ETIMEDOUT", "ESOCKET", "EENVELOPE", "EMESSAGE", "EDNS"].includes(e?.code || "") ? e.code! : "SMTP_ERROR";
   const explicitRejection = Number.isInteger(e?.responseCode) && e.responseCode! >= 400;
-  const beforeMessage = ["CONN", "EHLO", "HELO", "STARTTLS", "AUTH", "AUTH PLAIN", "AUTH LOGIN", "MAIL FROM", "RCPT TO"].includes(e?.command || "");
+  // Nodemailer also reports command=CONN when the socket closes after DATA.
+  // Only a proven connection-establishment failure makes CONN safe to retry.
+  const failedToConnect = e?.syscall === "connect" || e?.code === "EDNS" ||
+    ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "ENETUNREACH", "EHOSTUNREACH"].includes(e?.errno || "");
+  const beforeMessage = failedToConnect || ["EHLO", "HELO", "STARTTLS", "AUTH", "AUTH PLAIN", "AUTH LOGIN", "MAIL FROM", "RCPT TO"].includes(e?.command || "");
   const retryable = explicitRejection ? e.responseCode! < 500 : beforeMessage;
   // A connection lost after DATA may already have delivered. Do not blindly retry it.
   return { code, retryable, uncertain: !explicitRejection && !beforeMessage };

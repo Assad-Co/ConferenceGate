@@ -1,17 +1,19 @@
 import { deliverIntelligenceEmail } from "./intelligenceEmail";
-import { dbAll, dbRun } from "./db";
+import { dbAll, dbGet } from "./db";
 import { browseStoredConferences } from "./braveSearch";
 import { evaluateAlerts, parseState } from "../src/intelligence/engine";
 
 let scanning = false;
-export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: number; changed: number }> {
+// A bounded operational rehearsal may scan one consenting account. The timer still scans all accounts.
+export async function scanProfessionalIntelligenceAlerts(userId?: string): Promise<{ scanned: number; changed: number }> {
   if (scanning) return { scanned: 0, changed: 0 };
   scanning = true;
   let scanned = 0, changed = 0;
   try {
     const results = await browseStoredConferences(10000);
     const accounts = await dbAll<{user_id: string; state_json: string}>(
-      "SELECT user_id, state_json FROM professional_intelligence_state"
+      "SELECT user_id, state_json FROM professional_intelligence_state" + (userId ? " WHERE user_id=?" : ""),
+      userId ? [userId] : []
     );
     const recentThreshold = Date.now() - 2 * 60 * 60 * 1000;
     for (const account of accounts) {
@@ -37,10 +39,11 @@ export async function scanProfessionalIntelligenceAlerts(): Promise<{ scanned: n
           continue;
         }
         // Optimistic update prevents overwriting a user's concurrent browser changes.
-        await dbRun(
-          "UPDATE professional_intelligence_state SET state_json=?, updated_at=? WHERE user_id=? AND state_json=?",
+        const saved = await dbGet(
+          "UPDATE professional_intelligence_state SET state_json=?, updated_at=? WHERE user_id=? AND state_json=? RETURNING user_id",
           [next, new Date().toISOString(), account.user_id, account.state_json]
         );
+        if (!saved) continue;
         changed++;
         for (const alert of emailCandidates(after.alerts)) await deliverIntelligenceEmail(account.user_id, alert);
 
