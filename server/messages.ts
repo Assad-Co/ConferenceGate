@@ -22,8 +22,10 @@ async function getOrCreateConversation(userA: string, userB: string): Promise<Co
   if (existing) return existing;
   const [a, b] = conversationKey(userA, userB);
   const id = `conv_${crypto.randomUUID()}`;
-  await dbRun("INSERT INTO conversations (id, user_a, user_b) VALUES (?, ?, ?)", [id, a, b]);
-  return (await dbGet<ConversationRow>("SELECT * FROM conversations WHERE id = ?", [id]))!;
+  // Two first messages can race across async database reads. Let the pair's
+  // unique constraint choose one conversation, then read that shared row.
+  await dbRun("INSERT INTO conversations (id, user_a, user_b) VALUES (?, ?, ?) ON CONFLICT(user_a, user_b) DO NOTHING", [id, a, b]);
+  return (await findConversation(userA, userB))!;
 }
 
 function toMessageDTO(row: MessageRow) {
