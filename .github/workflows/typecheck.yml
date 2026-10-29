@@ -106,5 +106,7 @@ jobs:
         run: node scripts/smokeEnterpriseGovernance.mjs
       - name: Built server smoke test
         run: node scripts/smokeBuiltServer.mjs
+      - name: Concurrent first messages and realtime recipient isolation
+        run: node scripts/smokeMessagingConcurrency.mjs
       - name: Free-launch signup and certificate authorization acceptance
         run: node scripts/smokeFreeLaunchAcceptance.mjs
