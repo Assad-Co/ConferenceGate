@@ -78,7 +78,13 @@ export function startEmailOutboxWorker() {
       await drainEmailOutbox();
       const queue = await emailQueueDiagnostics();
       if (queue.alert) console.warn("[intelligence-email] queue requires attention", JSON.stringify({ counts: queue.counts, oldestQueuedAt: queue.oldestQueuedAt }));
-    } catch { console.warn("[intelligence-email] queue worker failed"); }
+    } catch (error) {
+      // Emit only stable error metadata, never message text or SMTP credentials.
+      const code = error && typeof error === "object" && "code" in error && typeof error.code === "string"
+        ? error.code.slice(0, 80) : "UNCLASSIFIED";
+      const kind = error instanceof Error ? error.name.slice(0, 80) : "UnknownError";
+      console.warn("[intelligence-email] queue worker failed", JSON.stringify({ code, kind }));
+    }
     finally { busy = false; }
   };
   setInterval(() => void tick(), 60000).unref();
