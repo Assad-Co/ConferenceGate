@@ -25,6 +25,8 @@ jobs:
           TURSO_AUTH_TOKEN: ''
         run: node --import tsx --test server/tests/intelligenceOutbox.test.ts
       - run: npm run build
+      - name: Verify email logo embedding and safe branded links
+        run: node --import tsx --test server/tests/emailBranding.test.ts
       - name: Verify actual isolated SMTP failure and recovery
         env:
           NODE_ENV: test

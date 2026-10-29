@@ -3,7 +3,7 @@ import { Router } from "express";
 import { dbAll, dbGet, dbRun } from "./db";
 import { COOKIE_NAME, verifySessionToken } from "./auth";
 import { isOwnerPreviewEmail } from "./ownerPreview";
-import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure, emailRouting } from "./emailTransport";
+import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure, emailRouting, emailLogoAttachment } from "./emailTransport";
 import { emailQueueDiagnostics, enqueueAlert, initEmailOutbox } from "./intelligenceOutbox";
 
 export const intelligenceEmailRouter = Router();
@@ -82,7 +82,7 @@ intelligenceEmailRouter.post("/test-email", async (req,res) => {
     const transport = createEmailTransport();
     try {
       const text = "This is a test of ConferenceGate Smart Alerts email delivery. No conference alert rule was changed.\n\nRequest ID: " + requestId;
-      const info = await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: test email",text,html:brandedEmail("Email delivery test",text),messageId:`<${requestId}@conferencegate.com>`});
+      const info = await transport.sendMail({from:process.env.INTELLIGENCE_EMAIL_FROM!,to:user.email,subject:"ConferenceGate: test email",text,html:brandedEmail("Email delivery test",text),attachments:emailLogoAttachment(),messageId:`<${requestId}@conferencegate.com>`});
       if (!info.accepted?.some((address: string) => address.toLowerCase() === user.email.toLowerCase())) throw Object.assign(new Error("Recipient rejected"), {code:"EENVELOPE",responseCode:550});
       await dbRun("UPDATE intelligence_email_tests SET status='sent' WHERE user_id=? AND last_attempt_at=?", [user.id,now]);
       await dbRun("UPDATE intelligence_email_test_records SET status='accepted',provider_message_id=?,updated_at=? WHERE id=?", [info.messageId || null,Date.now(),requestId]);
