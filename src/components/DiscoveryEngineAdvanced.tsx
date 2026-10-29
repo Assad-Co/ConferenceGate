@@ -1,4 +1,3 @@
-import { EmailDiagnostics } from './EmailDiagnostics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -187,29 +186,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
   onToggleSave,
   onToggleFollow,
 }) => {
-  const [testEmailStatus, setTestEmailStatus] = useState('');
-  const [testEmailSending, setTestEmailSending] = useState(false);
-  const sendTestEmail = async () => {
-    if (testEmailSending) return;
-    setTestEmailSending(true);
-    setTestEmailStatus('Sending test email to your account address…');
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 45000);
-    try {
-      const response = await fetch('/api/intelligence/test-email', {
-        method: 'POST', credentials: 'include',
-        headers: {'Content-Type':'application/json'}, body: '{}', signal: controller.signal,
-      });
-      const result = await response.json().catch(() => null) as {message?:string;error?:string} | null;
-      if (response.ok) setTestEmailStatus(result?.message || 'SMTP accepted the email. Check your inbox and Spam.');
-      else setTestEmailStatus(result?.error || `Test failed (HTTP ${response.status}). Sign in and retry after ten minutes if needed.`);
-    } catch (error) {
-      setTestEmailStatus(error instanceof Error && error.name === 'AbortError'
-        ? 'The request took too long. Delivery is not confirmed. Check Render logs before retrying.'
-        : 'Could not reach the test-email service. Refresh and sign in again.');
-    } finally { window.clearTimeout(timeout); setTestEmailSending(false); }
-  };
-
   const [searchTerm, setSearchTerm] = useState(initialSearchQuery);
   const [interests, setInterests] = useState(() => {
     try { return window.localStorage.getItem('conferencegate-discovery-interests') || ''; } catch { return ''; }
@@ -516,15 +492,6 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
           </p>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-white p-3">
-          <div className="flex-1 min-w-[180px]">
-            <p className="text-xs font-bold text-slate-800">Smart Alerts email delivery test</p>
-            <p className="text-xs text-slate-500">Sends one test to your signed-in account email. Limited to once every ten minutes.</p>
-          </div>
-          <button type="button" onClick={sendTestEmail} disabled={testEmailSending} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">{testEmailSending ? 'Sending…' : 'Send test email'}</button>
-          {testEmailStatus && <p role="status" className="w-full text-xs text-slate-700">{testEmailStatus}</p>}
-          <EmailDiagnostics />
-        </div>
         <div className="mt-6 pt-6 border-t border-blue-100 space-y-3">
           <form
             onSubmit={(event) => {
