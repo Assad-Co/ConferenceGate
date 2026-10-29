@@ -50,6 +50,25 @@ try {
   db=createClient({url:'file:'+dbPath});
   await db.execute("UPDATE intelligence_email_tests SET last_attempt_at=last_attempt_at-31000");
   assert.equal((await req('/api/intelligence/test-email',{cookie:admin,method:'POST',body:{},origin:base})).response.status,502);
+  // Verify real HTTP opt-in/unsubscribe state transition against an isolated database.
+  const optIn=await req('/api/intelligence/email-preferences',{cookie:ordinary,method:'PUT',body:{enabled:true}});
+  assert.equal(optIn.response.status,200); assert.equal(optIn.data.enabled,true);
+  const userRow=await db.execute({sql:'SELECT id FROM users WHERE email=?',args:['email-normal@example.invalid']});
+  const userId=String(userRow.rows[0].id);
+  const unsubKey='isolated-unsubscribe-secret'.repeat(2);
+  const token=crypto.createHmac('sha256',unsubKey).update(userId).digest('hex');
+  const unsubscribePath='/api/intelligence/unsubscribe/'+encodeURIComponent(userId)+'/'+token;
+  const confirmation=await fetch(base+unsubscribePath);
+  assert.equal(confirmation.status,200);
+  assert.ok((await confirmation.text()).includes('Stop conference alert emails?'));
+  const unsubscribed=await fetch(base+unsubscribePath,{method:'POST'});
+  assert.equal(unsubscribed.status,200);
+  assert.equal((await unsubscribed.json()).unsubscribed,true);
+  const prefAfter=await req('/api/intelligence/email-preferences',{cookie:ordinary});
+  assert.equal(prefAfter.data.enabled,false);
+  const invalid=await fetch(base+'/api/intelligence/unsubscribe/'+encodeURIComponent(userId)+'/'+('0'.repeat(64)),{method:'POST'});
+  assert.equal(invalid.status,403);
+  console.log(JSON.stringify({unsubscribeFlow:'passed',optIn:true,confirmationPage:true,postDisablesEmail:true,invalidTokenRejected:true}));
   assert.ok(!log.includes('must-not-leak'));
   console.log(JSON.stringify({emailDiagnostics:'passed',administratorOnly:true,credentialRedaction:true,originProtection:true,requestRecords:true,accountIsolation:true,failedTestRetryAfter30Seconds:true}));
 } finally {
