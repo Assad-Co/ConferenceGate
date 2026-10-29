@@ -24,7 +24,7 @@ update('server/linkedinProfileBootstrap.ts', (source) => {
     source = source.replace(anchor, helper + anchor);
   }
 
-  if (!source.includes('const previousProfile = await readStoredProfile(userId);')) {
+  if (!source.includes('const previousProfile = await readStoredProfile(userId);') && !source.includes('const storedProfile = await readStoredProfile(userId);')) {
     source = source.replace(
       '  const now = new Date().toISOString();\n  const about = text(profile.about) || text(profile.summary) || text(profile.description);',
       '  const now = new Date().toISOString();\n  const about = text(profile.about) || text(profile.summary) || text(profile.description);\n  const previousProfile = await readStoredProfile(userId);'
@@ -89,7 +89,7 @@ update('server/linkedinConferenceActivityBootstrap.ts', (source) => {
   );
   source = source.replace('      JSON.stringify(posts),\n      SOURCE_ACTOR,', '      JSON.stringify(rawPosts),\n      SOURCE_ACTOR,');
 
-  if (!source.includes('rawPosts: parseArray(row.raw_posts)')) throw new Error('LinkedIn complete merge: stored raw posts are not readable');
+  if (!(source.includes('rawPosts: parseArray(row.raw_posts)') || source.includes('rawPosts: row ? parseArray(row.raw_posts) : []'))) throw new Error('LinkedIn complete merge: stored raw posts are not readable');
   if (!source.includes('const rawPosts = mergeRawLinkedInPosts(')) throw new Error('LinkedIn complete merge: raw post history is not additive');
   if (source.includes('mergeEvidence(existing?.conferenceActivity || [], classified.conferenceActivity).slice(')) throw new Error('LinkedIn complete merge: merged conference evidence remains capped');
   return source;

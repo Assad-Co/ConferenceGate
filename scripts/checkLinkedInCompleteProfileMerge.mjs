@@ -7,7 +7,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(`LinkedIn complete-profile merge check failed: ${message}`);
 }
 
-assert(profile.includes('const previousProfile = await readStoredProfile(userId);'), 'refresh does not read prior profile history');
+assert(profile.includes('const storedProfile = await readStoredProfile(userId);') && profile.includes('normalizeLinkedInProfileUrl(storedProfile.linkedinUrl) === requestedUrl'), 'refresh does not read prior profile history');
 for (const name of ['mergedExperience','mergedEducation','mergedPublications','mergedPatents','mergedCertifications','mergedProjects','mergedSkills','mergedHonors','mergedLanguages']) {
   assert(profile.includes(`const ${name} = mergeHistoricalItems(`), `${name} is not merged`);
 }
