@@ -17,6 +17,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test scripts/productionReadiness.test.mjs
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run build
       - run: node scripts/smokeBillingWebhooks.mjs
+

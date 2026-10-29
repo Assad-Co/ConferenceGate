@@ -1,4 +1,5 @@
 const checkoutProvider = (process.env.BILLING_CHECKOUT_PROVIDER || 'hosted').trim().toLowerCase();
+const paddleEnvironment = (process.env.PADDLE_ENV || '').trim().toLowerCase();
 
 const databasePath = process.env.DATABASE_PATH?.trim() || '';
 const tursoUrl = process.env.TURSO_DATABASE_URL?.trim() || '';
@@ -26,7 +27,7 @@ const coreRequired = [
 
 const checkoutRequired =
   checkoutProvider === 'paddle'
-    ? ['PADDLE_API_KEY', 'PADDLE_ORGANIZER_PRICE_ID', 'PADDLE_SPONSOR_PRICE_ID', 'PADDLE_WEBHOOK_SECRET']
+    ? ['PADDLE_ENV', 'PADDLE_API_KEY', 'PADDLE_ORGANIZER_PRICE_ID', 'PADDLE_SPONSOR_PRICE_ID', 'PADDLE_WEBHOOK_SECRET']
     : ['ORGANIZER_CHECKOUT_URL', 'SPONSOR_CHECKOUT_URL'];
 
 const providerBindingRequired = [
@@ -91,8 +92,7 @@ if (checkoutProvider === 'hosted') {
   }
 }
 if (checkoutProvider === 'paddle') {
-  const paddleEnv = (process.env.PADDLE_ENV || 'live').trim().toLowerCase();
-  if (!['live', 'sandbox'].includes(paddleEnv)) {
+  if (paddleEnvironment && !['live', 'sandbox'].includes(paddleEnvironment)) {
     invalid.push('PADDLE_ENV must be live or sandbox.');
   }
 }
@@ -127,6 +127,18 @@ if (
 }
 
 const persistentDatabaseReady = tursoRequested ? tursoRuntimeConfigured : Boolean(databasePath);
+const configurationReady = missingRequired.length === 0 && persistentDatabaseReady &&
+  enabledBillingProviders.length > 0 && invalid.length === 0;
+const paidLaunchBlockers = [];
+if (checkoutProvider === 'paddle' && paddleEnvironment === 'sandbox') {
+  paidLaunchBlockers.push('Paddle is in Sandbox; test configuration cannot accept live customer payments.');
+}
+if (process.env.PRIVATE_WORKSPACES_ONLY === 'true') {
+  paidLaunchBlockers.push('Organizer and Sponsor workspaces are private; public paid onboarding is closed.');
+}
+if (process.env.FREE_LAUNCH_ORGANIZER_ACCESS === 'true' || process.env.FREE_LAUNCH_SPONSOR_ACCESS === 'true') {
+  paidLaunchBlockers.push('Free-launch access overrides are enabled for a paid role.');
+}
 
 const report = {
   mode: process.env.NODE_ENV || 'development',
@@ -136,6 +148,15 @@ const report = {
   tursoRuntimeConfigured,
   legacyTursoConfigured: false,
   checkoutProvider,
+  paddleEnvironment: checkoutProvider === 'paddle' ? paddleEnvironment || null : null,
+  scope: 'paid_launch_configuration_only',
+  configurationReady,
+  paidLaunchBlockers,
+  externalVerificationRequired: [
+    'Payment-provider account and website approval',
+    'Payout setup and commercial policies confirmed by the owner',
+    'Checkout and subscription lifecycle acceptance',
+  ],
   required: Object.fromEntries(required.map((name) => [name, Boolean(process.env[name]?.trim())])),
   billingProviders: enabledBillingProviders,
   providerRoleBindings: {
@@ -146,12 +167,8 @@ const report = {
   workspaceSeatLimit,
   payoutFeeBps,
   paddleWebhookToleranceSeconds: webhookToleranceSeconds,
-  ready:
-    missingRequired.length === 0 &&
-    persistentDatabaseReady &&
-    enabledBillingProviders.length > 0 &&
-    invalid.length === 0,
-  warnings: [],
+  ready: configurationReady && paidLaunchBlockers.length === 0,
+  warnings: [...paidLaunchBlockers, 'This report checks configuration only; it does not certify provider approval, payout setup, or checkout acceptance.'],
 };
 
 if (missingRequired.length) {
@@ -197,3 +214,4 @@ for (const message of invalid) report.warnings.push(message);
 
 console.log(JSON.stringify(report, null, 2));
 if (process.argv.includes('--strict') && !report.ready) process.exit(1);
+
