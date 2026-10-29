@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { dbAll, dbGet, dbRun } from "./db";
-import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure, retryDelay } from "./emailTransport";
+import { brandedEmail, createEmailTransport, emailConfiguration, emailFailure, retryDelay, emailLogoAttachment } from "./emailTransport";
 
 export async function initEmailOutbox() {
   await dbRun(`CREATE TABLE IF NOT EXISTS intelligence_email_outbox (
@@ -44,7 +44,8 @@ export async function drainEmailOutbox(createTransport = createEmailTransport, n
       transport = createTransport();
       const info = await transport.sendMail({ from: process.env.INTELLIGENCE_EMAIL_FROM!, to: user.email,
         subject: "ConferenceGate: new conference alert", text: job.body + "\n\nUnsubscribe: " + job.unsubscribe_url,
-        html: brandedEmail(job.title, job.body + "\n\nUnsubscribe: " + job.unsubscribe_url),
+        html: brandedEmail(job.title, job.body, { actionUrl: job.body.split(/\r?\n/).find(line => /^https?:\/\/\S+$/.test(line.trim()))?.trim(), actionLabel: "View conference source", unsubscribeUrl: job.unsubscribe_url }),
+        attachments: emailLogoAttachment(),
         messageId: `<${job.id}@conferencegate.com>`, headers: { "List-Unsubscribe": "<" + job.unsubscribe_url + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } });
       if (!info.accepted?.some((address: string) => address.toLowerCase() === user.email.toLowerCase())) {
         throw Object.assign(new Error("Recipient rejected"), { code: "EENVELOPE", responseCode: 550 });
