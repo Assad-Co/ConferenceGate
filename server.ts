@@ -3739,6 +3739,21 @@ Return JSON with exactly this shape:
     res.json(job.result);
   });
 
+  // Public product information is readable without JavaScript or a session.
+  // Explicit app/auth links and existing sessions retain the SPA entry point.
+  app.get("/", (req, res, next) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    res.vary("Cookie");
+    const params = new URL(req.originalUrl, "http://localhost").searchParams;
+    const hasAppQuery = [...params.keys()].some((key) =>
+      !key.toLowerCase().startsWith("utm_") &&
+      !["fbclid", "gclid", "msclkid", "ref", "referral"].includes(key.toLowerCase())
+    );
+    if (hasAppQuery || verifySessionToken(req.cookies?.[COOKIE_NAME])) return next();
+    const publicDir = process.env.NODE_ENV === "development" ? "public" : "dist";
+    res.sendFile(path.join(process.cwd(), publicDir, "about.html"));
+  });
+
   // Vite middleware for dev or static server for production
   if (process.env.NODE_ENV === "development") {
     const vite = await createViteServer({
