@@ -64,9 +64,17 @@ test('real SMTP sockets recover, reject and quarantine without duplicate submiss
     mode='ambiguous';await enqueue('ambiguous');await drainEmailOutbox(transport);
     assert.equal((await row('ambiguous')).status,'uncertain');assert.equal(accepted,3);
     mode='accept';await drainEmailOutbox(transport,Date.now()+10000000);assert.equal(accepted,3);
+    mode='temporary';await enqueue('exhausted');let retryTime=Date.now();
+    for(let attempt=1;attempt<=5;attempt++){
+      await drainEmailOutbox(transport,retryTime);
+      const current=await row('exhausted');assert.equal(current.attempts,attempt);
+      assert.equal(current.status,attempt===5?'failed':'retry');retryTime=current.next_attempt_at;
+    }
+    assert.equal(accepted,3);
     const diagnostics=await emailQueueDiagnostics();assert.equal(diagnostics.alert,true);
     assert.ok(diagnostics.counts.some(x=>x.status==='failed'));assert.ok(diagnostics.counts.some(x=>x.status==='uncertain'));
-    console.log(JSON.stringify({actualSocketFailure:true,temporaryRetryRecovered:true,permanentRejected:true,ambiguousQuarantined:true,duplicateSubmissions:0,diagnosticsAlert:true}));
+    assert.ok(diagnostics.recent.some((x:any)=>x.status==='failed'&&x.attempts===5));
+    console.log(JSON.stringify({actualSocketFailure:true,temporaryRetryRecovered:true,permanentRejected:true,ambiguousQuarantined:true,repeatedFailuresReported:true,duplicateSubmissions:0,diagnosticsAlert:true}));
   }finally{
     for(const socket of sockets)socket.destroy();
     if(server.listening)await new Promise<void>(resolve=>server.close(()=>resolve()));
