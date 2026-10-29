@@ -1,7 +1,11 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
-const root = '/tmp/cg-profile-import-' + process.pid;
+import os from 'node:os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { createClient } from '@libsql/client';
+const root = path.join(os.tmpdir(), 'cg-profile-import-' + process.pid).replaceAll('\\', '/');
 await fs.mkdir(root, { recursive: true });
 const fixturePath = root + '/provider.json';
 const preloadPath = root + '/provider.mjs';
@@ -9,7 +13,7 @@ await fs.writeFile(preloadPath, "import fs from 'node:fs';\nconst original = glo
 const linkedinUrl = 'https://www.linkedin.com/in/profile-import-fixture';
 const rich = { data: { profile: { fullName: 'Import Fixture Scientist', publicIdentifier: 'profile-import-fixture', experience: { items: [{ company: { name: 'Research Institute' }, positions: [{ title: 'Researcher', startDate: { year: 2001 }, endDate: { year: 2010 } }, { title: 'Principal Scientist', isCurrent: true, startDate: { year: 2020 } }] }] }, volunteerExperience: [{ title: 'Session Chair and Core Presenter', organization: 'Energy Conference 2012' }], publications: { items: [{ title: 'Research Paper', publisher: { name: 'Scientific Proceedings' }, date: '2012' }] }, education: { elements: [{ school: { name: 'University' }, degreeName: 'PhD' }] }, skills: ['Geochemistry'] } } };
 await fs.writeFile(fixturePath, JSON.stringify({ payload: [rich] }));
-const child = spawn(process.execPath, ['--import', preloadPath, 'dist/server.cjs'], { env: { ...process.env, NODE_ENV: 'test', PORT: '3157', TEST_DATABASE_PATH: root + '/fixture.db', TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', APIFY_TOKEN: 'isolated-provider-fixture', LINKEDIN_FIXTURE_PATH: fixturePath, PRIVATE_WORKSPACES_ONLY: 'true' }, stdio: ['ignore','pipe','pipe'] });
+const child = spawn(process.execPath, ['--import', pathToFileURL(preloadPath).href, 'dist/server.cjs'], { env: { ...process.env, NODE_ENV: 'test', PORT: '3157', TEST_DATABASE_PATH: root + '/fixture.db', TURSO_DATABASE_URL: '', TURSO_AUTH_TOKEN: '', APIFY_TOKEN: 'isolated-provider-fixture', LINKEDIN_FIXTURE_PATH: fixturePath, PRIVATE_WORKSPACES_ONLY: 'true' }, stdio: ['ignore','pipe','pipe'] });
 let log = '';
 child.stdout.on('data', value => log += value);
 child.stderr.on('data', value => log += value);
@@ -37,11 +41,21 @@ try {
   check(imported.profile.experience.length === 2, 'Grouped career was not imported');
   check(imported.profile.volunteering.length === 1, 'Volunteer service was not imported');
   check(imported.profile.publications.length === 1 && imported.profile.education.length === 1, 'Academic sections missing');
+  const fixtureDb = createClient({ url: 'file:' + root + '/fixture.db' });
   const account=await req('/api/auth/me');
+  const career = imported.profile.experience;
+  await fixtureDb.execute({ sql: 'UPDATE linkedin_profile_enrichment SET experience=?, skills=?, publications=? WHERE user_id=?', args: [
+    JSON.stringify([...career, ...career.map(item => ({ title: item.position, company: item.companyName, startDate: item.startDate.text, endDate: item.endDate?.text }))]),
+    JSON.stringify(['Geochemistry', { name: 'Geochemistry', endorsements: 5 }]),
+    JSON.stringify([{ title: 'Research Paper' }, ...imported.profile.publications]), account.user.id,
+  ] });
+  fixtureDb.close();
+  const legacy = await req('/api/linkedin-profile/me');
+  check(legacy.profile.experience.length === 2 && legacy.profile.skills.length === 1 && legacy.profile.publications.length === 1, 'Legacy database duplicates were not normalized on read');
   check(account.user.title === 'Member chosen title', 'Import replaced manually entered profile title');
   const activity=await req('/api/linkedin-conference/me');
   check(activity.activity.conferenceActivity.some(item=>item.role==='Session Chair' && item.year===2012 && item.memberClaimed && !item.verified), 'Profile conference role not surfaced without posts');
-  check(activity.roleSummary.roles.some(item=>item.role==='Core Presenter'), 'Direct professional-role summary omitted profile role');
+  check(activity.activity.conferenceActivity.some(item=>item.role==='Core Presenter'), 'Professional conference activity omitted profile role');
   await fs.writeFile(fixturePath, JSON.stringify({ payload:[{ publicIdentifier:'profile-import-fixture', fullName:'Import Fixture Scientist', headline:'Updated headline' }] }));
   const shallow=await req('/api/linkedin-profile/refresh', { consent:true, linkedinUrl });
   check(shallow.profile.experience.length === 2 && shallow.profile.volunteering.length === 1 && shallow.profile.publications.length === 1, 'Shallow refresh erased imported history');
@@ -53,10 +67,17 @@ try {
   await req('/api/linkedin-profile/refresh', { consent:true, linkedinUrl }, 502);
   const preserved=await req('/api/linkedin-profile/me');
   check(preserved.profile.fullName === 'Import Fixture Scientist' && preserved.profile.experience.length === 2, 'Failed imports modified stored profile');
+  const otherUrl = 'https://www.linkedin.com/in/another-import-fixture';
+  await fs.writeFile(fixturePath, JSON.stringify({ payload: [{ publicIdentifier: 'another-import-fixture', fullName: 'Another Fixture', headline: 'Other career' }] }));
+  const switched = await req('/api/linkedin-profile/refresh', { consent: true, linkedinUrl: otherUrl });
+  check(switched.profile.experience.length === 0 && switched.profile.publications.length === 0 && switched.profile.skills.length === 0, 'Changing LinkedIn identity merged the previous person history');
   console.log('PASS: real import endpoint, grouped and aliased profile sections, manual fields, profile-only conference roles and counters, shallow refresh preservation, identity mismatch, empty/error provider responses');
+} catch (error) {
+  console.error(error);
+  throw error;
 } finally {
   child.kill('SIGTERM');
   await Promise.race([new Promise(resolve=>child.once('exit',resolve)),pause(2000)]);
-  if(child.exitCode===null)child.kill('SIGKILL');
-  await fs.rm(root,{recursive:true,force:true});
+  if(child.exitCode===null && child.signalCode===null){ child.kill('SIGKILL'); await new Promise(resolve=>child.once('exit',resolve)); }
+  await fs.rm(root,{recursive:true,force:true,maxRetries:5,retryDelay:200});
 }

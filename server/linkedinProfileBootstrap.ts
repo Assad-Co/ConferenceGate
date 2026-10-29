@@ -1,4 +1,4 @@
-import { normalizeLinkedInProfilePayload } from "./linkedinImportNormalization";
+import { normalizeLinkedInProfilePayload, mergeLinkedInSection } from "./linkedinImportNormalization";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 
 /**
@@ -161,6 +161,40 @@ function text(value: unknown): string | null {
 
 function jsonArray(value: unknown): string {
   return JSON.stringify(arrayValue(value));
+}
+
+function careerPositionKey(item: any): string {
+  if (!item || typeof item !== "object") return String(item ?? "").trim().toLowerCase();
+  const title = text(item.position) || text(item.title) || text(item.role) || "";
+  const company = text(item.companyName) || text(item.company) || text(item.organization) || "";
+  const start = text(item?.startDate?.text) || text(item?.startDate) || text(item?.dateRange?.start) || "";
+  const end = text(item?.endDate?.text) || text(item?.endDate) || text(item?.dateRange?.end) || text(item?.period) || "";
+  return [title, company, start, end].join("|").trim().toLowerCase();
+}
+
+function mergeCareerPositions(profile: Record<string, any>): any[] {
+  const groups = [
+    arrayValue(profile.experience),
+    arrayValue(profile.positions),
+    arrayValue(profile.currentPosition),
+    arrayValue(profile.currentPositions),
+    arrayValue(profile.pastPositions),
+  ];
+  const merged: any[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    for (const item of group) {
+      const key = careerPositionKey(item);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
+function mergeHistoricalItems(previous: any[], next: any[], section: string): any[] {
+  return mergeLinkedInSection(previous, next, section);
 }
 
 function parseArray(value: string | null | undefined): any[] {
@@ -435,11 +469,7 @@ export async function fetchExactPublicLinkedInPortrait(linkedinUrl: string): Pro
 }
 
 function currentCareer(profile: Record<string, any>) {
-  const experience = arrayValue(profile.experience).length
-    ? arrayValue(profile.experience)
-    : arrayValue(profile.positions).length
-      ? arrayValue(profile.positions)
-      : [...arrayValue(profile.currentPositions), ...arrayValue(profile.pastPositions)];
+  const experience = mergeCareerPositions(profile);
 
   const current = experience.find((item) => {
     const endText =
@@ -507,7 +537,7 @@ function locationFields(profile: Record<string, any>) {
 
 function toClient(row: StoredRow | undefined) {
   if (!row) return null;
-  const experience = parseArray(row.experience);
+  const experience = mergeLinkedInSection([], parseArray(row.experience), "experience");
   const career = currentCareer({ experience, headline: row.headline });
   return {
     linkedinUrl: row.linkedin_url,
@@ -525,14 +555,14 @@ function toClient(row: StoredRow | undefined) {
     currentOrganization: career.organization,
     experience,
     volunteering: normalizeLinkedInProfilePayload((() => { try { return JSON.parse((row as any).raw_profile || "{}"); } catch { return {}; } })()).volunteering || [],
-    education: parseArray(row.education),
-    publications: parseArray(row.publications),
-    patents: parseArray(row.patents),
-    certifications: parseArray(row.certifications),
-    projects: parseArray(row.projects),
-    skills: parseArray(row.skills),
-    honorsAndAwards: parseArray(row.honors_awards),
-    languages: parseArray(row.languages),
+    education: mergeLinkedInSection([], parseArray(row.education), "education"),
+    publications: mergeLinkedInSection([], parseArray(row.publications), "publications"),
+    patents: mergeLinkedInSection([], parseArray(row.patents), "patents"),
+    certifications: mergeLinkedInSection([], parseArray(row.certifications), "certifications"),
+    projects: mergeLinkedInSection([], parseArray(row.projects), "projects"),
+    skills: mergeLinkedInSection([], parseArray(row.skills), "skills"),
+    honorsAndAwards: mergeLinkedInSection([], parseArray(row.honors_awards), "honorsAndAwards"),
+    languages: mergeLinkedInSection([], parseArray(row.languages), "languages"),
     sourceActor: row.source_actor,
     consentedAt: row.consented_at,
     fetchedAt: row.fetched_at,
@@ -1163,12 +1193,10 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     null;
   const now = new Date().toISOString();
   const about = text(profile.about) || text(profile.summary) || text(profile.description);
+  const storedProfile = await readStoredProfile(userId);
+  const previousProfile = storedProfile && normalizeLinkedInProfileUrl(storedProfile.linkedinUrl) === requestedUrl ? storedProfile : null;
 
-  const normalizedExperience = arrayValue(profile.experience).length
-    ? arrayValue(profile.experience)
-    : arrayValue(profile.positions).length
-      ? arrayValue(profile.positions)
-      : [...arrayValue(profile.currentPositions), ...arrayValue(profile.pastPositions)];
+  const normalizedExperience = mergeCareerPositions(profile);
   const normalizedEducation = arrayValue(profile.education).length
     ? arrayValue(profile.education)
     : arrayValue(profile.schools);
@@ -1183,6 +1211,19 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     ? arrayValue(profile.honorsAndAwards)
     : arrayValue(profile.awards);
   const normalizedLanguages = arrayValue(profile.languages);
+
+  // LinkedIn/provider responses can become shallower between refreshes. Never erase previously
+  // imported public history merely because one later response omits it. This applies to every
+  // signed-in member, not only the owner-preview account.
+  const mergedExperience = mergeHistoricalItems(previousProfile?.experience || [], normalizedExperience, "experience");
+  const mergedEducation = mergeHistoricalItems(previousProfile?.education || [], normalizedEducation, "education");
+  const mergedPublications = mergeHistoricalItems(previousProfile?.publications || [], normalizedPublications, "publications");
+  const mergedPatents = mergeHistoricalItems(previousProfile?.patents || [], normalizedPatents, "patents");
+  const mergedCertifications = mergeHistoricalItems(previousProfile?.certifications || [], normalizedCertifications, "certifications");
+  const mergedProjects = mergeHistoricalItems(previousProfile?.projects || [], normalizedProjects, "projects");
+  const mergedSkills = mergeHistoricalItems(previousProfile?.skills || [], normalizedSkills, "skills");
+  const mergedHonors = mergeHistoricalItems(previousProfile?.honorsAndAwards || [], normalizedHonors, "honorsAndAwards");
+  const mergedLanguages = mergeHistoricalItems(previousProfile?.languages || [], normalizedLanguages, "languages");
 
   // Resolve the member portrait from profile-specific fields, then copy it into ConferenceGate-
   // owned storage so it does not depend on a short-lived LinkedIn CDN URL.
@@ -1211,7 +1252,9 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
   if (!ownedProfileAvatar) {
     ownedProfileAvatar = await fetchExactPublicLinkedInPortrait(returnedUrl);
   }
-  const storedPhoto = ownedProfileAvatar || directPhotoUrl || null;
+  // Merge portrait sources instead of clearing a previously good LinkedIn portrait when a
+  // refresh omits the image. Explicit ConferenceGate photo choices are still protected below.
+  const storedPhoto = ownedProfileAvatar || directPhotoUrl || previousProfile?.photoUrl || null;
 
   await ensureSchema();
   await dbRun(
@@ -1259,15 +1302,15 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
       location.country,
       storedPhoto,
       profile.verified === true ? 1 : 0,
-      JSON.stringify(normalizedExperience),
-      JSON.stringify(normalizedEducation),
-      JSON.stringify(normalizedPublications),
-      JSON.stringify(normalizedPatents),
-      JSON.stringify(normalizedCertifications),
-      JSON.stringify(normalizedProjects),
-      JSON.stringify(normalizedSkills),
-      JSON.stringify(normalizedHonors),
-      JSON.stringify(normalizedLanguages),
+      JSON.stringify(mergedExperience),
+      JSON.stringify(mergedEducation),
+      JSON.stringify(mergedPublications),
+      JSON.stringify(mergedPatents),
+      JSON.stringify(mergedCertifications),
+      JSON.stringify(mergedProjects),
+      JSON.stringify(mergedSkills),
+      JSON.stringify(mergedHonors),
+      JSON.stringify(mergedLanguages),
       JSON.stringify(profile),
       SOURCE_ACTOR,
       now,
@@ -1282,7 +1325,7 @@ router.post("/refresh", requireMember, safe(async (req, res) => {
     "SELECT value FROM app_secrets WHERE key = ?",
     [`manual_avatar_override:${userId}`],
   );
-  const avatarCandidate = ownedProfileAvatar || directPhotoUrl || null;
+  const avatarCandidate = ownedProfileAvatar || directPhotoUrl || previousProfile?.photoUrl || null;
   const avatarUpdated = Boolean(avatarCandidate && !manualAvatarOverride);
 
   await dbRun(

@@ -1,6 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeLinkedInProfilePayload as normalize, extractLinkedInProfileConferenceSignals as signals, mergeProfileRoleSummary } from "../linkedinImportNormalization";
+import { normalizeLinkedInProfilePayload as normalize, extractLinkedInProfileConferenceSignals as signals, mergeProfileRoleSummary, mergeLinkedInSection } from "../linkedinImportNormalization";
+
+test("legacy aliases and provider metadata do not duplicate the same career position", () => {
+  const old = { title: "Scientist", company: "Institute", startDate: "Aug 2004", endDate: "Dec 2025" };
+  const rich = { position: "Scientist", companyName: "Institute", startDate: { text: "Aug 2004" }, endDate: { text: "Dec 2025" }, id: "provider-123", description: "Research work" };
+  const merged = mergeLinkedInSection([old], [rich], "experience");
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].description, "Research work");
+  assert.equal(mergeLinkedInSection(merged, [old, rich], "experience").length, 1);
+  assert.equal(mergeLinkedInSection(merged, [{ ...rich, startDate: "Aug 2001" }], "experience").length, 2);
+});
+
+test("string skills and named skill objects have one identity", () => {
+  assert.equal(mergeLinkedInSection(["Geochemistry"], [{ name: "Geochemistry", endorsements: 12 }], "skills").length, 1);
+  assert.equal(mergeLinkedInSection(["Arabic"], [{ name: "Arabic", proficiency: "Native" }], "languages").length, 1);
+});
+
+test("publication enrichment merges sparse history while retaining distinct editions", () => {
+  const rich = { title: "Research Paper", publisher: "Proceedings", date: "2012", doi: "10.1234/one" };
+  const merged = mergeLinkedInSection([{ title: "Research Paper" }], [rich], "publications");
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].doi, rich.doi);
+  assert.equal(mergeLinkedInSection(merged, [{ ...rich, date: "2020", doi: "10.1234/two" }], "publications").length, 2);
+});
 
 const url = "https://www.linkedin.com/in/test-researcher";
 test("nested profile payloads and collection aliases retain all career history", () => {

@@ -67,19 +67,38 @@ function collectSection(record: RecordValue, paths: string[], section: string): 
       else values.push(normalizeItem(item, section));
     }
   }
-  return uniqueItems(values);
+  return uniqueItems(values, section);
 }
-function uniqueItems(values: any[]): any[] {
+function uniqueItems(values: any[], section: string): any[] {
   const map = new Map<string, any>();
   for (const item of values) {
     if (!item || (typeof item === "object" && !Object.values(item).some(Boolean))) continue;
     const r = obj(item);
-    const key = typeof item === "string" ? item.toLowerCase() : [str(r.position || r.title || r.name), str(r.companyName || r.schoolName || r.issuer || r.publisher), str(r.startDate), str(r.endDate), str(r.date), str(r.degree), str(r.fieldOfStudy), str(r.patentNumber || r.credentialId || r.doi)].join("|").toLowerCase();
+    const label = typeof item === "string" ? item : str(r.position || r.title || r.name || r.skill || r.language);
+    let key = [label, str(r.companyName || r.schoolName || r.issuer || r.publisher), str(r.startDate), str(r.endDate), str(r.date), str(r.degree), str(r.fieldOfStudy), str(r.patentNumber || r.credentialId || r.doi)].join("|").toLowerCase();
+    if (section === "skills" || section === "languages") key = label.toLowerCase();
+    if (section === "publications") {
+      // Older imports may contain only a title, while a later import adds the
+      // publisher/date/DOI. Match that enrichment without conflating known editions.
+      const candidates = [...map.entries()].filter(([, old]) => {
+        if (str(old.title || old.name).toLowerCase() !== label.toLowerCase()) return false;
+        const conflicts = (a: string, b: string) => Boolean(a && b && a.toLowerCase() !== b.toLowerCase());
+        const year = (value: any) => str(value).match(/\b(?:19|20)\d{2}\b/)?.[0] || "";
+        return !conflicts(str(old.doi), str(r.doi)) && !conflicts(year(old.date), year(r.date)) &&
+          !conflicts(str(old.publisher), str(r.publisher));
+      });
+      if (candidates.length === 1) key = candidates[0][0];
+    }
     if (!key.replace(/\|/g, "")) continue;
     const old = map.get(key);
     map.set(key, old && JSON.stringify(old).length > JSON.stringify(item).length ? old : item);
   }
   return [...map.values()];
+}
+
+/** Canonical aliases also deduplicate legacy database rows when they are read. */
+export function mergeLinkedInSection(previous: any[], next: any[], section: string): any[] {
+  return uniqueItems([...previous, ...next].map(item => normalizeItem(item, section)), section);
 }
 const SECTIONS: Record<string, string[]> = {
   experience: ["experience", "experiences", "positions", "currentPosition", "currentPositions", "pastPositions", "workExperience", "workHistory"],
@@ -104,7 +123,7 @@ export function normalizeLinkedInProfilePayload(payload: unknown, previous?: unk
   const linkedinUrl = profileUrl(record.linkedinUrl || record.profileUrl || record.url) || profileUrl(record.publicIdentifier || record.username) || profileUrl(requestedUrl);
   const old = previous ? normalizeLinkedInProfilePayload(previous) : {};
   const sameProfile = Boolean(linkedinUrl && old.linkedinUrl && linkedinUrl.toLowerCase() === old.linkedinUrl.toLowerCase());
-  if (sameProfile) for (const section of Object.keys(SECTIONS)) sections[section] = uniqueItems([...(old[section] || []), ...sections[section]]);
+  if (sameProfile) for (const section of Object.keys(SECTIONS)) sections[section] = uniqueItems([...(old[section] || []), ...sections[section]], section);
   sections.experience.sort((a: any, b: any) => {
     const score = (item: any) => /present|current/i.test(str(item.endDate)) ? 2 : str(item.endDate) ? 0 : 1;
     return score(b) - score(a) || (Number(str(b.startDate).match(/(?:19|20)\d{2}/)?.[0]) || 0) - (Number(str(a.startDate).match(/(?:19|20)\d{2}/)?.[0]) || 0);
