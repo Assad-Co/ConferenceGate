@@ -25,4 +25,11 @@ jobs:
           TURSO_AUTH_TOKEN: ''
         run: node --import tsx --test server/tests/intelligenceOutbox.test.ts
       - run: npm run build
+      - name: Verify actual isolated SMTP failure and recovery
+        env:
+          NODE_ENV: test
+          TEST_DATABASE_PATH: ${{ runner.temp }}/smtp-recovery.db
+          TURSO_DATABASE_URL: ''
+          TURSO_AUTH_TOKEN: ''
+        run: node --import tsx --test server/tests/smtpRecovery.test.ts
       - run: node scripts/smokeEmailDiagnostics.mjs
