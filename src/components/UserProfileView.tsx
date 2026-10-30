@@ -668,7 +668,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         title: item.title,
         conferenceName: item.conferenceTitle,
         year: Number((item.completedAt || item.respondedAt || item.createdAt || '').slice(0, 4)) || new Date().getFullYear(),
-        roleLabel: item.roleType === 'chair' ? 'Session Chair' : 'Technical Committee Member',
+        roleLabel: item.roleType === 'chair' ? 'Conference Role' : 'Technical Committee Member',
         sourceUrl: null as string | null,
       })),
     ...uniqueLinkedInRoles.map((signal) => ({
@@ -691,7 +691,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         title: a.title,
         conferenceName: a.conferenceName,
         year: a.year,
-        roleLabel: a.badgeType === 'chair' ? 'Session Chair' : 'Committee Member',
+        roleLabel: a.badgeType === 'chair' ? 'Conference Role' : 'Committee Member',
         sourceUrl: null as string | null,
       })),
     ...userProfile.timeline.flatMap((yr) =>
@@ -1082,7 +1082,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   Committee: {userProfile.committeeAvailable ? 'Open' : 'Not available'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.sessionChairAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  Session Chair: {userProfile.sessionChairAvailable ? 'Open' : 'Not available'}
+                  Conference Role: {userProfile.sessionChairAvailable ? 'Open' : 'Not available'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full ${userProfile.speakerAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
                   Speaker: {userProfile.speakerAvailable ? 'Open' : 'Not available'}

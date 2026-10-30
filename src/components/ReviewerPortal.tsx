@@ -492,7 +492,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                 { id: 'recommended', label: 'Recommended for You', icon: Sparkles },
                 { id: 'reviewer', label: 'Reviewer', icon: Award },
                 { id: 'committee', label: 'Technical Committee', icon: Users },
-                { id: 'chair', label: 'Session Chair', icon: Presentation },
+                { id: 'chair', label: 'Conference Role', icon: Presentation },
                 { id: 'speaker', label: 'Speaker / Keynote', icon: Mic2 },
               ].map((item) => {
                 const Icon = item.icon;
@@ -560,7 +560,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                     invitation.roleType === 'committee'
                       ? 'Technical Committee'
                       : invitation.roleType === 'chair'
-                        ? 'Session Chair'
+                        ? 'Conference Role'
                         : 'Speaker / Keynote';
                   return (
                     <div key={invitation.id} className="p-5 bg-white rounded-2xl border border-blue-200 shadow-xs space-y-4">
@@ -719,7 +719,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                     opp.roleType === 'committee'
                       ? 'Technical Committee'
                       : opp.roleType === 'chair'
-                        ? 'Session Chair'
+                        ? 'Conference Role'
                         : 'Speaker / Keynote';
                   const interested = professionalOpportunityInterestIds.includes(opp.id);
                   return (
@@ -805,7 +805,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                   <Mic2 className="w-8 h-8 text-rose-300 mx-auto mb-3" />
                 )}
                 <h3 className="font-bold text-sm text-slate-900">
-                  No organizer-published {roleFilter === 'committee' ? 'Technical Committee' : roleFilter === 'chair' ? 'Session Chair' : 'Speaker / Keynote'} openings yet
+                  No organizer-published {roleFilter === 'committee' ? 'Technical Committee' : roleFilter === 'chair' ? 'Conference Role' : 'Speaker / Keynote'} openings yet
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-xl mx-auto">
                   ConferenceGate will show a role here only after an organizer explicitly publishes that opening.
@@ -1003,7 +1003,7 @@ export const ReviewerPortal: React.FC<ReviewerPortalProps> = ({
                       item.roleType === 'committee'
                         ? 'Technical Committee'
                         : item.roleType === 'chair'
-                          ? 'Session Chair'
+                          ? 'Conference Role'
                           : 'Speaker / Keynote';
                     return (
                       <div key={item.id} className="p-5 bg-white rounded-2xl border border-emerald-200 shadow-xs flex flex-col sm:flex-row items-start justify-between gap-4">
