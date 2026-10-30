@@ -815,7 +815,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               className="px-5 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Rate {attendanceOrganizerName || 'Organizer'}</span>
+              <span>Evaluate Conference</span>
             </button>
           )}
         </div>
