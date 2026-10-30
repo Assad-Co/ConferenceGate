@@ -418,9 +418,10 @@ export interface SubmitFeedbackPayload {
   ratings: Record<string, number>;
   comment?: string;
   recipientEmail?: string;
+  emailCopy?: boolean;
 }
 
-export async function submitConferenceFeedback(payload: SubmitFeedbackPayload): Promise<{ overallScore: number }> {
+export async function submitConferenceFeedback(payload: SubmitFeedbackPayload): Promise<{ overallScore: number; emailCopyStatus?: 'sent' | 'unavailable' | 'rate_limited' | 'failed' }> {
   const res = await fetch('/api/activity/feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -428,6 +429,21 @@ export async function submitConferenceFeedback(payload: SubmitFeedbackPayload): 
     body: JSON.stringify(payload),
   });
   return parseResponse(res);
+}
+
+export async function downloadConferenceFeedbackPdf(payload: SubmitFeedbackPayload): Promise<void> {
+  const res = await fetch('/api/activity/feedback/pdf', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', body: JSON.stringify(payload),
+  });
+  if (!res.ok) { await parseResponse(res); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ConferenceGate-feedback-${payload.conferenceTitle.replace(/[^a-z0-9]+/gi, '-').slice(0, 70)}.pdf`;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export async function fetchFeedbackSummary(): Promise<{ averageScore: number; responseCount: number }> {

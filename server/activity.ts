@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import crypto from "crypto";
+import { buildFeedbackPdf, emailFeedbackCopy, feedbackFilename, validFeedbackCopy } from "./feedbackPdf";
 import { isPublicConference } from "./publicConferenceVisibility";
 import {
   dbGet,
@@ -1374,8 +1375,20 @@ async function organizerFeedbackRows(accountId: string, accountOwner: UserRow) {
   });
 }
 
+activityRouter.post("/feedback/pdf", asyncHandler(async (req: AuthedRequest, res: Response) => {
+  if (!validFeedbackCopy(req.body)) return res.status(400).json({ error: "Provide a conference title and at least one rating on the 1 to 6 scale." });
+  const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+  if (!user) return res.status(401).json({ error: "Please sign in again." });
+  const pdf = buildFeedbackPdf({ ...req.body, participantName: user.name, participantCompany: user.organization || "", submitted: false });
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${feedbackFilename(req.body.conferenceTitle)}"`);
+  res.send(pdf);
+}));
+
 activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Response) => {
   const body = req.body || {};
+  if (body.emailCopy === true && !validFeedbackCopy(body)) return res.status(400).json({ error: "Provide valid feedback before requesting a PDF copy." });
   if (typeof body.conferenceTitle !== "string" || !body.conferenceTitle.trim()) {
     return res.status(400).json({ error: "conferenceTitle is required" });
   }
@@ -1444,7 +1457,17 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
     );
   }
 
-  res.status(existingFeedback ? 200 : 201).json({ ok: true, overallScore, updated: Boolean(existingFeedback) });
+  let emailCopyStatus: string | undefined;
+  if (body.emailCopy === true) {
+    // Resolve the recipient from the authenticated account, never the follow-up field.
+    const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
+    emailCopyStatus = user ? await emailFeedbackCopy(user, {
+      conferenceTitle, organizerName, role: body.role, ratings,
+      comment: body.comment, recipientEmail: body.recipientEmail,
+      participantName: user.name, participantCompany: user.organization || "", submitted: true,
+    }) : "unavailable";
+  }
+  res.status(existingFeedback ? 200 : 201).json({ ok: true, overallScore, updated: Boolean(existingFeedback), emailCopyStatus });
 }));
 
 activityRouter.get("/feedback/organizer", asyncHandler(async (req: AuthedRequest, res: Response) => {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, MessageSquare, Mic2, CalendarCheck2, Sparkles, CalendarDays, Send, User, Building2, UserCog, Tag } from 'lucide-react';
 import { useToast } from './Toast';
 import { ConferenceRole } from '../types';
-import { submitConferenceFeedback } from '../api/activity';
+import { submitConferenceFeedback, downloadConferenceFeedbackPdf } from '../api/activity';
 
 interface ConferenceFeedbackModalProps {
   isOpen: boolean;
@@ -142,6 +142,8 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
   const [organizerInput, setOrganizerInput] = useState(organizerName);
   const [role, setRole] = useState<ConferenceRole>(defaultRole || 'Attendee');
   const [submitting, setSubmitting] = useState(false);
+  const [emailCopy, setEmailCopy] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -163,6 +165,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     setRatings({});
     setComment('');
     setRecipientEmail('');
+    setEmailCopy(false);
   };
 
   const handleClose = () => {
@@ -179,7 +182,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     if (Object.keys(ratings).length === 0 || submitting) return;
     setSubmitting(true);
     try {
-      await submitConferenceFeedback({
+      const result = await submitConferenceFeedback({
         conferenceId,
         conferenceTitle,
         organizerName: (organizerName || organizerInput).trim() || undefined,
@@ -187,19 +190,30 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
         ratings,
         comment: comment.trim() || undefined,
         recipientEmail: recipientEmail.trim() || undefined,
+        emailCopy,
       });
       const ratingSummary = overall ? ` — overall rating: ${overall.label}.` : '.';
       showToast({
         type: 'success',
         title: 'Feedback submitted',
-        message: `Thanks for reviewing "${conferenceTitle}"${ratingSummary} Your response has been recorded for the organizing committee.`,
+        message: `Thanks for reviewing "${conferenceTitle}"${ratingSummary} Your response has been recorded for the organizing committee.${result.emailCopyStatus === 'sent' ? ' Your PDF copy was sent to your account email.' : result.emailCopyStatus ? ' Your feedback is saved, but email delivery could not be confirmed. Use Download PDF to keep a copy.' : ''}`,
       });
-      handleClose();
+      if (!result.emailCopyStatus || result.emailCopyStatus === 'sent') handleClose();
     } catch (err: any) {
       showToast({ type: 'info', title: 'Feedback not submitted', message: err.message || 'Please try again.' });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleExport = async () => {
+    if (!overall || exporting || submitting) return;
+    setExporting(true);
+    try {
+      await downloadConferenceFeedbackPdf({ conferenceId, conferenceTitle, organizerName: (organizerName || organizerInput).trim() || undefined, role, ratings, comment: comment.trim() || undefined, recipientEmail: recipientEmail.trim() || undefined });
+      showToast({ type: 'success', title: 'PDF downloaded', message: 'Your logo-branded draft copy is ready to save or forward. Downloading does not submit your feedback.' });
+    } catch (err: any) { showToast({ type: 'info', title: 'PDF not downloaded', message: err.message || 'Please try again.' }); }
+    finally { setExporting(false); }
   };
 
   return (
@@ -310,7 +324,19 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
             <p className="text-[10px] text-slate-400">Saved with your feedback record — no email is sent automatically.</p>
           </div>
 
-          <div className="flex items-center justify-between gap-4 pt-1 border-t border-slate-100">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 space-y-2">
+            <label className="flex items-start gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+              <input type="checkbox" checked={emailCopy} disabled={submitting} onChange={e => setEmailCopy(e.target.checked)} className="mt-0.5" />
+              Email me a PDF copy after I submit
+            </label>
+            <p className="text-xs text-slate-600">Includes the ConferenceGate logo, your ratings, and comments. Sent only to your signed-in account email. You can forward it yourself.</p>
+            <button type="button" onClick={handleExport} disabled={!overall || exporting || submitting} className="w-full sm:w-auto px-4 py-2.5 border border-blue-300 rounded-xl text-xs font-bold text-blue-900 bg-white cursor-pointer disabled:opacity-40">
+              {exporting ? 'Preparing PDF…' : 'Download PDF copy'}
+            </button>
+            <p className="text-[10px] text-slate-500">Downloading creates a draft copy and does not submit feedback.</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 border-t border-slate-100">
             <div className="text-xs text-slate-500 pt-3">
               {overall ? (
                 <span>
