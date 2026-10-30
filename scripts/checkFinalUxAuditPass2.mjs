@@ -47,7 +47,7 @@ must(search.includes('const acronym ='), 'acronym search missing');
 must(search.includes('[fields.organizer, fields.location, fields.dates]'), 'organizer/location search missing');
 must(search.includes('SEMANTIC_PATTERNS'), 'discipline semantic search missing');
 must(search.includes('oneEditOrAdjacentTranspose'), 'typo tolerance helper missing');
-must(search.includes('fuzzyTokenMatches(text, token)'), 'typo tolerance is not used');
+must(search.includes("fuzzyTokenMatches(subjectWords.join(' '), token)"), 'subject-scoped typo tolerance is not used');
 
 // Empty-state coverage: key customer-facing zero-data screens must tell the user what to do next.
 must(notifications.includes('Nothing needs your attention yet'), 'notification empty state missing');

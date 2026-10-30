@@ -275,6 +275,7 @@ function readVerifiedMajorManifestRecords(): LaunchConferenceRecord[] {
     'phase56-global-major-conferences.json',
   ];
   files.push('global-expansion-20261028.json');
+  files.push('official-calendar-expansion-20261030.json');
   const records: LaunchConferenceRecord[] = [];
   const seen = new Set<string>();
 
@@ -311,7 +312,8 @@ function readVerifiedMajorManifestRecords(): LaunchConferenceRecord[] {
         const sourceUrl = cleanText(event?.url);
         const startDate = cleanText(event?.start);
         if (!title || !sourceUrl || !startDate) continue;
-        const identity = `${sourceUrl.replace(/\/$/, '').toLowerCase()}|${startDate}`;
+        // A society can run several co-located conferences behind one event homepage.
+        const identity = `${sourceUrl.replace(/\/$/, '').toLowerCase()}|${startDate}|${title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()}`;
         if (seen.has(identity)) continue;
         seen.add(identity);
 

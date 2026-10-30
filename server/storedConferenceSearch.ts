@@ -205,7 +205,42 @@ function wordStartMatcher(token: string): RegExp {
   return matcher;
 }
 
-/** A token can match literally, by a conservative subject synonym, or by a geographic region. */
+function oneEditOrAdjacentTranspose(left: string, right: string): boolean {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+
+  if (left.length === right.length) {
+    const diffs: number[] = [];
+    for (let i = 0; i < left.length; i += 1) {
+      if (left[i] !== right[i]) diffs.push(i);
+      if (diffs.length > 2) return false;
+    }
+    if (diffs.length === 1) return true;
+    return diffs.length === 2 && diffs[1] === diffs[0] + 1 &&
+      left[diffs[0]] === right[diffs[1]] && left[diffs[1]] === right[diffs[0]];
+  }
+
+  const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < shorter.length && j < longer.length) {
+    if (shorter[i] === longer[j]) { i += 1; j += 1; continue; }
+    edits += 1;
+    if (edits > 1) return false;
+    j += 1;
+  }
+  return true;
+}
+
+function fuzzyTokenMatches(text: string, token: string): boolean {
+  if (!/^[a-z]{5,}$/.test(token)) return false;
+  return text.split(/\s+/).some((word) =>
+    word.length >= 5 && Math.abs(word.length - token.length) <= 1 && oneEditOrAdjacentTranspose(word, token)
+  );
+}
+
+/** A token can match literally, by a conservative subject synonym, geography, or one small typo. */
 function tokenMatches(text: string, token: string): boolean {
   const geo = GEO_PATTERNS[token];
   if (geo) return geo.test(text) || wordStartMatcher(token).test(text);
@@ -266,6 +301,8 @@ export function scoreStoredConferenceRecord(
   // A year is an exact edition constraint, not a prefix: 2027 must not match 20270.
   // Keep other subject terms prefix-searchable for existing discovery behavior.
   const allText = groups.map((group) => group.text).filter(Boolean).join(" ");
+  const subjectWords = [...new Set(groups.slice(0, 2).flatMap(group => group.text.split(/\s+/)))];
+  const typoMatch = (token: string) => fuzzyTokenMatches(subjectWords.join(' '), token);
   const yearTokens = tokens.filter((token) => /^20[0-9]{2}$/.test(token));
   if (yearTokens.some((year) => !new RegExp(`(?:^|[^0-9])${year}(?:[^0-9]|$)`).test(allText))) return null;
   const categoryPattern = CATEGORY_PATTERNS[normalize(query)];
@@ -273,11 +310,12 @@ export function scoreStoredConferenceRecord(
     // Classify from the conference subject, not incidental mentions in sponsor rosters or URLs.
     const subject = groups.slice(0, 3).map((group) => group.text).join(" ");
     if (!new RegExp(categoryPattern, "i").test(subject)) return null;
-  } else if (tokens.length > 0 && !tokens.every((token) => tokenMatches(allText, token))) return null;
+  } else if (tokens.length > 0 && !tokens.every((token) => tokenMatches(allText, token) || typoMatch(token))) return null;
 
   let score = 0;
   for (const token of tokens) {
     score += Math.max(0, ...groups.filter((group) => tokenMatches(group.text, token)).map((group) => group.weight));
+    if (!tokenMatches(allText, token) && typoMatch(token)) score += 30;
   }
 
   if (normalizedQuery) {

@@ -23,6 +23,16 @@ const base = {
   community: { association: "SPE community" },
 };
 
+test('one subject-word typo is recoverable without relaxing years, acronyms or location filters', () => {
+  const record={title:'International Meeting on Organic Geochemistry (IMOG 2027)',categories:['Organic Geochemistry'],location:'Rotterdam Netherlands',dates:'2027-09-12'};
+  assert.notEqual(scoreStoredConferenceRecord('organic geochemstry',record),null);
+  assert.equal(scoreStoredConferenceRecord('IMOG 2028',record),null);
+  assert.equal(scoreStoredConferenceRecord('IMOG Canada',record),null);
+  assert.equal(scoreStoredConferenceRecord('IMOF',record),null);
+  assert.equal(scoreStoredConferenceRecord('organic geoxxmistry',record),null);
+  assert.ok(scoreStoredConferenceRecord('geochemistry',record)! > scoreStoredConferenceRecord('geochemstry',record)!);
+});
+
 test("stored search covers identity, topics, organizer, location, and dates", () => {
   for (const query of ["IGC 2027", "Carbon Capture", "SPE", "Dubai", "Middle East 2027"]) {
     assert.notEqual(scoreStoredConferenceRecord(query, base), null, query);

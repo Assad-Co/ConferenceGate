@@ -24,7 +24,7 @@ jobs:
           TEST_DATABASE_PATH: ${{ runner.temp }}/global-coverage.db
           TURSO_DATABASE_URL: ''
           TURSO_AUTH_TOKEN: ''
-        run: node --import tsx --test server/dataset/tests/globalExpansion.test.ts src/utils/__tests__/conferencePresentation.test.ts
+        run: node --import tsx --test server/dataset/tests/globalExpansion.test.ts server/dataset/tests/officialCalendarExpansion.test.ts server/discovery/tests/storedSearch.test.ts src/utils/__tests__/conferencePresentation.test.ts
       - run: node --import tsx scripts/auditGlobalCoverage.ts global-coverage.json
       - uses: actions/upload-artifact@v4
         with:

@@ -126,6 +126,9 @@ const replace = (source, from, to, label) => {
 {
   const file = 'server/storedConferenceSearch.ts';
   let source = read(file);
+  // The maintained matcher confines fuzzy matching to title/subject words and ranks it lower.
+  // Do not reintroduce the legacy all-fields fallback during every production build.
+  if (!source.includes('const typoMatch')) {
   const anchor = `/** A token can match literally, by a conservative subject synonym, or by a geographic region. */\nfunction tokenMatches(text: string, token: string): boolean {`;
   const replacement = `function oneEditOrAdjacentTranspose(left: string, right: string): boolean {\n  if (left === right) return true;\n  if (Math.abs(left.length - right.length) > 1) return false;\n\n  if (left.length === right.length) {\n    const diffs: number[] = [];\n    for (let i = 0; i < left.length; i += 1) {\n      if (left[i] !== right[i]) diffs.push(i);\n      if (diffs.length > 2) return false;\n    }\n    if (diffs.length === 1) return true;\n    return diffs.length === 2 && diffs[1] === diffs[0] + 1 &&\n      left[diffs[0]] === right[diffs[1]] && left[diffs[1]] === right[diffs[0]];\n  }\n\n  const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];\n  let i = 0;\n  let j = 0;\n  let edits = 0;\n  while (i < shorter.length && j < longer.length) {\n    if (shorter[i] === longer[j]) { i += 1; j += 1; continue; }\n    edits += 1;\n    if (edits > 1) return false;\n    j += 1;\n  }\n  return true;\n}\n\nfunction fuzzyTokenMatches(text: string, token: string): boolean {\n  if (token.length < 4) return false;\n  return text.split(/\\s+/).some((word) =>\n    word.length >= 4 && Math.abs(word.length - token.length) <= 1 && oneEditOrAdjacentTranspose(word, token)\n  );\n}\n\n/** A token can match literally, by a conservative subject synonym, geography, or one small typo. */\nfunction tokenMatches(text: string, token: string): boolean {`;
   source = replace(source, anchor, replacement, 'fuzzy search helper');
@@ -136,6 +139,7 @@ const replace = (source, from, to, label) => {
     'fuzzy token fallback'
   );
   write(file, source);
+  }
 }
 
 // 5) Frontend notification routing: honor persisted destinations, open exact message thread,
