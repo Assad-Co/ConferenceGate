@@ -1196,7 +1196,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             const defaultRole: ConferenceRole = /reviewer/i.test(rawRole)
               ? 'Reviewer'
               : /(?:session|track).*chair|^chair$/i.test(rawRole)
-                ? 'Conference Role'
+                ? 'Session Chair'
                 : /keynote/i.test(rawRole)
                   ? 'Keynote'
                   : /speaker|presenter/i.test(rawRole)
