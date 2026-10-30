@@ -276,7 +276,7 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                 className="px-4 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Rate Organizer</span>
+                <span>Evaluate Conference</span>
               </button>
             )}
           </div>
