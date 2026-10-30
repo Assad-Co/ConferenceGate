@@ -20,7 +20,7 @@ import { findOfficialCandidates } from "./officialResolution";
 import { newReadBudget, readPage, type ReadBudget } from "./readPage";
 import { fetchRobots, isPathAllowed, type RobotsPolicy } from "./robots";
 import { classifySource, isEligibleOfficialSource, titleEvidenceScore, type SourceClassification } from "./sourceClassification";
-import { getDomain, normalizeDomain } from "./sourceRegistry";
+import { getSourceOwnerDomain, normalizeDomain } from "./sourceRegistry";
 import { extractStructuredEvents } from "./structuredData";
 import type { PublishReadiness, RawEventExtraction } from "./types";
 import type { UrlGuard } from "./httpClient";
@@ -736,7 +736,7 @@ async function verifyPage(event: EventRow, url: string, budget: ReadBudget, robo
   if (storedYear && extractedYear && storedYear !== extractedYear && !sameKnownOfficial) {
     return noteVerifyFailure(metrics, "page_states_a_different_year");
   }
-  const registry = await getDomain(host(finalUrl));
+  const registry = await getSourceOwnerDomain(host(finalUrl));
   const source = classifySource({ pageUrl: finalUrl, officialUrl: raw.officialUrl, organizerUrl: raw.organizerUrl,
     title: raw.title, organizer: raw.organizer, pageText: read.html, registryType: registry?.source_type });
   if (!isEligibleOfficialSource({ pageUrl: finalUrl, title: raw.title, organizerUrl: raw.organizerUrl,

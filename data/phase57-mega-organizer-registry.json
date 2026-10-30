@@ -1,8 +1,8 @@
 {
   "phase": 57,
   "name": "Mega worldwide organizer registry",
-  "targetAccepted": 1500,
-  "targetPublished": 1000,
+  "targetAccepted": 15000,
+  "targetPublished": 10000,
   "years": [2026, 2027, 2028],
   "policy": "Official organizer, professional society, scientific organization, government, university, research institute, or first-party conference source only. Discovery still passes robots, extraction, validation, deduplication and controlled publication gates.",
   "sources": [

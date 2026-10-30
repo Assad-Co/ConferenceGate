@@ -121,6 +121,35 @@ export async function getDomain(domain: string): Promise<DomainRow | undefined> 
   return dbGet<DomainRow>("SELECT * FROM discovery_domains WHERE domain = ?", [normalizeDomain(domain)]);
 }
 
+const OWNER_SOURCE_TYPES = new Set<SourceType>([
+  'conference_organizer', 'official_conference_site', 'professional_society',
+  'scientific_organization', 'medical_society', 'engineering_society',
+  'professional_association', 'university',
+]);
+const SHARED_HOSTS = new Set(['github.io', 'wordpress.com', 'blogspot.com', 'pages.dev', 'netlify.app', 'vercel.app', 'azurewebsites.net']);
+
+/** Ownership lookup only. Crawl scheduling, robots and host budgets still use exact domains. */
+export async function getSourceOwnerDomain(
+  domain: string,
+  lookup: (domain: string) => Promise<DomainRow | undefined> = getDomain,
+): Promise<DomainRow | undefined> {
+  const normalized = normalizeDomain(domain);
+  if (!/^[a-z0-9.-]+$/.test(normalized) || normalized.includes('..')) return undefined;
+  const exact = await lookup(normalized);
+  // Explicit denials and classifications take precedence over a parent's ownership.
+  if (exact && !exact.enabled) return undefined;
+  if (exact && exact.source_type !== 'unknown') return exact;
+  const labels = normalized.split('.');
+  for (let i = 1; i < labels.length - 1; i++) {
+    const parent = labels.slice(i).join('.');
+    if (SHARED_HOSTS.has(parent)) return exact;
+    const candidate = await lookup(parent);
+    if (candidate && !candidate.enabled) return exact;
+    if (candidate && OWNER_SOURCE_TYPES.has(candidate.source_type)) return candidate;
+  }
+  return exact;
+}
+
 export async function listDomains(options: { enabledOnly?: boolean } = {}): Promise<DomainRow[]> {
   return dbAll<DomainRow>(
     `SELECT * FROM discovery_domains ${options.enabledOnly ? "WHERE enabled = 1" : ""} ORDER BY trust_score DESC, domain ASC`
