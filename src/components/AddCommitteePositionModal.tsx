@@ -12,6 +12,8 @@ interface AddCommitteePositionModalProps {
 const POSITION_OPTIONS = [
   'Technical Program Committee',
   'Organizing Committee',
+  'Chairman',
+  'Co-chairman',
   'Session Chair',
   'Reviewer Committee',
   'Advisory Board',
@@ -19,7 +21,7 @@ const POSITION_OPTIONS = [
 ];
 
 const inputClass =
-  'w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600';
+  'w-full min-w-0 max-w-full min-h-11 px-3.5 py-2.5 rounded-lg border border-slate-300 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600';
 const labelClass = 'block text-xs font-bold text-slate-600 mb-1.5';
 
 export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps> = ({ isOpen, onClose, onAdd }) => {
@@ -88,23 +90,24 @@ export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white">
-          <h2 className="text-lg font-extrabold text-slate-900">Add a Committee Position</h2>
-          <button onClick={handleClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="committee-position-heading" className="bg-white rounded-2xl shadow-xl w-full min-w-0 max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[90dvh] overflow-y-auto overflow-x-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-100 sticky top-0 z-10 bg-white">
+          <h2 id="committee-position-heading" className="min-w-0 text-base sm:text-lg font-extrabold text-slate-900">Add a Committee Position</h2>
+          <button type="button" aria-label="Close committee position form" onClick={handleClose} className="shrink-0 min-w-11 min-h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
             This is self-reported and not verified by Conference Gate — it shows on your profile labeled that way.
           </p>
 
           <div>
-            <label className={labelClass}>Conference Name *</label>
+            <label htmlFor="committee-conference-name" className={labelClass}>Conference Name *</label>
             <input
+              id="committee-conference-name"
               type="text"
               value={conferenceName}
               onChange={(e) => setConferenceName(e.target.value)}
@@ -113,10 +116,10 @@ export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps>
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Position</label>
-              <select value={position} onChange={(e) => setPosition(e.target.value)} className={inputClass}>
+          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_7rem] gap-3">
+            <div className="min-w-0">
+              <label htmlFor="committee-position" className={labelClass}>Position</label>
+              <select id="committee-position" value={position} onChange={(e) => setPosition(e.target.value)} className={inputClass}>
                 {POSITION_OPTIONS.map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -124,10 +127,12 @@ export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps>
                 ))}
               </select>
             </div>
-            <div>
-              <label className={labelClass}>Year</label>
+            <div className="min-w-0">
+              <label htmlFor="committee-position-year" className={labelClass}>Year</label>
               <input
+                id="committee-position-year"
                 type="text"
+                inputMode="numeric"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 placeholder="e.g. 2023"
@@ -150,7 +155,7 @@ export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps>
               </p>
             )}
             {proofImage && (
-              <img src={proofImage} alt="Proof preview" className="mt-2 max-h-32 rounded-lg border border-slate-200" />
+              <img src={proofImage} alt="Proof preview" className="mt-2 max-w-full max-h-32 object-contain rounded-lg border border-slate-200" />
             )}
             {proofError && <p className="text-[11px] text-rose-600 mt-1">{proofError}</p>}
           </div>
@@ -166,14 +171,14 @@ export const AddCommitteePositionModal: React.FC<AddCommitteePositionModalProps>
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-full transition-colors cursor-pointer"
+              className="flex-1 min-h-11 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-full transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || uploadingProof}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white font-bold text-sm rounded-full transition-colors cursor-pointer"
+              className="flex-1 min-h-11 flex items-center justify-center gap-2 py-2.5 bg-blue-900 hover:bg-blue-950 disabled:opacity-60 text-white font-bold text-sm rounded-full transition-colors cursor-pointer"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Add
