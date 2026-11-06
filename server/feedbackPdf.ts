@@ -90,7 +90,6 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
   y += 2;
   doc.setTextColor(51, 65, 85);
   const values = Object.values(data.ratings);
-  line(`Overall rating: ${(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)} / 6`, 11, true);
   const tableWidth = width;
   const questionWidth = 83;
   const choiceWidth = (tableWidth - questionWidth) / feedbackScale.length;
@@ -150,6 +149,7 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
   doc.setTextColor(51, 65, 85);
   line("Overall feedback", 12, true);
   line(data.comment || "No additional comments.");
+  line(`Overall rating: ${(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)} / 6`, 11, true);
   if (data.recipientEmail) line(`Follow-up contact (record only): ${data.recipientEmail}`, 9);
   const exported = new Date().toISOString().slice(0, 10);
   const count = doc.getNumberOfPages();
