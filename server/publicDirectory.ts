@@ -3,6 +3,8 @@ import { dbAll } from "./db";
 import { renderPublicDirectory } from "./publicDirectoryPages.mjs";
 
 export function mountPublicDirectory(app: Express) {
+  // The home route still serves its landing template; legacy About URLs have one destination.
+  app.get(["/about.html", "/about/index.html"], (_req, res) => res.redirect(301, "/about/"));
   let snapshot: ReturnType<typeof renderPublicDirectory> | undefined;
   let expires = 0;
   let refresh: Promise<void> | undefined;
