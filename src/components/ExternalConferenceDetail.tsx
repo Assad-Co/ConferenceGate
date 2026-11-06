@@ -1762,17 +1762,16 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                         .
                       </p>
                     )}
+                    <ConferenceTravelCards
+                      destination={displayLocation || result.location?.city || result.location?.country}
+                      startDate={attendanceStartDate}
+                      endDate={attendanceEndDate}
+                      travelText={data?.travelText}
+                    />
                   </div>
                 </div>
 
-                <ConferenceTravelCards
-                  destination={displayLocation || result.location?.city || result.location?.country}
-                  venue={data?.venueName || data?.venueAddress}
-                  startDate={attendanceStartDate}
-                  endDate={attendanceEndDate}
-                  travelText={data?.travelText}
-                  officialUrl={result.link}
-                />
+
 
                 {/* Hotels the conference itself named, nearest first. Ordering uses only distances
                     the site actually published, so a hotel listed without one sorts last rather
