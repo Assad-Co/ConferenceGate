@@ -714,16 +714,15 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                     )}
                   </p>
                 )}
+                <ConferenceTravelCards
+                  destination={[conference.location.city, conference.location.country].filter(Boolean).join(', ')}
+                  startDate={conference.dates.start}
+                  endDate={conference.dates.end}
+                  travelText={conference.travelInfo}
+                />
               </div>
             </div>
-            <ConferenceTravelCards
-              destination={[conference.location.city, conference.location.country].filter(Boolean).join(', ')}
-              venue={conference.location.venue}
-              startDate={conference.dates.start}
-              endDate={conference.dates.end}
-              travelText={conference.travelInfo}
-              officialUrl={conference.officialWebsite}
-            />
+
           </div>
         )}
 
