@@ -31,6 +31,7 @@ import { generateInitialsAvatar } from '../utils/avatar';
 import { parseDateFromSnippet, parseLocationFromSnippet } from '../utils/parseSnippetMeta';
 import { createExternalSubmission, type MarkConferenceAttendancePayload } from '../api/activity';
 import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
+import { ConferenceTravelCards, cleanAccommodationText } from './ConferenceTravelCards';
 import { AbstractSubmission } from '../types';
 
 // Recognized form-building tools whose CFP link means "fill out a form on their site" rather
@@ -1721,8 +1722,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                       <Hotel className="w-4 h-4 text-blue-600" />
                       <span>Accommodation Details</span>
                     </div>
-                    {data?.accommodationText ? (
-                      <p>{data.accommodationText}</p>
+                    {cleanAccommodationText(data?.accommodationText) ? (
+                      <p>{cleanAccommodationText(data?.accommodationText)}</p>
                     ) : (
                       <p className="text-slate-400">
                         No accommodation details were found on this page —{' '}
@@ -1763,6 +1764,15 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     )}
                   </div>
                 </div>
+
+                <ConferenceTravelCards
+                  destination={displayLocation || result.location?.city || result.location?.country}
+                  venue={data?.venueName || data?.venueAddress}
+                  startDate={attendanceStartDate}
+                  endDate={attendanceEndDate}
+                  travelText={data?.travelText}
+                  officialUrl={result.link}
+                />
 
                 {/* Hotels the conference itself named, nearest first. Ordering uses only distances
                     the site actually published, so a hotel listed without one sorts last rather
