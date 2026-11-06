@@ -1,3 +1,4 @@
+import { mountPublicDirectory } from "./server/publicDirectory";
 import { startEmailOutboxWorker } from "./server/intelligenceOutbox";
 import { intelligenceEmailRouter, initIntelligenceEmailSchema } from "./server/intelligenceEmail";
 import { startProfessionalIntelligenceAlertScheduler } from "./server/intelligenceAlertScheduler";
@@ -3753,6 +3754,8 @@ Return JSON with exactly this shape:
     const publicDir = process.env.NODE_ENV === "development" ? "public" : "dist";
     res.sendFile(path.join(process.cwd(), publicDir, "about.html"));
   });
+
+  mountPublicDirectory(app);
 
   // Vite middleware for dev or static server for production
   if (process.env.NODE_ENV === "development") {
