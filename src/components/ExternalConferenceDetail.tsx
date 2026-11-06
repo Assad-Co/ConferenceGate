@@ -1588,6 +1588,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     <a className="mt-2 inline-block text-sm text-blue-700 underline" href={isBogotaSummit ? 'https://www.aapg.org/event-details/leadershipsummit2026/#program' : result.link} target="_blank" rel="noopener noreferrer">See organizer program</a>
                   </div>
                 )}
+                {isBogotaSummit && !data?.speakers.length && (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+                    <h4 className="font-bold text-slate-900">Named program facilitators</h4>
+                    <p className="text-xs text-slate-600">The official AAPG program names these leadership coaches. Keynote presenters have not been identified by name in the published program.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <PersonCard name="Lilly Margarita Guerrero" title="Leadership coach" org="MAGA Coaches" role="Workshop facilitator" />
+                      <PersonCard name="Herbert Otálora" title="Master Coach" org="MAGA Coaches" role="Workshop facilitator" />
+                    </div>
+                    <a href="https://www.aapg.org/event-details/leadershipsummit2026/#program" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline text-xs">Official AAPG program <ExternalLink className="w-3 h-3" /></a>
+                  </div>
+                )}
                 {!data?.speakers.length ? (
                   publishedKeynotes.length ? null : data?.crawlComplete === true ? (
                     <EmptyExtractState
@@ -1764,8 +1775,8 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
                     )}
                     <ConferenceTravelCards
                       destination={displayLocation || result.location?.city || result.location?.country}
-                      startDate={attendanceStartDate}
-                      endDate={attendanceEndDate}
+                      startDate={isBogotaSummit ? '2026-11-06' : attendanceStartDate}
+                      endDate={isBogotaSummit ? '2026-11-08' : attendanceEndDate}
                       travelText={data?.travelText}
                     />
                   </div>
