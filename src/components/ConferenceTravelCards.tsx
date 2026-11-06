@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, ExternalLink, Plane, Route, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Plane, Route, ShieldCheck } from 'lucide-react';
 
 type Props = {
   destination?: string | null;
@@ -11,7 +11,7 @@ type Props = {
 };
 
 const validDate = (value?: string | null): string | null => {
-  if (!value || !/^20\\d{2}-\\d{2}-\\d{2}$/.test(value)) return null;
+  if (!value || !/^20\d{2}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(value + 'T12:00:00Z');
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
 };
@@ -28,7 +28,7 @@ const findNamedAirport = (text?: string | null): string | null => {
   // Only show a named airport when the supplied conference guidance explicitly identifies it.
   // Never infer an airport or a travel time from a city name.
   if (!text || text.length > 5000) return null;
-  const match = text.match(/\\b([A-Z][\\p{L}.'’ -]{2,65}\\s(?:International\\s)?Airport)\\s*(?:\\(([A-Z]{3})\\))?/iu);
+  const match = text.match(/\b([A-Z][\p{L}.'’ -]{2,65}\s(?:International\s)?Airport)\s*(?:\(([A-Z]{3})\))?/iu);
   return match ? (match[2] ? match[1].trim() + ' (' + match[2] + ')' : match[1].trim()) : null;
 };
 const safeOfficialUrl = (url?: string | null): string | null => {
@@ -84,9 +84,9 @@ export const ConferenceTravelCards: React.FC<Props> = ({ destination, venue, sta
 export function cleanAccommodationText(value?: string | null): string | null {
   const raw = (value || '').trim();
   if (!raw) return null;
-  const navigation = /newsletter|subscribe to|explorer magazine|news-and-media|\\!\\[[^\\]]*\\]\\(/i;
-  const markdown = /\\[[^\\]]+\\]\\(https?:\\/\\/|\\\\\\[|\\\\\\!\\[|\\\\\\\\/i;
-  const urls = raw.match(/https?:\\/\\//g) || [];
+  const navigation = /newsletter|subscribe to|explorer magazine|news-and-media|\!\[[^\]]*\]\(/i;
+  const markdown = /\[[^\]]+\]\(https?:\/\/|\\\[|\\\!\[|\\\\/i;
+  const urls = raw.match(/https?:\/\//g) || [];
   if (navigation.test(raw) || markdown.test(raw) || urls.length > 2 || raw.length > 900) return null;
   return raw;
 }
