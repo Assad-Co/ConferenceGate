@@ -124,8 +124,8 @@ export function ConferenceIntelligenceHub({
           }}
         >
           {expanded
-            ? "Close intelligence workspace"
-            : "Open intelligence workspace"}
+            ? "Close Conference Insights"
+            : "Conference Insights"}
         </button>
         </div>
       </div>
