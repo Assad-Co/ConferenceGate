@@ -9,6 +9,7 @@ const web = value => {
   try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; }
   catch { return ''; }
 };
+const world = JSON.parse(fs.readFileSync('src/intelligence/world.json','utf8'));
 const slug = value => String(value).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 export function renderPublicDirectory(rows = [], today = new Date().toISOString().slice(0,10)) {
 const files = new Map();
@@ -48,9 +49,9 @@ if (new Set(events.map(eventPath)).size !== events.length) throw new Error('Dupl
 const page = (title, description, route, body) => `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} | ConferenceGate</title><meta name="description" content="${esc(description)}"><link rel="canonical" href="${origin}${route}">
-<link rel="stylesheet" href="/conferencegate-public.css">
+<link rel="stylesheet" href="/conferencegate-public.css"><link rel="stylesheet" href="/conferencegate-atlas.css">
 <style>main{max-width:76rem;margin:auto;padding:2rem 1rem} .listing{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1rem}.listing li{border:1px solid #c9d8e8;border-radius:1rem;padding:1rem}.listing li[hidden]{display:none}main a{text-decoration:underline;color:#075bc0}main input{width:min(100%,35rem);padding:.75rem;border:1px solid #627991;border-radius:.5rem;font:inherit}dt{font-weight:700;margin-top:.6rem}dd{margin-left:0}.site-header{flex-wrap:wrap}.site-header nav{display:flex;flex-wrap:wrap}</style>
-<body><header class="site-header"><a href="/" class="brand-link"><img src="/conference-gate-logo.png" alt="ConferenceGate"></a><nav aria-label="Main navigation"><a href="/conferences/">Conference directory</a><a href="/about.html">About</a></nav></header>
+<body><header class="site-header"><a href="/" class="brand-link"><img src="/conference-gate-logo.png" alt="ConferenceGate"></a><nav aria-label="Main navigation"><a href="/conferences/">Conference directory</a><a href="/about/">About</a><a class="cg-nav-join" href="/?auth=choose&amp;discover=1">Sign in</a></nav></header>
 <main>${body}</main><footer><div class="wrap"><a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="mailto:support@conferencegate.com">Contact</a></div></footer></body></html>`;
 const place = x => [x.city,x.country].filter(Boolean).join(', ');
 const dates = x => [x.start,date(x.end) !== x.start ? date(x.end) : ''].filter(Boolean).join(' to ');
@@ -73,16 +74,53 @@ ${field('Source last checked',checked || 'Not recorded in this catalogue')}</dl>
 ${web(x.source)!==web(x.url) ? `<p><a href="${esc(web(x.source))}">View official calendar source</a></p>` : ''}
 <p>Confirm dates and submission details with the organizer before making plans.</p>`));
 }
-files.set('/conferences/',page('Upcoming conferences','Browse upcoming conferences by topic, location and event name.','/conferences/',`
-<h1>Upcoming conferences</h1><p>Browse upcoming conferences with organizer or society sources. Search without an account. Select an event to sign in and continue in ConferenceGate. Listings reflect the catalogue as of ${today}.</p>
-<h2>Upcoming abstract deadlines</h2>
-${upcoming.some(x=>deadline(x)>=today) ? '<ul>'+upcoming.filter(x=>deadline(x)>=today).sort((a,b)=>deadline(a).localeCompare(deadline(b))).slice(0,20).map(x=>`<li><a href="${signIn(x)}">${esc(x.title)}</a> — ${esc(deadline(x))}</li>`).join('')+'</ul>' : '<p>No upcoming deadlines recorded yet.</p>'}
-<label for="conference-search">Search by event, field or location</label><br><input type="search" id="conference-search" placeholder="e.g. IMOG or geoscience" autocomplete="off">
-<p id="conference-count" role="status">${upcoming.length} upcoming conferences</p>
-<ul class="listing">${upcoming.map(x => `<li data-title="${esc(x.title)}" data-search="${esc([x.acronym,x.organizer,x.category,x.city,x.country,x.description].filter(Boolean).join(' '))}"><h2><a href="${signIn(x)}">${esc(x.title)}</a></h2><p>${esc([dates(x),place(x),x.category].filter(Boolean).join(' · '))}</p>${deadline(x) ? `<p>Submission deadline: ${esc(deadline(x))}</p>` : ''}</li>`).join('')}</ul>
+const aliases = new Map([['usa','united-states-of-america'],['us','united-states-of-america'],['united-states','united-states-of-america'],['uk','united-kingdom'],['uae','united-arab-emirates'],['czechia','czech-republic'],['turkiye','turkey'],['republic-of-korea','south-korea']]);
+const lookup = new Map(world.flatMap(c => [c.name,...c.aliases].map(name=>[slug(name),slug(c.name)])));
+const countryKey = label => lookup.get(aliases.get(slug(label)) || slug(label)) || aliases.get(slug(label)) || slug(label);
+const countries = new Map();
+const groups = x => [...new Set(String(x.country || '').split(/\s*\/\s*/).map(c=>c.trim()).filter(Boolean).map(label=>{
+  const key=countryKey(label);
+  countries.set(key, countries.get(key)||label);
+  return key;
+}))];
+const keys = new Map(upcoming.map(x=>[x,groups(x)]));
+const counts = new Map();
+for (const group of keys.values()) for (const country of group) counts.set(country,(counts.get(country)||0)+1);
+const fields = [...new Set(upcoming.flatMap(x=>String(x.category||'').split(', ').filter(Boolean)))].sort();
+const options = [...countries].sort((a,b)=>a[1].localeCompare(b[1])).map(([key,label])=>`<option value="${esc(key)}">${esc(label)}</option>`).join('');
+const geometry = world.map(c=>{
+  const key=slug(c.name), count=counts.get(key)||0;
+  return `<g data-map-country="${esc(key)}" class="${count?'has-events':''}" ${count?`role="button" tabindex="0" aria-pressed="false" aria-label="${esc(countries.get(key))}: ${count} conferences"`:''}><title>${esc(countries.get(key)||c.name)} · ${count} conferences</title>${c.paths.map(d=>`<path d="${esc(d)}"/>`).join('')}</g>`;
+}).join('');
+files.set('/conferences/',page('Find your next conference','Explore upcoming conferences on the world map, search by topic, or filter by country.','/conferences/',`
+<section class="cg-hero">
+  <span class="cg-kicker">CONFERENCEGATE DISCOVER</span><h1>Find your next conference.</h1>
+  <p>Explore events around the world, find where your research fits, and see what’s coming up.</p>
+  <div class="cg-stats"><span><strong>${upcoming.length}</strong> upcoming events</span><span><strong>${countries.size}</strong> countries &amp; territories</span><span>Organizer and society sources</span></div>
+</section>
+<section class="cg-workspace" aria-label="Conference search and filters">
+  <div class="cg-filters">
+    <label>Search conferences<input type="search" id="conference-search" placeholder="Event, topic, city or acronym" autocomplete="off"></label>
+    <label>Country<select id="cg-country"><option value="">All countries</option>${options}</select></label>
+    <label>Discipline<select id="cg-field"><option value="">All disciplines</option>${fields.map(x=>`<option>${esc(x)}</option>`).join('')}</select></label>
+    <label>Abstract deadline<select id="cg-deadline"><option value="">Any status</option><option value="upcoming">Upcoming dates</option></select></label>
+    <button type="button" id="cg-clear" class="cg-secondary">Clear</button>
+  </div>
+  <div class="cg-map-grid">
+    <div class="cg-map"><div class="cg-map-head"><div><span class="cg-kicker">WORLDWIDE COVERAGE</span><h2>Explore the world map</h2></div><span class="cg-legend">● Countries with events</span></div>
+      <svg viewBox="0 0 360 180" role="group" aria-label="World conference map. Select a highlighted country or use the Country filter.">${geometry}</svg>
+      <p class="cg-map-note">Select a highlighted country to see its events. Country coverage, not venue locations. Map: <a href="https://www.naturalearthdata.com/about/terms-of-use/">Natural Earth</a>.</p>
+    </div>
+    <aside class="cg-map-results" aria-label="Events on the map"><span class="cg-kicker">CONFERENCES ON THE MAP</span><h2 id="cg-map-title">Worldwide</h2><p id="cg-map-count">Select a country to explore its upcoming events.</p><ul id="cg-map-events"></ul><a class="cg-secondary" href="#cg-results">View results ↓</a></aside>
+  </div>
+</section>
+<section id="cg-results" class="cg-results"><div class="cg-results-head"><div><span class="cg-kicker">CONFERENCE DIRECTORY</span><h2>Upcoming conferences</h2></div><p id="conference-count" role="status">${upcoming.length} upcoming conferences</p></div>
+<p class="cg-muted">Updated ${today}. Select an event to sign in and continue in ConferenceGate.</p>
+<ul class="listing">${upcoming.map(x=>`<li data-title="${esc(x.title)}" data-search="${esc([x.acronym,x.organizer,x.category,x.city,x.country,x.description].filter(Boolean).join(' '))}" data-country="${esc(keys.get(x).join(' '))}" data-field="${esc(x.category || '')}" data-deadline="${deadline(x)>=today?'upcoming':''}"><span class="cg-card-date">${esc(dates(x))}</span><h3><a href="${signIn(x)}">${esc(x.title)}</a></h3><p>${esc([place(x),x.category].filter(Boolean).join(' · '))}</p>${deadline(x) ? `<p class="cg-card-deadline">Abstract deadline: ${esc(deadline(x))}</p>` : ''}</li>`).join('')}</ul>
+<button type="button" class="cg-secondary" id="cg-more" hidden>Show more conferences</button></section>
 <script src="/conferences/filter.js" defer></script>`));
 files.set('/conferences/filter.js', '(' + directoryFilter.toString() + ')();');
-const sitemap = ['/', '/about.html','/faq.html','/privacy.html','/terms.html','/pricing.html','/refunds.html','/verify.html','/conferences/',...upcoming.map(eventPath)];
+const sitemap = ['/', '/about/','/faq.html','/privacy.html','/terms.html','/pricing.html','/refunds.html','/verify.html','/conferences/',...upcoming.map(eventPath)];
 files.set('/sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap.map(route=>`  <url><loc>${origin}${route}</loc></url>`).join('\n')}\n</urlset>\n`);
 return {files, count:upcoming.length};
 }
@@ -109,10 +147,22 @@ function directoryFilter() {
     }
     return edits+(b.length-j)<=1;
   };
-  box.addEventListener('input', () => {
+  const country = document.querySelector('#cg-country');
+  const field = document.querySelector('#cg-field');
+  const deadline = document.querySelector('#cg-deadline');
+  const more = document.querySelector('#cg-more');
+  const pins = [...document.querySelectorAll('[data-map-country]')];
+  const mapTitle = document.querySelector('#cg-map-title');
+  const mapCount = document.querySelector('#cg-map-count');
+  const mapEvents = document.querySelector('#cg-map-events');
+  let limit = 12;
+  function update() {
     const query = normalize(box.value.slice(0,180));
     const words = query.split(' ').filter(x=>x&&!['the','in','near','for','and'].includes(x));
     const ranked = rows.map(r => {
+      if ((country.value&&!r.row.dataset.country.split(' ').includes(country.value)) ||
+          (field.value&&!r.row.dataset.field.split(', ').includes(field.value)) ||
+          (deadline.value&&r.row.dataset.deadline!==deadline.value)) return {...r,score:0};
       if(!query)return {...r,score:1};
       let score = r.title===query ? 100 : r.title.includes(query) ? 35 : r.acronym===query ? 45 : 0;
       for(const term of words) {
@@ -123,8 +173,41 @@ function directoryFilter() {
       }
       return {...r,score};
     }).sort((a,b)=>b.score-a.score||a.index-b.index);
-    let count=0;
-    for(const r of ranked){r.row.hidden=!r.score;if(r.score)count++;list.append(r.row);}
+    const matches=ranked.filter(r=>r.score);
+    let shown=0;
+    for(const r of ranked){r.row.hidden=!r.score||shown>=limit;if(r.score)shown++;list.append(r.row);}
+    const count=matches.length;
     status.textContent=count===1?'1 matching conference':count+' matching conferences';
+    more.hidden=count<=limit;
+    mapTitle.textContent=country.value ? country.selectedOptions[0].textContent : 'Worldwide';
+    mapCount.textContent=country.value ? status.textContent : 'Choose a highlighted country or use the filters.';
+    mapEvents.replaceChildren(...matches.slice(0,4).map(r=>{
+      const item=document.createElement('li');
+      const link=r.row.querySelector('h3 a').cloneNode(true);
+      item.append(link,r.row.querySelector('.cg-card-date').cloneNode(true));
+      return item;
+    }));
+    const counts=new Map();
+    for(const r of matches) for(const key of r.row.dataset.country.split(' ')) if(key) counts.set(key,(counts.get(key)||0)+1);
+    for(const pin of pins) {
+      const key=pin.dataset.mapCountry;
+      const active=country.value===key;
+      pin.classList.toggle('selected',active);
+      pin.classList.toggle('dimmed',!counts.get(key)&&!active);
+      if(pin.hasAttribute('aria-pressed'))pin.setAttribute('aria-pressed',String(active));
+    }
+  }
+  const change=()=>{limit=12;update();};
+  box.addEventListener('input',change);
+  for(const select of [country,field,deadline])select.addEventListener('change',change);
+  more.addEventListener('click',()=>{limit+=12;update();});
+  document.querySelector('#cg-clear').addEventListener('click',()=>{
+    box.value=country.value=field.value=deadline.value='';change();box.focus();
   });
+  for(const pin of pins.filter(p=>p.hasAttribute('role'))) {
+    const select=()=>{country.value=country.value===pin.dataset.mapCountry?'':pin.dataset.mapCountry;change();};
+    pin.addEventListener('click',select);
+    pin.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}});
+  }
+  update();
 }

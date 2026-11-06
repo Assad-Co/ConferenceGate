@@ -12,7 +12,7 @@ const origin = 'https://www.conferencegate.com';
 const robots = fs.readFileSync('dist/robots.txt','utf8');
 fs.writeFileSync('dist/robots.txt',robots.replace(/Sitemap: .*$/m,`Sitemap: ${origin}/sitemap.xml`));
 const home = fs.readFileSync('dist/about.html','utf8');
-const linked = home.replace(/<nav\b[^>]*>/,match=>match+'<a href="/conferences/">Browse conferences</a>');
+const linked = home.replace(/<nav\b[^>]*>/,match=>match+'<a href="/conferences/">Explore conferences</a><a href="/about/">About</a>');
 if (linked === home) throw new Error('Homepage navigation not found');
 fs.writeFileSync('dist/about.html',linked);
 console.log(`Published ${count} public conference pages.`);
