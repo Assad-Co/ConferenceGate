@@ -50,7 +50,6 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
   doc.setTextColor(30, 58, 138);
   line("Conference & Workshop Feedback", 18, true);
   doc.setTextColor(51, 65, 85);
-  line(data.submitted ? "Submitted feedback copy" : "Draft feedback - not yet submitted", 9);
   y += 2;
   const gap = 4;
   const metadataRow = (fields: Array<[string, string | undefined]>) => {
@@ -62,7 +61,7 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
     for (let offset = 0; offset < longest;) {
       if (y + 15 > 270) { doc.addPage(); y = 18; }
       const count = Math.min(longest - offset, Math.floor((270 - y - 9) / 3.6));
-      const height = 4 + count * 3.6;
+      const height = 3 + count * 3.6;
       fields.forEach(([label], index) => {
         const x = margin + index * (fieldWidth + gap);
         const value = wrapped[index].slice(offset, offset + count);
@@ -78,9 +77,9 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
         doc.setTextColor(30, 41, 59);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        value.forEach((text, i) => doc.text(text, x + 3, y + 9 + i * 3.6));
+        value.forEach((text, i) => doc.text(text, x + 3, y + 8.5 + i * 3.6));
       });
-      y += height + 6;
+      y += height + 5;
       offset += count;
     }
   };
@@ -90,7 +89,6 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
   metadataRow([["Your Role at This Event", data.role]]);
   y += 2;
   doc.setTextColor(51, 65, 85);
-  line(`Exported: ${new Date().toISOString().slice(0, 10)} (UTC)`);
   const values = Object.values(data.ratings);
   line(`Overall rating: ${(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)} / 6`, 11, true);
   const tableWidth = width;
@@ -121,8 +119,8 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
       const rating = data.ratings[`${section}_${index}`];
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.8);
-      const lines: string[] = doc.splitTextToSize(question, questionWidth - 6);
-      const rowHeight = Math.max(9, lines.length * 3.7 + (rating ? 4 : 7.2));
+      const lines: string[] = doc.splitTextToSize(rating ? question : question + " (Not rated)", questionWidth - 6);
+      const rowHeight = Math.max(8.2, lines.length * 3.4 + 3.4);
       if (y + rowHeight > pageLimit) {
         doc.addPage(); y = 18;
         tableHeader(title + " (continued)");
@@ -131,12 +129,7 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
       if (index % 2) doc.setFillColor(242, 247, 255); else doc.setFillColor(255, 255, 255);
       doc.rect(margin, y, tableWidth, rowHeight, "F");
       doc.setTextColor(30, 41, 59);
-      lines.forEach((part, i) => doc.text(part, margin + 3, y + 4.6 + i * 3.7));
-      if (!rating) {
-        doc.setFontSize(7);
-        doc.setTextColor(71, 85, 105);
-        doc.text("Not rated", margin + 3, y + rowHeight - 2.1);
-      }
+      lines.forEach((part, i) => doc.text(part, margin + 3, y + 4.4 + i * 3.4));
       feedbackScale.forEach((_, i) => {
         const left = margin + questionWidth + i * choiceWidth;
         const selected = rating === i + 1;
@@ -152,16 +145,18 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
       doc.line(margin, y + rowHeight, margin + tableWidth, y + rowHeight);
       y += rowHeight;
     });
-    y += 5;
+    y += 3;
   }
   doc.setTextColor(51, 65, 85);
   line("Overall feedback", 12, true);
   line(data.comment || "No additional comments.");
   if (data.recipientEmail) line(`Follow-up contact (record only): ${data.recipientEmail}`, 9);
+  const exported = new Date().toISOString().slice(0, 10);
   const count = doc.getNumberOfPages();
   for (let page = 1; page <= count; page++) {
     doc.setPage(page); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
     doc.text("conferencegate.com | Participant feedback - not a certificate or endorsement", margin, 286);
+    doc.text(`Exported: ${exported} (UTC)`, margin, 281);
     doc.text(`${page} / ${count}`, 192, 286, { align: "right" });
   }
   return Buffer.from(doc.output("arraybuffer"));

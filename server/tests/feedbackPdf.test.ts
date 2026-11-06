@@ -9,11 +9,13 @@ const copy = {
   comment: "Clear presentations and useful discussions.", recipientEmail: "organizer@example.org",
 };
 
-test("PDF includes logo, truthful draft status, all questions and unanswered ratings", () => {
+test("PDF includes logo, export date, all questions and unanswered ratings", () => {
   const pdf = buildFeedbackPdf(copy).toString("latin1");
   assert.ok(pdf.startsWith("%PDF-"));
   assert.match(pdf, /\/Subtype \/Image/);
-  assert.match(pdf, /Draft feedback - not yet submitted/);
+  assert.doesNotMatch(pdf, /Draft feedback - not yet submitted/);
+  assert.match(pdf, /Exported:/);
+  assert.equal((pdf.match(/\/Type \/Page\b/g) || []).length, 1);
   assert.match(pdf, /Sample Participant/);
   assert.match(pdf, /Excellent/);
   assert.match(pdf, /Not rated/);
@@ -24,7 +26,6 @@ test("PDF includes logo, truthful draft status, all questions and unanswered rat
 
 test("long comments paginate without dropping the ending", () => {
   const pdf = buildFeedbackPdf({ ...copy, comment: "Detailed feedback. ".repeat(250) + "FINAL COMMENT MARKER", submitted: true }).toString("latin1");
-  assert.match(pdf, /Submitted feedback copy/);
   assert.match(pdf, /FINAL COMMENT MARKER/);
   assert.ok((pdf.match(/\/Type \/Page\b/g) || []).length >= 2);
 });
