@@ -51,12 +51,45 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
   line("Conference & Workshop Feedback", 18, true);
   doc.setTextColor(51, 65, 85);
   line(data.submitted ? "Submitted feedback copy" : "Draft feedback - not yet submitted", 9);
-  line(data.conferenceTitle, 13, true);
-  line(`Participant: ${data.participantName}`);
-  if (data.participantCompany) line(`Organization: ${data.participantCompany}`);
-  if (data.organizerName) line(`Event organizer: ${data.organizerName}`);
-  line(`Event date: ${data.eventDate || "Not provided"}`);
-  line(`Conference role: ${data.role}`);
+  y += 2;
+  const gap = 4;
+  const metadataRow = (fields: Array<[string, string | undefined]>) => {
+    const fieldWidth = (width - gap * (fields.length - 1)) / fields.length;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const wrapped: string[][] = fields.map(([, value]) => doc.splitTextToSize(value?.trim() || "Not provided", fieldWidth - 6));
+    const longest = Math.max(...wrapped.map(value => value.length));
+    for (let offset = 0; offset < longest;) {
+      if (y + 15 > 270) { doc.addPage(); y = 18; }
+      const count = Math.min(longest - offset, Math.floor((270 - y - 9) / 3.6));
+      const height = 4 + count * 3.6;
+      fields.forEach(([label], index) => {
+        const x = margin + index * (fieldWidth + gap);
+        const value = wrapped[index].slice(offset, offset + count);
+        if (!value.length) return;
+        doc.setTextColor(30, 58, 138);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(label, x, y + 2.8);
+        doc.setFillColor(240, 245, 251);
+        doc.setDrawColor(218, 227, 240);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(x, y + 4, fieldWidth, height, 1.6, 1.6, "FD");
+        doc.setTextColor(30, 41, 59);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        value.forEach((text, i) => doc.text(text, x + 3, y + 9 + i * 3.6));
+      });
+      y += height + 6;
+      offset += count;
+    }
+  };
+  metadataRow([["Conference / Workshop", data.conferenceTitle], ["Name of Organizer / Society", data.organizerName]]);
+  metadataRow([["Date of Event", data.eventDate], ["Name of Participant", data.participantName]]);
+  metadataRow([["Company / Organization Affiliated With", data.participantCompany]]);
+  metadataRow([["Your Role at This Event", data.role]]);
+  y += 2;
+  doc.setTextColor(51, 65, 85);
   line(`Exported: ${new Date().toISOString().slice(0, 10)} (UTC)`);
   const values = Object.values(data.ratings);
   line(`Overall rating: ${(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)} / 6`, 11, true);
