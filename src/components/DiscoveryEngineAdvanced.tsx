@@ -152,24 +152,46 @@ function preferredAction(result: LiveSearchResult): string {
   return 'View Details';
 }
 
+// Edition-specific references from the organizers. Keep these separate from crawl completeness.
+function organizerCardDetails(result: LiveSearchResult) {
+  let url: URL;
+  try { url = new URL(result.link); } catch { return null; }
+  const host = url.hostname.toLowerCase().replace(/^www\./, '');
+  if (host === 'jcrai.org' && /\b2026\b/.test(result.title)) return {
+    image: 'https://siteoss.forwardacademy.org.cn/images/site/logo/a76024b32b4c4fddbdeea3b263d3c510.png',
+    imageLabel: 'JCRAI organizer logo',
+    dates: '6–8 Nov 2026',
+    summary: 'Hosted by Beijing University of Chemical Technology and Beijing Information Science and Technology University. Published keynote speakers include Yongchun Xie and Tao Zhou.',
+    url: 'https://www.jcrai.org/kn2026.html', label: 'Official keynote speakers',
+  };
+  if (host === 'aapg.org' && /^\/event-details\/leadershipsummit2026\/?$/.test(url.pathname)) return {
+    image: '/aapg-organizer.svg', imageLabel: 'AAPG organizer logo',
+    dates: '6–8 Nov 2026',
+    summary: 'Student and young professional leadership summit. The organizer lists keynote sessions and panels on geoscience careers and leadership.',
+    url: 'https://www.aapg.org/event-details/leadershipsummit2026/', label: 'Official summit program',
+  };
+  return null;
+}
+
 const ResultLogo: React.FC<{ result: LiveSearchResult }> = ({ result }) => {
-  const [failed, setFailed] = useState(false);
-  const logo = result.favicon || result.thumbnail;
-  if (logo && !failed) {
+  const [failed, setFailed] = useState<string[]>([]);
+  const official = organizerCardDetails(result);
+  const logo = [official?.image, result.thumbnail, result.favicon].find((url): url is string => Boolean(url && !failed.includes(url)));
+  if (logo) {
     return (
       <img
         src={logo}
-        alt={`${result.title} mark`}
+        alt={logo === official?.image ? official.imageLabel : `${result.title} artwork`}
         className="max-w-full max-h-full object-contain"
         loading="lazy"
         decoding="async"
         referrerPolicy="no-referrer"
-        onError={() => setFailed(true)}
+        onError={() => setFailed(previous => [...previous, logo])}
       />
     );
   }
   return (
-    <span className="text-sm font-black text-slate-700 text-center leading-tight">
+    <span className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-blue-900 to-sky-600 text-xl font-black text-white text-center leading-tight" aria-label="ConferenceGate placeholder">
       {getInitials(result.acronym || result.title)}
     </span>
   );
@@ -867,7 +889,8 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         {!webSearchError && displayedStored.length > 0 && (
           <div className="space-y-4">
             {displayedStored.map((result) => {
-              const date = dateLine(result.startDate, result.endDate);
+              const organizerDetails = organizerCardDetails(result);
+              const date = organizerDetails?.dates || dateLine(result.startDate, result.endDate);
               const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
               const categories = Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[])).slice(0, 4);
               const trust = conferenceTrustSignals(result);
@@ -916,7 +939,12 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       </div>
                     )}
 
-                    {result.description && <p className="text-xs text-slate-600 line-clamp-2">{result.description}</p>}
+                    {organizerDetails ? (
+                      <div className="rounded-xl bg-blue-50 p-3 text-sm text-slate-700">
+                        <p>{organizerDetails.summary}</p>
+                        <a href={organizerDetails.url} target="_blank" rel="noopener noreferrer" onClick={event => event.stopPropagation()} className="mt-1 inline-block font-semibold text-blue-700 underline">{organizerDetails.label}</a>
+                      </div>
+                    ) : result.description && <p className="text-xs text-slate-600 line-clamp-2">{result.description}</p>}
 
                     <div className="flex flex-wrap gap-2">
                       {result.sections?.includes('cfp') && <QuickTab label="CFP" icon={FileText} onClick={() => onOpenExternalResult(result, 'cfp')} />}
