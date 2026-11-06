@@ -101,3 +101,15 @@ test("markdown with no title line still yields a document", () => {
 test("the thin-page threshold is a real number the read chain can act on", () => {
   assert.ok(MIN_EXTRACTABLE_TEXT_CHARS >= 200 && MIN_EXTRACTABLE_TEXT_CHARS <= 2000);
 });
+
+test("scheduled rotations cover new searches without increasing the query plan", () => {
+  const options = { targetYears: [2026, 2027, 2028], maxQueries: 24 };
+  const first = planSearchQueries({ ...options, rotation: 20765 });
+  const next = planSearchQueries({ ...options, rotation: 20766 });
+  assert.equal(first.length, options.maxQueries);
+  assert.equal(next.length, options.maxQueries);
+  assert.equal(new Set(next.map(item => item.region)).size, 7);
+  assert.notDeepEqual(first.map(item => item.country), next.map(item => item.country));
+  assert.notDeepEqual(first.map(item => item.serperQuery), next.map(item => item.serperQuery));
+  assert.deepEqual(next, planSearchQueries({ ...options, rotation: 20766 }));
+});

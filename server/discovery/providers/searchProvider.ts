@@ -156,6 +156,8 @@ export function planSearchQueries(context: {
   maxQueries: number;
   /** Share of queries that must name the priority year. Defaults to 0.6 for a 2027-first run. */
   priorityYearShare?: number;
+  /** UTC day bucket for automated runs; zero preserves reproducible explicit plans. */
+  rotation?: number;
 }): PlannedQuery[] {
   const subjects = context.topics?.length ? context.topics : subjectPhrases();
   const regions = Object.keys(QUERY_COUNTRIES_BY_REGION);
@@ -168,6 +170,7 @@ export function planSearchQueries(context: {
   const priorityShare = context.priorityYearShare ?? 0.6;
   const priorityBudget = Math.round(context.maxQueries * priorityShare);
 
+  const rotation = Math.max(0, Math.trunc(context.rotation || 0));
   const planned: PlannedQuery[] = [];
   const seen = new Set<string>();
   let priorityUsed = 0;
@@ -181,9 +184,9 @@ export function planSearchQueries(context: {
     const region = target?.region || regions[index % regions.length];
     const countries = QUERY_COUNTRIES_BY_REGION[region];
     const stride = targets.length || regions.length;
-    const country = countries[Math.floor(index / stride) % countries.length];
-    const subject = target?.subject || subjects[(index * 3) % subjects.length];
-    const eventWord = EVENT_WORDS[(index * 2) % EVENT_WORDS.length];
+    const country = countries[(Math.floor(index / stride) + rotation) % countries.length];
+    const subject = target?.subject || subjects[(index * 3 + rotation) % subjects.length];
+    const eventWord = EVENT_WORDS[(index * 2 + rotation) % EVENT_WORDS.length];
 
     const priorityRemaining = priorityBudget - priorityUsed;
     const otherRemaining = context.maxQueries - planned.length - priorityRemaining;
@@ -200,7 +203,8 @@ export function planSearchQueries(context: {
 
     // Intent words bias towards a conference's own site; the negatives keep roundups and
     // directory pages out of results we are paying for.
-    const query = `${subject} ${eventWord} ${year} ${country} call for papers registration -"top conferences" -"list of conferences" -"upcoming conferences"`;
+    const intent = rotation ? ["call for papers", "abstract submission", "conference programme", "registration"][rotation % 4] : "call for papers registration";
+    const query = `${subject} ${eventWord} ${year} ${country} ${intent} -"top conferences" -"list of conferences" -"upcoming conferences"`;
     const serperQuery = `${subject} ${eventWord} ${year} ${country}`;
     planned.push({ query, serperQuery, subject, country, region, year });
   }
@@ -310,12 +314,13 @@ export class SearchDiscoveryProvider implements DiscoveryProvider {
     if (!this.isEnabled()) return [];
 
     const maxQueries = this.options.maxQueries ?? 24;
-    const perQuery = this.options.resultsPerQuery ?? 15;
+    const perQuery = this.options.resultsPerQuery ?? 20;
     const planned = planSearchQueries({
       targetYears: context.targetYears,
       topics: context.topics,
       targets: this.options.targets,
       maxQueries,
+      rotation: Math.floor(Date.now() / 86_400_000),
     });
     this.accounting.queriesPlanned = planned.length;
 
