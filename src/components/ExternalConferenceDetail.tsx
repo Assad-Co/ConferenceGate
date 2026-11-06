@@ -586,7 +586,14 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
     ? data.datesText
     : upcomingEventDate;
   const snippetDate = parseDateFromSnippet(result.snippet);
-  const displayDate = extractedDate || (snippetDate && !isOlderThanUpcomingCutoff(snippetDate) ? snippetDate : null);
+  const isBogotaSummit = /^https?:\/\/(?:www\.)?aapg\.org\/event-details\/leadershipsummit2026\/?(?:[?#].*)?$/i.test(result.link);
+  const catalogDate = [result.startDate, result.endDate !== result.startDate ? result.endDate : null].filter(Boolean).join(' – ');
+  // Detail pages retain the event's dates after it ends; only discovery filters hide past events.
+  const displayDate = (isBogotaSummit ? 'November 6–8, 2026' : null) || catalogDate || data?.datesText || extractedDate || snippetDate || 'Dates not published';
+  const keynoteSessions = (data?.agendaSessions ?? []).filter(session => /\b(keynote|plenary)\b/i.test(session.title));
+  const publishedKeynotes = keynoteSessions.length ? keynoteSessions : isBogotaSummit
+    ? ['Leadership in Geosciences', 'Diversity and Inclusion', 'Sustainability', 'Effective Communication', 'Energy Policy'].map(title => ({title, speakerName:null}))
+    : [];
   const displayTitle = data?.conferenceTitle || result.title;
   // The same mark the card showed, so a reader who clicked a card headed EASTERN does not land on
   // a page headed AAPG. The organiser is dropped for the reason the card drops it.
@@ -679,7 +686,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
       {/* Hero Banner Header */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div
-          className="relative h-64 sm:h-80 bg-slate-900 flex items-center justify-center"
+          className="relative min-h-64 sm:min-h-80 bg-slate-900 flex flex-col justify-end overflow-hidden"
           style={heroImage ? undefined : { backgroundImage: banner.backgroundImage }}
         >
           {heroImage ? (
@@ -687,20 +694,20 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               src={heroImage}
               alt=""
               onError={() => setHeroImageFailed(true)}
-              className="w-full h-full object-cover opacity-25 blur-[1px]"
+              className="absolute inset-0 w-full h-full object-cover opacity-25 blur-[1px]"
             />
           ) : !heroLogo || logoFailed ? (
             // The conference's own name, not a globe and not its publisher's logo — the one mark on
             // the page that belongs to this conference and no other. It sits on the drawn banner
             // now rather than on bare slate, so it reads as a title over artwork.
-            <span className={`${markSizeClass(heroMark, 'hero')} relative z-[1] font-black tracking-wide text-white/90 px-6 text-center leading-none drop-shadow-lg`}>
+            <span className={`${markSizeClass(heroMark, 'hero')} absolute right-6 top-5 font-black tracking-wide text-white/30 text-center leading-none`}>
               {heroMark}
             </span>
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent"></div>
           {heroLogo && !logoFailed && (
-            <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-3xl border border-white/80 shadow-xl flex items-center justify-center p-5">
+            <div className="absolute right-4 top-4 flex flex-col items-center gap-1">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 bg-white rounded-xl border border-white/80 shadow-xl flex items-center justify-center p-2">
                 <img
                   src={heroLogo}
                   alt={logoIsOwn ? `${displayTitle} logo` : `${result.displayLink} organiser logo`}
@@ -715,7 +722,7 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             </div>
           )}
 
-          <div className="absolute top-6 left-6 flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+          <div className="absolute top-4 left-4 right-auto max-w-[55%] flex items-center gap-3 bg-slate-950/70 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
             {logoUrl && !logoFailed && <img src={logoUrl} alt="" referrerPolicy="no-referrer" className="w-5 h-5 rounded shrink-0" />}
             <div>
               {/* Where the mark came from, named. An organiser's icon beside the word "Organiser"
@@ -723,17 +730,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
               <div className="text-[10px] uppercase font-bold text-slate-300">
                 {logoUrl && !logoIsOwn ? 'Organiser' : 'Source'}
               </div>
-              <div className="text-xs font-bold text-white">{result.displayLink}</div>
+              <div className="text-xs font-bold text-white break-all">{result.displayLink}</div>
             </div>
           </div>
 
-          <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
+          <div className="relative px-4 sm:px-6 pb-5 pt-28 sm:pt-32 text-white space-y-2">
             {data?.format && (
               <span className="bg-blue-600 text-white font-bold text-[10px] uppercase px-2.5 py-0.5 rounded-md">
                 {data.format}
               </span>
             )}
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
+            <h1 className="min-w-0 break-words text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
               {displayTitle}
             </h1>
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-200 font-medium">
@@ -1571,8 +1578,17 @@ export const ExternalConferenceDetail: React.FC<ExternalConferenceDetailProps> =
             {activeTab === 'speakers' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-slate-900">Keynote & Invited Speakers</h3>
+                {publishedKeynotes.length > 0 && (
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <h4 className="font-bold">Published keynote sessions</h4>
+                    <ul className="mt-2 list-disc pl-5 text-sm">{publishedKeynotes.map((session, index) => (
+                      <li key={index}>{session.title}{session.speakerName ? ' — ' + session.speakerName : ' — speaker not listed'}</li>
+                    ))}</ul>
+                    <a className="mt-2 inline-block text-sm text-blue-700 underline" href={isBogotaSummit ? 'https://www.aapg.org/event-details/leadershipsummit2026/#program' : result.link} target="_blank" rel="noopener noreferrer">See organizer program</a>
+                  </div>
+                )}
                 {!data?.speakers.length ? (
-                  data?.crawlComplete === true ? (
+                  publishedKeynotes.length ? null : data?.crawlComplete === true ? (
                     <EmptyExtractState
                       message={emptySectionMessage("keynote_speakers", "speakers", "The completed crawl found no named keynote or invited speakers.")}
                       sourceUrl={result.link}

@@ -42,6 +42,7 @@ for (const x of events) {
   }
 }
 const upcoming = events.filter(x => (date(x.end) || x.start) >= today);
+const signIn = x => '/?auth=choose&amp;q=' + encodeURIComponent(x.title);
 const eventPath = x => '/conferences/' + slug(x.id) + '.html';
 if (new Set(events.map(eventPath)).size !== events.length) throw new Error('Duplicate public event URL');
 const page = (title, description, route, body) => `<!doctype html>
@@ -73,15 +74,57 @@ ${web(x.source)!==web(x.url) ? `<p><a href="${esc(web(x.source))}">View official
 <p>Confirm dates and submission details with the organizer before making plans.</p>`));
 }
 files.set('/conferences/',page('Upcoming conferences','Browse upcoming conferences by topic, location and event name.','/conferences/',`
-<h1>Upcoming conferences</h1><p>Browse upcoming conferences with organizer or society sources. No account required. Listings reflect the catalogue as of ${today}.</p>
+<h1>Upcoming conferences</h1><p>Browse upcoming conferences with organizer or society sources. Search without an account. Select an event to sign in and continue in ConferenceGate. Listings reflect the catalogue as of ${today}.</p>
 <h2>Upcoming abstract deadlines</h2>
-${upcoming.some(x=>deadline(x)>=today) ? '<ul>'+upcoming.filter(x=>deadline(x)>=today).sort((a,b)=>deadline(a).localeCompare(deadline(b))).slice(0,20).map(x=>`<li><a href="${eventPath(x)}">${esc(x.title)}</a> — ${esc(deadline(x))}</li>`).join('')+'</ul>' : '<p>No upcoming deadlines recorded yet.</p>'}
+${upcoming.some(x=>deadline(x)>=today) ? '<ul>'+upcoming.filter(x=>deadline(x)>=today).sort((a,b)=>deadline(a).localeCompare(deadline(b))).slice(0,20).map(x=>`<li><a href="${signIn(x)}">${esc(x.title)}</a> — ${esc(deadline(x))}</li>`).join('')+'</ul>' : '<p>No upcoming deadlines recorded yet.</p>'}
 <label for="conference-search">Search by event, field or location</label><br><input type="search" id="conference-search" placeholder="e.g. IMOG or geoscience" autocomplete="off">
 <p id="conference-count" role="status">${upcoming.length} upcoming conferences</p>
-<ul class="listing">${upcoming.map(x => `<li><h2><a href="${eventPath(x)}">${esc(x.title)}</a></h2><p>${esc([dates(x),place(x),x.category].filter(Boolean).join(' · '))}</p>${deadline(x) ? `<p>Submission deadline: ${esc(deadline(x))}</p>` : ''}</li>`).join('')}</ul>
+<ul class="listing">${upcoming.map(x => `<li data-title="${esc(x.title)}" data-search="${esc([x.acronym,x.organizer,x.category,x.city,x.country,x.description].filter(Boolean).join(' '))}"><h2><a href="${signIn(x)}">${esc(x.title)}</a></h2><p>${esc([dates(x),place(x),x.category].filter(Boolean).join(' · '))}</p>${deadline(x) ? `<p>Submission deadline: ${esc(deadline(x))}</p>` : ''}</li>`).join('')}</ul>
 <script src="/conferences/filter.js" defer></script>`));
-files.set('/conferences/filter.js',`const box=document.querySelector('#conference-search'),rows=[...document.querySelectorAll('.listing li')],status=document.querySelector('#conference-count');box.addEventListener('input',()=>{const terms=box.value.toLowerCase().trim().split(/\\s+/);let count=0;for(const row of rows){row.hidden=!terms.every(term=>row.textContent.toLowerCase().includes(term));if(!row.hidden)count++;}status.textContent=count===1?'1 matching conference':count+' matching conferences';});`);
+files.set('/conferences/filter.js', '(' + directoryFilter.toString() + ')();');
 const sitemap = ['/', '/about.html','/faq.html','/privacy.html','/terms.html','/pricing.html','/refunds.html','/verify.html','/conferences/',...upcoming.map(eventPath)];
 files.set('/sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap.map(route=>`  <url><loc>${origin}${route}</loc></url>`).join('\n')}\n</urlset>\n`);
 return {files, count:upcoming.length};
+}
+
+function directoryFilter() {
+  const box = document.querySelector('#conference-search');
+  const list = document.querySelector('.listing');
+  const status = document.querySelector('#conference-count');
+  const normalize = value => value.toLowerCase().normalize('NFKD').replace(/\p{M}/gu,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const rows = [...list.children].map((row,index) => {
+    const title = normalize(row.dataset.title || '');
+    return {row,index,title,words:normalize(title+' '+row.dataset.search+' '+row.textContent).split(' '),acronym:title.split(' ').filter(x=>x.length>2&&!['the','and','for','with'].includes(x)).map(x=>x[0]).join('')};
+  });
+  const close = (a,b) => {
+    if (Math.abs(a.length-b.length)>1) return false;
+    if (a.length>b.length) [a,b]=[b,a];
+    let i=0,j=0,edits=0;
+    while(i<a.length&&j<b.length) {
+      if(a[i]===b[j]){i++;j++;continue;}
+      if(++edits>1)return false;
+      if(a.length===b.length&&a[i]===b[j+1]&&a[i+1]===b[j]){i+=2;j+=2;continue;}
+      if(a.length===b.length)i++;
+      j++;
+    }
+    return edits+(b.length-j)<=1;
+  };
+  box.addEventListener('input', () => {
+    const query = normalize(box.value.slice(0,180));
+    const words = query.split(' ').filter(x=>x&&!['the','in','near','for','and'].includes(x));
+    const ranked = rows.map(r => {
+      if(!query)return {...r,score:1};
+      let score = r.title===query ? 100 : r.title.includes(query) ? 35 : r.acronym===query ? 45 : 0;
+      for(const term of words) {
+        if(r.words.includes(term))score+=10;
+        else if(term.length>=3&&r.words.some(w=>w.startsWith(term)))score+=5;
+        else if(term.length>=5&&r.words.some(w=>close(term,w)))score+=2;
+        else if(r.acronym!==term)return {...r,score:0};
+      }
+      return {...r,score};
+    }).sort((a,b)=>b.score-a.score||a.index-b.index);
+    let count=0;
+    for(const r of ranked){r.row.hidden=!r.score;if(r.score)count++;list.append(r.row);}
+    status.textContent=count===1?'1 matching conference':count+' matching conferences';
+  });
 }

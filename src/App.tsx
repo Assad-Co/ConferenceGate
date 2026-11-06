@@ -249,6 +249,8 @@ export function App() {
   useEffect(() => {
     if (!authUser || new URLSearchParams(window.location.search).get('discover') !== '1') return;
     setActiveTab('discover');
+    const eventQuery = new URLSearchParams(window.location.search).get('q');
+    if (eventQuery) setSearchQuery(eventQuery.slice(0, 180));
     window.history.replaceState(null, '', '/');
   }, [authUser]);
   const [selectedConference, setSelectedConference] = useState<Conference | null>(null);
@@ -1644,12 +1646,14 @@ export function App() {
   // About-page Explore links deliberately open the same Login / Sign Up choice for
   // everyone. A member with an active session may continue without signing in again.
   if (new URLSearchParams(window.location.search).get('auth') === 'choose') {
+    const eventQuery = new URLSearchParams(window.location.search).get('q')?.slice(0, 180);
+    const discoverUrl = '/?' + new URLSearchParams(eventQuery ? { discover: '1', q: eventQuery } : { discover: '1' });
     return (
       <div className="relative min-h-screen">
         {authUser && (
           <button
             type="button"
-            onClick={() => window.location.replace('/?discover=1')}
+            onClick={() => window.location.replace(discoverUrl)}
             className="fixed top-4 right-4 z-50 rounded-full bg-blue-900 px-5 py-3 text-sm font-bold text-white shadow-lg hover:bg-blue-800"
           >
             Continue to my account →
@@ -1657,7 +1661,7 @@ export function App() {
         )}
         <AuthScreen onAuthenticated={(user) => {
           applyAuthUser(user);
-          window.location.replace('/?discover=1');
+          window.location.replace(discoverUrl);
         }} />
       </div>
     );
