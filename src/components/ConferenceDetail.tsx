@@ -26,6 +26,7 @@ import { Conference } from '../types';
 import { formatDateRange } from '../utils/date';
 import { generateInitialsAvatar, getInitials } from '../utils/avatar';
 import { useCurrentLocalDate } from '../hooks/useCurrentLocalDate';
+import { ConferenceTravelCards, cleanAccommodationText } from './ConferenceTravelCards';
 
 interface ConferenceDetailProps {
   conference: Conference;
@@ -674,8 +675,8 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                   <Hotel className="w-4 h-4 text-blue-600" />
                   <span>Accommodation Details</span>
                 </div>
-                {conference.accommodation ? (
-                  <p>{conference.accommodation}</p>
+                {cleanAccommodationText(conference.accommodation) ? (
+                  <p>{cleanAccommodationText(conference.accommodation)}</p>
                 ) : (
                   <p className="text-slate-400">
                     Hotel partnerships haven't been published on Conference Gate yet
@@ -715,6 +716,14 @@ export const ConferenceDetail: React.FC<ConferenceDetailProps> = ({
                 )}
               </div>
             </div>
+            <ConferenceTravelCards
+              destination={[conference.location.city, conference.location.country].filter(Boolean).join(', ')}
+              venue={conference.location.venue}
+              startDate={conference.dates.start}
+              endDate={conference.dates.end}
+              travelText={conference.travelInfo}
+              officialUrl={conference.officialWebsite}
+            />
           </div>
         )}
 
