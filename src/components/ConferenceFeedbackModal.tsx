@@ -183,6 +183,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     setSubmitting(true);
     try {
       const result = await submitConferenceFeedback({
+        eventDate: eventDate.trim() || undefined,
         conferenceId,
         conferenceTitle,
         organizerName: (organizerName || organizerInput).trim() || undefined,
@@ -210,7 +211,7 @@ export const ConferenceFeedbackModal: React.FC<ConferenceFeedbackModalProps> = (
     if (!overall || exporting || submitting) return;
     setExporting(true);
     try {
-      await downloadConferenceFeedbackPdf({ conferenceId, conferenceTitle, organizerName: (organizerName || organizerInput).trim() || undefined, role, ratings, comment: comment.trim() || undefined, recipientEmail: recipientEmail.trim() || undefined });
+      await downloadConferenceFeedbackPdf({ eventDate: eventDate.trim() || undefined, conferenceId, conferenceTitle, organizerName: (organizerName || organizerInput).trim() || undefined, role, ratings, comment: comment.trim() || undefined, recipientEmail: recipientEmail.trim() || undefined });
       showToast({ type: 'success', title: 'PDF downloaded', message: 'Your logo-branded draft copy is ready to save or forward. Downloading does not submit your feedback.' });
     } catch (err: any) { showToast({ type: 'info', title: 'PDF not downloaded', message: err.message || 'Please try again.' }); }
     finally { setExporting(false); }

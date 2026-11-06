@@ -411,6 +411,7 @@ export async function toggleConferenceInteraction(
 }
 
 export interface SubmitFeedbackPayload {
+  eventDate?: string;
   conferenceId?: string;
   conferenceTitle: string;
   organizerName?: string;

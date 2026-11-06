@@ -1462,7 +1462,7 @@ activityRouter.post("/feedback", asyncHandler(async (req: AuthedRequest, res: Re
     // Resolve the recipient from the authenticated account, never the follow-up field.
     const user = await dbGet<UserRow>("SELECT * FROM users WHERE id = ?", [req.userId!]);
     emailCopyStatus = user ? await emailFeedbackCopy(user, {
-      conferenceTitle, organizerName, role: body.role, ratings,
+      conferenceTitle, organizerName, eventDate: body.eventDate, role: body.role, ratings,
       comment: body.comment, recipientEmail: body.recipientEmail,
       participantName: user.name, participantCompany: user.organization || "", submitted: true,
     }) : "unavailable";
