@@ -3740,6 +3740,14 @@ Return JSON with exactly this shape:
     res.json(job.result);
   });
 
+  // Keep one public website while allowing direct Render API and webhook traffic.
+  app.use((req, res, next) => {
+    const host = (req.get("host") || "").toLowerCase().split(":")[0];
+    if (host !== "conferencegate.onrender.com" || !["GET", "HEAD"].includes(req.method)
+        || /^\/api(?:\/|$)/i.test(req.path)) return next();
+    return res.redirect(301, "https://www.conferencegate.com" + req.originalUrl);
+  });
+
   // Public product information is readable without JavaScript or a session.
   // Explicit app/auth links and existing sessions retain the SPA entry point.
   app.get("/", (req, res, next) => {
