@@ -108,8 +108,6 @@ export function buildFeedbackPdf(data: FeedbackCopy): Buffer {
         const left = margin + questionWidth + i * choiceWidth;
         const selected = rating === i + 1;
         if (selected) {
-          doc.setFillColor(219, 234, 254);
-          doc.rect(left, y, choiceWidth, rowHeight, "F");
           doc.setFillColor(29, 78, 216);
         }
         doc.setDrawColor(148, 163, 184);
