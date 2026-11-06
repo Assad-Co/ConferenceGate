@@ -35,7 +35,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateTab, role }) => {
             </div>
           </div>
 
-          <div><h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Company</h4><ul className="space-y-2 text-xs"><li><a href="/about/" className="hover:text-blue-600 transition-colors">About Us</a></li><li><a href="/about/#mission" className="hover:text-blue-600 transition-colors">Mission &amp; Vision</a></li><li><a href="/about/#platform" className="hover:text-blue-600 transition-colors">What We Do</a></li></ul></div>
+          <div><h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Company</h4><ul className="space-y-2 text-xs"><li><a href="/?public=1#about" className="hover:text-blue-600 transition-colors">About Us</a></li><li><a href="/?public=1#about-mission" className="hover:text-blue-600 transition-colors">Mission &amp; Vision</a></li><li><a href="/?public=1#about-platform" className="hover:text-blue-600 transition-colors">What We Do</a></li></ul></div>
 
           <div>
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Support &amp; Legal</h4>

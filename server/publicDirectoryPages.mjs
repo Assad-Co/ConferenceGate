@@ -51,7 +51,7 @@ const page = (title, description, route, body) => `<!doctype html>
 <title>${esc(title)} | ConferenceGate</title><meta name="description" content="${esc(description)}"><link rel="canonical" href="${origin}${route}">
 <link rel="stylesheet" href="/conferencegate-public.css"><link rel="stylesheet" href="/conferencegate-atlas.css">
 <style>main{max-width:76rem;margin:auto;padding:2rem 1rem} .listing{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1rem}.listing li{border:1px solid #c9d8e8;border-radius:1rem;padding:1rem}.listing li[hidden]{display:none}main a{text-decoration:underline;color:#075bc0}main input{width:min(100%,35rem);padding:.75rem;border:1px solid #627991;border-radius:.5rem;font:inherit}dt{font-weight:700;margin-top:.6rem}dd{margin-left:0}.site-header{flex-wrap:wrap}.site-header nav{display:flex;flex-wrap:wrap}</style>
-<body><header class="site-header"><a href="/" class="brand-link"><img src="/conference-gate-logo.png" alt="ConferenceGate"></a><nav aria-label="Main navigation"><a href="/conferences/">Conference directory</a><a href="/about/">About</a><a class="cg-nav-join" href="/?auth=choose&amp;discover=1">Sign in</a></nav></header>
+<body><header class="site-header"><a href="/" class="brand-link"><img src="/conference-gate-logo.png" alt="ConferenceGate"></a><nav aria-label="Main navigation"><a href="/conferences/">Conference directory</a><a href="/?public=1#about">About</a><a class="cg-nav-join" href="/?auth=choose&amp;discover=1">Sign in</a></nav></header>
 <main>${body}</main><footer><div class="wrap"><a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="mailto:support@conferencegate.com">Contact</a></div></footer></body></html>`;
 const place = x => [x.city,x.country].filter(Boolean).join(', ');
 const dates = x => [x.start,date(x.end) !== x.start ? date(x.end) : ''].filter(Boolean).join(' to ');
@@ -120,7 +120,7 @@ files.set('/conferences/',page('Find your next conference','Explore upcoming con
 <button type="button" class="cg-secondary" id="cg-more" hidden>Show more conferences</button></section>
 <script src="/conferences/filter.js" defer></script>`));
 files.set('/conferences/filter.js', '(' + directoryFilter.toString() + ')();');
-const sitemap = ['/', '/about/','/faq.html','/privacy.html','/terms.html','/pricing.html','/refunds.html','/verify.html','/conferences/',...upcoming.map(eventPath)];
+const sitemap = ['/', '/faq.html','/privacy.html','/terms.html','/pricing.html','/refunds.html','/verify.html','/conferences/',...upcoming.map(eventPath)];
 files.set('/sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap.map(route=>`  <url><loc>${origin}${route}</loc></url>`).join('\n')}\n</urlset>\n`);
 return {files, count:upcoming.length};
 }

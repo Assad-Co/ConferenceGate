@@ -1,10 +1,16 @@
+import path from "node:path";
 import type { Express } from "express";
 import { dbAll } from "./db";
 import { renderPublicDirectory } from "./publicDirectoryPages.mjs";
 
 export function mountPublicDirectory(app: Express) {
   // The home route still serves its landing template; legacy About URLs have one destination.
-  app.get(["/about.html", "/about/index.html"], (_req, res) => res.redirect(301, "/about/"));
+  app.get(["/about", "/about.html", "/about/index.html"], (_req, res) => res.redirect(301, "/?public=1#about"));
+  app.get("/", (req, res, next) => {
+    if (req.query.public !== "1" || Object.keys(req.query).length !== 1) return next();
+    const folder = process.env.NODE_ENV === "development" ? "public" : "dist";
+    res.set("Cache-Control", "no-store").sendFile(path.join(process.cwd(), folder, "about.html"));
+  });
   let snapshot: ReturnType<typeof renderPublicDirectory> | undefined;
   let expires = 0;
   let refresh: Promise<void> | undefined;
