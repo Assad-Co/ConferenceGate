@@ -50,10 +50,7 @@ const views: Array<[View, string]> = [
   ["search", "Smart search"],
   ["map", "Global map"],
   ["cfp", "Abstract & CFP"],
-  ["safety", "Source & risk checks"],
-  ["opportunities", "Professional opportunities"],
   ["alerts", "Smart alerts"],
-  ["planner", "Planning dashboard"],
 ];
 export function ConferenceDiscoveryWorkspace({
   accountId,
