@@ -889,8 +889,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
         {!webSearchError && displayedStored.length > 0 && (
           <div className="space-y-4">
             {displayedStored.map((result) => {
+              const date = dateLine(result.startDate, result.endDate);
               const organizerDetails = organizerCardDetails(result);
-              const date = organizerDetails?.dates || dateLine(result.startDate, result.endDate);
+              const displayDate = organizerDetails?.dates || date;
               const place = formatConferenceLocation([result.location?.city, result.location?.country].filter(Boolean).join(', '));
               const categories = Array.from(new Set([result.category, ...(result.categories || [])].filter(Boolean) as string[])).slice(0, 4);
               const trust = conferenceTrustSignals(result);
@@ -925,9 +926,9 @@ export const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({
                       </div>
                     </div>
 
-                    {(date || place) && (
+                    {(displayDate || place) && (
                       <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
-                        {date && <span className="inline-flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-slate-400" />{date}</span>}
+                        {displayDate && <span className="inline-flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-slate-400" />{displayDate}</span>}
                         {place && <span className="inline-flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" />{place}</span>}
                       </div>
                     )}
